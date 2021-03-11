@@ -1,0 +1,1821 @@
+  ===============================================================
+
+
+                    TYMSHARE DATA NETWORK DIVISION
+                    NETWORK DEVELOPMENT DEPARTMENT
+                     SOFTWARE RELEASE DESCRIPTION    
+  ================================================================
+  Product Name :  TYMNET-II Node Code
+  Product Id   :  TII
+  For this release DND support is given by:      (ONTYME:    )
+
+  ======================== RELEASE SUMMARY =======================
+
+  New Release :  TII004.R00
+  Reference Release:  TII003.R21
+   ________________________________________________________________
+    A) Brief Description of the Bug Fixes with the
+       SAR Numbers Responded:
+
+  A.1. Eliminated DLOAD/reload problem on nodes with SIO.
+  A.2. Eliminated conflict between sync and SIO lines on multi-line
+       links.
+  A.3. Eliminated bug which prevented specification of up to 32
+       sync lines.
+    ________________________________________________________________
+  B) Changes in the External Functions (with SCR Numbers Responded
+     which are Visible to the User (Performance Improvements,
+     Functionality Changes, User Commands, Status Reports)
+
+  B.1. Standalone TYMSAT (including PVC) now supported.
+  B.2. New node reports to supervisor (types 19-28).
+  B.3. TYMNET-I UNTAKER message sent to downstream T-I neighbors.
+  B.4. Vulnerability to crashes reduced through changes in MAC
+       interrupt routine, software consistency check logic; certain
+       types of errors will cause link snips instead of crashes.
+  B.5. Extensive enhancements to XRAY -- new commands, performance
+       monitoring staistics, GMT node time, multi-user access.
+  B.6. Restricted host facility (ISIS) permits setting of limits
+       on circuit-building and report-generating by hosts/slots.
+  B.7. Version number formats for ISIS (10vvv) and TYMSAT (20vvv).
+  ________________________________________________________________
+  C) Summary of the Changes in the Internal Functions (with SCR
+     Numbers Responded) which are not Visible to the User But 
+     Visible to the Other Slot Codes Which Interface with this Product:
+
+  C.1. Network control character-pairs utilized for REBILD, performance
+       measurement.
+  ________________________________________________________________
+  D) Changes In The Sysgen Parameters:
+
+  D.1. Several new Tymfile parameters relating to ISIS Restricted Host
+       facility, crash action options, XRAY multi-user access, TYMSAT
+       support, PVC, memory size.
+  D.2. New command file scheme necessitated by changes in memory usage.
+  D.3. Many new assembly-time remarks and error messages.
+  D.4. New memory requirements documented for sample configurations.
+
+  ========================= RELEASE DETAILS =======================
+
+  Detailed Descriptions For The Above Listed Items If Necessary,
+  And Other Changes:
+
+  Please refer to the attached documentation.
+
+This document describes the changes made to TYMNET-II node code in version
+4.00.  The differences between this version and the previous release (3.21)
+are substantial and extensive.  For this reason, an attempt has been made
+to organize the release documentation by functional categories. 
+
+CONTENTS
+--------
+
+ 1.  T-II Standalone TYMSAT
+     a. Functional Specifications - Equivalent to T-I TYMSAT (Version 4.47).
+     b. Unsupported T-I TYMSAT Options - CPS, NBISYN, TTS, ISIS2.
+     c. PVC Support.
+     d. XRAY Features - Special async and PVC status commands and messages.
+     e. Miscellany - Console display, version number, etc.
+     f. The Login Process - Describing the interaction between the TYMSAT
+			    module and the node code.
+     
+ 2.  Memory Allocation/Utilization
+     a. Memory Requirements - Basic requirements, increments required for
+			      additional capabilities, sample configurations.
+     b. Bufferlet Storage Allocation - New bufferlet allocation scheme.
+     c. Changes in Segment Usage - New execute-only segment.
+
+ 3.  SYSGEN Considerations 
+     a. Tymfile Parameters and Macros - Summary of all new specifications.
+     b. PVC Parameters and Macros.
+     c. Assembly-Time Warnings and Error Messages - Summarized in alpha order.
+     d. Informational Remarks During Assembly - Sample assembly.
+     e. Command File Changes - Sample ISIS and SOLO command files with
+			       explanation of new structure.
+
+ 4.  Supervisor/Network Communications
+     a. New Reports to Supervisor - Types 19-28.
+     b. T-I UNTAKER Message - Now sent to downstream T-I neighbors.
+     c. Physical Port Status - PROBE PSTAT command.
+
+ 5.  Error-Handling -
+     a. MAC Error-Handling - Eliminates some crashes caused by intermitent
+			     and/or spurious MAC errors.
+     b. Software-Detected Errors - Lead to fewer crashes, link snips instead.
+     c. Link Snip Reason Codes.
+     d. New Crash-Handling Options - Four different crash action options
+				     can be selected separately for hardware
+				     and software crashes.
+
+ 6.  XRAY Enhancements
+     a. Multi-User Access - Three (or more) simultaneous XRAY users.
+     e. Local (TTY) XRAY - Now available under ISIS.
+     c. Display Enhancements - GMT node time, radix compatibility, etc.
+     d. Performance-Monitoring - Node and network performance statistics.
+     f. New Commands - For async status, PVC, crash options.
+     h. CRYPTO Messages - Many new ones, including all node reports.
+
+ 7.  ISIS-Related Features
+     a. MERLIN Parameter Edits - Assure compatibility between node code
+				 and ISIS parameters.
+     b. Restricted Host Facility - Sets limits on host/slot activity.
+
+ 8.  Sync/SIO Line Features 
+     a. Mixed (Sync/SIO) Multi-Line Capability.
+     b. Extended Sync-Line Support - Up to 32 sync lines.
+     c. SIO Initialization - Eliminates DLOAD/reload problem.
+
+10.  Miscellaneous
+     a. Version Numbers - Format changed for ISIS.
+     b. Console Display - New for TYMSAT.
+     c. REBILD - Not yet supported, but code recognizes special characters.
+
+
+
+
+
+ 1.  T-II Standalone TYMSAT
+     ----------------------
+
+a.  Functional Specifications:  The TYMNET-II TYMSAT is functionally equi-
+	 		        valent to the TYMNET-I Standalone TYMSAT
+    (Version 4.47), except that certain T-I options (see 1.b below) are 
+    not supported.  Some differences in implementation which may be of
+    interest are described in 1.f below.
+
+    For full documentation of TYMSAT features and functionality, refer to:
+
+	TYMNET.DOC - TYMNET-I Reference Manual
+	TYMSAT.DOC - Asynchronous TYMSAT Reference Manual
+	Various TYMNET-I release documentation 
+
+b.  Unsupported T-I TYMSAT Options:  The following T-I TYMSAT parameters are
+    				     not supported in TYMNET-II and assembly 
+    will fail if any of them are defined greater than zero:
+
+	NBISYN : Number of bisync ports.
+	CPS    : Console CPS load display option.
+	ISIS2  : ISIS II TYMSAT parameter.
+	TTS    : Transaction Telephone System.
+
+c.  PVC Support:  The Permanent Virtual Circuit (PVC) facility is supported as
+		  described in TYMSAT.DOC.  In TYMNET-II, PVC is somewhat more
+    efficient than in TYMNET-I because there are fewer delays involved in the
+    circuit-building process.
+
+    The following summary of PVC is presented for convenient reference.  Refer
+    to TYMSAT.DOC for full documentation.
+
+    PVC support is invoked via macros which should be defined in a separate
+    .PVC file which is assembled immediately after the .TYM file.  The .PVC
+    file must invoke at least the following two macros (see section 3.c for
+    macro formats):
+
+    1) The PVCRNG macro defines the ports that are to receive any type of PVC
+    service.  It accepts up to 16 arguments (decimal port numbers or ranges)
+    and may be called as many times as necessary to specify PVC for up to
+    256d ports.  At least one argument must be entered.  Any port number 
+    which is referenced in any other PVC macro must first be specified in a
+    PVCRNG macro.  This macro is what causes the PVC code to be assembled by
+    setting PVCCNT to a non-zero value (the number of PVC ports).  A bit array
+    (PVCARY) is set up by the code based on the arguments passed to the PVCRNG
+    macro; indexed by async port number, PVCARY is used to determine which
+    ports require any kind of PVC service.  Incorrect use of this macro may
+    generate assembly-time error messages (see section 3.e).
+    
+    2) The PVCDF macro defines the default PVC options for ports specified
+    in PVCRNG macros.  The options specified in this macro will apply to all
+    PVC ports which are not defined as exceptions by the PVCEX macro.  Every
+    PVC option has a default value, and the PVCDF macro may be called with
+    no arguments if all options are to be defaulted (or if all PVC ports are
+    to be specified in PVCEX macros).  (See section 3.c for a summary of PVC
+    options.)  Some PVC options are closely interrelated and incorrect speci-
+    fication of PVCDF arguments will generate assembly-time error messages
+    (see section 3.e).
+
+    Other PVC macro's and parameters are optional (see section 3.c for
+    details):
+
+	PCOTRY - Parameter specifies a wait period before trying to re-
+		 connect a PCO (Permanent Connect Option) port.
+		 
+	PTEXT  - Macro defines alternate login message text for PVC ports.
+	
+	PVCEX  - Macro specifies exception PVC options for ports that are
+		 to have different PVC configurations from those defined in
+		 the PVCDF macro.  Accepts the same option arguments as the
+		 VCDF macro.
+
+	STEXT  - Macro allows additional security string to be specified and
+		 appended to the default login string generated by the node
+		 code for PVC ports.
+
+	UTEXT  - Macro allows specification of tailored login string to over-
+		 ride default generated login string.
+
+	UTXRNG - Macro specifies ports which are to use associated UTEXT
+		 login string when more than one such string is defined.
+
+    Basic PVC support (0 or 1 UTEXT macros) requires about 3 KB of memory.
+    Multiple UTEXT macro's increase memory requirements significantly and
+    should be used with care.
+
+d.  XRAY Features:  The following new TYMSAT-related features have been
+		    added to XRAY (see section 6.f for more detail):
+
+    New XRAY commands include 'AS' (Display Async Port Status), 'AZ' (Ini-
+    tialize Async Statistics), and 'PV' (Display PVC Configuration).  
+    These commands provide detailed information which can be very helpful
+    in trouble-shooting async problems.  In addition, the 'NS' (Node Sta-
+    tistics) command displays the current and highwater-mark CPS rates (in
+    and out) for async ports; it also displays execution statistics for the 
+    TYMSAT module (which is the highest priority process in the node code).
+    
+    Several new CRYPTO messages relating to async activity are recorded
+    if the ASYDIS switch is set (see section 3.b):
+
+	3C: TID RECEIVED - PORT = oooo, TYPE = hh
+		A TID of 'hh' has been received for port 'oooo'.
+	3D: NEEDLE EYE RECEIVED - PORT = oooo, CHAN = hhhh
+		A circuit requested for port 'oooo' has been completed
+		using channel 'hhhh'.
+	3E: BCKTAL ERROR - CHAN = hhhh, PORT = oooo
+		A serious error has occured.  This should be brought to
+		the attention of T-II development staff.
+	3F: PORT ANSWERED - PORT = oooo
+		Port 'oooo' has been answered.
+
+    These messages, used in conjunction with the circuit-built and
+    circuit-zapped messages enabled by the CRYDIS switch, can be
+    useful in measuring circuit-building delays for async ports.
+
+e.  Miscellany -- TYMSAT Odds and Ends
+
+    1) Console Display:  A node running TYMSAT code displays a 'B' in the 
+		 	 high-order digit of the Engine console.  (A SOLO
+       switcher displays 'A'.)
+
+    2) Version Number:  Version numbers of T-II TYMSAT code are of the form
+    			20vvv.  (ISIS version numbers are 10vvv; switcher 
+       version numbers are 00vvv.)
+
+    3) Physical Async Port Status in PROBE:  The TYMSAT sends a new 
+    					     'addendum to accounting'
+       report to the supervisor for every async port in use (see 4.c).
+       The PROBE 'PSTAT' command displays the information when entered
+       with a 'host' argument of 0, as follows:
+
+       :PSTAT 2165 H0 0
+       HOST 0 PORT ARRAY 0  13 21 22 23 29
+       
+       Unless, of course, there aren't that many ports on the node:
+       
+       :PSTAT 2165 H0 1
+       HOST 0 PORT ARRAY 1 OUT OF RANGE
+       
+       (Node 2165 is configured with 32 async ports.)
+
+f.  The Login Process:
+
+    The TYMSAT module is treated by the node code almost as 
+    though it were an external process (like an ISIS slot) rather than
+    an integral part of the node code.  It has its own I/O drivers and
+    ring buffer.  Separate permuter tables are maintained for async ports 
+    in login mode, and communication between TYMSAT and node code during
+    login is mediated by the Async Login Interface process (much as the
+    Dispatcher mediates between the node code and an ISIS slot).  This 
+    scheme avoids one of the problems that can occur in a T-I TYMSAT -- 
+    misdirected circuits resulting from ports being hung while in login 
+    mode, then being answered again before permuter table entries are
+    cleaned up.  
+
+The following section describes the circuit-building process for async
+ports on a T-II TYMSAT.  References are made to 2 diagrams which follow.
+
+I. Answering a new async port and putting it into login mode.
+
+   A. When a port is answered, the async module builds a complete
+      circuit between it and the Async Login Interface process (ALI).
+      The physical async port number is used to index into the AIOTAB
+      permuter table (see figure 1).  ALI channel assignment is made
+      dynamically, based on the next available ALI channel (i.e.,
+      the next free entry in the ALMTAB permuter table whose corres-
+      ponding entry in ALNTAB is also free).  Thus the node code's
+      access (ALNTAB) to a port in login mode is not tied to physical
+      port number.  A port being answered will never get inadvertently
+      connected to a partial circuit left over from an aborted login.
+      (ALMTAB and ALNTAB are twice as long as AIOTAB to assure that
+      we can always accomodate a new port.)  Additionally, the port
+      drivers (OPD, IPD) neither know nor care that a port is in login
+      mode, except that the port's initial receive vector will always 
+      point to the TID routine.
+
+   B. When the VID routine detects a valid TID, it puts it into the A2
+      buffer.  It gets the A2 buffer index from the AIOTAB permuter
+      table entry for the port.  (This differs from TYMNET-I which
+      computes the buffer index based on the port number.)  VID then
+      sets the recive vector for the port to the appropriate input
+      port driver (based on the TID).
+
+   C. The routine IZZAP initializes the login variable for the port.
+      The ALI channel number assigned to a port in login mode is
+      unrelated to async port number; instead it is indexed by ALI
+      relative channel number, which is computed by subtracting
+      the absolute channel number of ALI relative channel 0 from
+      the A2 buffer's BF.
+
+II. ALI (Async Login Interface):  This is a schizoid process which
+    talks to two other processes -- the TYMSAT and the main body
+    of the node code.  When ALI receives a character from the TYMSAT,
+    it checks for a permuter table entry corresponding to the port
+    channel.  If no entry exists, this is the first (TID) character
+    for the port, in which case ALI must: 1) get a buffer; 2) build
+    a half-circuit terminating at the corresponding ALNTAB channel;
+    and 3) call the login routine to put the port in login mode 
+    (notifying the supervisor) if everything is OK.
+
+    ALI passes logical characters and responses between the TYMSAT and
+    the node code.  Characters coming from the TYMSAT are checked for
+    special characters (e.g., CR, semi-colon) which cause bits to be
+    set/reset in the LOGGER, ECHO, HAFDUX, etc. arrays, and the B2 BF
+    to be adjusted (as is currently done in the dispatcher interface.)
+
+    Characters coming from the node code to the TYMSAT are examined
+    for 'login error' and 'message for terminal in login mode' 03-
+    character pairs.  'Login error' is treated as a zapper.  TILIM
+    causes a canned message to be expanded and output to the TYMSAT.
+
+III. Completing the circuit:  When a needle arrives for a port in login
+     mode (i.e., terminates on an ALI port), LEP gets a new buffer,
+     appends to it any data remaining in the old buffer, and builds a
+     new half-circuit.  (Note that even though ALNTAB has a new
+     permuter table entry pointing toward a different buffer, ALI
+     doesn't care; the new buffer becomes the node code buffer.)
+     LEP treats the needle as though it were for a dispatcher port,
+     and sends a needle eye to ALI.
+     
+     When ALI detects a needle eye for a port in login mode, it
+     1) copies data from buffer A2 to buffer B2 (if any); 2) copies
+     data from buffer A1 to buffer B1 (if any -- i.e., for a PVC
+     port); 3) returns the A1/A2 buffer pair to the pool; 4) clears
+     the ALMTAB and ALNTAB permuter table entries and sets ACP to
+     indicate the ports are available; 5) stores the absolute channel
+     number of the async port in the B1 BF; and 6) stores the B2
+     buffer index into the AIOTAB permuter table entry.
+     
+     The circuit is now complete as pictured in figure 2.  Though
+     this scheme is a bit more complicated than in TYMNET-I, the
+     isolation of the async process from the node code (and of
+     the login process from the physical async port) provides 
+     flexibility for future development (e.g., the CONSAT) as
+     well as protection from potentially troublesome race condi-
+     tions resulting from aborted logins.
+
+Figure 1. ASYNC PORT IN LOGIN MODE
+          ------------------------
+
+
+AIOTAB                         ALMTAB . ALNTAB
++--+                             +--+ . +--+
+|  |                        |  | . |  |
+|  |                             |  | . |  |
+|  |                             |  | . |  |
+|  |                             |  | . |  |
+|  |                             |  | . |  |
+|  |           +----+            |  | . |  |            +----+
++--+<== OPD <==|CHN1|<== ALI  <==+--+ . +--+<== ALI  <==|CHN3|==> LEP (B2)
+|A2|           +----+            |A1| . |B2|            +----+
++--+==> IPD ==>|CHN2|==> LGGO ==>+--+ . +--+==> LGGO ==>|LBF |==> LOGGER
+|  |           +----+            |  | . |  |            +----+
+|  |                             |  | . |  |
+|  |                             |  | . |  |
++--+                             +--+ . +--+
+                                      .
+                          TYMSAT <==| + |==> NODE CODE
+
+
+NOTES:
+
+AIOTAB  is a permuter table indexed by (physical) async port number.
+	The output and input port drivers (OPD, IPD) use it to handle
+	data to and from async ports through the async ring.
+ALMTAB  is a permuter table for async ports in login mode and is indexed
+	by ALI relative channel number which is assigned dynamically and
+	is not tied in any way to physical port number.
+ALNTAB  is the node code's permuter table for async ports in login mode
+	and is also indexed by relative ALI channel number.
+OPD and IPD are the output and input port drivers.  
+ALI     is the Async Login Interface process which mediates between the
+	TYMSAT module and the node code during the login process.
+
+
+Figure 2. COMPLETE CIRCUIT FROM ASYNC PORT INTO NETWORK
+          ---------------------------------------------
+
+           AIOTAB                                NIOTAB
+           +----+                                +----+
+<== A      |    |                                |    |          ==>
+<== S      |    |                                |    |          ==>
+<== Y  D   |    |                                |    |  N  S  D ==>
+<== N  R   |    |           +------+             |    |  E  Y  R ==>
+<== C  I   +----+<== OPD <==| CHN1 |<== RTD   <==+----+  T  N  I ==>
+<==    V   | B2 |           +------+             | B1 |  W  C  V ==>
+<== R  E   +----+==> IPD ==>| CHN2 |==> RMAKE ==>+----+  O  /  E ==>
+<== I  R   |    |           +------+             |    |  R  S  R ==>
+<== N      |    |                                |    |  K  I  S ==>
+<== G      |    |                                |    |     O    ==>
+           |    |                                |    |          ==>
+           +----+                                +----+
+
+NOTES:
+
+Once a complete circuit has been built from an async port to a network
+link channel, AIOTAB (permuter table indexed by physical port number)
+is used by the input and output port drivers (IPD, OPD) to pass data
+to and from the async port through the ASYNC RING DRIVER.  On the other
+side, NIOTAB (permuter table indexed by relative channel number on a link
+basis) is used by RMAKE and RTD to put data from the async port into
+packets and to pass data from incoming packets to the port drivers.
+
+2.  Memory Allocation/Utlization
+    ----------------------------
+
+a.  Memory Requirements:  Approximate memory requirements for various T-II
+			  node configurations are given below.  All estimates
+    are based on optimum bufferlet allocation (4.00 bufferlets per circuit).
+
+
+    MINIMUM BASIC REQUIREMENTS:
+
+	Switcher - 92 KB (1 sync line, 1 network link, 64 passthroughs)
+	TYMSAT -  126 KB (1200 baud, 32 ports, 1 sync line, 1 network link,
+			  0 passthroughs)
+	ISIS -     99 KB (with 2 other slots, 64 dispatcher ports, 1 sync
+			  line, 1 network link, 0 passthroughs)
+
+
+    ADDITIONAL REQUIREMENTS:
+
+	Sync line - 				0.5 KB
+	Network link (WS8) -			3.5 KB
+	1st SIO line -				5.5 KB
+	Add'l SIO line -			2   KB
+	Trace Line Event Option (TLEV) -	7   KB
+	64 dispatcher ports -			6.5 KB
+	64 passthroughs -			6.5 KB
+	Async card (32 ports) -			8.5 KB
+	PVC (minimum) -				3   KB
+	Supervisor with NSP=128	-	       21   KB
+	Additional 128 supervisor ports -	9   KB
+
+	NOTE: The UPSW trace option (UTRC) dramatically increases memory
+	      requirements in a TYMSAT configuration.  Don't use it.
+
+	
+    SAMPLE CONFIGURATIONS:
+
+	NODE		  	     ASYNC   SYNC     SIO
+	TYPE   MEMORY   NDP   PTHR   PORTS   LINES   LINES   LINKS   SUP   NSP
+	----   ------   ---   ----   -----   -----   -----   -----   ---   ---
+	SWCH    92 KB   n/a     64    n/a       1       0       1    n/a     0
+	SWCH   145 KB   n/a    256    n/a       8       2       8    n/a     0
+	SWCH   190 KB   n/a    512    n/a      16       4      12    n/a     0
+	SWCH   292 KB   n/a   1024    n/a      24       8      24    n/a     0
+	
+	TSAT   107 KB   n/a      0     32       1       0       1    n/a     0
+	TSAT   169 KB   n/a    128     96       6       2       8    n/a     0
+	TSAT   224 KB   n/a    256    192       8       4      12    n/a     0
+	TSAT   257 KB   n/a    512    256      12       4      12    n/a     0
+	TSAT   331 KB   n/a   1024    256      16       4      16    n/a     0
+	
+	ISIS    99 KB    64      0    n/a       1       0       1     N      0
+	ISIS   142 KB	128    128    n/a       8       0       8     N      0
+	ISIS   209 KB   256    256    n/a      12       4      16     N      0
+	ISIS   230 KB   256    256    n/a      12       4      16     Y    128  
+	ISIS   384 KB  1024   1024    n/a      24       8      20     N      0
+
+
+b.  Bufferlet Storage Allocation:  Previous versions of T-II code
+				   allocated memory for bufferlet storage
+    on a bytes-per-circuit basis which was a function solely of the maxi-
+    mum number of circuits for which the node is configured.  Version 4
+    simply allocates all available (i.e., otherwise unused) memory for
+    the bufferlet pool based on the Tymfile parameter NBRK (see item
+    3.b).  As a result, total and per-circuit bufferlet allocation will
+    vary depending on the configuration.  Assembly-time remarks tell the
+    total size and per-circuit allocation of the bufferlet pool and warn
+    if the bufferlet allocation is less than optimal.  The optimal allo-
+    cation of 4.0 bufferlets is an estimate.  It is recommended that
+    some effort be made to keep above this level.  However, it is probable
+    that 3.00 bufferlets will be sufficient in most configurations; 
+    difficulties may be anticipated if it is less than this.  In any
+    case, if the amount of memory allocated for bufferlets is less than
+    the required minimum (1 bufferlet per circuit or 4d KB total),
+    assembly will fail.
+
+
+c.  Changes in Segment Usage:  XRAY, which previously ran in segment 1,
+			       has been moved to segment D.  This change
+    has necessitated a change in command files used to assemble NIB
+    files (see section 3.a).
+
+    Current segment usage is as follows:
+
+	SEG 0: Node code data area
+	SEG 1: Node code execute-only area
+	SEG 2: Data area 
+	SEG 3: Data area 
+	SEG 4: Kernel communication area if ISIS or supervisor, else unused
+	SEG 5: Async ring if TYMSAT, supervisor ring if sup, else unused
+	SEG 6: Bufferlets
+	SEG 7: Bufferlets
+	SEG 8: Bufferlets
+	SEG 9: Bufferlets
+	SEG A: Dummy segment maps into absolute memory (0-FFFF) for XRAY
+	SEG B: Sync input rings
+	SEG C: Data area 
+	SEG D: XRAY execute and data (execute only)
+	SEG E: CTA table if ISIS, else dummy segment mapping to absolute
+	       600 for FASTC and SLOWC
+
+
+
+
+3.  Sysgen Considerations
+    ---------------------
+
+a.  Tymfile Parameters and Macros:  The following Tymfile parameters and
+				    and macros are new or different in
+    Version 4.00.  They are listed in alphabetical order and those which
+    should usually be included in the Tymfile are starred (**).  (PVC
+    parameters and macros are listed separately in section b. below.)
+
+    CPS    - This T-I TYMSAT parameter is not supported (see item 1.b).
+	     ASSEMBLY FAILS if it is defined > 0.  DEFAULT = 0.
+
+    DB56KB - New parameter enables a debugging option for 56KB SIO lines
+	     Defaults to 0 (OFF) and is set to 0 if no SIO lines have 
+	     been specified.
+
+    GGHOST - Macro format:  GGHOST(<host#1>,<host#2>,...,<host#8>)
+	     New macro (ISIS only) which defines which hosts may come up on
+	     the node.  If this macro is not invoked, any host may come up
+	     on the node; if it is used, only the hosts specified in it may
+	     come up on the node.  Up to 8 host numbers may be specified in
+	     the GGHOST macro which may be called up to 32 times for a pos-
+	     sible total of 256 restricted hosts on a node.  This macro must
+	     be invoked for any hosts which are to be specified in an HLIMIT
+	     or HSTSLT macro (see below).  Arguments are decimal host numbers.
+	     (See item 7.b for more detail.)
+	     
+    HLIMIT - Macro format:  HLIMIT(<host#>,<cpm>,<srpm>)
+	     New macro (ISIS only) which sets limits on the number of 
+	     circuits-per-minute (<cpm>) and slot-reports-per-minute
+	     (<srpm>) which may be generated by a host which has been 
+	     specified in a GGHOST macro.  All arguments are decimal.
+	     (See item 7.b for more detail.)
+	     
+    HSTSLT - Macro format:  HSTSLT(<host#>,<slot#1>,<slot#2>,...,<slot#8>)
+	     New macro (ISIS only) which defines which slots a restricted 
+	     host may come up on.  The host must have been specified in
+	     a GGHOST macro.  The first argument is the host number; it
+	     is followed by up to 8 slot numbers.  The HSTSLT macro can be
+	     called only once for each host; if it is called more than once
+	     only the last call has effect.  All arguments are decimal.
+	     (See item 7.b for more detail.)
+	     	     
+    ISIS2  - This T-I TYMSAT parameter is not supported (see item 1.b).
+	     ASSEMBLY FAILS if it is defined > 0.  DEFAULT = 0.
+
+    MEMRMK - This parameter, when set > 0, causes an assembly-time remark
+    	     to be printed indicating the size of the assembled code.  Note
+    	     that if NBRK has been specified, the valued displayed by the
+	     MEMRMK remark is always 4 KB less than that specified by NBRK.
+	     This is because 4 KB must be reserved for future implementation
+	     of a new boot loader.
+
+    MICRO  - The default and only acceptable value for this parameter is 2
+   	     (enhanced sync and async microcode).  ASSEMBLY FAILS if it is 
+	     defined < 2.  DEFAULT = 2.
+
+  **NACARD - This parameter specifies the number of async cards (32 ports per
+	     card) on a stand-alone TYMSAT and causes the TYMSAT module to
+	     be assembled if defined > 0.  If NACARD is < 1, TYMSAT is not
+	     assembled and all other TYMSAT-related parameters are ignored.
+	     DEFAULT = 0 (no TYMSAT).  MAXIMUM = 8 (256d async ports).
+
+    NBISYN - This T-I TYMSAT parameter is not supported (see item 1.b).
+	     ASSEMBLY FAILS if it is defined > 0.  DEFAULT = 0.
+
+    NBRK   - New parameter specifies the memory size for which the code
+	     should be assembled.
+
+    NLINES - Old parameter (number of network sync lines) has a new maximum
+	     allowable value of 32.  (See item 8.b.)
+
+    NXUBLK - New parameter defines the maximum number of remote users that
+	     can have concurrent access to XRAY on a node (see item xx.z).
+	     A warning is printed if NXUBLK is defined < 1 (no remote access
+	     to XRAY); this would make sense only for very special security
+	     reasons.  If NXUBLK is defined > 14d (the maximum), a warning 
+	     message is printed and the value is set to 14d.  NXUBLK should
+	     be defaulted unless additional remote XRAY access is required
+	     for special (e.g., training) purposes.  DEFAULT = 3.  MAXIMUM
+	     = 14d.
+
+    LTEXT  - Macro format:  LTEXT(<message type>,<message text>)
+	     Macro allows alternate text to be specified to replace the
+	     'please log in:' (ULMSG) or the 'please type your terminal
+	     identifier' (TIDM) prompts on a TYMSAT.  The text specified
+	     must be less than 257d characters and must conform to certain
+	     syntactical rules described in section 1.3.3 of TYMSAT.DOC.
+	     In the above format specification, <message type> must be
+	     ULMSG or TIDM.
+	     
+  **OPTION - Macro format:  OPTION(<arg1>,<arg2>,...,<arg8>)
+	     The OPTION macro has a number of new arguments, some of which
+	     supercede old arguments.  Although all previously documented
+	     arguments are still valid, the new ones should be used when-
+	     ever possible.  Arguments which are commonly used are starred
+	     (**).
+
+	     ALL    - Old all-option argument; use OALL instead.
+	     BFTR   - New buffer trace option (see item #xx.z).
+	     BOT    - Old boot-on-crash option; use NBTH and NBTS instead.
+	     BUB    - Old BUBBNET bubble option; use BUBB instead.
+	     BUBB   - New BUBBNET bubble option (replaces BUB).
+	     CIR    - Old XRAY circuit trace display option; use CIRD instead.
+	   **CIRD   - New XRAY circuit trace display option (replaces CIR).
+	     DBG    - Old general debug option; use DEBUG instead.
+	     DBUG   - New general debug option (replaces DBG).
+	   **NaaH   - New hardware crash options define the action to be
+		      taken for hardware-detected errors in the node code
+		      (see item 5.d):
+		      NBTH - Go to boot.
+		      NHTH - Halt node (wait bar on).
+		      NRSH - Restart (DEFAULT).
+		      NSTH - Stop node code (leave XRAY running).
+	   **NaaS   - New software crash options define the action to be
+		      taken for software-detected errors in the node code
+		      (see item 5.d):
+		      NBTS - Go to boot.
+		      NHTS - Halt node (wait bar on).
+		      NRSS - Restart (DEFAULT).
+		      NSTS - Stop node code (leave XRAY running).
+	     OALL   - New all-option argument (replaces ALL).
+	     STP    - Old stop-on-crash option; use NHTH and NSTS instead.
+	   **TLEV   - New trace line event option (replaces TSN).
+	     TRC    - Old UPSW jump trace option; use UTRC instead.
+	     TSN    - Old trace line event option; use TLEV instead.
+	     UTRC   - New UPSW jump trace option (replaces TRC).
+
+    SLIMIT - Macro format:  SLIMIT(<slot#>,<cpm>,<srpm>)
+	     New macro (ISIS only) defines limits to the number of circuits-
+	     per-minute (<cpm>) and slot-reports-per-minute (<srpm>) that
+	     an ISIS slot may generate.  If the 2nd or 3rd argument is 
+	     omitted, no limit is set for the corresponding activity.
+	     All arguments are decimal.  (See item 7.b for more detail.)
+	     
+    TTS    - This T-I TYMSAT parameter is not supported (see item 1.b).
+	     ASSEMBLY FAILS if it is defined > 0.  DEFAULT = 0.
+
+b.  PVC Parameters and Macros:  A TYMSAT which has any ports requiring
+				Permanent Virtual Circuit (PVC) service
+    must be assembled with a .PVC file which defines the PVC parameters for
+    those ports.  PVC parameters and macro's are fully documented in the
+    'Asynchronous TYMSAT Reference Manual' (TYMSAT.DOC), and are summarized
+    here only for convenient reference.  (See also item 1.c regarding PVC
+    on the T-II TYMSAT.)  Macro's which must be included in the .PVC file
+    are starred (**).
+
+    PCOTRY - Parameter specifies the number of seconds the TYMSAT will wait
+	     after a circuit to an ALO/PCO port is lost before attempting
+	     to log in again.  Meaningless if no ALO/PCO ports are specified.
+	     Applies to all ALO/PCO ports.  DEFAULT = 90d seconds.  RANGE =
+	     32d to 8192d seconds.
+
+    PTEXT  - Macro format:  PTEXT(<msg#>,<text>)
+	     Macro for defining alternate text for one of the five login
+	     messages transmitted to PVC ports.  The first argument is the
+	     number of the message for which alternate text is to be defined
+	     (1-5).  The second argument is the text itself which must meet
+	     certain syntax requirements (see Section 1.3.3 of TYMSAT.DOC).
+	     Refer to Section 4.4 of TYMSAT.DOC for full documentation of 
+	     the PTEXT macro.  This macro is OPTIONAL.
+    	     
+  **PVCDF  - Macro format:  PVCDF(<arg1>,<arg2>,...,<arg13>)
+	     Macro for defining the default parameters for PVC ports on a
+	     TYMSAT.  This macro is required for PVC but, if all PVC para-
+	     meters are to be defaulted, it may be invoked with no arguments.
+	     Arguments (up to 13) may be listed in any order.  The parameters
+	     specified will apply to all PVC ports which are not otherwise
+	     optioned with a PVCEX macro (see below).  PVCDF arguments are
+	     listed below in pairs (except TIDn) in alphabetical order.  The
+	     first argument of each pair enables, and the second disables,
+	     the specified option (they are mutually exclusive).  Some
+	     arguments are valid only if, and some are invalid if, others
+	     have been specified.  
+
+	     AID/NOAID - Automatic Terminal Identification.  DEFAULT = NOAID.
+			 Causes a PVC port to be automatically identified
+			 according to the TIDn parameter (see below) when it
+			 is answered.  If AID, TIDn must be specified.
+	     ALO/NOALO - Automatic Logon Option.  DEFAULT = NOALO.  Causes
+			 a prepared login string to be transmitted for a 
+			 PVC port when it is answered.  The login string may
+			 be generated by the node code (default) or may be
+			 specified via the UTEXT macro (see below).  If ALO
+			 is specified, either PCO or SLO (see below), but
+			 not both, must also be specified.
+	     CRLF/NOCRLF - Echo linefeed with carriage return.  DEFAULT =
+	     		   CRLF.
+	     HDX/NOHDX - Half-Duplex mode.  DEFAULT = NOHDX.  Causes normal
+			 echoing by the TYMSAT to be suppressed (except for
+			 carriage-return/linefeed pairs.
+	     HNG/NOHNG - Hang Port on TID Timeout.  DEFAULT = HNG.  Causes
+			 the port to be hung if a valid TID is not entered
+			 within 16-32 seconds after the port is answered, or
+			 when the network sends a hang command.
+	     LFCR/NOLFCR - Echo Carriage-Return with Linefeed.  DEFAULT =
+	     		   LFCR.  Causes the TYMSAT to echo all carriage-
+	     		   returns input form the terminal with linefeeds.
+	     NPI/NONPI - Print Node/Port Identifier for AID ports.  DEFAULT =
+	     		 NPI.  Causes the TYMSAT to print a node/port iden-
+	     		 tification message on AID ports when answered.
+	     PAR/NOPAR - Even Parity Option.  DEFAULT = NOPAR (normal mark
+	     		 parity).
+	     PCO/NOPCO - Permanent Circuit Option.  DEFAULT = NOPCO.  When
+			 specified for an ALO port, PCO will cause the TYMSAT
+			 to keep trying to build a circuit (or rebuild a lost
+			 circuit) to the port's "home" host (at intervals
+			 specified by the PCOTRY parameter) as long as the 
+			 port is connected.  The port cannot log into any
+			 other host.  PCO and SLO are mutually exclusive,
+			 and one or the other must be specified if ALO is
+			 specified.  ("Home" host may be the host specified
+			 in a login string defined by a UTEXT macro.)
+	     RBP/NORBP - Reverse Backpressure.  DEFAULT = NORBP.  Simulates
+			 the inclusion of a Control-R in the login string
+			 (gives terminal control of data flow via XON/XOFF
+			 control characters).
+	     SLO/NOSLO - Subsequent Logon Option.  DEFAULT = NOSLO.  For ALO
+			 ports, causes the TYMSAT to prompt for manual login
+			 if it is unable to complete a circuit to the port's
+			 "home" host (or if an existing circuit is lost).
+			 SLO and PCO are mutually exclusive, and one or the 
+			 other must be specified if ALO is specified.  
+			 ("Home" host may be the host specified in a login 
+			 string defined by a UTEXT macro.)
+	     TIDn      - Defines the Terminal Identifier for ALO ports.
+	     		 This argument is required if ALO is specified and
+	     		 is meaningless if not.  The value of 'n' must be 1-17
+			 (decimal).  See Section 4.2.1 of TYMSAT.DOC for the
+			 meaning of the various TID's.
+	     TRS/NOTRS - Reset Terminal Options.  DEFAULT = NOTRS.  Causes
+			 the TYMSAT to reset all terminal options (to those
+			 specified by the TID and PVC parameters) when a
+			 port is disconnected from a host.  This restores the
+			 port to its original login state rather than pre-
+			 serving any changes which may have been made during
+			 a previous host session.
+	     
+    PVCEX  - Macro format:  PVCEX(<port#>,<arg1>,<arg2>,...,<arg13>)
+	     Macro for defining exception parameters for a PVC port which
+    	     is to have options different from those specified or defaulted
+	     by the PCVDF macro.  The first argument must be a decimal port
+	     number which has been specified in the PVCRNG macro.  The other
+	     arguments are the same as those described for the PVCDF macro,
+	     and may be specified in any order.
+
+  **PVCRNG - Macro format:  PVCRNG(<port#>,<port#>1-<port#2>...)
+	     Macro for defining which async ports on a TYMSAT are to receive
+	     PVC service.  Arguments are decimal port numbers or ranges of
+	     port numbers (p1-p2) separated by commas.  If a range of port
+	     numbers is entered, the second number must not be less than the
+	     first.  Up to 16 arguments may be entered and the macro may be
+	     called as many times as necessary.  This macro is REQUIRED for
+	     PVC and must have at least one argument.  
+
+    STEXT  - Macro format:  STEXT(<character string>)
+	     Macro defines an additional security string (up to 4 characters)
+	     which is appended to the default login string generated by the
+	     node code for ALO ports.  This macro is OPTIONAL and is invalid
+	     if the UTEXT macro is invoked. Refer to sections 4.5 and 1.3.4 of
+	     TYMSAT.DOC for a full explanation of the STEXT macro and the
+	     generated login string.
+
+    UTEXT  - Macro format:  UTEXT(<login string>)
+	     Macro defines the login string to be used for all ALO ports
+    	     or for the ALO port(s) specified in an immediately following
+	     UTXRNG macro.  If the UTEXT macro is invoked only once, no
+	     associated UTXRNG macro is necessary and, in any case, all ALO
+	     ports use the login string defined by it.  If the UTEXT macro
+	     is invoked more than once, each UTEXT macro must be immediately
+	     followed by a UTXRNG macro which specifies the port(s) which
+	     are to use the login string.  In the case of multiple UTEXT 
+	     macros, any ALO ports not explicitly specified in a UTXRNG macro
+	     will use the login string defined in the first UTEXT macro.  It
+	     should be noted that the use of multiple UTEXT macros is expen-
+	     sive in core requirements.  This macro is OPTIONAL for PVC and
+	     is meaningless if no ALO ports are specified.  It is required
+	     only if the default generated login string for ALO ports is not
+	     adequate for the PVC application.  The login string defined in
+	     a UTEXT macro must conform to certain syntactical requirements 
+	     described in section 1.3.3 of TYMSAT.DOC.
+	     
+    UTXRNG - Macro format:  UTXRNG(<port#>,<port#1>-<port#2>...)
+	     Macro specifies the ALO port(s) which will use the login string
+	     defined in the immediately preceding UTEXT macro.  This macro
+	     is required only if there is more than one UTEXT macro.  
+	     Arguments are governed by the same rules as the PVCRNG macro
+	     (see above).
+
+
+c.  Assembly-Time Warnings and Error Messages:  The following assembly-time
+					        warnings and error messages
+    new with Version 4.00.  They are listed in alphabetical order (based on
+    the first alpha character in the message), and those which indicate
+    fatal errors are marked ##.  (The normal sequence of assembly-time
+    informational remarks is described in section d. below.)
+
+##  ***CPS NOT SUPPORTED***  
+		(TYMSAT only)
+		The TYMNET-I TYMSAT CPS parameter is not supported for
+		the T-II TYMSAT (see item 1.b).  ASSEMBLY FAILS.
+
+    ERR     *** PORT NUMBER TOO LARGE ***  
+		(TYMSAT+PVC only)
+		A port number specified in the PVCRNG macro was too large
+		(greater than 255d).  Assembly continues, but a port which
+		was intended to have PVC service may be omitted from the PVC
+		array.
+
+    ERR     ***PORT RANGES MUST BE FROM SMALLER TO LARGER*** 
+		(TYMSAT+PVC only)
+		A range of port numbers was specified in a UTXRNG macro in 
+		which the first port number was not less than the second.
+		Assembly continues, but a port(s) which was intended to be
+		included in the range be omitted.
+
+    ERR     *** PORT RANGES SHOULD BE FROM SMALLER TO LARGER ***
+		(TYMSAT+PVC only)
+		A range	of ports was specified in the PVCRNG macro in which
+		the first port number was not less than the second.  Assembly
+		continues, but a port(s) which was intended to be included 
+		in the range may be omitted.
+
+    ERROR - MULTIPLE HARDWARE CRASH OPTIONS DEFINED!
+		More than one OPTION argument of the form NaaH has been 
+		specified (see item 5.d).  Assembly continues.
+
+    ERROR - MULTIPLE SOFTWARE CRASH OPTIONS DEFINED!
+		More than one OPTION argument of the form NaaS has been 
+		specified (see item 5.d).  Assembly continues.
+
+    ERROR, NBR PVC PORTS > NUMBER ASYNC PORTS ON REMOTE  
+		(TYMSAT+PVC only)
+		The number of ports specified in the PVCRNG macro is greater 
+		than the number of async ports (32*NACARD) specified.  
+		Assembly continues, but some ports intended to have PVC 
+		service will not exist at all.
+
+    ERROR, NO PVCDF SPECIFIED  
+		(TYMSAT+PVC only)
+		PVC has been invoked via the PVCRNG macro, but no PVCDF
+		(PVC Default parameters) macro was invoked.  The PVCDF macro
+		must be called, even if with no arguments (see item 7.b).		
+		Assembly continues.
+
+    ERROR   *** PORT NUMBER IS NEGATIVE ***  
+		(TYMSAT+PVC only)
+		A negative number was used as an argument for the PVCRNG 
+		macro.  Assembly continues, but a port(s) which was intended
+		to have PVC service may be omitted from the PVC array.
+
+##  Fatal error - configuration too large!!
+    nnnd KB specified as available, !must! be increased.
+    Bad assembly
+		The amount of memory available as defined by the NBRK
+		parameter will not support the specified configuration.
+		ASSEMBLY FAILS.
+
+##  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !!! FATAL ERROR !!! FATAL ERROR !!!
+    !!! ASSEMBLY HAS BEEN KILLED !!!!!!
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		This is the general "fatal error" message and it indicates
+		that assembly was killed immediately when the error was
+		detected.  It is immediately preceded by another error
+		message which indicates the reason for the failure.  This
+		message is currently implemented for only some fatal errors.
+		The others will continue to let the assembly die by slow
+		degrees.
+
+    HLIMIT ERROR:
+    GGHOST MACRO NOT SPECIFIED FOR HOST hhhh  
+		(ISIS+HLIMIT only)
+		The HLIMIT macro (see item 7.b) was called without a
+		required prior call to the GGHOST macro.  Assembly continues,
+		but no restricted host options will be in effect.
+
+    HLIMIT ERROR:
+    GGHOST MACRO SPECIFIED WITH NO ARGUMENTS FOR HOST hhhh  
+		(ISIS+HLIMIT only)
+		The HLIMIT macro was called without a prior valid call to
+		the GGHOST macro (no arguments were specified).  (See item
+		7.b.)  Assembly continues, but no restricted host options
+		will be in effect.
+
+    HLIMIT ERROR:
+    HOST dddd NOT SPECIFIED IN GGHOST  
+		(ISIS+HLIMIT only)
+		The host number specified in an HLIMIT macro not been
+		specified in a previous GGHOST macro.  The HLIMIT macro
+		is valid only for host numbers which have been specified 
+		in a GGHOST macro (see item 7.b).  Assembly continues,
+		but the HLIMIT option will not be in effect for the
+		specified host.
+
+    HSTSLT ERROR:
+    GGHOST MACRO NOT SPECIFIED FOR HOST hhhh  
+		(ISIS+HSTSLT only)
+		The HSTSLT macro has been called without a required prior
+		call to the GGHOST macro (see item 7.b).  Assembly
+		continues, but no restricted host options will be in
+		effect.
+
+    HSTSLT ERROR:
+    GGHOST MACRO SPECIFIED WITH NO ARGUMENTS FOR HOST hhhh  
+		(ISIS+HSTSLT only)
+		The HSTSLT macro was called without a prior valid call to
+		the GGHOST macro (no arguments were entered).  (See item
+		7.b.)  Assembly continues but no restricted host options 
+		will be in effect.
+
+    HSTSLT ERROR:
+    HOST hhhh NOT SPECIFIED IN GGHOST  
+		(ISIS+HSTSLT only)
+		The host number specified in an HSTSLT macro was not specified
+		in a previous GGHOST macro.  The HSTSLT macro is valid only
+		for host numbers which have been specified in a GGHOST macro.
+		(See item 7.b.)  Assembly continues, but the HSTSLT option
+		will not be in effect for the specified host.
+
+    HSTSLT ERROR:
+    NO SLOTS SPECIFIED FOR HOST hhhh  
+		(ISIS+HSTSLT only)
+		No slot numbers were specified in an HSTSLT macro; at least
+		one slot number must be specified (see item 7.b).  Assembly
+		continues, but the HSTSLT option will not be in effect for the
+		specified host.
+
+##  ***ISIS2 NOT SUPPORTED***  
+		(TYMSAT only)
+		The TYMNET-I TYMSAT ISIS2 parameter is not supported for the
+		T-II TYMSAT (see item 1.b).  ASSEMBLY FAILS.
+
+    Memory used for this configuration nnnd KB
+		Note that if NBRK has been defined, the figure given in this
+		message is always 4 KB less than that specified for NBRK.
+		This is to allow room for the new boot loader code.
+
+##  MUST USE TII004.I01 INITIALIZATION FILE!  
+		The wrong initialization file has been assembled (see item
+		3.e).  ASSEMBLY FAILS.
+
+##  ***NBISYN NOT SUPPORTED***  
+		(TYMSAT only)
+		The TYMNET-I TYMSAT NBISYN parameter is not supported in
+		the T-II TYMSAT (see item 1.b).  ASSEMBLY FAILS.
+
+    NBRK not defined, assuming 256d KB  
+		(SOLO only)
+		The memory size parameter NBRK (number of kilobytes of
+		memory) has not been defined and the default value (256d)
+		is assumed.  Assembly continues, but if the machine into
+		which the code is to be loaded has less than 256d KB of
+		memory, the code will not load.  If the machine to be
+		loaded has more than 256d KB of memory, the code will
+		load, but some of its memory will be wasted.  
+
+
+    NO REMOTE XRAY PORTS DEFINED (NXUBLK < 1)  
+		The NXUBLK parameter (number of remote XRAY user blocks)
+		has been defined < 1 (see item 6.a).  This means that 
+		remote access to XRAY will not be permitted.  This would make
+		sense only under very exceptional circumstances (e.g., special
+		security considerations).  Assembly continues, but a require-
+		ment for no remote XRAY access should be verified.
+
+    Number of bufferlets allocated is insufficient.
+    56 bytes (4.00 bufferlets) per circuit desired,
+    nn bytes (y.zz bufferlets) per circuit allocated.
+    xxd KB additional memory required.
+		(SOLO only)
+		The amount of memory available as defined by the NBRK para-
+		meter is not sufficient to support optimal bufferlet alloca-
+		tion (4.00 bufferlets per circuit).  The message indicates the
+		actual bufferlet allocation as well as the additional amount
+		of memory required for optimal allocation.  Assembly con-
+		tinues, but if actual allocation is substantially below the
+		optimal level, problems (i.e., too many buffer zaps) may
+		be encountered.	 
+
+    NXUBLK TOO LARGE, HAS BEEN RESET TO MAX VALUE (14d)
+		The NXUBLK parameter (number of remote XRAY user blocks) was
+		defined > 14d (the maximum permissible value).  (See item
+		6.a).  The value of NXUBLK is set to 14d and assembly
+		continues.
+
+    Optimal amount of memory for this configuration - xxxd KB  
+		(MEMRMK only)
+		This informational message is printed only if the MEMRMK
+		parameter is defined > 0.  It can be useful in fine-tuning
+		memory usage.  It is not affected by the NBRK parameter.
+
+    PVCDF ALREADY DEFINED  
+		(TYMSAT+PVC only)
+		Multiple calls to the PVCDF macro have been made (see item
+		1.c).  Assembly continues, and the PVC parameters specified
+		in the last PVCDF macro override all previously specified 
+		default parameters.
+
+    PVCDF - AID REQUESTED, BUT NO TID SPECIFIED  
+		(TYMSAT+PVC only)
+		The AID option has been specified in a PVCDF macro, but the
+		required TIDn argument was not included (see item 1.c).
+    		Assembly continues.
+
+    PVCDF - ALO SPECIFIED, BUT NO SLO OR PCO  
+		(TYMSAT+PVC only)
+		ALO has been specified in the PVCDF macro, but neither SLO
+		nor PCO has been specified.  Either PCO or ALO must be
+		specified for all ALO ports (see item 1.c).  Assembly
+		continues.
+
+    PVCDF - PCO, SLO MUTUALLY EXCLUSIVE OPTIONS  
+		(TYMSAT+PVC only)
+		ALO has been specified in the PVCDF macro, and both PCO and 
+		SLO have also been specified.  Either PCO or SLO, but not
+		both, must be specified for ALO ports (see item 1.c).
+		Assembly continues.
+
+    PVCEX - ALO SPECIFIED, BUT NO SLO OR PCO  
+		(TYMSAT+PVC only)
+		See similar PVCDF error above.
+
+    PVCEX - PCO, SLO MUTUALLY EXCLUSIVE OPTIONS  
+		(TYMSAT+PVC only)
+		See similar PVCDF error above.
+
+    PVCEX - PORT ALREADY DEFINED  
+		(TYMSAT+PVC only)
+		A port number has been specified in more than one PVCEX 
+		macro.  Assembly continues, and the port is configured accor-
+		ding to the last PVCEX macro in which it was specified.
+
+    PVCEX - PORT NUMBER OUT OF RANGE  
+		(TYMSAT+PVC only)
+		A port number greater than 255d was specified in a PVCEX
+		macro (see item 1.c).  Assembly continues, but a PVC port
+		which was intended to have exception parameters may not
+		be properly configured.
+
+##  ***TTS NOT SUPPORTED***  
+		(TYMSAT only)
+		The TYMNET-I TYMSAT parameter TTS is not supported for the
+		T-II TYMSAT (see item 1.b).  ASSEMBLY FAILS.
+
+    ULMSG MUST BE LESS THAN 257 CHARACTERS!!  
+		(TYMSAT only)
+		The LTEXT macro was called with a message text of more than
+	        256d characters.  Assembly continues, but only the first 
+		256 characters of the message will be used.  (See TYMSAT.DOC).
+
+##  ** USE T2ICMD.R04 COMMAND FILE TO ASSEMBLE **
+    ** RELEASED T-II ISIS CODE, OR T2ICMD.T04  **
+    ** TO ASSEMBLE FIELD-TEST T-II ISIS CODE.  **
+    **     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!     **  
+		(ISIS only)
+		An attempt has been made to assemble Version 4.00 node code
+		explicitly (e.g., using	;ATII004.R00 in a .C00 file).
+		This is discouraged for reasons explained in section 3.e.
+		Instead use ;XT2ICMD.R04 or ;XT2ICMD.T04 as appropriate.  
+		ASSEMBLY FAILS.
+
+##  ** USE T2SCMD.R04 COMMAND FILE TO ASSEMBLE **
+    ** RELEASED T-II SOLO CODE, OR T2SCMD.T04  **
+    ** TO ASSEMBLE FIELD-TEST T-II SOLO CODE.  **
+    **     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!     **  
+		(SOLO only)
+		An attempt has been made to assemble Version 4.00 node code
+		explicitly (e.g., using ;ATII004.R00 in a .CMD file).
+		This is discouraged for reasons	explained in section 3.e.
+		Instead use ;XT2SCMD.R04 or ;XT2SCMD.T04 as appropriate.
+
+    Warning - NBRK not a multiple of 64d!  
+		(SOLO only)
+		The NBRK parameter (number of kilobytes of memory) was
+		defined incorrectly -- it should be a multiple of 64d
+		(and in some cases, of 128d).  Assembly continues.
+
+d.  Normal Assembly-Time Remarks:  The sequence of informational remarks
+				   printed during a normal (error-free)
+    assembly is illustrated below.  Several new remarks have been added,
+    and some revised, since version 3.21.  (See also the sample command
+    files listed in section 3.e.)
+
+    -R NAD
+    070681
+    ;X   ND9999.CMD 	<<< SOLO
+    <<<OR>>> 
+    ;X   ND9999.C00	<<< ISIS
+    
+    ;;Command File Header Information
+    ;;and Remarks
+    ;X   TIIINI.R04 	<<< This command file assembles the current 
+			<<< released Version 4 initialization file.
+    ;A   TII004.I00
+
+    End of assembly
+    ;A   ND9999.TYM	
+    
+    End of assembly
+    ;A   ND9999.PVC	<<< Only for TYMSAT with PVC.
+
+    End of assembly
+    1;F   ND9999.BND	<<< Opens the NIB file.  At this point, any existing
+    <<<OR>>>		<<< NIB file has been destroyed.
+    1;F   ND9999.N00
+
+    ;X   T2SCMD.R04	<<< SOLO released code (T2SCMD.T04 for field-test).
+    <<<OR>>>		
+    ;X   T2ICMD.R04	<<< ISIS released code (T2ICMD.T04 for field-test).
+
+    ;A   T2FILE.CMD     <<< This file is used to assure that the NIB file
+			<<< is written out properly.
+    End of assembly
+    ;X	 TII004.CMD	<<< This file references the current release of
+			<<< the Version 4 source code.
+
+    ;A    TII004.R00    <<< Source file.
+
+    NBRK not defined, assuming 256d KB	<<< See the comments on this
+					<<< warning in item 3.c above.
+    TYMNET-II Node Code
+
+    ISIS Node, version 4.00 --  Node 9999, Kernel host 999
+    <<<OR>>>
+    Stand-alone Remote, version 4.00 --  Node 9999, Kernel host 999
+    <<<OR>>>
+    Stand-alone Supervisor base, version 4.00 --  Node 9999, Kernel host 999
+    <<<OR>>>
+    Stand-alone Switcher, version 4.00 --  Node 9999, Kernel host 999
+    
+    16d sync lines and 4d SIO lines for 16d network links
+    
+    Number of dispatcher ports = 128d	<<< ISIS only.
+    Number of async ports = 128d, 12 ports specified as PVC   <<< TYMSAT only.
+    Number of passthroughs = 128d
+    Number of Supervisor ports = 64d	<<< Supervisor base only.
+    Number of Kernel ports = 3d		<<< ISIS only.
+    Number of XRAY ports = 3d		
+    Maximum number of circuits = 9999d
+
+    Bufferlet storage space = FFFFx bytes, 64d KB	<<< Bufferlet alloca-
+    xx bytes (y.zz bufferlets) per circuit allocated.	<<< tion sufficient.
+
+    <<<OR>>>
+							
+    Number of bufferlets allocated is insufficient.	<<< See comments on
+    56 bytes (4.00 bufferlets) per circuit desired,	<<< this warning in
+    49 bytes (3.52 bufferlets) per circuit allocated.	<<< item 3.c above.
+    **12 percent below optimal level, 5d KB additional memory required.
+    
+    Memory used for this configuration - 3F000x, 252d KB. <<< See item 3.c.
+
+    Optimal amount of memory for this configuration - 9999d KB. 
+						<<< This useful information is
+						<<< printed only if the MEMRMK
+						<<< Tymfile parameter is set.
+						<<< See item 3.a.
+
+    End of assembly		<<< SOLO NIB file is written out.
+    70;T			<<< All this is done by T2SCMD.R04.
+    PRIVBG,RANGE1;P
+    SEG1BG,SEG1RL,SEG1SZ;P
+    XRAYBG,XRAYRL,XRAYSZ;P
+    %P
+    %Q
+    EXIT
+    <<<OR>>>
+    End of assembly		<<< ISIS NIB file is written out.
+    SEG0,S0SIZE;P		<<< All this is done by T2ICMD.R04.
+    SEG1,S1SIZE;P
+    SEGD,SDSIZE;P
+    SEGF,SFSIZE;P
+    CTA,CTASIZE;P
+    %P
+    %Q
+    EXIT
+
+
+e.  New Command File Scheme:  Because of changes in memory usage, command
+			      files used to assemble previous versions of
+    T-II node code will not work with version 4.00.  To avoid potential
+    problems, a new command file structure has been implemented, as illus-
+    trated in the following examples:
+
+    ;;SAMPLE COMMAND FILE FOR VERSION 4.00 T-II SOLO NODE CODE
+    ;XTIIINI.R04   >>>> For current released version of initialization file.
+		   >>>> Use TIIINI.T04 for current field-test version.
+    ;AND9999.TYM
+    ;AND9999.PVC   >>>> Only if TYMSAT with PVC.
+    1;FND9999.BND
+    ;XT2SCMD.R04   >>>> For current released version of source file.
+		   >>>> Use T2SCMD.T04 for current field-test version.
+
+
+
+    ;;SAMPLE SLOT 0 COMMAND FILE FOR VERSION 4.00 T-II ISIS NODE CODE
+    ;XTIIINI.R04   >>>> For current released version of initialization file.
+	 	   >>>> Use TIIINI.T04 for current field-test version.
+    ;AND9999.TYM
+    1;FND9999.N00
+    ;XT2ICMD.R04   >>>> For current released version of initialization file.
+	 	   >>>> Use T2ICMD.T04 for current field-test version.
+
+
+    Note that neither the SOLO nor the ISIS version of the new command
+    file explicitly references the T-II initialization or source files.
+    Instead, the file TIIINI.R04 executes assembly of the latest release
+    of the initialization file.  And the files T2SCMD.R04 (for SOLO) and
+    T2ICMD.R04 (for ISIS) assemble the source code and properly write out
+    the NIB file.  Similarly, the TIIINI.T04, T2SCMD.T04, and T2ICMD.T04 
+    files reference the current field-test release of initialization and
+    source code.
+
+    One effect of this scheme is that command files will always implicitly
+    reference the current release (or field-test) Version 4 code; there
+    will be no need to update command files for new releases (though this
+    will still have to be done for new code versions).  Another effect of
+    this command file structure is that an existing NIB file is destroyed
+    when the new NIB file is opened **before** the source code starts to
+    assemble.  If assembly is subsequently aborted (<ESCAPE>'d or killed
+    due to fatal error), no NIB file will exist.
+    
+    The T2SCMD.R04 and T2ICMD.R04 files include a mechanism for verifying
+    that they were used to assemble the source code and write out the NIB
+    file.  ASSEMBLY WILL FAIL if they are not used.
+
+
+
+
+ 4. Supervisor/Network Communication Features
+    -----------------------------------------
+
+a.  New Reports to Supervisor:
+
+    19 - Node crash report
+
+		   Format is '0019 xxyy yyyy',
+		   where xx = crash id
+		         yy yyyy = crash address
+
+    1A - Report node resources: SIO and sync lines, XLINKS, NLINKS
+
+                   Format is '001A ssyy xxtt',
+                   where ss = 80 + number of SIO lines
+                         yy = 80 + number of sync lines
+                         xx = 80 + number of X-links
+                         tt = 80 + number of TII-links
+
+    1B - Report node resources: ports and passthroughs
+
+                   Format is '001B oooo aaaa',
+                   where oooo = 8000 + number of ports
+                         aaaa = 8000 + number of passthroughs
+
+    1C - Report node resources: unused lines
+
+                   Format is '001C bbbb bbbb',
+                   where bbbb bbbb is a bit array representing 32 possible
+                         lines, a 1-bit indicating the corresponding line
+                         has been used.
+    
+    1D - Report node resources: lines used (one report per line)
+
+		   Format is '001D' followed by:
+			  1 bit  of line type (0= sync, 1=SIO)
+			  1 bit  (1 if T-I link with WS8, else 0)
+			  1 bit  of link altitude (1 if satellite,
+			  	    0 if terrestrial)
+			  5 bits of link speed
+			  8 bits of line number (FF if not up)
+			  1 bit  of line status (1 if up, else 0)
+			 15 bits of neighbor node number
+
+    1E - Slot report limit exceeded (see 7.b)
+    
+    1F - Invalid host on restricted host node (see 7.b)
+    
+    20 - Slot/host limit exceeded (see 7.b)
+    
+    21 - Count of circuits zapped due to DLOAD
+    
+		Format is '0021 pppp tttt',
+		where pppp = 8000 + number of ports
+		      tttt = 8000 + number of passthroughs
+
+    22 - Invalid 03-character pair on command circuit
+
+		Format is '0022 FFFF 03cc',
+		where cc = the invalid second character
+
+    23 - Node took MAC error and recovered (see 5.a)
+
+		Format is '0023 aaaa aaaa',
+		where aaaa aaaa = address of MAC error
+
+    24 - 56KB Diagnostic - SIO timeout on output
+
+    25 - TYMSAT Diagnostic - Data on disabled async port
+
+		Format is '0025 pppp nnnn',
+		where pppp = 8000 + number of async cards
+			     8000 + async port number
+   
+    26 - Invalid 03- character pair on T-I command circuit
+   
+		Format is '0026 cccc nnnn',
+		where cccc = 8000 + second character of pair
+		      nnnn = 8000 + neighbor number
+
+    27 - T-I supervisor record with invalid length
+
+		Format is '0026 cccc llll',
+		where cccc = 8000 + second character of pair
+		      llll = 8000 + length
+    
+    28 - MAC interrupt caused by DMA hardware timeout
+
+
+b.  T-I UNTAKER Message: The UNTAKER message (type 0) is now sent by a
+			 T-II node to its downstream T-I neighbors when
+    a command circuit is lost.
+
+c.  PROBE PSTAT Command:  This command now displays physical port status
+			  based on the 'addendum to accounting' messages
+    sent to the supervisor for async ports.  See the example in section 1.e.
+
+
+
+
+ 5. Error-Handling Features
+    -----------------------
+
+An analysis of Version 3 node crashes over a period of several weeks showed
+that a small but fairly consistent proportion of them were caused by:
+1) intermittent (and often spurious) MAC errors, and 2) software-consistency
+errors of undetermined cause and very limited impact.  Changes have been made
+in Version 4 to handle these error conditions by taking action less drastic
+than crashing the node.  As a result, we expect to see fewer of certain types
+of crashes, with a corresponding increase in link snips (for example), as
+Version 4 is deployed.
+
+
+a.  MAC-Error Handling:  The MAC interrupt routine has been modified in
+			 two ways:
+
+    1. If the interrupt was for DMA-timeout (bit 24 of the MAC interrupt
+       status register is set), messages are sent to the supervisor log
+       and the CRYPTO log; the interrupt is otherwise
+       ignored.  If, however, more than one such interrupt is generated
+       in a four-minute period, the node will crash.  Normally, crash
+       action in this case will be dictated by the currently selected crash
+       option.  However, if the node is flooded with DMA-timeouts,
+       the node will halt (wait bar on) unconditionally.
+
+       Most MAC errors due to DMA-timeout appear to be essentially
+       non-recurring (i.e., a node will typically have one, then go
+       for weeks or months before another one occurs, if at all).
+       Since no real damage is caused by an ocassional DMA-timeout, 
+       there is no need to cause the node to crash unless the problem
+       becomes persistent.  On the other hand, a node which is exper-
+       iencing a flood of DMA timeouts will not recover from a crash
+       in any case, so halting the node makes the most sense.
+       
+       A MAC/DMA-timeout error generates a crash ID of '5' and a crash
+       address of '8E' (compared to '8' and '8A' for all other MAC
+       errors).
+
+    2. MAC errors other than DMA-timeout frequently occur for no
+       apparent reason.  These spurious MAC errors are typically very
+       intermittent (essentailly non-recurring).  The Tymfile parameter
+       MACERR enables a MAC ABEND facility which allows certain routines
+       in the code (e.g., RTD, RMAKE) to handle the error on their own
+       without crashing the node (e.g., by snipping a link).  In these
+       cases, the error, whatever its cause, can have no impact beyond
+       the link involved (which is snipped).  In these cases, if more
+       than one such error occurs within a four-minute period, the
+       error is treated in the normal way (see next paragraph).
+       
+       MAC errors which occur in areas of code which do not utilize
+       the ABEND facility cause the node to crash and action is taken
+       as dictated by the current crash option setting.
+       
+b.  Software-Detected Errors:  Software consistency checks in the node code
+			       have been revised to take the least drastic
+    action necessary and sufficient to recover from a detected error.  Thus,
+    instead of calling the OOPS crash routine, many of these checks have
+    been modified to snip a link or zap a circuit (as appropriate) instead.
+
+    It should be noted that the reasons for these errors have not been deter-
+    mined, and in several cases it is not clear that the problem is in the
+    code of the node that detects the error.
+
+c.  Link Snip Reason Codes:  When a link is snipped due to an error, the
+			     type of error is indicated by the following
+    codes:
+
+	01 - Split 00- or 01-character pair.
+	02 - Invalid 03-character pair.
+	03 - Split 03-character pair.
+	04 - Bad channel number detected in back-pressure record.
+	05 - Channel number out of range.
+	06 - ILC permuter table entry 0 for T-II neighbor.
+	07 - BPMV permuter table entry 0 for T-I neighbor.
+	08 - Unrecognized control record received.
+	09 - Shrink command from neighbor - no channels to shrink.
+	10 - Arrayand error - both bits not set.
+	11 - Arrayand error - channel out of range.
+	12 - Zero permuter table entry for active channel.
+	13 - BPSCNT zero.
+	14 - Buffer flag set for empty buffer.
+	15 - Attempt to build zero-length record.
+	16 - Recovery from MAC interrupt in RMAKE or RTEAR.
+
+
+d.  Crash-Handling Options:  Crash-handling logic now differentiates between
+			     software-consistency crashes (OOPS) and hardware-
+    detected crashes (MAC, illegal instruction, etc.).  One of the four pos-  
+    sible crash action options may be specified separately for the two types
+    of crashes using the Tymfile OPTION macro.
+
+    OPTION    
+    Argument  	Crash Action 
+    --------  	------------
+    NRSH	Restart on hardware crash. (DEFAULT)
+    NSTH	Stop on hardware crash (leave XRAY running).
+    NBTH	Go to boot on hardware crash.
+    NHTH	Halt (wait bar on) on hardware crash.
+
+    NRSS	Restart on software crash. (DEFAULT)
+    NSTS	Stop on software crash (leave XRAY running).
+    NBTS	Go to boot on software crash.
+    NHTS	Halt (wait bar on) on software crash.
+
+    For example, OPTION(NRSH,NBTS) will cause the node to restart on a 
+    hardware-detected crash and go to its boot on a software-detected
+    crash.  The default crash action option is to restart on either kind
+    of crash (NRSH,NRSS).
+    
+
+6. XRAY Enhancements
+   -----------------
+
+XRAY, the interactive monitoring and debugging system in TYMNET-II node
+code, has been extensively modified to improve its useability and usefulness.
+The new XRAY features are briefly summarized here; see the XRAY User's Guide
+(TIIDEV)XRAY.DOC for complete documentation of old and new features as well 
+as more information about XRAY in general.
+
+a.  Multi-User Access:  Several users can now be logged into remote XRAY
+    on a node at the same time.  Most XRAY commands execute concurrently for
+    multiple users (including the TTY port); the few which are not fully
+    concurrent issue a 'BUSY' message when they are already in use.
+
+    The maximum number of concurrent XRAY user slots on a node is defined
+    by a Tymfile parameter, NXUBLK, which defaults to 3 and which cannot
+    exceed 14d (see section 3.a on the NXUBLK parameter).  NXUBLK may be
+    defined < 1 (permitting no remote access to XRAY), but an assembly-
+    time warning is printed in this case.  Prohibiting remote access to
+    XRAY would make sense only for very special security reasons.  It might
+    be desireable to set NXUBLK > 3 for a node which is to run in a training
+    environment.  If NXUBLK is defined greater than the maximum allowed (14d),
+    an assembly-time warning is printed and the value is forced to 14d.
+    (NOTE: the NXUBLK parameter has no effect on local access to XRAY through
+    the TTY port.)
+
+    Each XRAY user slot requires 256d bytes of memory.
+
+    A user attempting to log into XRAY on a node in which all XRAY user
+    slots are already in use will receive the 'out of xray slots' message
+    when the circuit is zapped.  A user who is logged into XRAY may be
+    logged out with the message 'xray slot overridden', indicating that a
+    privileged user (or process) has preempted the user's XRAY port.  
+    
+b.  GMT Date/Time Format:  Node time is now displayed as ddd:hh:mm:ss (GMT).
+    This makes it possible to correlate time-stamped events in the CRYPTO
+    logs of various nodes with each other and with the PROBE log.  GMT time-
+    stamps are also used to mark the last time a node came up from a load,
+    the last time it came up from a crash, and the last time each of its
+    lines changed status (all on the 'ND' display).
+    
+    Node time is updated each time a node is taken over after a crash.  Field
+    tests indicate that this clock remains accurate to within a very few
+    seconds even in nodes which have been up continuously for long periods.
+    There are (rare) circumstances in which a node's clock might be ini-
+    tialized incorrectly by several seconds, or might drift significantly
+    after initialization.  If this happens, a privileged XRAY user can cause
+    the time to be re-initialized correctly.
+
+x.  Radix Compatibility:  All numeric values on XRAY displays now conform to
+    TYMNET conventions.  Node numbers, async port numbers, and code versions 
+    are displayed in octal; host numbers are decimal; channels numbers are hex.
+    Also, most elapsed time values which used to be displayed in FASTC ticks
+    (1/600 second) are now displayed in decimal milliseconds.  
+
+c.  Performance-Monitoring:  Statistics reflecting node efficiency and network
+    performance have been greatly expanded.  New fields in the 'NS' (Node
+    Statistics) and 'KS' (Link Statistics) displays show component delays (in
+    milliseconds) for data passing through a node.  The Delay Measurement
+    commands (DB, DD, DE) record the amount of time it takes for packets to
+    travel through a portion of the network.  
+
+d.  Local (TTY) XRAY:  XRAY can now be accessed via the TTY port on an ISIS
+    node.  This is accomplished by first logging into slot 0 through DDT
+    (which owns the TTY port under ISIS) and typing '?STAT'.  Hitting <BREAK>,
+    which  cancels XRAY output on a SOLO node, also returns the TTY port to 
+    DDT mode on an ISIS machine; typing '?STAT' returns control to XRAY.  A 
+    few XRAY commands cannot be executed through the TTY port on an ISIS node 
+    because of a potentially disastrous race condition that would arise 
+    between DDT and the node code.
+    
+    Local and remote XRAY users no longer interrupt each other's output when
+    typing <BREAK> and Control-C respectively.
+
+e.  New Commands:  The following new XRAY commands are now available (and
+		   are fully documented in XRAY.DOC):
+
+    'AS' displays (in detail) the status of async ports (one port, a range of
+         ports, all ports, or active ports only) on a TYMSAT.  'AZ' ini-
+	 tializes certain async high-water-mark statistics displayed by the 
+	 'AS' command.
+
+    'BS' displays statistics about bufferlet usage -- total bytes allocated,
+	 currently in use, and available; peak number of bytes in use; and a
+	 histogram of past usage scaled to the node's bufferlet pool size.
+
+    'CO' allows the privileged user to modify crash-handling options selected
+	 for either hardware or software crashes (see item 5.d).
+
+    'PV' displays the configuration of one or all PVC ports on a TYMSAT node.
+	 No more uncertainty about exactly what PVC options are selected.
+
+f.  CRYPTO Messages:  CRYPTO messages have been reformatted to make them
+		      easier to interpret.  Each message field is now labeled
+    and each message is time-stamped (ddd:hh:mm:ss) with GMT (plus a halfword
+    of FASTC).  A large number of new CRYPTO messages have been added (includ-
+    ing all node reports sent to the supervisor).  These messages are fully
+    documented in XRAY.DOC.
+
+
+
+
+ 7. ISIS-Related Features
+    ---------------------
+
+a.  MERLIN Parameter Edits:  Edits to assure compatibility between ISIS and
+			     and the node code have been incorporated into
+    Version 4 as specified in the following proposal:
+
+           PROPOSAL TO VERIFY ISIS SYSTEM CONFIGURATION PARAMETERS
+                            PRIOR TO SOFTWARE LOAD
+
+                                ROBBIE FORKISH
+                                 DAN LASATER
+
+         Because  ISIS   and  the  TYMNET-II   node  code   are  assembled
+    separately,  it  is possible  to  configure  them with  different  and
+    incompatible TYM file options.  When  this occurs, the system software
+    typically fails  in a very obscure  manner.  This proposal  outlines a
+    method whereby critical parameters such  as number of dispatcher ports
+    and number of slots can be verified  when the codes are being bound by
+    MERLIN.  The intention  is to insure that critical ISIS  and node code
+    options agree,  and to  provide for applications  slots to  have their
+    parameters verified also.
+
+         Each  process  will  define its  parameter  requirements  at  the
+    beginning of  segment 'F'.  The  segment 'F' critical  parameters area
+    consists  of 2  lists:   a list  of parameters  as  presented by  that
+    process's assembly; a list of required parameter values.  The critical
+    parameters area will reside in a fixed location in each slot's segment
+    'F', and will be formatted as follows:
+
+          2 bytes - count of parameter entries
+                6 bytes - P-symbol-name 1
+                2 bytes - P-symbol-value 1
+
+                6 bytes - P-symbol-name 2
+                2 bytes - P-symbol-value 2
+                      :
+                      :
+                      :
+
+          2 bytes - count of requirement entries
+                6 bytes - R-symbol-name 1
+                2 bytes - R-flags 1
+                2 bytes - R-value-A 1
+                2 bytes - R-value-B 1
+
+                6 bytes - R-symbol-name 2
+                2 bytes - R-flags 2
+                2 bytes - R-value-A 2
+                2 bytes - R-value-B 2
+                      :
+                      :
+                      :
+
+         16 bits of R-flags exist; 2 have been defined, as follows:
+                               RRRRRRRRRRRRRRCI
+    where
+           R = reserved for future expansion
+           C = CRITICAL  - if  1,  parameter  is critical  and  should
+              prevent binding operation from completing; if 0, warning
+              message  should be  issued by  MERLIN  but binding  will
+              complete.
+           I = IF-DEFINED - if 1, verify only if symbol defined; if 0,
+              undefined symbol is treated as if values did not compare
+              equal.
+
+         If the R-value-A  and R-value-B fields are  unequal, they specify
+    an inclusive  range of acceptable  values; otherwise, only  the single
+    value specified  in each is acceptable.   ISIS will define  all values
+    having to do with the machine's  configuration, such as: MICRO, NSLOT,
+    NKU, NPRINT, TII, etc.
+
+         The MERLIN  verification process  requires 2  passes.  The  first
+    pass gathers  the parameter entries made  by each process;  the second
+    pass  verifies those  entries against  process  requirements.  When  a
+    parameter verification  fails, MERLIN  will either  display a  warning
+    message or abort the binding operation,  depending on the value of the
+    C flag of the requirement entry.   There will be an initial transition
+    period when MERLIN will ignore the I  flag value and will consider all
+    requirements  as IF-DEFINED  (I flag  =  1); once  all processes  have
+    implemented the  critical parameters  in segment  'F', MERLIN  will be
+    changed to obey the I flag value.
+
+
+b.  Restricted Host Feature:  The Restricted Host feature described in the
+			      memo has been implemented:
+
+                     RESTRICTED HOSTS AND ACTIVITY LIMITS
+
+                                ROBBIE FORKISH
+
+     The restricted host feature of the  TYMNET-II node code provides for
+     host security and  host/slot activity throttling at  the nodal level
+     of the  network.  By  invoking up  to four  different macros  in the
+     node's TYM file, a  user may list the only valid  host numbers which
+     may come up on the node (all  other host numbers will be rejected by
+     the node); specify  the slot or slots  in which a host  may come up;
+     specify a limit on the number of circuits per minute originated by a
+     host; or specify a  limit on the number of circuits  or slot reports
+     originated by  a slot.  If  none of  the restricted host  macros are
+     invoked, the default  is no restrictions (which is the  case for all
+     existing released versions of node code).
+
+     GGHOST: specify legal host numbers
+
+     The GGHOST macro allows the user to specify a good-guy list of legal
+     host numbers for a node.  If this macro is not invoked, any host may
+     come up on a node.  If the GGHOST macro is invoked, only those hosts
+     listed in the macro are allowed to come  up on the node - all others
+     are rejected with the ISIS "host  unacceptable" message type 0B with
+     the 'err' field set  to 3.  If a host is rejected,  the node sends a
+     type 1F node report  to the sup log, with the aaaa  field set to the
+     slot number  plus 8000  and the bbbb  field set  to the  host number
+     being rejected plus 8000.
+
+     The GGHOST macro  accepts up to eight decimal host  numbers, and may
+     be decalred up to 32 times for a maximum of 256 restricted hosts.  A
+     host specified in the  GGHOST macro may come up on  any slot, unless
+     the HSTSLT macro is invoked for that host.
+
+     HSTSLT: specify host slot or slots
+
+     The HSTSLT macro allows  a user to specify up to  eight slots that a
+     host may come up in  (but it may be up in only one  slot at a time).
+     The first argument  in the HSTSLT macro is the  decimal host number,
+     which must  have been specified  in the  GGHOST macro.  Up  to eight
+     additional arguments  may be  specified which  are the  decimal slot
+     numbers for which  the indicated host is valid.  If  a host attempts
+     to come up on  a slot not specified in the HSTSLT  macro, it will be
+     rejected the  same as an illegal  restricted host (see  above).  The
+     maximum decimal  slot number which may  be specified is 31.   If the
+     HSTSLT macro is not invoked for a host,  the host may come up on any
+     slot.
+
+     HLIMIT: specify host limit
+
+     The HLIMIT  macro allows  a user  to specify  a circuits  per minute
+     limit for a host specified in  the GGHOST macro.  The first argument
+     for  the  HLIMIT macro  is  the  decimal  host number.   The  second
+     argument, in decimal,  is the maximum number of  circuits per minute
+     which  may be  originated by  this host.   If the  host attempts  to
+     exceed  this limit,  it will  receive  the ISIS  "unable to  provide
+     pseudo-needle" message type  09 with the 'err' field set  to 0.  For
+     each minute  that the host exceeds  its circuit building  limit, the
+     node will send a  type 20 node report to the sup  log, with the aaaa
+     field set to the slot number plus 8000 and the bbbb field set to the
+     originating host number plus 8000.
+
+     Note  that  all circuit  building  attempts  are counted,  not  just
+     successfully built circuits.  The HLIMIT and SLIMIT logic applies to
+     the combination of normal and aux  circuits.  If the HLIMIT macro is
+     not  invoked for  a  host, then  no  circuit  building limit  exists
+     (unless the SLIMIT macro is specified for the slot in which the host
+     resides - see below).
+
+     SLIMIT: specify slot limits
+
+     The SLIMIT  macro allows  a user  to specify  a circuits  per minute
+     and/or a slot  reports per minute limit for a  specified slot.  This
+     is the only one of the four macros which is keyed by slot number and
+     not by host number; the SLIMIT macro may be invoked without invoking
+     the GGHOST macro.
+
+     The  first  argument is  the  decimal  slot  number.  If  an  SLIMIT
+     declaration exists for  slot x, and a HLIMIT macro  has been invoked
+     for the  host in slot  x, then the values  of the HLIMIT  macro have
+     precedence over the values of the SLIMIT macro.
+
+     The  second argument,  if  present, defines  the  maximum number  of
+     circuits per  minute which may be  originated by this slot.   If the
+     second argument  is not  present or  the SLIMIT  macro has  not been
+     invoked, then there is no limit on the number of circuits originated
+     by the  slot (assuming  that no  HLIMIT macro  was declared  for the
+     slot's originating  host).  If an  SLIMIT circuit building  limit is
+     exceeded, the "unable to provide  pseudo-needle" message is returned
+     to the slot and a node report  is generated exactly as if the HLIMIT
+     circuit building limit had been exceeded (see above).
+
+     The third argument,  if present, defines the maximum  number of slot
+     reports per  minute which  may be  originated by  the slot.   If the
+     third  argument is  not present  or the  SLIMIT macro  has not  been
+     invoked,  then there  is  no limit  on the  number  of slot  reports
+     generated by  the slot.   If the  limit is  exceeded, no  message is
+     returned to the  offending slot - the node will  toss each excessive
+     slot report, and will  send one type 1E node report  to the sup log,
+     with the aaaa  field set to the  slot number plus 8000  and the bbbb
+     field set to the specified limit.
+
+
+
+
+8. SYNC/SIO Features
+   -----------------
+
+a.  SYNC/SIO Multi-Line Link Capability:  Multi-line links may now include
+					  both synchronous and V.35 (SIO)
+    lines.  A lock-out mechanism assures that the interrupt-driven sync
+    transmitter does not interfere with the SIO transmitter's updating of
+    the next-record-to-transmit field (which would result in packets being
+    "lost").
+    
+b.  32 Sync Lines Supported:  Up to 32 network sync lines may now be specified
+			      with the NLINES paramater.  
+
+c.  SIO Initialization on Boot:  The boot SVC (jump to 5A; SOLO only) now
+				 initializes all SIO lines, if any, before
+    going to the boot loader.  This prevents the SIO motherboards from corrup-
+    ting memory which the new code being loaded may want to use for executable
+    code.  Nodes with SIO can now be DLOADed and reloaded with new code 
+    without worry.
+
+
+
+
+9. Miscellaneous
+   -------------
+
+a.  Console Display:  The engine console displays a high-order 'A' when
+		      running SOLO switcher code, and a high-order 'B' when
+    running TYMSAT code.
+
+    A wait bar with a display of '8E' indicates the node was halted due to
+    continuous DMA-timeout interrrupts (see 5.a).
+    
+    A wait bar with a display of '90' indicates the machine halted due to
+    an illegal instruction during initialization.
+
+b.  Version Numbers:  
+
+	SOLO Switcher - 000vvv
+	SOLO Tymsat   - 200vvv
+	ISIS          - 100vvv
+
+c.  REBILD:  REBILD is not yet supported; however, the code is in place
+	     to recognize and handle the special REBILD character-pairs.
+ |@[Q
