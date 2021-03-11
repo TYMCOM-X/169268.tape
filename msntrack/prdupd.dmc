@@ -1,0 +1,129 @@
+!             PROGRAM:       (MSNTRACK)PRDUPD.DMC
+!             AUTHOR         Rob Nielsen
+!             DATE:          October 22, 1986
+!
+!             PURPOSE:       To update the PRDSUM.DMS data base to capture the
+!                  changes in two consecutive runs.
+!
+!             DESCRIPTION:   The program will open two copies of the PRDSUM
+!                  data base. The pseudocode goes as follows
+!
+!                  For each product in the most recent product run
+!                       Get the values of Slots, Hosts, and Nodes in DBSET 1
+!                       Map to DBSET 2 by Product
+!                            Get the record for the second most recent run
+!                                 If no records,
+!                                      Then mark the not found variable
+!                                      Else count the Slots, Hosts, and Nodes
+!                       Return the DBSET 1
+!                            If the not found variable is true
+!                                 Then mark the not found field to yes
+!                            Subtract old slots, etc. from new and assign to
+!                                 the appropriate difference attirbute
+!
+!             NOTATION:
+!                  ALL CAPS: File names, attribute names, & DPL reserved words
+!                  Mixed:    Variables, labels, and subroutines.
+
+
+
+             OPEN (MSNTRACK)PRDSUM.
+             APPEND (MSNTRACK)PRDSUM.DMI.
+             LET SYSCASE EQ 1.
+             FIND PRODUCT CT "CONSAT".
+!                 Assign an accounting host for each slot
+             CHANGE HOSTS SLOTS.
+             OPEN (MSNTRACK)PRDSUM (MSNTRACK)PRDSUM.
+
+             DPL START.
+             DBSET 1.
+             LET SYSCASE EQ 1.
+             DBSET 2.
+             LET SYSCASE EQ 1.
+
+             DEFINE INTEGER NewSlot OldSlot NewHost OldHost NewNode &
+                            OldNode CurrentDat.
+             DEFINE TEXT 1 NotFound.
+
+             DBSET 1.
+             FIND ALL.
+                  EVALUATE CurrentDat MAX (RUNDATE).
+             FIND RUNDATE EQ CurrentDat.
+             
+             SORT KEY PRODUCT.
+
+NextProdct:  DBSET 1.
+!                       Get the data for the most recent run
+             GETREC LastProdct.
+                  LET NotFound EQ "N".
+                  LET NewSlot EQ SLOTS.
+                  LET NewHost EQ HOSTS.
+                  LET NewNode EQ NODES.
+
+                  CALL LastReport.
+
+                  DBSET 1.
+                  CALL ChangeData.
+
+             GOTO NextProdct.
+
+
+LastProdct:      ! Set CONSAT hosts equal to CONSAT slots for difference count
+             FIND RUNDATE EQ CurrentDat AND PRODUCT CT "CONSAT".
+             CHANGE HOSTDIFF SLOTDIFF.
+
+             GOTO TheEnd.
+
+!             *************** SUBROUTINE LASTREPORT **********************
+
+LastReport:  DBSET 1.
+
+             LET OldSlot EQ 0.
+             LET OldHost EQ 0.
+             LET OldNode EQ 0.
+
+!                  Get the data for the next to last run
+             MAP TO 2 VIA PRODUCT TO PRODUCT.
+                  SORT BY RUNDATE DESCENDING.
+!                       Drop the first record but keep the second
+                  GETREC EndLastrpt.
+                  DROP.
+
+!                       If no previous records for this product, mark NotFound
+                  GETREC NotThere.
+                       LET OldSlot EQ SLOTS.
+                       LET OldHost EQ HOSTS.
+                       LET OldNode EQ NODES.
+                  GOTO EndLastRpt.
+
+NotThere:         LET NotFound EQ "Y".
+
+EndLastrpt:  RETURN.
+
+
+
+!             *************** SUBROUTINE CHANGEDATA **********************
+
+ChangeData:  DBSET 1.
+             IF NotFound CT "Y" GOTO NoHistory.
+                  CHANGE SLOTDIFF (NewSlot - OldSlot).
+                  CHANGE HOSTDIFF (NewHost - OldHost).
+                  CHANGE NODEDIFF (NewNode - OldNode).
+                  CHANGE FIRSTMONTH "N".
+             GOTO EndChgdata.
+
+NoHistory:        CHANGE SLOTDIFF 0.
+                  CHANGE HOSTDIFF 0.
+                  CHANGE NODEDIFF 0.
+                  CHANGE FIRSTMONTH "Y".
+             GOTO EndChgdata.
+
+EndChgdata:  RETURN.
+
+
+!             *************** END OF PROGRAM  **********************
+
+
+TheEnd:      DPL STOP.
+             DPL END.
+
