@@ -1,0 +1,3503 @@
+
+
+
+                REVISION LIST
+
+                MAY 21, 1984
+
+           1.  Troubleshooting guide created as an  offshoot  of  field
+               guide.
+
+   
+   
+
+
+                 **********FOR INTERNAL REFERENCE ONLY**********
+                 **********NOT FOR PUBLIC DISTRIBUTION**********
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  ISIS INTERFACE
+                              TROUBLESHOOTING GUIDE
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                 GEOFFREY M. LEE
+                  MAJOR INTERFACE QUALITY ASSURANCE AND TESTING
+                           NETWORK TECHNOLOGY DIVISION
+                                   MAY 21, 1984
+   ISIS INTERFACE TROUBLESHOOTING GUIDE                          Page 1
+   TABLE OF CONTENTS
+
+
+                                TABLE OF CONTENTS
+
+
+           SECTION  TITLE                                              PAGE
+           -------  -----                                              ----
+           
+           1.0  REFERENCES
+           
+           2.0  LOADING A SLOT
+           2.1    Loading With LOADII..................................2-1
+           2.1.1    Loading Through A Gateway..........................2-2
+           2.1.2    LOADII Errors......................................2-2
+           2.2    Loading The Node/Kernel Code.........................2-3
+           2.3    Slot - Node/Kernel Consolidation.....................2-3
+           
+           3.0  NAD COMMANDS TO READ AND TO WRITE
+           3.1    NAD Preliminaries To Reading And Writing.............3-1
+           3.2    NAD Commands Used To Read And To Interpret...........3-2
+           3.2.1    Localizing Modules.................................3-2
+           3.2.2    Reading PDP Memory In Hex..........................3-3
+           3.2.3    Reading PDP Memory In Instruction Mnemonics........3-4
+           3.2.4    Reading Engine Memory..............................3-5
+           3.2.5    Interpreting A Hex Address As A Label..............3-6
+           3.2.6    Interpreting A Label As A Hex Value................3-6
+           3.2.7    Convenient Shorthand Notations In NAD..............3-8
+           3.2.8    Displaying The PDP Image In ASCII..................3-8
+           3.3    NAD Commands Used To Write...........................3-9
+           3.3.1    Writing Into PDP Memory............................3-9
+           3.3.1.1    Inserting ASCII Into The PDP image...............3-9
+           3.3.2    Writing Into Engine Memory.........................3-10
+           3.3.2.1    Quick Write And Restore With NAD.................3-10
+           
+           4.0  USING NAD FOR LOADING, DEBUGGING, AND PATCHING
+           4.1    Loading..............................................4-1
+           4.1.1    Get The Image Binary And Symbol Table..............4-1
+           4.1.1.1    Freshly Generated Code...........................4-1
+           4.1.1.2    Previously Generated Code........................4-1
+           4.1.2    Build An Auxiliary Circuit To The Slot.............4-2
+           4.1.2.1    If The Circuit Must Be Built Through A Gateway...4-3
+           4.1.2.2    Auxiliary Circuit Rebuild........................4-4
+           4.1.3    Load The Slot With The Slot Load Command File......4-6
+           4.2    Generating A Source Listing..........................4-7
+           4.3    Slot Dumps...........................................4-8
+           4.3.1    Dumping A Slot.....................................4-8
+           4.3.2    Reading A Dump.....................................4-9
+           4.4    Debugging............................................4-9
+           4.4.1    Checking PDP Image/Engine Memory Correspondence....4-10
+           4.4.2    Evidence From The Crash Table......................4-10
+           4.4.2.1    Reading The Crash Table..........................4-10
+           4.4.2.2    Interpreting The Crash Table.....................4-11
+           4.4.2.3    Debugging With The Crash Table...................4-12
+           4.4.3    Evidence From ISIS DDT.............................4-13
+           4.4.4    Evidence From The ORING And IRING..................4-14
+           4.4.5    Debugging Switches.................................4-17
+   ISIS INTERFACE TROUBLESHOOTING GUIDE                          Page 2
+   TABLE OF CONTENTS
+
+
+           4.4.5.1    BUFTRC - Buffer Trace............................4-18
+           4.4.5.3    HDWTRC - Hardware Trace..........................4-18
+           4.4.6    Breakpoints........................................4-20
+           4.5    Patching.............................................4-22
+           4.5.1    Patching The PDP Image.............................4-22
+           4.5.2    Changing Engine Memory.............................4-23
+           4.5.3    Changing The NIB File..............................4-24
+           4.5.4    Creating A Patch File..............................4-25
+           4.5.5    Temporary Patches As A Debugging Aid...............4-28
+           
+           5.0  TROUBLESHOOTING GUIDE
+           5.1    NAD Error Messages...................................5-1
+           5.2    Slot Doesn't Load....................................5-1
+           5.3    Host Never Comes Up..................................5-2
+           5.4    Protection Violation.................................5-2
+           5.5    Dispatcher Crash.....................................5-2
+           
+           
+           Appendix A - NAD/DDT command summary
+           Appendix B - Hex to ASCII conversion chart
+           Appendix C - 2741 correspondence code conversion chart
+           Appendix D - Hex to EBCD conversion chart
+           Appendix E - Hex to EBCDIC conversion chart
+           Appendix F - Engine instruction summary
+           
+           Index
+
+
+
+
+
+
+
+
+
+
+
+
+                                CHAPTER 1
+
+                                REFERENCES
+
+
+
+
+
+
+                This document is kept in ()TGUIDE.DOC.
+
+                The following documents are used as references:
+
+
+           1.  (ISISDOC:25)TOOLS.DOC
+
+           2.  (ISISDOC:25)ISIS2.DOC
+
+           3.  (ISISDOC:25)ENGINE.DOC
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                CHAPTER 2
+
+                              LOADING A SLOT
+
+
+
+           2.1  LOADING WITH LOADII
+
+
+
+                Loading a slot with (NETCON)LOADII  is  done  with  the
+           slot  load  command,  followed  by  specifications  of  slot
+           number, NIB file name, and kernel host number.  For example,
+           to load slot 3 of node 664(whose kernel is 808) with the NIB
+           file  (TYMISIS)ND0664.N03,  something  like  the   following
+           sequence should occur:
+
+                   R(NETCON)LOADII
+           
+                   NODE LOADER VERSION- 2.01
+                   :S
+                   ENTER KERNEL HOST NUMBER:808
+                   BUILDING CIRCUIT TO KERNEL HOST  808
+                   CIRCUIT BUILT
+                   ENTER SLOT NUMBER:3
+                   ENTER FILE FOR SLOT:(TYMISIS)ND0664.N03
+                   INITIALIZING MAC
+                   TRANSMITTING SEGMENT 14
+                   SENDING DATA TO ADDRESS:xxxxxxxxxxxx BYTES=   xxxxx
+                   .
+                   .
+                   .
+                   SLOT 3 LOADED
+           
+                   EXIT
+
+           then LOADII would proceed to load  the  slot  and  start  it
+           before  it  exits.   Do not disturb LOADII once it has built
+           the circuit and has started to send data.
+   LOADING A SLOT                                              Page 2-2
+   LOADING WITH LOADII
+
+
+           2.1.1  LOADING THROUGH A GATEWAY
+
+                Loading a slot through a gateway looks very similar  to
+           loading  a  slot  in  the  regular  manner.  Some additional
+           information is needed, however.  One must know  the  gateway
+           host  number  and  the  password to get through the gateway.
+           Suppose the gateway host number is 171.   Then  loading  the
+           node in the previous example looks something like this:
+
+                   R(NETCON)LOADII
+           
+                   NODE LOADER VERSION- 2.01
+                   :G
+                   ENTER GATEWAY HOST:171 
+                   ENTER PASSWORD FOR EXTERNAL NET: (echo suppressed)
+           
+                   :S
+                   ENTER KERNEL HOST NUMBER:808
+                   CIRCUIT TO GATEWAY BUILT
+                   CIRCUIT BUILT
+                   ENTER SLOT NUMBER:3
+                   ENTER FILE FOR SLOT:(TYMISIS)ND0664.N03
+                   INITIALIZING MAC
+                   TRANSMITTING SEGMENT 14
+                   SENDING DATA TO ADDRESS:xxxxxxxxxxxx BYTES=   xxxxx
+                   .
+                   .
+                   .
+                   SLOT 3 LOADED
+           
+                   EXIT
+
+
+
+           2.1.2  LOADII ERRORS
+
+                If for  some  reason  LOADII  has  trouble  building  a
+           circuit,  it will say it is going to wait for some period of
+           time and then it will wait.  If one wishes to  leave  LOADII
+           instead  of  waiting,  this  wait  period  is a good time to
+           leave.  Type escape or control-C a few times to exit.
+
+                An  error  response  from  LOADII  will  sometimes   be
+           followed  by  an  error  type in octal.  The following table
+           explains some of the types(See the ISIS-II document appendix
+           for  a  full  list.   See  also  TOOLS  document  section on
+           LOADII.).
+
+   LOADING A SLOT                                              Page 2-3
+   LOADING WITH LOADII
+
+
+                ERROR TYPE: OCTAL HEX      MEANING
+                ---------------------      -------
+                             22   12       Parity error
+                             26   16       Slot already connected
+                             27   17       Illegal instruction in
+                                           controlled code
+                             31   19       Dispatcher crash
+                             34   1C       Aborting
+                             35   1D       Insufficient license
+                             36   1E       Frozen!
+                             37   1F       MAC not set up correctly
+                             40   20       Aborting--available space
+                                           exceeded
+
+
+
+
+           2.2  LOADING THE NODE/KERNEL CODE
+
+                The node/kernel code is loaded with LOADII using the  L
+           command.   LOADII then prompts for neighbor and line numbers
+           and NIB(object) file name.  The procedure  is  the  same  as
+           that used for Varians.  
+
+
+
+
+           2.3  SLOT - NODE/KERNEL CONSOLIDATION
+
+                Once a slot configuration has been finalized, it can be
+           bound  to  the  node/kernel  code  with MERLIN(See the TOOLS
+           document).  Then a reload of the node with  the  bound  file
+           will automatically load the slot.
+
+
+
+
+
+
+
+
+
+
+
+
+                                CHAPTER 3
+
+                  NAD COMMANDS USED TO READ AND TO WRITE
+
+
+
+                First,  there   are   some   preliminaries   to   cover
+           typographical errors.
+
+
+
+           3.1  NAD PRELIMINARIES TO READING AND WRITING
+
+                Any hex number to be passed to NAD that starts with  an
+           alphabetic   character  should  be  prefixed  with  a  zero;
+           otherwise, NAD will try to interpret the number as a label.
+
+                In case of  a  typing  error  a  single  character  can
+           usually  be  deleted  with a delete if you are using the PDP
+           executive or control-A if you are using the  TYM  executive.
+           This  procedure  will  delete  characters only up to but not
+           including   the   first   non-alphanumeric   character    it
+           encounters.
+
+                Similarly, a control-U  (PDP  executive)  or  control-Q
+           (TYM  executive)  will delete all characters up to the first
+           non-alphanumeric character.
+
+                To delete the entire line or command, type ?   and  NAD
+           should  respond with ?  of its own.  Occasionally, more than
+           one ?  is needed.
+
+                If NAD seems to have passed a bad command to ISIS  DDT,
+           DDT  will  request a \.  Respond to this with a :\ to insure
+           that NAD will send the \ to DDT.  The \ restarts DDT.
+
+                When connected to a slot, remember that many  of  NAD's
+           commands  are  only  two  characters  long and do not need a
+           carriage return to terminate the command.  A small typo  can
+           go a long way.  Common typos with cures are the following:
+
+           1.  :A -  This  makes  the  entire  slot  one  MAC  segment.
+               Accidentally type this and you can recover by typing
+   NAD COMMANDS USED TO READ AND TO WRITE                      Page 3-2
+   NAD PRELIMINARIES TO READING AND WRITING
+
+
+                    :H::?LMAC<carriage return>
+
+                    :E
+
+           2.  :H - The slot just halted.  Start it up again with :E.
+
+           3.  :P - DDT proceeds from a  breakpoint,  meaning  it  just
+               strolled into the sunset.  Call it back with %C.
+
+
+                Most of the others will eventually be cured with :\.
+
+                The %C mentioned above will restart DDT.  It  basically
+           sends a control-C to DDT.
+
+                In a similar manner %O sends  a  control-O  to  DDT  to
+           flush output from the Engine to the terminal.  This is handy
+           if you no longer wish to view the remaining output from  the
+           Engine.
+
+
+
+           3.2  NAD COMMANDS USED TO READ AND TO INTERPRET
+
+                NAD may be used to examine the PDP  image  of  the  NIB
+           file  in  hex  or  in instruction mnemonics.  It may also be
+           used to read the contents of Engine memory.
+
+                In all cases symbolic references may be used instead of
+           numerical  references.   If,  in  using a symbol known to be
+           legitimate, NAD replies with "Undefined not allowed", it may
+           be because the symbol is local to a particular module.
+
+
+
+           3.2.1  LOCALIZING MODULES
+
+                To localize the symbols in a module, first identify the
+           module by finding the instruction
+
+                                MODULE(modulename)
+           or
+                                MO    .,modulename
+
+           in the listing that precedes the symbol  that  needs  to  be
+           localized.  Then type
+
+                         LO modulename<carriage return>
+
+           to localize all symbols from  that  module.   NAD  will  not
+           prompt after this command.
+   NAD COMMANDS USED TO READ AND TO WRITE                      Page 3-3
+   NAD COMMANDS USED TO READ AND TO INTERPRET
+
+
+                The reverse procedure  may  be  accomplished  with  the
+           command
+
+                         FO modulename<carriage return>
+
+
+
+           3.2.2  READING PDP MEMORY IN HEX
+
+                To examine a single halfword in hex, type
+
+                                    location[
+
+                To view successive locations, type linefeeds.
+
+                To examine a range of halfwords in hex, type
+
+                            startlocation,endlocation[
+
+
+
+                If       endlocation < startlocation    ,   endlocation
+           will  be  interpreted as the number of bytes to be displayed
+           instead of the last location to be displayed.  
+
+
+                EXAMPLE:  To read the second halfword in the host  name
+           table HNT, type
+                                      HNT+2[
+
+           EXAMPLE:  To read the first  10x  bytes  of  the  host  name
+           table, type
+                                   HNT,HNT+10[
+
+
+                EXAMPLE:  To read 10x bytes starting at  location  HNT,
+           type
+                                     HNT,10[
+
+
+                NAD will display the memory location  followed  by  the
+           contents of that location in the PDP image, one location per
+           line.
+
+                More than one location can be displayed per  line  with
+           the command
+
+                                      p,q%2
+
+           This command will print q halfwords in q columns,  each  p+1
+           characters wide.
+   NAD COMMANDS USED TO READ AND TO WRITE                      Page 3-4
+   NAD COMMANDS USED TO READ AND TO INTERPRET
+
+
+                A default may be taken with the command
+
+                                       q%2
+
+           in which p = 4 is assumed.
+
+                A printout similar to the  display  seen  when  reading
+           Engine memory can be obtained with the command
+
+                                       8%2
+
+           A more efficient use of space will be obtained with
+
+                                       10%2
+
+
+                The  fullword  display  command   p,q%4   has   similar
+           characteristics, with a default of p = 8.
+
+                Normal printout will resume with the command
+
+                                    0%2 or 0%4
+
+           This will  be  necessary  in  order  to  obtain  uncorrupted
+           displays of instruction mnemonics.
+
+
+
+                3.2.3  READING PDP MEMORY IN INSTRUCTION MNEMONICS
+
+                To examine the instruction  at  a  particular  location
+           (which may be a label plus a displacement), type
+
+                                    location]
+
+                If NAD finds no recognizable instruction there, it will
+           reply "OPFLOP".
+
+                To view successive locations, type linefeeds.
+
+                To  examine  the  instrns  within   a   range   of
+           addresses, type
+
+                            startlocation,endlocation]
+
+
+
+                If       endlocation < startlocation    ,   endlocation
+           will  be  interpreted as the number of bytes to be displayed
+           instead of the last location to be displayed.  
+
+
+                EXAMPLE:  To examine the instruction in PDP  memory  at
+           location ICN095+0E, type
+   NAD COMMANDS USED TO READ AND TO WRITE                      Page 3-5
+   NAD COMMANDS USED TO READ AND TO INTERPRET
+
+
+                                    ICN095+0E]
+
+           EXAMPLE:  To examine all  instructions  between  ICN095  and
+           ICN096 in PDP memory, type
+
+                                  ICN095,ICN096]
+
+           EXAMPLE:  To examine 10x bytes of instructions  starting  at
+           ICN095 in PDP memory, type
+
+                                    ICN095,10]
+
+
+           NOTE:  Sometimes the instructions NAD prints out will not be
+           exactly  the  same as those in the listing.  Oftentimes this
+           is because NAD has referenced some other  symbol.   One  can
+           use  the  #  command  to  determine  if  the two symbols are
+           equivalent.  It should not be surprising  when  NAD  chooses
+           the  wrong  symbol.  It has no knowledge of the structure of
+           the listing;  it simply uses whatever symbol is available.
+
+
+
+           3.2.4  READING ENGINE MEMORY
+
+                To read a number of bytes from the  Engine  starting  a
+           particular address, type
+
+                   :R startaddress,bytecount<carriage return>
+
+           NOTE:  If the label used as the start address begins with an
+           R,  be sure to use a blank to separate the :R from the start
+           address.  The reason for this is that :RR is the command  to
+           read  a  particular  REGISTER,  which  is  probably  not the
+           intended interpretation.
+
+
+           EXAMPLE:  To read 10 (hex) bytes of the host name table HNT,
+           type:
+
+                           :R HNT,10<carriage return>
+
+           EXAMPLE:  To read 10 (hex) bytes of the array RING, type
+
+                          :R RING,10<carriage return>
+
+
+                When trying to  read  large  sections  of  memory,  the
+           Engine  may  send data to the PDP faster than NAD can handle
+           it, resulting in a data loss.  To avoid this, run NAD in PDP
+           mode  and  preface  the login line to the kernel host with a
+           control-A;  e.g.,
+
+                  ;C   ^Ausername:kernelhost<carriage return>
+   NAD COMMANDS USED TO READ AND TO WRITE                      Page 3-6
+   NAD COMMANDS USED TO READ AND TO INTERPRET
+
+
+           This sets the circuit speed to 300 baud, slowing  down  data
+           transmission  enough  to  avoid  overwhelming NAD.  However,
+           this will also slow transmission TO  the  Engine,  so  avoid
+           loads  and  long  data block transfers to the Engine in this
+           state(unless you have LOTS of time to spare).  
+
+
+
+           3.2.5  INTERPRETING A HEX ADDRESS AS A LABEL
+
+                To  convert  a  hex  address  into  a  label   plus   a
+           displacement, type
+
+                                    address_
+
+                Leading zeros may be omitted  if  the  first  digit  is
+           numerical.
+
+
+           EXAMPLE:   To  find  the  label  associated   with   address
+           000135D4, type
+                                     135D4_
+
+
+                If NAD reports a label plus a  large  displacement  and
+           the  source  listing indicates a closer label that NAD might
+           have used but did not,  it  may  be  because  NAD  used  the
+           nearest  global  label  it  had  and was not aware of labels
+           local  to  that  particular  module.   In  this   case   the
+           appropriate  module  should  be  determined and localized to
+           make the displacement small enough to pinpoint the location.
+
+
+
+           3.2.6  INTERPRETING A LABEL AS A HEX VALUE
+
+                To convert a label to its hex value, type
+
+                                     label#
+
+
+           EXAMPLE:  To find the hex value of ICN095+0E, type
+
+                                   ICN095+0E#
+
+
+                Note that this command may be used to make NAD act as a
+           calculator.  To calculate the value of an expression, merely
+           type the  expression  followed  immediately  by  a  #.   The
+           following operations may be performed:
+
+   NAD COMMANDS USED TO READ AND TO WRITE                      Page 3-7
+   NAD COMMANDS USED TO READ AND TO INTERPRET
+
+
+                   OPERATION       INTERPRETATION
+                   ---------       --------------
+                   +R              R
+                   -R              minus R
+                   @R              one's complement of R
+                   L^R             L shifted left R places
+                                   (R negative is a shift right)
+                   L*R             L times R
+                   L/R             L divided by R(no remainder)
+                   L+R             L plus R
+                   L-R             L minus R
+                   L&R             L and R
+                   L!R             L or R
+
+                See the TOOLS document for a more detailed  explanation
+           of the operators and their precedence.
+
+
+           EXAMPLE:  Suppose the number of bufferlets as defined in the
+           listing   of   an   interface  is  Q1*NHPORT,  where  Q1  is
+           (NCBUF+5)/6.  To determine the number of  bufferlets  for  a
+           particular interface, type
+
+                              ((NCBUF+5)/6)*NHPORT#
+
+           and the value will be given in the default radix.
+
+                Initially  the  default  radix  is  hexadecimal.    The
+           default may be changed with the command
+
+                             RA n<carriage return>
+
+           where n is the desired radix, represented by  a  hex  number
+           between  0 and 0F.  This remains in effect until the next RA
+           command.
+
+
+                The current radix may be set with the command
+
+                                        $n
+
+           where n is a hex value between 0 and  F.   0  will  set  the
+           radix  to  16;   the  others will set the radix as expected.
+           Once the radix has been set by this command, the numbers  on
+           the  current line will be interpreted as being in this radix
+           until the radix is changed or a carriage  return  is  typed.
+           The  last radix set determines the radix of the final value,
+           although after a carriage return the radix  reverts  to  the
+           default radix.
+
+                These  commands  allow  one  to  use  NAD   for   radix
+           conversions  by  terminating  an expression with the desired
+           current radix setting.
+   NAD COMMANDS USED TO READ AND TO WRITE                      Page 3-8
+   NAD COMMANDS USED TO READ AND TO INTERPRET
+
+
+           EXAMPLE:  To convert the calculation in the previous example
+           to the decimal radix, type 
+
+                             ((NCBUF+5)/6)*NHPORT$A#
+
+           EXAMPLE:  To perform the same calculation  in  octal  before
+           converting to the decimal radix, type 
+
+                            $8((NCBUF+5)/6)*NHPORT$A#
+
+           Note that until a carriage return or until the current radix
+           is  specifically changed, the working radix will continue to
+           be decimal.
+
+
+
+
+           3.2.7  CONVENIENT SHORTHAND NOTATIONS IN NAD
+
+                Two shorthand notations may be used to make  NAD  usage
+           more convenient.
+
+
+           
+                   .       Denotes last PDP image location read
+           
+                   \       Denotes current display mode
+           
+
+
+           EXAMPLE:  The consecutive commands
+
+                                       DTR[
+                            :R .,2<carriage return>
+
+           will display the first halfword of the DTR array in the  PDP
+           image  and  read  the first halfword of the DTR array in the
+           Engine, respectively.
+
+           EXAMPLE:  The consecutive commands
+
+                                       DTR[
+                                       .\
+
+           will display the same location in PDP  memory  in  the  same
+           manner.
+
+   NAD COMMANDS USED TO READ AND TO WRITE                      Page 3-9
+   NAD COMMANDS USED TO READ AND TO INTERPRET
+
+
+           3.2.8  DISPLAYING THE PDP IMAGE IN ASCII
+
+                To display the PDP image in ASCII, do the following:
+
+           1.  Set the current display mode to ASCII with ;"
+
+           2.  Display locations with \
+
+
+
+           EXAMPLE:  To display the beginning of the host name table in
+           ASCII, type
+
+                                 ;" HNT,HNT+10\
+
+
+
+
+
+           3.3  NAD COMMANDS USED TO WRITE
+
+           3.3.1  WRITING INTO PDP MEMORY
+
+                To write into PDP memory, merely examine  the  location
+           in  the  mode  desired,  then type the new contents for that
+           location followed by a carriage return.  If the new contents
+           are  acceptable,  NAD will make no comment.  If NAD does not
+           like the new contents, it will give an appropriate  comment.
+           In many cases objections are due to misspellings or the need
+           to localize a module.  The location may be  reexamined  with
+           "." for convenience.
+
+                Successive changes may be made by using a linefeed  for
+           a terminator instead of a carriage return.
+
+                It is important to realize that changing the PDP  image
+           in  this  manner  does NOT change Engine memory and does NOT
+           change the original NIB file.  It is possible to convey  PDP
+           changes  to  the  Engine  and  to  the  NIB  file, but other
+           commands must be used.
+
+
+
+           3.3.1.1  INSERTING ASCII INTO THE PDP IMAGE
+
+                If one wants to insert an ASCII string into PDP memory,
+           the   procedure   is  as  above,  but  with  two  additional
+           restrictions:
+
+           1.  The string must be prefixed  with  a  "  (single  double
+               quote), and
+   NAD COMMANDS USED TO READ AND TO WRITE                     Page 3-10
+   NAD COMMANDS USED TO WRITE
+
+
+           2.  The string must be bracketed by some character (e.g.,  a
+               /).
+
+
+           EXAMPLE:  To insert a message at location  LSMS0+1,  do  the
+           following:
+
+           1.  Check the message already in the PDP image to make  sure
+               the correct location is being examined.
+
+                    ;"   LSMS0+1,LSMS0+41\
+                    LSMS0+1\
+                    LSMS0+3\   pl
+                    LSMS0+5\   ea
+                       .
+                       .
+                       .
+
+           2.  Insert the ASCII string.
+
+                    LSMS0+1\   "/The quick brown fox /<linefeed>
+                    LSMS0+21\   id   "/jumped over /<linefeed>
+                       .
+                       .
+                       .
+
+               This may be continued for as long as necessary.
+
+
+
+
+           3.3.2  WRITING INTO ENGINE MEMORY
+
+                To write into Engine memory, the :W  command  is  used.
+           The  best  way to make a change in Engine memory is to first
+           change the corresponding area in PDP memory, then convey the
+           change  to  the Engine.  This is done with an instruction of
+           the form
+
+                            startlocation,bytecount:W
+
+           The data will be sent as  soon  as  the  :W  is  typed.   No
+           carriage  return is needed, so be sure the location and byte
+           count are correct before the W is typed.
+
+                NAD  will  reply  "Data   sent   and   received"   upon
+           completion.
+
+
+           EXAMPLE:  Suppose the instruction at location ICN095+0E  has
+           been changed in the PDP memory.  This change may be conveyed
+           to the Engine with the command
+
+                                  ICN095+0E,10:W
+   NAD COMMANDS USED TO READ AND TO WRITE                     Page 3-11
+   NAD COMMANDS USED TO WRITE
+
+
+           EXAMPLE:  Suppose the halfword at location  HNT+8,  a  table
+           value,  has  been changed in the PDP image.  This change may
+           be transferred to the Engine with
+
+                                    HNT+8,2:W
+
+
+
+           3.3.2.1  QUICK WRITE AND RESTORE WITH NAD
+
+                A single word of memory may be changed with a  slightly
+           different form of the :W command.  The command has the form
+
+                   :W location,fullwordofhex<carriage return>
+
+           This will place a FULL WORD of hex starting at  a  specified
+           location in Engine memory WITHOUT modifying the PDP image.
+
+           NOTE:  "fullwordofhex" may be any  expression  that  NAD  is
+           capable of evaluating.  
+
+                The important implication is that the location  may  be
+           restored  without  recording  the original contents, AND the
+           location may be restored quickly.  This  is  very  important
+           when debugging on a customer machine.
+
+           BE VERY CAREFUL WHEN USING THIS FORM OF THE WRITE COMMAND!
+
+           Also see the section on temporary patches in chapter  7  for
+           quick change/restore.
+
+
+           EXAMPLE:  To install a halt at location ICN095+8, first make
+           sure the PDP image matches the Engine memory.  Then type
+
+                         :W ICN095+8,0<carriage return>
+
+           and wait for the crash table  to  change.   Quickly  restore
+           with
+
+                                   ICN095+8,4:W
+
+
+           NOTE:  If the location label begins with an R,  be  sure  to
+           use  a  space  separator  with the :W command;  that is, use
+           :W Rxxx, where Rxxx represents the label.  This is to  avoid
+           confusion with the Write Register command :WR.
+
+
+           EXAMPLE:  To install a  halt  at  RINGUP,  check  PDP/Engine
+           correspondence, then type
+
+                          :W RINGUP,0<carriage return>
+   NAD COMMANDS USED TO READ AND TO WRITE                     Page 3-12
+   NAD COMMANDS USED TO WRITE
+
+
+           and wait for the crash table  to  change.   Quickly  restore
+           with
+
+                                    RINGUP,4:W
+
+
+
+
+
+
+
+
+
+
+
+
+                                CHAPTER 4
+
+              USING NAD FOR LOADING, DEBUGGING, AND PATCHING
+
+
+
+
+           4.1  LOADING
+
+                An  alternate  method  of   loading   uses   NAD   more
+           vigorously(See the Tools and ISIS-II documents).
+
+                AUXILIARY CIRCUIT LICENSE MUST BE SET BEFORE USING  NAD
+           TO LOAD.
+
+                One should keep in mind that NAD does not need carriage
+           returns  for  most  of  its  character  pair  commands,  and
+           carriage returns are used mainly to avoid ambiguity.  
+
+
+
+
+           4.1.1  GET THE IMAGE BINARY AND SYMBOL TABLE
+
+                The method of getting the image binary and symbol table
+           will  depend  upon whether the code is about to be generated
+           or whether it was generated some time in the past.
+
+
+
+           4.1.1.1  FRESHLY GENERATED CODE
+
+                If the code is being freshly generated, follow the code
+           generation procedures used before.  When NAD finishes it may
+           be reentered  by  typing  REE<carriage  return>  immediately
+           afterwards.
+
+
+
+
+           4.1.1.2  PREVIOUSLY GENERATED CODE
+
+                If the NIB file has already been generated, proceed  as
+           follows:
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING              Page 4-2
+   LOADING
+
+
+                First, run NAD.  Designate the current  NIB  file  with
+           the command
+
+                         %Fnibfilename<carriage return>
+
+           WARNING:  DO NOT USE ;F BY MISTAKE.  This command will  give
+           you  the  opportunity  to  wipe out the NIB file designated;
+           i.e., the one you wanted to open.
+
+                NAD prompts with a linefeed.
+
+
+                Read in the symbol table and binary image with  %G;G(no
+           carriage  return!).   NAD  responds  with a carriage return,
+           linefeed and a list of data ranges:
+
+           EXAMPLE:  For node 664, slot 3,
+           
+              R(ISIS)NAD
+              042180
+              %F   ND0664.N03<carriage return>
+           
+              %G;G
+           
+              Data ranges read:
+              0-119B 10000-1472B 30000-30743 40000-404F5 0E0000-0E012D
+
+
+
+
+           4.1.2  BUILD AN AUXILIARY CIRCUIT TO THE SLOT
+
+                Build an auxiliary circuit to the  kernel  host  number
+           with  the  command  ;C  immediately  followed by a user name
+           valid on that machine ___________ followed by  a  colon  and
+           the kernel host number<carriage return>.  NAD will provide 3
+           spaces after the ;C.
+
+                After a circuit is built, NAD states  the  node  number
+           and kernel host number.  Be sure to verify these numbers are
+           the ones with which you expect to  be  working;   otherwise,
+           you  could  be disturbing a slot belonging to somebody else.
+           If you get some response other than the node and kernel host
+           numbers,  it is possible you have reached a non-ISIS machine
+           and that a mistake has been made somewhere.
+
+                After stating the node and kernel  host  numbers,  ISIS
+           will  ask  for  the  slot number desired.  Reply with ;Rss/,
+           where ss is a two digit (hex) slot number.  Alphabetic  slot
+           numbers  should  be  capitalized.   NAD will give an * for a
+           prompt.
+
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING              Page 4-3
+   LOADING
+
+
+           EXAMPLE:  For node 664 with kernel host 808 and target  slot
+           slot 3,
+           
+                   ;C   xxxxxxxx:808<carriage return>
+                   Working
+                   Circuit Ready
+                   node: 664
+                   host: 808
+                   slot #: ;R03/
+           
+                   *
+
+
+
+
+           4.1.2.1  IF THE CIRCUIT MUST BE BUILT THROUGH A GATEWAY
+
+                If the circuit must be built  through  a  gateway,  the
+           procedure  is  slightly different.  First build a circuit to
+           the gateway  using  a  name  valid  on  that  machine  whose
+           password  you  know.  You will be informed when the link has
+           been established.  When the login is requested, type
+
+             ::username:kernelhostnumber;password<carriage return>
+
+           where the username is  the  same  name  used  to  reach  the
+           gateway.
+
+                Until the slot # prompt is received, each line sent  to
+           the gateway through NAD should be prefixed with ::  .
+
+           EXAMPLE:  For node 664, kernel 808, slot 3, through  gateway
+           host 171, 
+           
+                   ;C   xxxxxxxx:171<cr> (if 171 is the gateway host)
+                   Working
+                   Circuit Ready
+           
+                   inter-link established from TYMNET to xxxxxxxx
+                   please log in: ::xxxxxxx:808
+           
+                   password:
+                   ::xxxxxxx<cr>
+           
+                   node: 664
+                   host: 808
+                   slot #: ;R03/
+           
+                   *
+
+           WARNING:  THE PASSWORD WILL BE PRINTED  during  kernel  host
+           login.   This  may  be overcome on hardcopy terminals by not
+           typing the password on the login line.  Simply terminate the
+           login line after the host number, and let the gateway prompt
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING              Page 4-4
+   LOADING
+
+
+           for the password.  In doing so, it should blacken  the  area
+           that  will  receive  the password.  When this is done, enter
+           the password (The password must also be prefaced by :: .).
+
+           NOTE:  If the ::  does not work  as  expected  (e.g.,  if  a
+           space is embedded in the expression being sent), one may use
+           the %R instruction to relay an ASCII string to  the  Engine.
+           The  %R  instruction  must  be  terminated with an escape or
+           control-C, depending on whether one is using  the  XEXEC  or
+           PDP  monitor.   Everything  between the %R and the escape or
+           control-C will be sent in ASCII to the Engine.  
+
+                When using %R in building a circuit through a  gateway,
+           be  sure  to  remember to terminate with escape or control-C
+           before typing ;R to designate the slot  number;   otherwise,
+           the ;R command will not be interpreted correctly.  
+
+           EXAMPLE:  For node 664, kernel 808, slot 3, through  gateway
+           host 171, 
+           
+                   ;C   xxxxxxxx:171<cr> (if 171 is the gateway host)
+                   Working
+                   Circuit Ready
+           
+                   inter-link established from TYMNET to xxxxxxxx
+                   please log in: ::xxxxxxx:808
+           
+                   password:
+                   %Rxxxxxxx<cr>
+           
+                   node: 664
+                   host: 808
+                   slot #: <escape or control-C>;R03/
+           
+                   *
+
+
+
+           4.1.2.2  AUXILIARY CIRCUIT REBUILD
+
+                If an aux circuit to  a  slot  is  accidentally  broken
+           (e.g.,  if  an  intermediate  node  goes  down),  it will be
+           necessary to rebuild a circuit to that slot.  There  may  be
+           some  problems  in  doing  this because a remnant of the old
+           circuit may remain.
+
+                If your aux circuit is immediately zapped  when  trying
+           to  reenter  the  slot,  it is likely that a remnant circuit
+           exists.  This remnant must be removed if the slot is  to  be
+           reentered.
+
+                To accomplish this, do the following:
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING              Page 4-5
+   LOADING
+
+
+           1.  Build a circuit to an unoccupied  slot  in  the  Engine.
+               Any  one  will do.  This slot will be referred to as the
+               secondary slot.
+
+           2.  Use ::?WHO to confirm that a remnant exists.  Note  that
+               the  number  of  the  slot  you  currently occupy has an
+               asterisk next to it, followed by the user name  used  (A
+               record   of   the   last  two  names,  if  distinct,  is
+               displayed.).  The old slot with remnant has  some  other
+               indication  (perhaps  a @, but not a *) that the remnant
+               exists.
+
+           3.  Use ::?PORT to determine the kernel port you occupy,  as
+               indicated  by  the  *.   If  one  other  kernel  port is
+               occupied, it is probably the remnant to the old slot.
+
+           4.  If the other kernel port determined above is port n, use
+
+                                    ::?HANG n
+
+               to hang that kernel port.  However, note  the  following
+               caution:
+
+               1.  If the user name associated with the  slot  you  are
+                   about  to hang is different from the one you used to
+                   log into the secondary  slot,  there  should  be  no
+                   complications  and  you  should  be able to hang the
+                   port and then move to your original  slot  with  the
+                   command
+
+                                  ::^slotnumber
+
+
+               2.  
+
+                        If you have logged into the secondary slot with
+                   the  same  user  name  associated  with  the remnant
+                   circuit, HANGing that port will probably  cause  you
+                   to  lose your own circuit because NAD will be unable
+                   to distinguish the circuit zapper  it  receives  for
+                   the  remnant  circuit  from a zapper for the circuit
+                   you have built to the secondary slot.  So  when  NAD
+                   sees  the  zapper,  it  will  clean  your  secondary
+                   circuit from its tables, and your secondary  circuit
+                   will be left as a new remnant.
+
+                        To  avoid  this  problem,  HANG  the  port   as
+                   described above, then quickly type control-Z 2 times
+                   to have DDT zap your circuit.  Your circuit and  the
+                   remnant  will  both  be destroyed, but the important
+                   point is that no remnants will remain.  You may then
+                   build a new circuit to your original slot.
+
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING              Page 4-6
+   LOADING
+
+
+           5.  A ::?SLOT will confirm that you are in the correct slot.
+               Continue on with your work in the slot.
+
+
+
+
+
+           4.1.3  LOAD THE SLOT WITH THE SLOT LOAD COMMAND FILE
+
+                Now   execute    the    load    slot    command    file
+           (TYMISIS)SLOTLD.FAT(Remember  to  use  the  ;X command!).  A
+           control-D must be typed twice during the  command  sequence;
+           these  are  indicated by ^D in the example that follows.  At
+           the end a :E starts the slot.
+
+           
+                   *;X   (TYMISIS)SLOTLD.FAT<carriage return>
+           
+                   :H:I:A
+                   *
+                   *
+                   *^DCTA,CTASIZ:W Data sent and received
+                   *::?LMAC
+                   *^D;;     SEG 0 IS WRITABLE DATA
+                   SEG0,S0SIZE:W Data sent and received
+           
+                   *;;     SEG 1 IS CODE AND READ ONLY TABLES
+                   SEG1,S1SIZE:W Data sent and received
+           
+                   *;;     SEG 2 IS BUFFERS
+                   ;; (NOT COPIED)
+                   ;;      SEG3,S3SIZE:W Data sent and received
+           
+                   *;;     SEG 4 IS READ ONLY TABLES
+                   SEG4,S4SIZE:W Data sent and received
+           
+                   *;;     SEG 5 IS RINGS
+                   ;; (NOT COPIED)
+           
+                   ;; SLOT LOAD COMPLETE
+                   :E
+
+           After the load, exit with %Q or remain for debugging.
+
+                This method of loading may be generalized for any  ISIS
+           interface  by  modifying  the  segments  sent to the Engine.
+           Note that this interface only needs to write segments 0,  1,
+           3,  and 4.  In general the segments that need to be sent are
+           indicated at the bottom of the command file used to generate
+           the NIB file.
+
+                If ISIS should indicate a parity error during a load(or
+           any  other time), examine absolute locations 348 through 34B
+           for the location of the error.  This will involve  going  to
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING              Page 4-7
+   LOADING
+
+
+           slot  FF  if  the examination is done through NAD.  A parity
+           error may also  be  detected  with  (NETQA:29,25)CORSIZ.CMD.
+           The  engineering  diagnostic  routine (ENGDIAG:29)ISISDB may
+           also be used to check for parity errors  and  to  check  for
+           other problems.
+
+
+
+           4.2  GENERATING A SOURCE LISTING
+
+
+           NOTE:  Before starting, it would be wise to  make  sure  all
+           the  files needed to generate a source listing are available
+           on the system being used.  System 39 may have the  necessary
+           files.   Read this entire section before proceeding with the
+           source listing generation.
+
+                To do any debugging or patching, one must have a source
+           listing.   This may be generated with a command file similar
+           to the one below:
+
+                   ;a(ISIS)NAX
+                    TITLE ASYNC FLEXIBLE ISIS TYMCOM -- VERSION v.rr
+                   0,FAT;(
+                   108,60;%
+                   ;@(TYMISIS)ACOM01.I01
+                   ;@(TYMISIS)ACOM01.R01
+                   ;)%Q
+
+
+                This is  basically  a  standard  command  file  without
+           Tymfile  that does not create a NIB file.  This command file
+           creates a list file FAT.CRF with 108 characters per line and
+           60   lines  per  page.   The  source  listing  will  include
+           information in the files between the ;( and ;).
+
+           WARNING:  THIS SHOULD BE DONE ON A CRT  because  many,  many
+           errors  will  be generated and displayed on the terminal due
+           to the lack of a Tymfile.  Just fire it up and walk away.
+
+           The printing of errors to the  terminal  may  be  suppressed
+           with  a  control-O  if  in  PDP mode;  with a File Separator
+           character (control-\) if in XEXEC mode.
+
+                Now make sure you are in PDP  mode.   Run  NAD  with  a
+           command file similar to the one above.  Then type
+
+                              R(UPL)COM;(ISIS)NAX.DO
+
+           This will run CROSS and then TECO.  When TECO  prompts  with
+           EB  or  *,  enter the following (the $ represents the escape
+           character):
+
+           FAT.LST$MM$$
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING              Page 4-8
+   GENERATING A SOURCE LISTING
+
+
+           A page count will be output for each page processed.
+
+                This command  file  is  meant  to  indicate  levels  of
+           assembly  IF  nestings  in  the  left-hand  margin.  Further
+           documentation is available in (ISIS)NAX.DOC.  
+
+                The resulting list file FAT.LST is set up to fit nicely
+           on  small  paper,  eight lines per inch.  You may choose any
+           file name you wish besides FAT.
+
+
+
+
+
+                4.3  SLOT DUMPS
+
+           4.3.1  DUMPING A SLOT
+
+                To dump a slot, use the  LOADII  command  U.   It  will
+           prompt you for kernel host numbe, slot number, and dump file
+           name.  An asterisk (*) is output  from  LOADII  to  indicate
+           records dumped.  
+
+                An example is shown below:
+
+           .r(isis)loadii
+           
+           NODE LOADER VERSION- 2.11
+           ENTER FUNCTION:u
+           ENTER KERNEL HOST NUMBER:624
+           CIRCUIT BUILT
+           ENTER SLOT NUMBER:2
+           ENTER FILE FOR SLOT:dump.me
+           .
+           READING FROM ADDRESS:E0000 BYTES=     226
+           *
+           READING FROM ADDRESS:00000 BYTES=    4320
+           ***********
+           READING FROM ADDRESS:10000 BYTES=   60710
+           ************************************************************
+           
+           **************************************************
+           READING FROM ADDRESS:30000 BYTES=    5781
+           **************
+           READING FROM ADDRESS:50000 BYTES=    8228
+           *********************
+           READING FROM ADDRESS:90000 BYTES=    9688
+           *************************
+           SLOT DUMP COMPLETE
+           
+           EXIT
+
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING              Page 4-9
+   SLOT DUMPS
+
+
+                After the slot has been dumped, it is very important to
+           append  the  symbol table of the relevant NIB file.  This is
+           done as follows:
+
+               R NAD<cr>
+               042882
+               %Fnibfilename<cr>        (open original NIB file)
+               %g                       (get symbol table)
+               1%Fdumpfilename<cr>      (open dump file for I/O)
+               %P                       (write symbol table to dump file)
+               %Q                       (close file and exit NAD)
+
+
+
+           4.3.2  READING A DUMP
+
+                There are two ways to read a slot dump:
+
+           1.  The dump binary can be loaded into a spare slot  in  the
+               lab  and  examined  using  NAD  and  DDT as if it were a
+               customer slot.
+
+                    In this case, use NAD to load the slot, but do  not
+               start  the  slot.   Read  commands  sent to DDT will get
+               responses that look exactly as if the  slot  had  halted
+               after a crash.
+
+                    Of course, the lab slot must be at least  as  large
+               as the slot dumped.
+
+           2.  The dump binary can be examined with NAD alone  using  [
+               and  ].  The command p%2 may be used to dump p halfwords
+               per line.  Remember that if you need to examine the dump
+               in  instruction mnemonics the display must be reset with
+               0%2.
+
+                    Note that  this  method  displays  in  a  different
+               format,  and  if  multiple halfwords/words are displayed
+               per  line,  each  new  line  does  not  get  an  address
+               displayed with it.
+
+
+
+
+                4.4  DEBUGGING
+
+                Refer to the NAD instructions in the NAD  chapter,  the
+           TOOLS document, and the ISIS-II document.
+
+                Before doing any debugging, make sure the  correct  NIB
+           file is in the PDP image.
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING             Page 4-10
+   DEBUGGING
+
+
+           4.4.1  CHECKING FOR PDP IMAGE/ENGINE MEMORY CORRESPONDENCE
+
+                Sometimes a lot of frustration and anguish can be saved
+           at  the  very  beginning if one checks to make sure that the
+           PDP image being used corresponds to the Engine memory of the
+           slot  being examined.  If there is even the slightest bit of
+           doubt, check.  This could save a lot of time later.
+
+                To check the correspondence, do the following:
+
+           1.  Choose  a  handful  of  locations  scattered  about  the
+               executable and read only code.
+
+           2.  Display a small area about each location in  PDP  memory
+               with the [ command.
+
+           3.  Examine the same area  in  Engine  memory  with  the  :R
+               command.
+
+           4.  If the areas match, the PDP image is probably the  right
+               one.   If  there  is even the slightest deviation, think
+               twice about using the  PDP  image  for  this  particular
+               slot.
+
+
+
+
+
+           4.4.2  EVIDENCE FROM THE CRASH TABLE
+
+                Debugging starts with the crash table.  Read in the NIB
+           file with NAD and build an aux circuit to the slot.
+
+
+
+           4.4.2.1  READING THE CRASH TABLE
+
+                Read the crash table by using the :R  command  starting
+           at location CRAT for 4C bytes:  
+
+                                    :R CRAT,4C
+
+
+           EXAMPLE
+           
+           :R CRAT,4C<carriage return>
+           00176  0002  0011  0001  35D4  FFFF  FFFF  0000  0001
+           00186  0001  890C  0000  0012  0000  0000  0000  FFFE
+           00196  0000  0242  0001  4A4E  0000  0000  FFFF  FFFF
+           001A6  0000  0000  0000  0002  0000  0000  0000  0001
+           001B6  0001  35D4  0000  0000  FFFF  FFFF
+
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING             Page 4-11
+   DEBUGGING
+
+
+           4.4.2.2  INTERPRETING THE CRASH TABLE
+
+                The crash table is displayed as a block  of  halfwords.
+           It is interpreted in the following manner:
+
+           1.  The numbers in the LEFT HAND COLUMN are ADDRESSES.
+
+           2.  The FIRST HALF WORD of data is the RESTART COUNT.
+
+           3.  The NEXT HALF WORD is the CRASH CODE of the last crash.
+
+                    The  codes  are  explained  in  the  crash  library
+               section  of  the  listing.  The standard codes are given
+               below:
+
+                       0       Power failure
+                       1       Manual restart
+                       0E      Parity error
+                       10      Dispatcher crash
+                       11      Illegal instruction
+                       12      Illegal SVC
+                       13      System crash
+                       14      Protection violation
+
+                    A dispatcher crash means  the  dispatcher  did  not
+               like  a  message  the  slot put into the output ring, so
+               ISIS crashed the slot.  In this case  the  rest  of  the
+               crash table is meaningless because the register contents
+               displayed are contents at a time long after  the  guilty
+               routine  placed  the  offending  message into the ORING.
+               One must look to the ORING to decide what the  incorrect
+               message  is,  then  try to determine which routine under
+               what  circumstance  was  responsible  for  placing  that
+               message into the ORING.
+
+                    A protection violation usually means the slot tried
+               the execute an area that had execution protection(like a
+               jump to zero).
+
+                    The other codes are self-explanatory.
+
+                    The crash codes only  give  an  indication  of  the
+               nature  of  the  crash.   The  area of code in which the
+               crash occurred must be examined in  order  to  determine
+               the precise meaning of the crash.
+
+           4.  The FIRST FULL WORD AFTER THE CRASH CODE is  either  the
+               ADDRESS  OF THE INSTRUCTION THAT CAUSED THE CRASH or the
+               location of the instruction after the  one  that  caused
+               the  crash.   The  crash  code  must  be  interpreted to
+               determine the exact location of the crash.
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING             Page 4-12
+   DEBUGGING
+
+
+           5.  The NEXT FULL WORD is the ADDRESS OF  THE  ROUTINE  THAT
+               CALLED  THE  ROUTINE  that crashed.  This simply repeats
+               information already in one of the registers.  Often this
+               location  is  all  one's;  then this gives no additional
+               information.
+
+           6.  The NEXT 16 FULL  WORDS  are  the  CONTENTS  OF  THE  16
+               REGISTERS  R0  through  R15.   For quick access into the
+               table note that the right  hand  column  represents  the
+               registers  R0,  R4,  R8,  and  R12 - all registers whose
+               numbers are multiples of 4.
+
+
+
+
+           4.4.2.3  DEBUGGING WITH THE CRASH TABLE
+
+                To debug with the crash table, do the following:
+
+           1.  First  note  the  crash  count.   If  it  continues   to
+               increase, it is crashing over and over.  The slot should
+               probably be halted in this case.
+
+           2.  Note the crash code.  It will give an initial indication
+               of the problem.
+
+           3.  Scan the crash table for addresses.  In many slot  codes
+               all the executable code is kept in segment 1.  These are
+               the values whose first half  word  contains  0001.   The
+               complete address is contained in the full word.
+
+           4.  Determine the labels associated  with  these  addresses.
+               Localize  modules if necessary to keep any displacements
+               small and manageable.
+
+           5.  Examine the code immediately preceding  these  locations
+               to  determine  the  sequence  of  calls taken before the
+               crash occurred.  Values in other registers might be used
+               to corroborate a hypothesis.
+
+
+
+           EXAMPLE:  In the previous example of a crash table, we  note
+           the following:
+
+           1.  The crash count is 2, so it has only crashed once  since
+               reload.
+
+           2.  The crash code is  11,  an  illegal  instruction.   This
+               could   be  caused  by  a  jump  to  the  middle  of  an
+               instruction.  It might  also  be  a  zero  intentionally
+               placed to crash the slot for debugging purposes.
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING             Page 4-13
+   DEBUGGING
+
+
+           3.  The crash location is 135D4.  Find the label  associated
+               with  this  address  using  135D4_.  Do the same for the
+               other addresses contained in the table:   1890C(register
+               1) and 14A4E(register 6).  
+
+           4.  Examine the code preceding these locations to  determine
+               the activities of the slot prior to the crash.
+
+
+
+
+
+           4.4.3  EVIDENCE FROM ISIS DDT
+
+                Other bits of information that help in debugging can be
+           obtained  from ISIS DDT.  Some useful commands are described
+           below:
+
+                   ::?ABS addr     Translates an address to an
+                                   absolute address
+                   ::?MAC          Gives table of slot's MAC
+                                   configuration
+                   ::?VERN         Gives ISIS version number
+                                   and slot version number
+                   ::?HOST         Indicates host number and
+                                   number of ports
+                   ::?SLOT         Gives current slot number
+                   ::?HIST         Gives recent history of
+                                   slot's stops and starts
+                   ::?CPU          Gives percentage of CPU
+                                   utilization
+                   ::?CT           Gives mapping of ISIS ports
+                                   (These are the port numbers
+                                   PROBE refers to in a CT)
+                                   to slot ports(used by TOM)
+                   ::?WHO          Tells who logged into slot last
+                   ::?PORT         Lists users of kernel ports
+                   ::?HANG pn      Hangs user on specified kernel port
+                   ::?BT           Gives background PSD(status bits/
+                                   program counter)
+                   ::?FT           Gives foreground PSD
+                   ::^slotnum      Changes connection to slot number
+                                   specified(^ is an up arrow)
+
+                The ::  prefixing each of the above commands tells  NAD
+           to relay the message following to ISIS DDT.
+
+                All commands  above  are  terminated  with  a  carriage
+           return.
+
+           NOTE:  These queries may be used on  the  slot  DDT  without
+           having  the NIB file and symbol table at hand.  For example,
+           to query the cpu, it suffices to do the following:
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING             Page 4-14
+   DEBUGGING
+
+
+           1.  Start NAD.
+
+           2.  Build a circuit to the slot.
+
+           3.  Type ::?CPU.
+
+           This can be done very quickly.
+
+           WARNING:  For many of the query commands, FORGETTING TO TYPE
+           THE  ?   WILL  CAUSE  BIG  PROBLEMS!   Try  to  avoid typing
+           mistakes with these commands.
+
+
+
+
+           4.4.4  EVIDENCE FROM THE ORING AND IRING
+
+                There are two other areas besides the crash table  that
+           might  be  useful to examine, namely, the ORING(output ring)
+           and IRING(input ring) contain slot messages to and from ISIS
+           and/or the network.
+
+                These rings contain the messages  passed  between  ISIS
+           and the slot(for all practical purposes, between the network
+           and the slot).  The ORING contains messages from the slot to
+           ISIS  and/or  the  network;  the IRING, from ISIS and/or the
+           network  to  the  slot.   These  rings  should  be  examined
+           whenever ISIS to slot or network to slot communications need
+           to be examined.
+
+                The ORING contains ORSIZE  bytes;   the  IRING,  IRSIZE
+           bytes.   Conveniently,  the pointers and the entire ring can
+           be examined by reading ORING or IRING for 400 (hex) bytes.
+
+                The first two halfwords of the rings are pointers  into
+           the message part of the ring, which starts immediately after
+           the pointer  in  the  second  halfword.   The  pointers  are
+           displacements  into the data part of the ring.  In each case
+           the first pointer is the next-fill-message-index,  which  is
+           the  place  in the ring into which the next message is to be
+           placed.  The  second  pointer  is  the  current-empty-index,
+           which is the place one should go to pull the next message.
+
+
+
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING             Page 4-15
+   DEBUGGING
+
+
+                                 ORING
+                  __________________________________
+                 |      |      |                    |\
+                 | NFMI | CEI  |                    | \
+                 |______|______|____________________|  \
+                 |                                  |   \
+                 |                                  |    \
+                 |__________________________________|     \
+                 |                .                 |      \
+                 |                .                 |       \
+                 |                .                 |        \
+                 |                .                 |        / ORSIZE
+                 |                .                 |       /
+                 |__________________________________|      /
+                 |                                  |     /
+                 |                                  |    /
+                 |__________________________________|   /
+                 |                                  |  /
+                 |                                  | /
+                 |__________________________________|/
+           
+
+                Under normal circumstances the  two  pointers  will  be
+           equal  when  observed.   On occasion they will be different,
+           but this situation should not persist.  If the pointers  are
+           observed  to  be  unequal  and  do  not  change over several
+           observations, it means the  background  is  unable  to  pull
+           messages(if the ring is the IRING) or ISIS is unable to pull
+           messages(if  the  ring  is  the  ORING).   If  the  slot  is
+           preoccupied  with  another  task,  this  might  prevent  the
+           background from running.  (Use ::?FT  and  ::?BT  to  check.
+           ::?CPU  is good here too.) Detailed information may be found
+           in (ISISDOC)ISIS2.DOC.
+
+                ISIS messages are defined in ISIS2.DOC.   THE  MESSAGES
+           ALWAYS  START  ON  A WORD BOUNDARY.  The first halfword of a
+           message is the relative ISIS port number(use ::?CT to relate
+           ISIS  ports  to  host  ports).  The next byte is the message
+           type.  An abbreviated table of message types is given below:
+
+
+                  TYPE     USAGE
+           
+                   00      Needle
+                   01-9D   Data text string
+                   9E      Detach(originate yellow ball)
+                   9F      Disconnect(ZAP)
+                   A0      Apply backpressure
+                   A1      Release backpressure
+                   A2      Flush output
+                   A3      Flush input
+                   A4      Black ball
+                   A5      Gray ball
+                   A6      Enter deferred echo mode
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING             Page 4-16
+   DEBUGGING
+
+
+                   A7      Leave deferred echo mode
+                   A8      Enter transparency
+                   A9      Leave transparency
+                   AA      Green ball
+                   AB      Red ball
+                   AC      Yellow ball
+                   AD      Orange ball
+                   AE      "Break" begin
+                   AF      "Hang up"
+                   B0      Query terminal parameter
+                   B1      Set terminal parameter
+                   B2      Pseudo-needle(from slot 0)
+                   B3      Normal logon character(to slot 0)
+                   B4      Normal logon status(from slot 0)
+                   B5      Logon failure(from slot 0)
+                   B6      Successful logon from this port(from slot 0)
+                   B7      Addendum to accounting
+                   B8      Super "hang" for half-duplex terminals
+                   B9      Set transmit limit
+                   BA      "break" end
+                   BB      Zap acknowledge
+                   BC      Enter 'Alternate Output Device' mode
+                   BD      Leave 'Alternate Output Device' mode
+                   BE      Zap with reason
+                   BF      SIIX command
+                   C0      TIIX command
+                   C1-FF   Undefined
+           
+           
+
+
+           EXAMPLE:  A typical  IRING  might  look  in  part  like  the
+           following:
+
+               *:R IRING,400<carriage return>
+               50400  0044  0044  001E  001C  0061  012C  006A  0407
+               50410  0000  8080  0000  0000  0000  C106  4E45  5451
+               50420  418D  0000  001E  B920  001E  B100  0000  0000
+               50430  001E  B100  0000  0000  001E  B104  0100  0000
+               50440  001E  B111  0100  0000  00A3  C810  014C  4140
+               50450  4001  492E  C800  0050  4140  4001  492E  4300
+                                         .
+                                         .
+                                         .
+               507F0  . . .
+
+           Note that the two pointers at locations 50400 and 50402  are
+           both  44.   This  means  the  most  recent  message precedes
+           location 50404+44=50448.  One may work backwards  from  that
+           point  to decipher the last few messages.  In particular the
+           messages  from  50404  to  50448  are  all  for  ISIS   port
+           1E(correlate  this  with  results  of  ::?CT) and indicate a
+           login:
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING             Page 4-17
+   DEBUGGING
+
+
+                Location 50404 shows a needle(type 00).
+
+                Location 50424 sets a transmit limit(type B9) of 20.
+
+                Locations 50428, 50430, 50438, and 50440  set  terminal
+           parameters(type B1).
+
+
+
+
+           4.4.5  DEBUGGING SWITCHES
+
+                If the debugging is to be done  in  the  lab  or  on  a
+           customer  machine that can be halted and examined, there are
+           other switches that can be set at assembly time that will be
+           useful:
+
+
+
+
+                   CRSTOP          Stops the slot after a crash.
+
+                   BUFTRC          Records  every   character   passing
+                                   between ISIS and the slot in history
+                                   table    HISTAB.     Includes    the
+                                   character, port number, and location
+                                   where character was placed.
+
+                   HDWTRC          Allows the  value  of  the  last  16
+                                   program  counters to be stored away.
+                                   This is meant  to  aid  in  tracking
+                                   wild jumps.
+
+
+
+                To set a switch to a value in NAD, do as follows:
+
+           1.  First make it global.
+
+           2.  Then type the value followed by [.
+
+           3.  NAD will answer with the contents of  that  location  in
+               hex.
+
+           4.  Type the switch name followed by a  :<carriage  return>.
+               Set the switches desired.
+
+           5.  Then type  0[<carriage  return>  to  reset  the  program
+               counter NAD uses.
+
+
+                Now the code assembly can be done as  before  with  the
+           command file.
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING             Page 4-18
+   DEBUGGING
+
+
+           EXAMPLE:  To set CRSTOP to 1, type the following:
+
+                           GL CRSTOP
+                           1[CRSTOP:
+                           0[
+
+           before executing the command file that gens the code.  These
+           commands  may  also  be incorporated at the beginning of the
+           command file if they are to be a permanent part of the code.
+
+                The above switches will be enabled when set to 1.
+
+
+
+           4.4.5.1  BUFTRC - buffer trace
+
+                When the buffer trace switch is enabled in an ISIS code
+           that   incorporates   the   standard   ISIS  buffer  library
+           BUFFER.LIB or MBUFER.LIB, every character that is passed via
+           the  GCI/WCI  routines  is  recorded  in  the  history table
+           HISTAB.  Entries are a fullword each, consisting of  a  byte
+           of  character,  a  byte  of buffer number, and a halfword of
+           address of the routine calling GCI or WCI.  HISX contains  a
+           pointer  to  the  last  history  entry  made.   The table is
+           circular and of size HISTSZ.
+
+                The buffer trace is useful when trying to determine how
+           a   particular   sequence   of  characters  arrived  in  the
+           bufferlets.
+
+
+
+           4.4.5.2  HDWTRC - hardware trace
+
+                The hardware trace is used to trap a  particular  logic
+           sequence.   The  sequence  may occur in either foreground or
+           background, but both foreground and background sequences may
+           not be checked at the same test session.  
+
+                The trace logic itself looks like this:
+
+           ::      HARDWARE TRACE OPTION
+           :       IF HDWTRC=1 THE HARDWARE TRACE OPTION IS ASSEMBLED.
+           :       THIS CODE ALLOWS THE TRACING OF THE LAST 32 JUMPS
+           :       (LOWER 16 BITS).
+           :       
+           :       TO ENABLE, ENTER --
+           :               :W BEXPSD,1000        FOR BACKGROUND
+           :               :W FEXPSD,1000        FOR FOREGROUND
+           :       TO DISABLE, ENTER --
+           :               :W BEXPSD,0        FOR BACKGROUND
+           :               :W FEXPSD,0        FOR FOREGROUND
+           :
+           :       TRCADR  CONTAINS THE LAST 32 JUMPS
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING             Page 4-19
+   DEBUGGING
+
+
+           :       TRCPTR  POINTS PAST THE LAST ENTRY
+           :       TRCREG  CONTAINS THE REGISTERS AT TIME OF LAST JUMP
+           :       TRCPAT  IS A UPSW INST TO CONTINUE FOLLOWED BY
+           :               AN 80 BYTE PATCH AREA WHICH CAN BE USED
+           :               TO PATCH ADDITIONAL TRACE CODE
+           
+             IF    HDWTRC
+                   GL      TRCREG,TRCADR,TRCPTR,TRCPSD,TRCPAT,TRACE
+                   SEG     0               :MUST BE IN SEG 0
+                   ORG     10
+           TRCPSD  WC      1000,0000       :NEXT PSD
+                   WC      TRACE           :ON TRAP, GO TO "TRACE"
+           TRCREG  WS      10
+           TRCADR  WS      10              :LAST 32 JUMPS
+           TRCPTR  HC      0               :PTR INTO TRCADR
+           
+                   SEG     A.CODE
+           TRACE   HS
+                   STM     00,TRCREG       :SAVE ALL REGS
+                   L       0F,TRCPSD+4     :LAST JUMP ADDR
+                   LHL     0E,TRCPTR
+                   STH     0F,TRCADR,0E
+                   AIS     0E,2
+                   NHI     0E,3F           :MOD 40
+                   STH     0E,TRCPTR
+                   LM      0E,TRCREG+4*0E  :RESTORE REGS USED
+           TRCPAT  UPSW    TRCPSD          :NOW DO JUMP
+                   HS      40              :TRACE PATCH AREA
+             EI
+
+
+                The background exec loop should be of this form:
+
+           BGEXEC  --------
+                   --------
+                       .
+                       .
+                       .
+                   --------
+                   SVC     FASTD,0        :FAST DISMISS
+                   UPSW    BEXPSD         :LOOP
+           BEXPSD  WC      0000,BGEXEC    :CHANGE 0000 TO 1000 FOR 
+                                          :ENGINE HARDWARE TRACE
+
+
+                The foreground exec loop should be similar:
+
+           FGEXEC  --------
+                   --------
+                       .
+                       .
+                       .
+                   --------
+                   SVC     FASTD,0        :FAST DISMISS
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING             Page 4-20
+   DEBUGGING
+
+
+                   UPSW    FEXPSD         :LOOP
+           FEXPSD  WC      0000,FGEXEC    :CHANGE 0000 TO 1000 FOR 
+                                          :ENGINE HARDWARE TRACE
+
+
+                The  foreground  or  background  trace  is  enabled  by
+           writing   a   hex   1000   to  location  FEXPSD  or  BEXPSD,
+           respectively.  The trace is disabled by writing a 0  to  the
+           same location.
+
+                The last 32 jumps are recorded in the table  TRCADR  as
+           halfword entries.  TRCPTR points past the last entry.
+
+                If one wishes to crash the code in a certain  condition
+           after  the jumps are recorded, a test for this condition may
+           be  patched  into  the  trace  at  location   TRCPAT.    The
+           instruction UPSW TRCPSD originally at TRCPAT should be moved
+           to the end of the patch.
+
+           CAUTION:  The hardware trace takes a heavy toll on  CPU  and
+           may  slow  the  code  to  a  crawl.   Patching in additional
+           conditions at TRCPAT may  make  the  situation  even  worse,
+           since  the  patch  is executed on every jump instruction the
+           code takes.
+
+
+
+           4.4.6  BREAKPOINTS
+
+                Breakpoints may be set in a  code  after  it  has  been
+           halted.   They  are useful for defining the precise sequence
+           of instructions a piece of code follows.
+
+                Use
+
+                           :Baddr,n<carriage return>
+
+           to set breakpoint number n at address addr, where  n  is  an
+           integer between 1 and 9 inclusive and addr is any expression
+           NAD  is  able  to  interpret.   Breakpoints  may  be   newly
+           installed   or   replaced  with  this  command.   To  remove
+           breakpoint n completely, use the command with addr=0.
+
+                Interrupts will be inoperative  while  breakpoints  are
+           set.
+
+                After setting breakpoints the code may be instructed to
+           proceed to the next breakpoint with the command
+
+                              :P<carriage return>
+
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING             Page 4-21
+   DEBUGGING
+
+
+                To have the code start at location addr(instead of just
+           continuing), use the command
+
+                            :Gaddr<carriage return>
+
+
+                To have the slot single-step through a section of code,
+           use 
+
+                              :N<carriage return>
+
+
+                Once a breakpoint has been reached, the code halts  and
+           memory  locations  may  be examined as usual.  The registers
+           are examined with the command
+
+                           :RRn,cnt<carriage return>
+
+           starting  with  register  n  and  for  cnt  registers.   The
+           contents of register n may be modified with the command
+
+                         :WRn,contents<carriage return>
+
+
+                One method of using breakpoints is the following:
+
+           1.  Set  CRSTOP  to  1  so  the  interface  will  halt  upon
+               crashing.
+
+           2.  Write a 0 to the instruction preceding the code area  of
+               interest.   This may involve some patching (e.g., if you
+               want to examine the code in the middle of a loop).
+
+           3.  After the code crashes, restore the instruction that was
+               zeroed out.
+
+           4.  Read the crash table to check that the interface crashed
+               because you wanted it to.  Note the register contents.
+
+           5.  Halt the slot (DDT command :H).
+
+           6.  Read the DDT registers (DDT command :RR).   They  should
+               now  correspond  to  the  registers  in the crash table.
+               Register contents may be changed with  the  DDT  command
+               :WR.
+
+           7.  Set the desired breakpoints.  A good first  one  is  the
+               instruction  that  you  zeroed out to make the interface
+               crash.
+
+           8.  Start the slot at the instruction that  you  zeroed  out
+               (and  later  restored)  with the DDT command :G.  If you
+               have a breakpoint set there, it should  tell  you  right
+               away.
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING             Page 4-22
+   DEBUGGING
+
+
+           9.  Continue on as necessary with the DDT commands :P or :N,
+               checking registers or memory as necessary.
+
+
+
+
+           4.5  PATCHING
+
+                See the ISIS-II  document,  especially  the  NAD-kernel
+           commands.
+
+                Four operations must be carried out before a patch  can
+           be considered complete:
+
+
+           1.  The change must be made in the  image  residing  in  PDP
+               memory.
+
+           2.  The change  must  be  transferred  to  the  Engine  core
+               memory.
+
+           3.  The  NIB  file  for  the  slot  must  have   the   patch
+               incorporated into it.
+
+           4.  The command file must be changed so that when  the  code
+               is  generated the patch is automatically included in the
+               NIB file.
+
+
+                Operations 3 and 4 can be  combined  if  the  patch  is
+           incorporated  into  the  command  file, and then the code is
+           immediately regenned.
+
+                In any case all 4 operations should be completed within
+           minutes  of  each  other  to  avoid  unnecessary  late night
+           emergencies.
+
+
+
+
+           4.5.1  PATCHING THE PDP IMAGE
+
+                To patch the PDP image, load the image  with  NAD.   To
+           display  an  instruction  at  a  location,  type the address
+           followed by ].  Type the change  desired  immediately  after
+           the  present instruction is displayed, followed by <carriage
+           return> if only one change is to be made  in  that  area  of
+           code;   <linefeed>  if  several successive changes are to be
+           made.  NAD will answer with ?  if it is unable to place  the
+           instruction as typed into that location.
+
+                To display the contents of a half word in hex, type the
+           location followed by [.
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING             Page 4-23
+   PATCHING
+
+
+                Refer to the NAD chapter for more detail.
+
+
+           EXAMPLE:  To see the PDP image contents of the ECRLF  array,
+           type
+                                      ECRLF[
+
+
+           Changes to the image in hex mode may be made just as changes
+           in instruction mode.
+
+                This may be used to check  for  correspondence  between
+           the  NIB  file  currently  held  by  NAD and the Engine core
+           image.
+
+
+           EXAMPLE:  To verify that the instructions near  label  ICNDL
+           match  in  the  PDP image and in the Engine, display the PDP
+           image with
+
+                                 ICNDL,ICNDL+10[
+
+           and compare the hex results  with  the  contents  of  Engine
+           memory as displayed with
+
+                          :R ICNDL,10<carriage return>
+
+
+
+
+
+
+           4.5.2  CHANGING ENGINE MEMORY
+
+                Once a change is made in the  PDP  image,  it  must  be
+           placed  in the Engine memory.  Build a circuit to the proper
+           slot.  Note that the patching in  NAD  could  have  occurred
+           after  the  circuit  was built;  this is the usual procedure
+           since debugging and patching  are  usually  mixed  during  a
+           session.
+
+                Convey a change to the Engine with  an  instruction  of
+           the form
+
+                            startlocation,bytecount:W
+
+           The :W is the write command.  No carriage return is  needed,
+           and NAD will reply "Data sent and received" upon completion.
+
+                When conveying patches of executable code, it  is  best
+           to  transfer  an  area larger than the actual patch(e.g., 10
+           bytes for a single instruction) to insure the  entire  patch
+           is sent at once.
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING             Page 4-24
+   PATCHING
+
+
+           EXAMPLE:  If the instruction at label ICNDL  is  changed  in
+           the  PDP  image,  that  change may be conveyed to the Engine
+           with the command
+                                    ICNDL,10:W
+
+
+           When conveying patches of a table, it is  best  to  transfer
+           only  the changes to avoid altering neighboring table values
+           that might be correct.
+
+
+           EXAMPLE:  Suppose a change to the host name table  has  been
+           made  in  the  PDP  image in the halfword at location HNT+8.
+           Transfer this change to the Engine with the command
+
+                                    HNT+8,2:W
+
+
+
+                Patches of additional executable code should be made in
+           PATCH1.   Additional  tables  or storage locations should be
+           placed in  PATCH0.   It  is  recommended  that  all  patches
+           destined  for  PATCH1  and  PATCH0 be transferred before the
+           patch invoking a call from regular code to  either  area  is
+           transferred.
+
+           THE GENERAL PHILOSOPHY IS THIS:  Make the patches in the PDP
+           image first, then transfer the patches to the Engine.
+
+
+
+
+
+           4.5.3  CHANGING THE NIB FILE
+
+                Patches may be immediately incorporated  into  the  NIB
+           file  from the PDP image using the last part of the standard
+           command file:
+
+                           1;Fnibfile name<carriage return>
+                           SEG0,S0SIZE;P
+                           SEG1,S1SIZE;P
+                           SEG3,S3SIZE;P
+                           SEG4,S4SIZE;P
+                           SEGE,SESIZE;P
+                           %P
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING             Page 4-25
+   PATCHING
+
+
+           4.5.4  CREATING A PATCH FILE
+
+                However, it is safer to incorporate  the  patches  into
+           the  command  file, then regen the code.  The patches in the
+           command file look exactly like the commands  that  would  be
+           typed  to  NAD online, but it is not necessary to leave room
+           for NAD's reply.
+
+
+           EXAMPLE:  STANDARD PATCH FILE FOR VERSION 1.00 
+                     (TYMISIS:29)NDAT01.P00
+           
+            TITLE ISIS ASYNC TYMCOM  --  VERSION 01.00  
+           ;@(TYMISIS)ACOM01.I00
+           ;@(TYMISIS)ND0&&&.T##
+           ;@(TYMISIS)ACOM01.R00
+           ;; PATCH TO IGNORE A9 MSG (LEAVE TRANSPARENCY)
+           ;; INSTEAD OF CRASHING.
+            LO XLS
+           ICRCOM+18[EXITIC+6-.S
+           ;; PATCH TO NOT LOSE CHARACTERS AFTER NULLS.
+            LO FOR
+           FIN5+1E]J FIN4
+           ;; END PATCH - DAVE MONTAGNA, NETWORK DEVELOPMENT
+           ;; PATCH TO IGNORE DATA ON INACTIVE PORTS.
+            LO POP
+            LO TABLES
+           ASYN1]J PATCH1
+           PATCH1]LHL 1,FBDAT,0C
+           PATCH1+4]NH 1,ACP,0C
+           PATCH1+8]J ASYN1+4
+           ;; END PATCH 5/6/80 - GEOFF LEE, HQ TECH SUPPORT
+           ;; PATCH TO NOT ZAP LOGOUT MESSAGES FROM HOST.
+           HTI080+10]J PATCH1+0C
+           PATCH1+0C]JL DETHP
+           PATCH1+10]CLHI R7,CM.ZAP
+           PATCH1+14]JE DETHP
+           PATCH1+18]CLHI R7,CM.DET
+           PATCH1+1C]JE DETHP
+           PATCH1+20]J HTI080+14
+           ;; END PATCH 5/7/80 - GEOFF LEE, HQ TECH SUPPORT
+           ;; PATCH TO INITIALIZE INDEX INTO HOST NAME TABLE.
+           ICNDL+20]J PATCH1+24
+           PATCH1+24]JAL R4,GETCH,,
+           PATCH1+2A]LIS R13,0
+           PATCH1+2C]J ICNDL+24
+           ;; END PATCH 5/13/80 - GEOFF LEE, HQ TECH SUPPORT
+           1;FND0&&&.N##
+           SEG0,S0SIZE;PSEG1,S1SIZE;PSEG3,S3SIZE;PSEG4,S4SIZE;P
+           SEGE,SESIZE;P%P%Q
+
+
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING             Page 4-26
+   PATCHING
+
+
+           EXAMPLE:  STANDARD PATCH FILE FOR VERSION 1.02
+                     (TYMISIS:29)NDAT01.P02
+           
+            TITLE ISIS ASYNC TYMCOM  --  VERSION 01.02
+           ;@(TYMISIS)ACOM01.I02
+           ;@ND0&&&.T##
+           ;@(TYMISIS)ACOM01.R02
+           ;;**************************************************************
+           ;; IF THE SLOT IS RUNNING UNDER ISIS VERSION 3.13,
+           ;; ENABLE THE FOLLOWING PATCH:
+           ;;CTA+2[2+4+8+100*PROJ
+           ;; END PATCH 3/2/81 - GEOFF LEE, HQ TECH SUPPORT
+           ;;**************************************************************
+           ;; PATCH TO HANDLE ASCII TO BINARY CONVERSION OVERFLOWS CORRECTLY.
+           LO TOM
+           CAB045+2]JR RLCAB
+           ;; END PATCH 4/22/81 - GEOFF LEE, HQ TECH
+           ;; PATCH TO ALLOW TOM LOGIN FROM AN X25 INTERFACE.
+           LO TOM
+           ICRTOM+18[EXITIC+6-.S
+           ;; END PATCH 3/27/81 - GEOFF LEE, HQ TECH
+           ;; PATCH TO CORRECTLY INITIALIZE TOM PORTS AT STARTUP
+           LO TOM
+           LO TABLES
+           TOMEXE-6]STH R4,PDOWN+NNTMGP*2
+           ;; END PATCH 4/16/81 - GEOFF LEE, HQ TECH
+           ;; Patch to insure foreground/background rings do not get exactly
+           ;; filled when an escaped character is inserted.  If an escaped
+           ;; character will not fit, it is discarded.
+           LO FOR
+           PECB1+8]AIS R2,2
+           PECB1+0A]JGFS PECB2
+           PECB1+0C]J PECBK-6
+           PECF1+8]AIS R2,2
+           PECF1+0A]JGFS PECF2
+           PECF1+0C]J PECFOR-6
+           ;; End patch 5/7/81 - Geoff Lee, HQ Tech Support
+           PATCH0[P0END:
+           PATCH1[P1END:
+           ;; ANY ADDITIONAL PATCHES SHOULD BE EXECUTED HERE:
+           ;X(TYMISIS)TYPE.P02
+           1;FND0&&&.N##
+           SEG0,S0SIZE;PSEG1,S1SIZE;PSEG3,S3SIZE;PSEG4,S4SIZE;P
+           SEGE,SESIZE;P%P%Q
+
+
+
+                IF switches  may  be  used  within  a  patch  file  for
+           conditional assembly of patches.
+
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING             Page 4-27
+   PATCHING
+
+
+           EXAMPLE:  A patch file with an IF switch in  it  might  look
+           like the following:  
+
+                     LO TABLES
+                     LO XLS
+                     LO POP
+                      IF T27N+1
+                     P1END]PAT28:TBT R1,TRANSP<linefeed>
+                     JNFS .+6<linefeed>
+                     SBT R1,GBRCVD<linefeed>
+                     J ICGRN+0C<linefeed>
+                     PAT29:TBT RP,TRANSP<linefeed>
+                     JNR RLINK<linefeed>
+                     LHI R0,AO.EPC<linefeed>
+                     J TYPEPC+4,,<linefeed>
+                     P1END:<linefeed>
+                     ICGRN+8]J PAT28
+                     TYPEPC]J PAT29
+                     KILL PAT28,PAT29
+                      EI
+
+
+
+                Placing the patches in the command file is the best way
+           of  documenting  a patch.  The patch file should contain the
+           following:
+
+           1.  The patch should be preceded by a short  description  of
+               the patch.
+
+           2.  It should contain the NAD  instructions  comprising  the
+               patch.
+
+           3.  It should indicate the end of the patch.
+
+           4.  It should note who created the patch.
+
+           5.  It should indicate when the patch was created.
+
+
+                The following procedures are also important in creating
+           a correct command file:
+
+           1.  In the command file patches to the  code  should  follow
+               the  assembly  of  the files and precede creation of the
+               NIB file.
+
+           2.  The setting of debugging switches should be done  before
+               any of the files has been assembled.
+
+
+                There are two other devices that may  be  used  in  the
+           execution of command files:  
+   USING NAD FOR LOADING, DEBUGGING, AND PATCHING             Page 4-28
+   PATCHING
+
+
+           1.  A control-V in the command file tells NAD to stop taking
+               commands  from  the  file and wait for commands from the
+               terminal.
+
+           2.  A control-D tells NAD to resume taking commands  from  a
+               command file.
+
+
+
+
+
+           4.5.5  TEMPORARY PATCHES AS A DEBUGGING AID
+
+                Naturally, patching and debugging go together.  A patch
+           can  be  installed  to  leave  more  evidence  than the code
+           normally leaves in order to facilitate debugging.   As  more
+           and  more  evidence  is  uncovered,  patches may be moved or
+           removed easily with NAD.
+
+                A  shortened  form  of  the  :W  command  is  good  for
+           inserting a halt in the code:
+
+                   :W location,fullwordofhex<carriage return>
+
+           will write a full word of hex specified  into  the  location
+           specified.  So, to install a halt, type
+
+                         :W location,0<carriage return>
+
+           and a full word  of  0  will  be  placed  in  the  specified
+           location.   The  particularly nice feature of this method is
+           that the  PDP  image  is  left  unchanged;   this  makes  it
+           unnecessary to record the original contents elsewhere (where
+           it can be lost).
+
+                If the halt must be removed quickly, the original  code
+           can be restored with
+
+                                   location,4:W
+
+           without any need to record or reset the original contents of
+           that  location.   This  assumes  that  the  contents  of the
+           location in the NIB file in PDP memory has not been  changed
+           since NAD pulled it in.
+
+
+           EXAMPLE:  To install a halt at location ICN095+8, type
+
+                         :W ICN095+8,0<carriage return>
+
+           and wait for the crash table  to  change.   To  restore  the
+           original instruction, type
+
+                                   ICN095+8,4:W
+
+
+
+
+
+
+
+
+
+
+
+
+                                CHAPTER 5
+
+                          TROUBLESHOOTING GUIDE
+
+
+
+                The  following  is  a   list   of   problems   commonly
+           encountered  in the field.  Following each problem is a list
+           of possible methods of solution.   Also  included  are  some
+           techniques that may be used in testing.
+
+
+           1.  NAD DOES NOT COMPLETE ASSEMBLY; NAD ERROR MESSAGES
+
+               1.  Undefined not allowed - Either a module needs to  be
+                   localized,  an initial label needs to be defined, or
+                   a typo has been made.
+
+               2.  Operand out of range - A jump instruction  does  not
+                   have  a  large enough format to accommodate the jump
+                   location. Change the format to the next larger.
+
+               3.  Radix  violation  -  The  number  entered   is   not
+                   acceptable for the radix presently set in NAD.
+
+
+           2.  SLOT DOESN'T LOAD
+
+               1.  Compare slot size allotted by node/kernel .TYM  file
+                   and  size  required by slot code. Slot size allotted
+                   must not be smaller than size required for slot.
+
+               2.  If the slot is large enough and a  parity  error  is
+                   indicated  during the load, memory should be checked
+                   by maintenance. Examine absolute locations 348 - 34B
+                   for the location of the parity error.
+
+               3.  Available memory in an Engine may be determined with
+                   a  procedure  described  in (NETQA) CORSIZE.DOC. One
+                   may  also  use  NAD  and  a  command  file   (NETQA)
+                   CORSIZ.CMD,   or   one   may   use  the  engineering
+                   diagnostic routine (ENGDIAG:29)ISISDB.  ISISDB  will
+                   perform other tests also; see ISISDB.DOC.
+
+   TROUBLESHOOTING GUIDE                                       Page 5-2
+   
+
+
+           3.  SLOT IS LOADED, BUT HOST NEVER COMES UP
+
+               1.  Check to see that slot host number  is  not  already
+                   assigned  to  some other node in the network. Modify
+                   the HOSTS table if necessary.
+
+               2.  See also category below(slot is loaded, but  crashes
+                   continually.)
+
+
+           4.  THE  CRASH  TABLE  INDICATES  THE  LAST  CRASH   WAS   A
+               PROTECTION VIOLATION (TYPE 14).
+
+               1.  If you're  lucky,  the  crash  table  points  to  an
+                   instruction  like  a store or set/reset bit in which
+                   an indexing register has been  set  with  the  wrong
+                   value. Interpret this as you would a regular crash.
+
+               2.  If you're unlucky, the  crash  table  points  to  no
+                   instruction  at  all.  The  probable cause is a jump
+                   through a register that was not set correctly.
+
+                   1.  Scan the contents of the other registers to  see
+                       if  one  matches  or closely resembles the crash
+                       location. This is probably the register used for
+                       the  jump.  If  the match is not exact, the jump
+                       could have been done with a displacement.
+
+                   2.  Scan the other registers for contents that  look
+                       like  addresses.  They will be between 10000 and
+                       1FFFF because executable code  is  contained  in
+                       segment 1.
+
+                   3.  Find the labels associated with these locations.
+
+                   4.  Find these labels in the source listing.
+
+                   5.  Look for an instruction nearby  that  might  use
+                       the suspected jump register as a jump register.
+
+                   6.  When  this  is  found,  this  is  probably   the
+                       location of the crash.
+
+                   7.  If this doesn't do it, use the  HDWTRC  feature.
+                       This requires a regen. 
+
+
+
+           5.  THE  CRASH  TABLE  INDICATES  THE  LAST  CRASH   WAS   A
+               DISPATCHER CRASH (TYPE 10)
+
+               1.  This crash occurs because the slot placed a  message
+                   in   the   ORING   that   was  unacceptable  to  the
+                   dispatcher, so the dispatcher crashed the slot.
+   TROUBLESHOOTING GUIDE                                       Page 5-3
+   
+
+
+                        Since the offending message was placed into the
+                   ORING   some  time  before  the  slot  crashed,  the
+                   register  contents  in  the  crash  table  will   be
+                   irrelevant; they should be totally disregarded.
+
+                        It will be necessary to examine the section  of
+                   ORING containing the unprocessed (and probably last)
+                   message, so either create a patch to do so, or regen
+                   the code with CRSTOP set so the slot will halt after
+                   a crash.
+
+               2.  After the dispatcher crash, pull  the  last  set  of
+                   unprocessed messages from the ORING.
+
+               3.  Decipher the ISIS message types and  determine  what
+                   disturbed the dispatcher. Quite often the culprit is
+                   a misplaced ASCII message, so ASCII  translation  is
+                   advised whenever possible.
+
+               4.  Decide which part of the  code  is  responsible  for
+                   sending  that  message  (using the code outline, for
+                   example) and continue the analysis from there.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               APPENDIX A
+
+                         NAD/DDT COMMAND SUMMARY
+
+
+
+
+
+
+           1.  HOW TO ASSEMBLE WITH NAD
+
+               1.  Use command file to assemble
+
+                   1.  ;xFILE - read commands from FILE
+
+                   2.  control-V - move control from the  command  file
+                       to the terminal
+
+                   3.  control-D - return control to the command file
+
+
+               2.  COMMON COMMANDS IN STANDARD COMMAND FILE
+
+                   1.  ;@FILE or ;aFILE - assemble FILE
+
+                   2.  1;fFILE - create  NIB  file  FILE,  destroy  any
+                       previous FILE
+
+                   3.  ADDR,BYTES;p - append BYTES  bytes  starting  at
+                       ADDR to NIB file
+
+                   4.  %p - put symbols in NIB file
+
+
+
+           2.  ERROR RECOVERY IN NAD/DDT
+
+               1.  control-A    -    delete    previous    alphanumeric
+                   character(XEXEC mode)
+
+               2.  delete - delete previous alphanumeric  character(PDP
+                   mode)
+
+               3.  control-Q  -  delete  all   preceding   alphanumeric
+                   characters     up    to    first    non-alphanumeric
+                   character(XEXEC mode)
+   NAD/DDT COMMAND SUMMARY                                      Page A-2
+   
+
+
+               4.  control-U  -  delete  all   preceding   alphanumeric
+                   characters     up    to    first    non-alphanumeric
+                   character(PDP mode)
+
+               5.  ?  - discard previous entry
+
+               6.  :\ - restart DDT
+
+               7.  %C - restart DDT
+
+               8.  %O - flush output from Engine
+
+
+           3.  GENERATING A LISTING
+
+               1.  ;( - precedes the first file to be listed
+
+               2.  ;) - follows last file to be listed
+
+               3.  ;% - set listing page dimensions
+
+
+           4.  READING AN IMAGE BINARY INTO PDP MEMORY
+
+               1.  %fFILE - FILE is the NIB file to be used
+
+               2.  %g - get symbols from NIB file
+
+               3.  ;g - get image binary from NIB file
+
+
+           5.  CHANGING THE IMAGE BINARY IN PDP MEMORY
+
+               1.  ADDR[ - display contents of ADDR in hex
+
+               2.  ADDR1,ADDR2[ - display contents from ADDR1 to  ADDR2
+                   in hex
+
+               3.  ADDR] - display  contents  of  ADDR  in  instruction
+                   mnemonics
+
+               4.  ADDR1,ADDR2] - display contents from ADDR1 to  ADDR2
+                   in  instruction  mnemonics.   "OPFLOP"  indicates no
+                   instruction recognized.
+
+               5.  NUM_ - interpret the location  in  terms  of  labels
+                   from symbol table
+
+               6.  LABEL# - interpret label as hex value
+
+               7.  ADDR\ - display location in current display mode
+   NAD/DDT COMMAND SUMMARY                                      Page A-3
+   
+
+
+               8.  $N - set radix to N, N a hex  digit  between  0  and
+                   F(0=hex)
+
+               9.  ;" or %" - examine PDP image in ASCII
+
+              10.  <carriage return> - change contents of location last
+                   displayed
+
+              11.  <linefeed>  -  change  contents  of  location   last
+                   displayed and display next location
+
+              12.  Error resulting from wrong format,  typo,  undefined
+                   symbol may be recoverable using current PC(.).
+
+              13.  May need to localize  a  module(LO  module)  to  get
+                   local  labels.   Look  for  MO(name)  preceding  the
+                   desired label in listing.
+
+
+           6.  BUILDING A CIRCUIT TO A SLOT
+
+               1.  ;c - build an auxiliary circuit to a slot
+
+               2.  ;r - send hex pair(s) to Engine
+
+               3.  ::  - send the Engine the following ASCII string (up
+                   through  the  carriage  return) (This interpretation
+                   will be different if the string contains a space  or
+                   comma.) 
+
+               4.  %r - relay an ASCII string to the Engine (terminated
+                   by an escape or control-C) 
+
+
+           7.  LOADING A SLOT
+
+               1.  See slot load command file
+
+               2.  COMMANDS USED IN SLOT LOAD COMMAND FILE
+
+                   1.  :h - halt slot
+
+                   2.  :i - initialize slot
+
+                   3.  :a - set up slot as one MAC segment
+
+                   4.  Send control table
+
+                   5.  ::?lmac - prepare MAC for load
+
+                   6.  Send segments
+   NAD/DDT COMMAND SUMMARY                                      Page A-4
+   
+
+
+                   7.  May start code at ADDR with :g ADDR command
+
+
+
+           8.  EXAMINATION OF ENGINE CORE MEMORY
+
+               1.  :r ADDR,BYTES - read BYTES bytes starting at ADDR
+
+               2.  Used to read tables
+
+               3.  Used to confirm NIB file is correct one  for  engine
+                   core  image.   Compare  PDP  contents  using  [ with
+                   Engine contents using :r.
+
+               4.  Convert hex to label+displacement with _ suffix
+
+               5.  Convert expression to hex with # suffix
+
+
+           9.  PATCHING CODE
+
+               1.  Change PDP image
+
+               2.  ADDR,CNT:w - transmit CNT  bytes  starting  at  ADDR
+                   from PDP memory to Engine
+
+               3.  Send change to slot with :w command
+
+               4.  Can reload entire segment with :w
+
+               5.  :w ADDR,HEXWORD - write full word of hex HEXWORD  to
+                   ADDR in Engine without altering PDP image
+
+               6.  Can reset entire  NIB  file  using  1;f  ;p  and  %p
+                   commands
+
+               7.  Can use NAD to determine proper instruction formats,
+                   instruction  lengths,  And instruction locations for
+                   patches
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               APPENDIX B
+
+                      HEX TO ASCII CONVERSION CHART
+
+
+
+
+
+
+           
+                                     FIRST DIGIT
+           
+                              0    1   2   3  4  5  6  7  PARITY NOT SET
+                              8    9   A   B  C  D  E  F  PARITY SET
+           
+                         0   NUL  DLE  SP  0  @  P  `  p
+                         1   SOH  DC1  !   1  A  Q  a  q
+                    S    2   STX  DC2  "   2  B  R  b  r
+                    E    3   ETX  DC3  #   3  C  S  c  s
+                    C    4   EOT  DC4  $   4  D  T  d  t
+                    O    5   ENQ  NAK  %   5  E  U  e  u
+                    N    6   ACK  SYN  &   6  F  V  f  v
+                    D    7   BEL  ETB  '   7  G  W  g  w
+                         8   BS   CAN  (   8  H  X  h  x
+                    D    9   HT   EM   )   9  I  Y  i  y
+                    I    A   LF   SUB  *   :  J  Z  j  z
+                    G    B   VT   ESC  +   ;  K  [  k  {
+                    I    C   FF   FS   ,   <  L  \  l  |
+                    T    D   CR   GS   -   =  M  ]  m  }
+                         E   SO   RS   .   >  N  ^  n  ~
+                         F   SI   US   /   ?  O  _  o  DEL
+           
+           
+
+
+
+
+
+
+
+
+
+
+
+
+                               APPENDIX C
+
+                         2741 CORRESPONDENCE CODE
+
+
+
+           
+           
+                                    CASE                          CASE
+                 BINARY   OCT HEX  LOW UP      BINARY   OCT HEX  LOW UP
+           
+                 000 000  00  00   SP  SP      100 000  40  20   1   }
+                 000 001  01  01   !   <       100 001  41  21   m   M
+                 000 010  02  02   t   T       100 010  42  22   x   X
+                 000 011  03  03   j   J       100 011  43  23   g   G
+                 000 100  04  04   4   $       100 100  44  24   0   )
+                 000 101  05  05   o   O       100 101  45  25   s   S
+                 000 110  06  06   l   L       100 110  46  26   h   H
+                 000 111  07  07   /   ?       100 111  47  27   y   Y
+                 001 000  10  08   5   %       101 000  50  28   7   &
+                 001 001  11  09   '   "       101 001  51  29   r   R
+                 001 010  12  0A   e   E       101 010  52  2A   d   D
+                 001 011  13  0B   p   P       101 011  53  2B   ;   :
+                 001 100  14  0C  (DC2 DC2)    101 100  54  2C  (DC3 DC1)
+                 001 101  15  0D  (EM  GS)     101 101  55  2D   CR  CR
+                 001 110  16  0E  (SUB FS)     101 110  56  2E   LF  LF
+                 001 111  17  0F  (DC4 DC4)    101 111  57  2F   HT  HT
+                 010 000  20  10   2   @       110 000  60  30   3   #
+                 010 001  21  11   .   .       110 001  61  31   v   V
+                 010 010  22  12   n   N       110 010  62  32   u   U
+                 010 011  23  13   =   +       110 011  63  33   f   F
+                 010 100  24  14   z   Z       100 100  64  34   9   (  
+                                                                 EOA EOA
+                 010 101  25  15  (VT  FF)     110 101  65  35   w   W
+                 010 110  26  16  (RS  RS)     100 110  66  36   b   B
+                 010 111  27  17  (RS  RS)     110 111  67  37   -   _
+                 011 000  30  18   6   >       111 000  70  38   8   *
+                 011 001  31  19   i   I       111 001  71  39   a   A
+                 011 010  32  1A   k   K       111 010  72  3A   c   C
+                 011 011  33  1B   q   Q       111 011  73  3B   ,   ,
+                 011 100  34  1C   UC shift    111 100  74  3C   EOT EOT
+                                  (SO  ENQ)
+                 011 101  35  1D   BS  BS      111 101  75  3D  (NUL NUL)
+                 011 110  36  1E  (ETX  ETB)   111 110  76  3E  (ESC DLE)
+                 011 111  37  1F   LC shift    111 111  77  3F  (DEL NUL)
+                                  (BEL SI)
+   2741 CORRESPONDENCE CODE                                    Page C-2
+   
+
+
+           NOTE:  Alternate  definitions  are  given  below  the  first
+           definitions.
+
+           NOTE:   Parenthetical  abbreviations  are  not   necessarily
+           defined  in this node, but may be used by some datascopes as
+           an interpretation of the data.
+
+           NOTE:  Since this is only a six-bit code, the first two bits
+           should  be  ignored  if  characters are being examined in an
+           eight-bit mode.  Thus, for the first hex digit,
+
+                              0 4 8 C are equivalent
+                              1 5 9 D are equivalent
+                              2 6 A E are equivalent
+                              3 7 B F are equivalent
+
+
+           2741 correspondence code chart courtesy  of  Bruce  Thomson,
+           with some minor modifications.
+
+
+
+
+
+
+
+
+
+
+
+
+                               APPENDIX D
+
+                                EBCD CODE
+
+
+
+           
+           Unshifted = shifted in
+           Shifted   = shifted out
+           
+                                   SHIFTED                       SHIFTED
+                 BINARY   OCT HEX  IN OUT      BINARY   OCT HEX  IN OUT
+           
+                 000 000  00  00   SP  SP      100 000  40  20   1   =
+                 000 001  01  01   -   _       100 001  41  21   j   J
+                 000 010  02  02   @   hex     100 010  42  22   /   ?
+                 000 011  03  03   &   +       100 011  43  23   a   A
+                 000 100  04  04   8   *       100 100  44  24   9   (
+                 000 101  05  05   q   Q       100 101  45  25   r   R
+                 000 110  06  06   y   Y       100 110  46  26   z   Z
+                 000 111  07  07   h   H       100 111  47  27   i   I
+                 001 000  10  08   4   :       101 000  50  28   5   %
+                 001 001  11  09   m   M       101 001  51  29   n   N
+                 001 010  12  0A   u   U       101 010  52  2A   v   V
+                 001 011  13  0B   d   D       101 011  53  2B   e   E
+                 001 100  14  0C   hex hex     101 100  54  2C   RS  RS
+                                  (PN  PN)
+                 001 101  15  0D   hex hex     101 101  55  2D   CR  CR
+                                  (RES RES)
+                 001 110  16  0E   hex hex     101 110  56  2E   LF  LF
+                                  (BYP BYP)
+                 001 111  17  0F   hex hex     101 111  57  2F   HT  HT
+                                  (PF  PF)
+                 010 000  20  10   2   <       110 000  60  30   3   ;
+                 010 001  21  11   k   K       110 001  61  31   l   L
+                 010 010  22  12   s   S       110 010  62  32   t   T
+                 010 011  23  13   b   B       110 011  63  33   c   C
+                 010 100  24  14   0   )       100 100  64  34   #   "  
+                 010 101  25  15   VT  VT      110 101  65  35   $   !
+                 010 110  26  16   FF  FF      100 110  66  36   ,   ,
+                 010 111  27  17   hex hex     110 111  67  37   .   .
+                 011 000  30  18   6   '       111 000  70  38   7   >
+                 011 001  31  19   o   O       111 001  71  39   p   P
+                 011 010  32  1A   w   W       111 010  72  3A   x   X
+                 011 011  33  1B   f   F       111 011  73  3B   g   G
+                 011 100  34  1C   SO  SO      111 100  74  3C   EOT EOT
+   EBCD CODE                                                   Page D-2
+   
+
+
+                                  (shift out)
+                 011 101  35  1D   BS  BS      111 101  75  3D   hex hex
+                                                                 (IL IL)
+                 011 110  36  1E   ETB ETB     111 110  76  3E   ESC ESC
+                 011 111  37  1F   SI  SI      111 111  77  3F   DEL DEL
+                                  (shift in)
+           NOTE:  Alternate  definitions  are  given  below  the  first
+           definitions.
+
+           NOTE:   Parenthetical  abbreviations  are  not   necessarily
+           defined  in this node, but may be used by some datascopes as
+           an interpretation of the data.
+
+           NOTE:  Since this is only a six-bit code, the first two bits
+           should  be  ignored  if  characters are being examined in an
+           eight-bit mode.  Thus, for the first hex digit,
+
+                              0 4 8 C are equivalent
+                              1 5 9 D are equivalent
+                              2 6 A E are equivalent
+                              3 7 B F are equivalent
+
+
+
+
+
+
+
+
+
+
+
+
+                               APPENDIX E
+
+                      HEX TO EBCDIC CONVERSION CHART
+
+
+
+
+
+
+           
+                                            FIRST DIGIT
+           
+                        0    1    2   3   4   5  6  7  8  9  A  B  C  D  E  F
+           
+                   0   NUL  DLE  DS       SP  &  -                 {  }  \  0
+                   1   SOH  DC1  SOS             /     a  j  ~     A  J     1
+              S    2   STX  DC2  FS  SYN               b  k  s     B  K  S  2
+              E    3   ETX  DC3                        c  l  t     C  L  T  3
+              C    4   PF   RES  BYP PN                d  m  u     D  M  U  4
+              O    5   HT   NL   LF  RS                e  n  v     E  N  V  5
+              N    6   LC   BS   ETB UC                f  o  w     F  O  W  6
+              D    7   DEL  IL   ESC EOT               g  p  x     G  P  X  7
+                   8        CAN                        h  q  y     H  Q  Y  8
+              D    9   RLF  EM                         i  r  z     I  R  Z  9
+              I    A   SMM  CC   SM      cent !  |  :
+              G    B   VT                 .   $  ,  #
+              I    C   FF   IFS      DC4  <   *  %  @
+              T    D   CR   IGS  ENQ NAK  (   )  _  '
+                   E   SO   IRS  ACK      +   ;  >  =
+                   F   SI   IUS  BEL SUB  |   ^  ?  "
+           
+
+
+
+
+
+
+
+
+
+
+
+
+                               APPENDIX F
+
+                        ENGINE INSTRUCTION SUMMARY
+
+
+
+
+
+
+           Instruction                             Op-code NAD 
+
+           Add                                     5A      A
+           Add Halfword                            4A      AH 
+           Add Halfword Immediate                  CA      AHI 
+           Add Halfword to Memory                  61      AHM 
+           Add Immediate                           FA      AI 
+           Add Immediate Short                     26      AIS 
+           Add Register                            0A      AR 
+           Add to Memory                           51      AM 
+           aNd                                     54      N 
+           aNd Halfword                            44      NH 
+           aNd Halfword Immediate                  C4      NHI 
+           aNd Immediate                           F4      NI 
+           aNd Register                            04      NR 
+
+           Compare                                 59      C 
+           Compare Halfword                        49      CH 
+           Compare Halfword Immediate              C9      CHI 
+           Compare Immediate                       F9      CI 
+           Compare Logical                         55      CL 
+           Compare Logical Byte                    D4      CLB 
+           Compare Logical Halfword                45      CLH 
+           Compare Logical Halfword Immediate      C5      CLHI 
+           Compare Logical Immediate               F5      CLI 
+           Compare Logical Register                05      CLR 
+           Compare Register                        09      CR 
+           Complement BiT                          77      CBT 
+           Console IO                              99      CIO 
+           Convert Halfword Value Register         12      CHVR 
+
+           Divide                                  5D      D 
+           Divide Halfword                         4D      DH 
+           Divide Halfword Register                0D      DHR 
+           Divide Register                         1D      DR 
+
+   ENGINE INSTRUCTION SUMMARY                                  Page F-2
+   
+
+
+           EXchange Byte Register                  94      EXBR 
+           EXchange Halfword Register              34      EXHR 
+           Exchange Program Status Register        95      EPSR 
+           eXclusive or Halfword                   47      XH 
+           eXclusive or Halfword Immediate         C7      XHI 
+           eXclusive or                            57      X 
+           eXclusive or Immediate                  F7      XI 
+           eXclusive or Register                   07      XR 
+
+           Jump                                    430     J 
+           Jump And Link                           41      JAL 
+           Jump And Link Register                  01      JALR 
+           Jump Backward Short                     220     JBS 
+           Jump Carry                              428     JC 
+           Jump Carry Backward Short               208     JCBS 
+           Jump Carry Forward Short                218     JCFS 
+           Jump Carry Register                     028     JCR 
+           Jump Equal                              433     JE 
+           Jump Equal Backward Short               223     JEBS 
+           Jump Equal Forward Short                233     JEFS 
+           Jump Equal Register                     033     JER 
+           Jump False Backward Short               22M     JFBS 
+           Jump False Forward Short                23M     JFFS 
+           Jump Find First One                     31      JFFO 
+           Jump Find First One Halfword            33      JFFOH 
+           Jump Forward Short                      230     JFS 
+           Jump Greater                            422     JG 
+           Jump Greater Backward Short             202     JGBS 
+           Jump Greater Equal                      431     JGE 
+           Jump Greater Equal Backward Short       221     JGEBS 
+           Jump Greater Equal Forward Short        231     JGEFS 
+           Jump Greater Equal Register             031     JGER 
+           Jump Greater Forward Short              212     JGFS 
+           Jump Greater Register                   022     JGR 
+           Jump Less                               421     JL 
+           Jump Less Backward Short                201     JLBS 
+           Jump Less Equal                         432     JLE 
+           Jump Less Equal Backward Short          222     JLEBS 
+           Jump Less Equal Forward Short           232     JLEFS 
+           Jump Less Equal Register                032     JLER 
+           Jump Less Forward Short                 211     JLFS 
+           Jump Less Register                      021     JLR 
+           Jump No Carry                           438     JNC 
+           Jump No Carry Backward Short            228     JNCBS 
+           Jump No Carry Forward Short             228     JNCFS 
+           Jump No Carry Register                  038     JNCR 
+           Jump Not equal                          423     JN 
+           Jump Not equal Backward Short           203     JNBS 
+           Jump Not equal Forward Short            213     JNFS 
+           Jump Not equal Register                 023     JNR 
+           Jump on False condition                 43M     JF 
+           Jump on False condition Register        03M     JFR 
+   ENGINE INSTRUCTION SUMMARY                                  Page F-3
+   
+
+
+           Jump on True condition                  42M     JT 
+           Jump on True condition Register         02M     JTR 
+           Jump Register                           030     JR 
+           Jump True Backward Short                20M     JTBS 
+           Jump True Forward Short                 21M     JTFS 
+
+           Load                                    58      L 
+           Load Address                            E6      LA 
+           Load Byte                               D3      LB 
+           Load Byte Register                      93      LBR 
+           Load Complement Short                   25      LCS 
+           Load Halfword                           48      LH 
+           Load Halfword Immediate                 C8      LHI 
+           Load Halfword Logical                   73      LHL 
+           Load Halfword Logical                   73      LHL 
+           Load Halfword Register                  12      LHR 
+           Load Immediate                          F8      LI 
+           Load Immediate Short                    24      LIS 
+           Load Multiple                           D1      LM 
+           Load Program Status Word                C2      LPSW 
+           Load Program Status Word Register       18      LPSWR 
+           Load Register                           08      LR 
+
+           Multiply                                5C      M 
+           Multiply Halfword                       4C      MH 
+           Multiply Halfword Register              0C      MHR 
+           Multiply Register                       1C      MR 
+
+           No OPeration                            420     NOP 
+           No OPeration Register                   020     NOPR 
+
+           Or Halfword                             46      OH 
+           Or Halfword Immediate                   C6      OHI 
+           Or Immediate                            F6      OI 
+           Or Register                             06      OR 
+           Or word                                 56      O 
+           Output Command                          DE      OC 
+           Output Command Register                 9E      OCR 
+
+           Read Data                               9B      RDR 
+           Reset BiT                               76      RBT 
+           Rotate Left Logical                     EB      RLL 
+           Rotate Right Logical                    EA      RRL 
+
+           Sense Status Register                   9D      SSR 
+           Set BiT                                 75      SBT 
+           Shift Left Halfword Logical             CD      SLHL 
+           Shift Left Halfword Logical Short       91      SLHLS 
+           Shift Left Logical                      ED      SLL 
+           Shift Left Logical Short                11      SLLS 
+           Shift Right Arithmetic                  EE      SRA 
+           Shift Right Halfword Logical            CC      SRHL 
+   ENGINE INSTRUCTION SUMMARY                                  Page F-4
+   
+
+
+           Shift Right Halfword Logical Short      90      SRHLS 
+           Shift Right Logical                     EC      SRL 
+           Shift Right Logical Short               10      SRLS 
+           STore                                   50      ST 
+           STore Byte                              D2      STB 
+           STore Byte Register                     92      STBR 
+           STore Halfword                          40      STH 
+           STore Multiple                          D0      STM 
+           Subtract                                5B      S 
+           Subtract Halfword                       4B      SH 
+           Subtract Halfword Immediate             CB      SHI 
+           Subtract Immediate                      FB      SI 
+           Subtract Immediate Short                27      SIS 
+           Subtract Register                       0B      SR 
+           SuperVisor Call                         E1      SVC 
+
+           Test and Set                            E0      TS 
+           Test BiT                                74      TBT 
+           Test Halfword Immediate                 C3      THI 
+           Test Immediate                          F3      TI 
+
+           User Program Status Word                D5      UPSW 
+
+           Write Data                              DA      WD 
+           Write Data Register                     9A      WDR 
+                                                           Page Index-1
+   
+
+
+                                      INDEX
+
+
+
+
+           %c . . . . . . . . . . . . . . 3-2
+           %o . . . . . . . . . . . . . . 3-2
+
+           Assembly errors  . . . . . . . 5-1
+           Auxiliary circuit
+             broken . . . . . . . . . . . 4-4
+             rebuild  . . . . . . . . . . 4-4
+             through a gateway  . . . . . 4-3
+             to a slot  . . . . . . . . . 4-2
+
+           Bound files  . . . . . . . . . 2-3
+           Breakpoints  . . . . . . . . . 4-20
+           Buffer trace . . . . . . . . . 4-18
+           BUFTRC . . . . . . . . . . . . 4-17
+
+           Character trace  . . . . . . . 4-18
+           Command file pause . . . . . . 4-28
+           Command file resume  . . . . . 4-28
+           Conversion chart
+             2741 correspondence code . . B-1
+             ebcd code  . . . . . . . . . C-2
+             hex to ASCII . . . . . . . . A-4
+             hex to EBCDIC  . . . . . . . D-2
+           CORSIZ.CMD . . . . . . . . . . 4-7, 5-1
+           Crash codes
+             standard . . . . . . . . . . 4-11
+           Crash table
+             debugging  . . . . . . . . . 4-12
+             interpreting . . . . . . . . 4-10
+             reading  . . . . . . . . . . 4-10
+           CRSTOP . . . . . . . . . . . . 4-17
+           Current radix, NAD . . . . . . 3-7
+
+           Data rings . . . . . . . . . . 4-14
+             IRING  . . . . . . . . . . . 4-14
+             ORING  . . . . . . . . . . . 4-14
+           DDT flush  . . . . . . . . . . 3-2
+           DDT queries  . . . . . . . . . 4-13
+           DDT restart  . . . . . . . . . 3-1 to 3-2
+           Debugging  . . . . . . . . . . 4-9
+           Debugging switches . . . . . . 4-17
+             BUFTRC . . . . . . . . . . . 4-17
+             CRSTOP . . . . . . . . . . . 4-17
+             HDWTRC . . . . . . . . . . . 4-17
+             setting  . . . . . . . . . . 4-17
+           Default radix, NAD . . . . . . 3-7
+           Diagram
+             ORING  . . . . . . . . . . . 4-15
+           Dispatcher crash . . . . . . . 5-2
+           Dumping a slot . . . . . . . . 4-8
+             appending the symbol table . 4-8
+             reading a slot dump  . . . . 4-9
+
+           Errors from LOADII . . . . . . 2-2
+           Example
+             ASCII display  . . . . . . . 3-9
+             ASCII insertion  . . . . . . 3-10
+             building an auxiliary circuit  4-3
+             building circuit through gateway  4-3
+             crash interpretation . . . . 4-12
+             crash table  . . . . . . . . 4-10
+             getting NIB file . . . . . . 4-2
+             IRING  . . . . . . . . . . . 4-16
+             label to hex . . . . . . . . 3-6
+             NAD calculator . . . . . . . 3-7
+             NAD shorthand  . . . . . . . 3-8
+             NIB file verification  . . . 4-23
+             number to label conversion . 3-6
+             patch file . . . . . . . . . 4-25
+             patch with IF switch . . . . 4-27
+             patching Engine memory . . . 4-24
+             patching PDP image . . . . . 4-23
+             reading Engine memory  . . . 3-5
+             reading PDP memory . . . . . 3-3
+             reading PDP memory instructions  3-4
+             setting debug switches . . . 4-18
+             slot load with NAD . . . . . 4-6
+             temporary halt . . . . . . . 3-11, 4-28
+             writing into Engine memory . 3-10
+
+           Hardware trace . . . . . . . . 4-18
+           HDWTRC . . . . . . . . . . . . 4-17, 5-2
+           Host
+             table  . . . . . . . . . . . 5-2
+
+           IF switches  . . . . . . . . . 4-26
+           Instruction summary, Engine  . E-1
+           IRING  . . . . . . . . . . . . 4-14
+           ISIS message
+             types  . . . . . . . . . . . 4-15
+           ISISDB . . . . . . . . . . . . 4-7, 5-1
+
+           Jumps, tracing . . . . . . . . 4-18
+
+           Listing
+             generating a . . . . . . . . 4-7
+           LOADII errors  . . . . . . . . 2-2
+           Loading
+             error types  . . . . . . . . 2-3
+             LOADII . . . . . . . . . . . 2-1
+             NAD  . . . . . . . . . . . . 4-1
+           Loading a slot . . . . . . . . 2-1
+
+           NAD
+             ASCII display  . . . . . . . 3-8
+             assembly errors  . . . . . . 5-1
+             calculator . . . . . . . . . 3-6
+             command summary  . . . . . . 5-3
+             error messages . . . . . . . 5-1
+             hex address to label . . . . 3-6
+             label to hex . . . . . . . . 3-6
+             line editing . . . . . . . . 3-1
+             loading  . . . . . . . . . . 4-1
+             localizing modules . . . . . 3-2
+             multiple value display . . . 3-3
+             preliminaries  . . . . . . . 3-1
+             radix conversion . . . . . . 3-8
+             reading Engine memory  . . . 3-5
+             reading PDP memory . . . . . 3-3
+             reentering . . . . . . . . . 4-1
+             shorthand notations  . . . . 3-8
+             writing into Engine memory . 3-10
+             writing into PDP memory  . . 3-9
+
+           OPFLOP . . . . . . . . . . . . 3-4
+           ORING  . . . . . . . . . . . . 4-14
+
+           Parity error . . . . . . . . . 5-1
+           Patching . . . . . . . . . . . 4-22
+             changing the NIB file  . . . 4-24
+             creating a patch file  . . . 4-24
+             documentation  . . . . . . . 4-27
+             Engine memory  . . . . . . . 4-23
+             general philosophy . . . . . 4-24
+             inserting a halt . . . . . . 4-28
+             patch contents . . . . . . . 4-27
+             PDP image  . . . . . . . . . 4-22
+             procedures . . . . . . . . . 4-27
+             temporary patches  . . . . . 4-28
+           Pause in command file  . . . . 4-28
+           Protection violation . . . . . 5-2
+
+           Radix
+             current, NAD . . . . . . . . 3-7
+             default, in NAD  . . . . . . 3-7
+           References . . . . . . . . . . 1-1
+           Resume command file  . . . . . 4-28
+
+           Slot load  . . . . . . . . . . 2-1
+           Slot load command file . . . . 4-6
+           Source listing, generating a . 4-7
+
+           Table
+             DDT queries  . . . . . . . . 4-13
+             ISIS message types . . . . . 4-15
+             standard crash codes . . . . 4-11
+           Tracing buffers  . . . . . . . 4-18
+           Tracing characters . . . . . . 4-18
+           Tracing jumps  . . . . . . . . 4-18
+           Troubleshooting  . . . . . . . 4-29
+
+   
+   
+
+
+                                      NOTES
+   
+   
+
+
+                                      NOTES
+   
+   
+
+
+                                      NOTES
+   <@
