@@ -1,0 +1,331 @@
+
+.nr O 1.2i
+.nr W 6.5i
+
+.so /usr/lib/tmac/tmac.m
+
+
+\&
+.S 28
+.ls 2
+.ce 4
+.B
+.sp
+SNA CONVERSION 
+for
+TURBO ENGINE
+GENERAL EXTERNAL DESIGN
+.ls 1
+.R
+.sp .5i
+.S 16
+.ls 2
+.ce 3
+by
+Drue Bondad
+\*(DT
+.sp 1.25i
+.S 11 13
+.ls 1
+.TS
+center linesize(36) box;
+aw(5.5i).
+T{
+TYMNET's proprietary rights are included in the information disclosed herein.
+The recipient, by receiving this document, agrees that neither this document nor
+the information disclosed herein nor any part thereof shall be reproduced or
+transferred to other documents or used or disclosed to others for manufacturing
+or for any other purpose except as specifically authorized in writing by TYMNET.
+T}
+.sp .10i
+.TE
+.ds HP 12 12 12 12  
+.ds HF 3 3 2 2
+.PH "'\fB\s-1\\*(DT'MDC Confidential'Introduction\fR\s+1'"
+.bp
+.PF "'\fB\s-1PIR 2431-2373\fR\s+1'\fB\s-1SNA Turbo Engine Conversion General External Design'\\\\nP\fR\s+1'"
+.H 1 "Introduction"
+.sp
+This document describes the external specifications for the conversion of the
+SNA interface source code for support on the Turbo engine as requested in
+PIR 2431-2373.
+.sp
+The goal of this project is to modify the SNA code so that it can be
+assembled into object code for either the Turbo Engine or a TYMNET Engine.
+The Turbo Engine SNA code must perform functionally the same as the TYMNET Engine 
+SNA code.
+.sp
+Currently the SNA source code is written in NAD (Engine) 
+assembly language. The NAD assembler runs on the PDP/10s and
+assembles this code into object code 
+for TYMNET Engines. The UNIX NAD Analogue (Nada) assembler also
+assembles NAD assembly language into TYMNET Engine object code, but
+operates in a UNIX environment.
+The SNA source code has not been moved to
+any of the UNIX systems and therefore has not yet been assembled using NADA.
+.sp
+The Turbo Engine, however, requires 68020 object code
+running under ISIS-68K. The NAD68
+assembler, which like NADA operates under UNIX, assembles a subset of
+the NAD assembly
+language into 68020 object code to be run on the Turbo Engine.
+Modifications to the SNA source code are required to use only the
+subset of NAD assembly
+language which the NAD68 assembler supports. This document will identify
+what these changes are.
+.sp
+
+
+.H 2 "Scope"
+.sp
+The scope of this document is to identify modifications
+required to support SNA code on the Turbo Engine. The General Internal
+Design (GID) will go into more detail to describe exactly how these
+changes will be handled in the code.
+.sp
+.H 2 "Design Objectives"
+.sp
+.I
+.BL
+.LI
+Retain as much compatability as is possible between the translated
+SNA code and the current engine code.
+.LI
+Translate the code using the most structured method rather than
+by using the method which is easiest to implement.
+.LI
+This conversion will NOT include any direct 68020 assembly language,
+only NAD assembly language.
+.LI
+Code optimization and efficiency will not be a primary concern for
+this first phase of translation.
+.LE
+
+.sp
+.H 2 "Reference Documentation"
+.sp
+.I
+.BL
+.LI
+NAD68 Assembler General External Design
+.LI
+ISIS-68K External Specification
+.LE
+.sp
+.H 1 "Summary of Modifications"
+.sp
+In order to assemble the SNA code using NAD68, all the SNA source code
+will need to be copied to a UNIX system. NAD68 only runs under UNIX. 
+After this transfer, the SNA source code should be assembled using
+NADA and the object code loaded into a TYMNET Engine. This code should function
+the same as the object code assembled by NAD on the PDP/10s.
+.sp
+Since not all NAD instructions are valid under NAD68,
+the next step will be to modify the SNA source code to use only the assembly
+language subset supported by NAD68. In addition to these
+changes, the ISIS library modules referenced by the SNA source code also need
+to be translated. The only library modules which have been translated so far
+are START.LIB and FINISH.LIB. It is assumed that the ISIS section will
+provide translation for all other ISIS libraries used by the SNA source
+code.
+The interface to these ISIS libraries needs to be defined
+and agreed upon in the GID.
+.sp
+Once the translation is complete, all three assemblers will be able to
+assemble the same translated SNA source code. NAD will assemble SNA source
+modules on the PDP/10s into TYMNET Engine object code. NADA will assemble
+SNA source modules on the UNIX systems into TYMNET Engine code. NAD68 will
+assemble SNA source modules on the UNIX systems into 68020 object code
+for the Turbo Engine.
+.sp
+
+.H 1 "Modifications to Support NAD68"
+.sp
+This section describes the different modifications which need to be
+made to support NAD68.
+.sp
+.H 2 "Numbered Instructions"
+.sp
+Most of the changes will be to avoid using numbers or symbols 
+which represent the Engine instruction lengths. Because the NAD assembly
+instructions and
+68020 instructions are different, there
+is no fixed correspondence in instruction lengths when translating from
+Engine code to 68020 code. Any references to instruction lengths in the
+SNA source code and ISIS library modules need to be avoided.
+.sp 
+.H 3 "Skip Returns"
+.sp
+Currently when a calling routine jumps to execute a called routine,
+the return address of the calling routine maybe saved in a link register.
+After the called routine has finished execution, the called
+routine can then perform a normal return or a skip return back to the 
+calling routine. If a normal return is used, the called routine returns 
+to execute the next instruction, in the calling routine,
+after the original call. If a skip return is used, the called routine
+does not return to the next instruction after the original call. Instead,
+the called routine decides how many instructions it will jump around
+when returning to the called routine. The lengths of these instructions
+which will be skipped is added to the link register.
+.sp
+By using skip returns the called routine must know the length of the 
+instructions being skipped. When using NAD68, the length of these instructions
+can not always be determined properly. Some how the called routine
+must not try to calculate these lengths.
+.sp
+There are different ways of eliminating these instruction length
+references, such as `J 4,R5 ;skip return', or `JLE 6,R4'.
+The easiest method would be to continue using the skip returns, but
+have the calling routine indicate the skip return addresses to the called
+routine. By doing this the called routine would not need to deal with
+instruction lengths. Since the basic flow of the routines would not be
+changed by implementing this method, modifications could easily be
+substituted in place of the old skip return code.
+.sp
+Another method to avoid skip returns is to always return to the same place
+with a condition code. This way the calling routine can determine
+where to jump next rather than the called routine deciding. This is a much more 
+structured approach, but would require more effort to implement. 
+
+.sp
+The General Internal Design (GID) will specify exactly how the skip returns
+will be avoided for the translated code.
+.sp
+.H 3 "Relative Jumps"
+.sp
+Relative jumps, such as 'JGE .+4', should be rewritten. Rather then
+jump relative, a label should be added so that a jump label is used
+instead.
+.sp
+.H 2 "Supervisor Calls - SVCs"
+.sp
+Only some of the SVCs will be supported by NAD68. This means SVCs 
+which are currently used by the SNA code and are not supported by NAD68 will
+need to be rewritten. SVCs which need modification will be under an
+assembly switch named 'NAD68'. This switch will be set using the
+NAD68 TARGET directive.
+.sp
+.H 2 "Modifications to Reference ISIS Library"
+.sp
+The SNA code uses some ISIS library modules. Some of the
+modules are referenced from the ISISLIB directory and the others
+are referenced from the SNADEV directory. Modules which reside in the
+ISISLIB directory are maintained and managed by the ISIS section. Modules
+residing in the SNADEV directory are managed by the SNA/SDLC section.
+The modules which have been moved from the ISIS to the SNA directory
+have been modified for our own purposes. The changes should
+be studied and possibly added to the ISISLIB modules so that all
+libraries can be managed by one section.
+.sp
+.bp
+The following library modules need to be translated for NAD68:
+.sp
+.TS
+box, expand;
+c|c|c|c
+l|l|l|l.
+routine	directory	return modes	comments
+=
+TRACE.LIB	ISISLIB	normal	T{
+.na
+Hardware trace feature
+.ad
+T}
+_
+TIMOUT.LIB	ISISLIB	normal	T{
+.na
+Standard time out routines
+.ad
+T}
+_
+BID.LIB	ISISLIB	normal	T{
+.na
+Halfword bit identifier
+.ad
+T}
+_
+FRING.LIB	ISISLIB	T{
+.na
+skip and normal
+.ad
+T}	T{
+.na
+Ring handler
+.ad
+T}
+
+_
+CRASH.LIB	SNADEV	T{
+.na
+no return
+.ad
+T}	T{
+.na
+Generalized crash package
+.ad
+T}
+
+_
+CONVRT.LIB	ISISLIB	normal	T{
+.na
+Data conversion routines
+.ad
+T}
+
+_
+DATIME.LIB	ISISLIB	normal	T{
+.na
+GMT clock conversion routines
+.ad
+T}
+
+_
+BBUF03.F02	SNADEV	T{
+.na
+skip and normal
+.ad
+T}	T{
+.na
+Big Bufferlet Package
+.ad
+T}
+
+_
+FRNTND.LIB	SNADEV	T{
+.na
+skip and normal
+.ad
+T}	T{
+.na
+ISIS Front End Handler Package
+.ad
+T}
+
+_
+PATCH.F01	SNADEV	T{
+.na
+no return
+.ad
+T}	T{
+.na
+Patch area definitions
+.ad
+T}
+.TE
+.sp
+
+
+.H 1 "Limitations"
+.sp
+.bl
+.I
+.BL
+.LI
+The actual code size will increase approximately three times. The size of the
+data area or control blocks will not be effected by the translation.
+.LI
+The response time may be increased.
+.LE
+
+.sp
+    
