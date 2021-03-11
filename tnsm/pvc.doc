@@ -1,0 +1,373 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                   XCOM - PVC Feature for X.25 Interfaces
+                  Feature Description and Reference Manual
+
+
+
+
+
+
+
+
+
+
+                           Author: Frank Kotulak
+
+                        Major Interface Development
+                        Network Technology Division
+                               Tymshare, Inc.
+                              10261 Bubb Road
+                            Cupertino, CA  95014
+
+
+
+
+
+
+
+                           Date October 17, 1983
+
+
+
+                          Proprietary Information
+
+
+doc:  (NETMID)PVC.DOC
+X.25 PVC Feature Documentation. Proprietary Information Oct-17-83     Page 2
+Table of Contents
+
+
+     1. Introduction
+        1.1 Feature Abstract
+        1.2 Applicable Documents
+
+     2. Interface Description
+        2.1 To the Host
+        2.2 To the Network
+
+     3. Tymfile Parameter Description
+        3.1 PCNL
+        3.3 PVCHANNEL
+
+     4. Other Considerations
+        4.1 Configuring
+        4.2 Error Handling
+                A. Host Down
+                B. Circuit Down
+                C. Illegal Packets
+                D. Tymfile Inconsistencies
+        4.3 Miscellaneous
+                A. Data packets after RESET
+                B. Username Specification
+        4.4 Accounting
+
+     GLOSSARY
+X.25 PVC Feature Documentation. Proprietary Information Oct-17-83     Page 3
+Introduction
+
+
+     1.  Introduction
+
+       1.1 Feature Abstract
+
+         This document  describes  the  CCITT  specified  Permanent  Virtual
+         Circuit  feature  for  the  X.25 protocol as developed for the XCOM
+         interface by the Network Technology  Division  of  Tymshare,  Inc..
+         The PVC Feature conforms to the Host-Network communication protocol
+         as specified  by  CCITT  1980.   However,  because  of  the  Tymnet
+         transport   mechanism  used  within  the  network,  certain  Tymnet
+         required information must be specified  at  the  time  the  PVC  is
+         configured.    The   only   known  non-conformity  with  the  CCITT
+         specification as currently defined is in the number of PVC channels
+         allowed  per  link.   CCITT describes a maximum PVC channel/link of
+         4095.  The PVC Feature as described herein,  currently  supports  a
+         maximum of 255 PVC channels/link.  
+
+
+
+       1.2 Applicable Documents
+
+         CCITT X.25 Reccommendation, 1980
+
+         X.25/X.75 Interface Reference Manual, 1981
+
+         (NETMID)TUR.DOC
+X.25 PVC Feature Documentation. Proprietary Information Oct-17-83     Page 4
+Interface Description
+
+
+     2.  Interface Description
+
+       2.1 To the Host
+
+         Once all interfaces are properly configured (both host  and  slot),
+         the  Host-Network interface for a PVC is the same as a SVC with the
+         following exception.  All level 3 packets that deal with Call setup
+         (ie.  Call Request, etc.) or Call clearing should not be recognized
+         nor sent by either side, under any circumstances.  A  reset  packet
+         will  be  sent  by the network to both Hosts (DTE's) if any illegal
+         packets arrive on the channel.  This conforms with the  CCITT  1980
+         specifications.
+
+       2.2 To the Network
+
+         The development of a new X.25 dialect level (ie.  Turkey level) was
+         required  to  implement  a  PVC feature.  Therefore, to communicate
+         through the network as a PVC both interfaces must be able  to  talk
+         Turkey level 2 or higher.
+
+         Since the "normal" call request and call accept scenario  does  not
+         exist for a PVC, a PVC goes through a special setup sequence at the
+         time the interface first comes up  or  after  the  network  becomes
+         available  following  the loss of circuits due to a network outage.
+         In both of the above cases a circuit rebuild sequence is  attempted
+         every  60  seconds  until  the  circuit is re-established.  The DTE
+         interface with the "higher" host number is responsible for building
+         the circuit.
+
+         The circuit rebuild sequence which creates the PVC consists  of  an
+         exchange  of  IIX  Turkey Level 2 messages which confirm and verify
+         that this PVC is going to the right host, link and channel and that
+         the  two  separately  configured  interfaces  have  been  correctly
+         configured.  A 60 second retry rebuild sequence will begin if there
+         is  a  validity  problem.  Also, it is during this message exchange
+         that the interfaces indicate to each  other  the  status  of  their
+         respective DTE's (ie.  "up" or "down").
+
+         In the case where a Host goes out of the network, the circuit  will
+         remain  up.   A  series  of reset packets as described in the CCITT
+         specification will be used to notify the other interface  and  Host
+         (DTE)  of  the  PVC's  operational status.  This will eliminate any
+         delay from the application's viewpoint when the downed  Host  comes
+         back  into the network.  It will also eliminate any unnecessary use
+         of the bandwidth for timer activated status messages.
+X.25 PVC Feature Documentation. Proprietary Information Oct-17-83     Page 5
+Tymfile Parameters
+
+
+     3.  Tymfile Parameter Description
+
+       3.1 PCNL(lc,hc)
+
+         This macro is LINK dependent and specifies the number  of  channels
+         to  be  reserved  as  PVC  channels  for  this link.  The number of
+         channels that may be described for each link is from 1 to  255.   A
+         PVC  channel  is not explicitly defined, however, until a PVCHANNEL
+         macro is  created  for  that  channel.   The  PCNL  macro  must  be
+         specified if a PVC is desired on a particular link.  "lc" specifies
+         the lowest PVC channel for this link.  "hc" specifies  the  highest
+         PVC  channel  for  this  link and may not be higher than the number
+         255.
+X.25 PVC Feature Documentation. Proprietary Information Oct-17-83     Page 6
+Tymfile Parameters
+
+
+       3.2 PVCHANNEL(ochan,dhost,dlink,dchan,ulog,pst,psr,pwt,wr,tct,tcr)
+
+         This macro requires the specification of a PCNL macro.  This  macro
+         is LINK dependent and must be specified within a link option group.
+         Only ONE PVC channel may be described per macro call and  only  255
+         macro calls are allowed per link.
+
+         This  macros  purpose  is  to  provide  network  and  packet  level
+         information  regarding the PVC and to provide information that will
+         enable the validation of the circuit at the  time  the  circuit  is
+         built.
+
+         The description and default for each parameter follows;
+
+           ochan        
+             Originating (our) PVC channel number.  No default.
+
+           dhost
+             The destination Host number for this PVC.  No default.
+
+           dlink
+             The destination Link number for this PVC.  No default.
+
+           dchan
+             The destination channel number for this PVC.  No default.
+
+           ulog
+             This specifies the username that will be used to log  into  the
+             network  at  the  time  the PVC circuit is built.  The username
+             will be constructed by taking  the  value  in  this  field  and
+             concatenating  a  ":dhost;<cr>" to it.  Therefore, the username
+             must be of the NO or NULL password type.  No default.
+
+           pst
+             The CCITT specified packet size CODE for transmit.  Default 7
+
+           psr
+             The CCITT specified packet size CODE for receiving.  Default 7.
+
+           pwt
+             The packet window size for transmission.  Default 2.
+
+           pwr
+             The packet window size for receiving.  Default 2.
+
+           tct
+             Transmission thruput class.  Default 7.
+
+           tcr
+             Reception thruput class.  Default 7.
+
+         NOTE:  the other interface's CODES and classes must  be  oppositely
+         configured  in  order to be valid.  All numeric values are given in
+         decimal.
+X.25 PVC Feature Documentation. Proprietary Information Oct-17-83     Page 7
+Considerations
+
+
+     4.  Other Considerations
+
+       4.1 Configuring
+
+         All PVC macros must "physically" be specified within a link  option
+         group.
+
+         Only one PCNL macro per link.
+
+         The PVC "absolute" channel range as currently implemented is from 1
+         to 255.
+
+         The network side should always be viewed as the DCE  in  all  other
+         Tymfile specifications for the "best" operation of the PVC.
+
+         No XOM's defined for PVC's, though  usernames  can  be  added  thru
+         patching.
+
+       4.2 Error Handling
+
+         A.  Host Down
+
+           If  a  PVC  connected  DTE  becomes  disconnected  (ie.    "down"
+           condition  on  the  link  or  channel) a RESET packet is sent and
+           delivered to the other connected DTE.  The cause byte  indication
+           is  "Out  of  Order".   The  PVC  circuit will remain "up" in the
+           network.
+
+           Any data, RR or RNR packets sent by the "up" DTE to  the  network
+           after  the  RESET  has  been  sent  and confirmed, will result in
+           another RESET "Out of Order" being sent by the interface  to  the
+           "up" DTE.
+
+           When the "down" Host (DTE) reconnects to the network a RESET "DTE
+           Operational"  will  be sent and delivered to the other DTE.  Data
+           transmission can then resume.
+
+         B.  Circuit Down
+
+           If a PVC's network  circuit  is  lost  (ie.   physical  break  in
+           internodal links or one of the interface slots supporting the PVC
+           "crashes") all active PVC interfaces will notify their respective
+           DTE's via a RESET "Network Congestion".
+
+           Any data, RR or RNR packets sent by the "up" DTE to  the  network
+           after  the  RESET  has  been  sent  and confirmed, will result in
+           another RESET "Out of Order" being sent by the interface  to  the
+           "up" DTE.
+
+           When the network problem is  corrected  a  PVC  circuit  will  be
+           rebuilt  between  the  DTEs  within 60 seconds.  A RESET "Network
+           Operational"  is  sent  by  the  network  to  each   DTE.    Data
+           transmission can then resume.
+X.25 PVC Feature Documentation. Proprietary Information Oct-17-83     Page 8
+Considerations
+
+
+         C.  Illegal Packets
+
+           Call Request, Call Accept, Clear Request and  Clear  Confirmation
+           packets  should  not be sent by a DTE on a PVC and are considered
+           "invalid" packets.
+
+           If an "invalid" packet is received a RESET "Invalid Packet"  will
+           be sent to both DTEs.
+
+         D.  Tymfile Inconsistencies
+
+           The information supplied in the PVCHANNEL macro on one  interface
+           is  compared  and  validated with the information supplied in the
+           PVCHANNEL macro on the other interface.  If their is a validation
+           problem  this  is  considered  to  be a Tymfile inconsistency.  A
+           (9Ah) PVC Confirmation IIX Turkey level 2 message  will  be  sent
+           between  interfaces  indicating  a reject.  When a reject occurs,
+           the circuit will be  zapped  and  a  60  second  circuit  rebuild
+           sequence will begin.
+
+           Note, support personnel should look for this situation in  the  I
+           and  O  rings if the PVC circuit does not create itself and there
+           are no known network problems.  Refer to (NETMID)TUR.DOC for  the
+           message format.
+
+
+       4.3 Miscellaneous
+
+         A.  Data Packets and RESETS
+
+           The sending of data packets by the DTE after confirming  an  "Out
+           of  Order"  or "Network Congestion" RESET packet, conforms to the
+           proposed 1984  CCITT  specification.   If  the  DTE's  x.25  code
+           continues  to send data packets and multiple PVCs are configured,
+           the physical link between DTE and DCE could degrade  quickly.   A
+           tight  DATA-RESET-RESET  CONF.   loop  will occur on each channel
+           until the network or host problem is  corrected.   The  NPSI  IBM
+           X.25 package currently works this way.  
+
+         B.  Usernames
+
+           Usernames specified in the PVCHANNEL macro must be  validated  in
+           the  network such that no password is required and a <CR> need be
+           sent following the semicolon.
+
+
+       4.4 Accounting
+
+         The  existing  accounting  system  in  Xcom,  contains  no  special
+         provisions for PVC's.
+X.25 PVC Feature Documentation. Proprietary Information Oct-17-83     Page 9
+GLOSSARY
+
+
+     PVC
+
+       Permanent Virtual Circuit is a circuit which is immediately available
+       for  the  transmission  of information between two hosts.  A PVC does
+       not require explicit login or logoff from the network.  Once a PVC is
+       built  it  remains  in  existence until a network outage "kills" that
+       circuit.  Once the "outage is corrected, the circuit will be  rebuilt
+       automatically.  User intervention should never be required.  Unless a
+       Host is "down" or the  network  is  "down"  a  PVC  circuit  type  is
+       quaranteed to be up and available.
+
+     SVC
+
+       Switched Virtual Circuit is a circuit that is  explicitly  built  and
+       torn down by the user through the use of logon/logoff procedures.  No
+       quarantees regarding network availability are made for a  user  of  a
+       SVC.  An SVC is the "normal" x.25/x.75 circuit type.
+   
