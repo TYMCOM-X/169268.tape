@@ -1,0 +1,522 @@
+
+
+
+
+.
+
+
+
+
+
+
+             TYMNET CUSTOMER REPORT GENERATOR DOCUMENTATION             
+             ----------------------------------------------
+
+
+        THE TYMNET REPORT GENERATOR (RPTGEN) PROGRAM GENERATES MONTH END
+        REPORTS FOR TYMNET CUSTOMERS.  THE REPORTS ARE GENERATED FROM
+        THE DETAIL FILES FOR EACH CUSTOMER SUPPLIED BY TYMSHARE. (THE
+        D#####.TYM FILES: WHERE ##### = 5 DIGIT CUSTOMER NUMBER )
+
+        THE FOLLOWING IS A LIST OF FILES THAT MUST RESIDE IN THE ACCG1
+        DIRECTORY BEFORE THE RPTGEN PROGRAM CAN BE RUN.
+
+                FILE                            DESCRIPTION
+                ----                            -----------
+
+                RPTGEN.SAV                      THE RPTGEN PROGRAM
+
+                RPTGEN.MMM                      AN INPUT FILE CONTAINING
+                                                A LIST OF CUSTOMER
+                                                NUMBERS AND REPORTS TO
+                                                BE GENERATED FOR EACH
+                                                CUSTOMER.
+                                                (WHERE MMM = 3 CHAR.
+                                                MONTH ABBREVIATION)
+                                                APPENDIX A. =
+                                                DESCRIPTION FILE FOR
+                                                THIS INPUT FILE.
+
+                RPTGEN.DMD                      DESCRIPTION FILE FOR
+                                                LOADING CUSTOMER DETAIL
+                                                FILE.
+                                                APPENDIX B. = LISTING OF
+                                                THIS DESCRIPTOR FILE)
+
+                RPT##.DMC                       1022 COMMANDS FILES FOR
+                                                CREATION OF REPORTS.
+                                                (WHERE ## = REPORT
+                                                NUMBER . CURRENTLY 1-6)
+                                                APPENDIX C. = LIST OF
+                                                CURRENT REPORTS
+                                                AVAILABLE.
+
+
+
+.
+
+
+                                                              Page  2   
+
+
+
+                            PROGRAM OUTLINE                             
+                            ---------------
+
+
+
+        THIS PROGRAM PERFORMS THE FOLLOWING FUNCTIONS:
+
+        1.      READS THE RPTGEN.MMM FILE.
+
+        2.      BUILDS A CONTROL FILE.  (RPTGEN.CTL)
+
+        3.      GETS A CUSTOMER NUMBER FROM THE CONTROL FILE.
+
+        4.      EXECUTES PHASE 1 - LOADS THE DETAIL FILE FOR THE CURRENT
+                CUSTOMER.
+
+        5.      EXECUTES PHASE 2 - DEPENDING ON THE REPORTS TO BE
+                GENERATED, UPDATES THE 1022 CUSTOMER DETAIL FILE.
+
+                        A. FOR REPORTS 1 OR 4, ADDS ATTRIBUTES
+                           CITY, STATE, DENSITY.
+
+                        B. FOR REPORTS 2 OR 5, STRIPS PROJECT CODE
+                           FROM USRNAM FIELD.
+
+                        C.  FOR REPORTS 3 OR 6, NO UPDATING
+
+        6.      EXECUTES PHASE 3 - GENERATES ALL REPORTS FOR CURRENT
+                CUSTOMER.
+
+                        A. GENERATES ONE REPORT.
+
+                        B. UPDATES CONTROL FILE INDICATING THE REPORT
+                           HAS BEEN GENERATED. GOES BACK TO 6.A.  UNTIL
+                           ALL REPORTS FOR CURRENT CUSTOMER HAVE BEEN
+                           GENERATED.
+
+        7.      KEEPS REPEATING STEPS 3-6 UNTIL ALL CUSTOMER REPORTS
+                HAVE BEEN GENERATED.
+
+
+
+
+
+.
+
+
+                                                              Page  3   
+
+
+
+                            PROGRAM COMMANDS                            
+                            ----------------
+
+
+
+        THE RPTGEN PROGRAM HAS ONLY TWO COMMANDS.  THE FOLLOWING IS A
+        DESCRIPTION OF BOTH COMMANDS.
+
+        1.      RUN - THIS COMMAND SHOULD BE ISSUED THE 1ST TIME THE
+                PROGRAM IS TO BE RUN AT THE END OF EACH MONTH, OR IF THE
+                WHOLE PROCESS MUST BE REDONE.  THIS COMMAND CAUSES THE
+                PROGRAM TO START WITH STEP-1 OF THE OUTLINE.
+
+                EXAMPLE:
+
+                        - PERFORM RPTGEN
+                          --------------
+
+                        : RUN
+                          ---
+
+                        MONTH AND YEAR TO PROCESS? (MM,YY)  02,79
+                                                            -----
+
+                THE PROGRAM WOULD THEN GO AND CREATE ALL CUSTOMER
+                REPORTS FOR FEB., 1979.
+
+        2.      RESTART - THIS COMMAND SHOULD BE USED IF THE PROGRAM IS
+                INTERRUPTED AT ANY POINT AFTER THE 'BEGINNING PHASE 1'
+                MESSAGE HAS BEEN OUTPUT TO THE TERMINAL.  THERE ARE TWO
+                DIFFERENT WAYS  TO RESTART THE PROGRAM: (A) RESTART THE
+                PROGRAM AT EXACTLY THE POINT IT WAS INTERRUPTED. (B)
+                RESTART THE PROGRAM AT A PHASE PRIOR TO THE ONE THAT WAS
+                BEING EXECUTED WHEN THE PROGRAM WAS INTERRUPTED.  NOTE:
+                      ALL PHASES FOR ONE CUSTOMER ARE COMPLETED BEFORE
+                      THE NEXT CUSTOMER IS PROCESSED.
+
+                TO RESTART IN CASE (A)
+                ASSUME PROGRAM WAS INTERRUPTED IN PHASE 3
+
+
+
+
+
+.
+
+
+                                                              Page  4   
+
+
+
+                        - GO RPTGEN                                     
+                          ---------
+
+                        : RES
+                          ---
+
+                        RESTART WITH PHASE: 3
+                                            -
+
+                        MONTH AND YEAR TO PROCERSS? (MM,YY)  02,79
+                                                             -----
+
+                THE PROGRAM WOULD USE THE CONTROL FILE TO RESTART WITH
+                THE REPORT IT WAS CREATING BEFORE THE INTERRUPTION AND
+                CONTINUE FROM THERE.
+
+
+
+                TO RESTART IN CASE (B)
+                ASSUME THE PROGRAM WAS INTERRUPTED IN PHASE 3 AND FOR
+                SOME REASON YOU WANT TO REDO ALL OF THE CUSTOMERS
+                REPORTS OR REDO ALL OF THE REPORTS STARTING WITH A
+                PARTICULAR CUSTOMER. THEN, THE CONTROL FILE WOULD HAVE
+                TO BE EDITED BEFORE RESTARTING THE PROGRAM.  SEE
+                APPENDIX-D.  FOR A DESCRIPTION OF THE CONTROL FILE.
+
+                THE 1ST VALUE OF EACH RECORD IN THE CONTROL FILE
+                INDICATES WHICH REPORT WAS LAST COMPLETED FOR THAT
+                CUSTOMER.  THEREFORE, AFTER THE PROGRAM WAS INTERRUPTED
+                , IF THE CONTROL FILE LOOKED LIKE THE FOLLOWING:
+
+                        10 04077 1 1 1 0 0 0 0 0 0 0
+                         3 05536 1 0 0 0 0 0 0 0 0 0
+                         0 04111 0 0 0 0 1 1 0 0 0 0
+
+                THEN ALL REPORTS HAVE BEEN COMPLETED FOR CUSTOMER 04077.
+                UP TO THE 3RD REPORT HAS BEEN GENERATED ( OR CHECKED TO
+                  SEE IF IT SHOULD BE GENERATED) FOR CUSTOMER 05536.
+                AND NO REPORTS HAVE BEEN GENERATED YET FOR CUSTOMER
+                04111.
+
+
+
+
+.
+
+
+                                                              Page  5   
+
+
+
+                          EXAMPLES OF RESTARTS                          
+                          --------------------
+
+
+        BELOW ARE LISTED THREE EXAMPLES OF HOW TO MODIFY THE CONTROL
+        FILE TO CAUSE THE PROGRAM TO RESTART AT DIFFERENT PLACES.
+
+        **      TO REDO ALL REPORTS FOR ALL CUSTOMERS SET THE 1ST VALUE
+                OF EACH RECORD TO 0. MAKING THE CONTROL FILE:
+
+                        0 04077 1 1 1 0 0 0 0 0 0 0
+                        0 05536 1 0 0 0 0 0 0 0 0 0
+                        0 04111 0 0 0 0 1 1 0 0 0 0
+
+                THEN RESTART WITH PHASE 3 (OF COURSE PHASE 1 AND 2 WILL
+                BE RE-EXECUTED FOR CUSTOMERS 05536 AND 04111)
+
+        **      TO REDO ALL OF CUSTOMER 5536'S REPORTS AND RELOAD THAT
+                CUSTOMERS DETAIL FILE, CHANGE THE CONTROL FILE TO:
+
+                        10 04077 1 1 1 0 0 0 0 0 0 0
+                         0 05536 1 0 0 0 0 0 0 0 0 0
+                         0 04111 0 0 0 0 1 1 0 0 0 0
+
+                AND RESTART WITH PHASE 1.
+
+
+        **      FINALLY YOU CAN ALWAYS CREATE YOUR OWN CONTROL FILE. FOR
+                EXAMPLE AFTER THE PROGRAM COMPLETES RUNNING ALL REPORTS
+                FOR ALL CUSTOMERS YOU MAY FIND YOU MUST REDO THE 2 AND
+                4TH REPORTS FOR CUSTOMER 09111 AND THE 1ST REPORT FOR
+                CUSTOMER 05777.  SIMPLY CREATE THE FOLLOWING CONTROL
+                FILE:
+
+                         0 09111 0 1 0 1 0 0 0 0 0 0
+                         0 05777 1 0 0 0 0 0 0 0 0 0
+
+                MAKING SURE TO NAME IT: RPTGEN.CTL AND THEN RESTART WITH
+                PHASE 1.
+
+
+
+
+
+.
+
+
+                                                              Page  6   
+
+
+
+                              APPENDIX-A.                               
+                              -----------
+
+
+                    DESCRIPTOR FILE FOR: RPTGEN.MMM
+
+
+        THE REPGEN.MMM FILE IS A FREE FORMATTED FILE.  ALL FIELDS ARE
+        SEPARATED BY COMMAS.  THE FIRST FIELD MUST BE THE 5 DIGIT
+        CUSTOMER NUMBER.  THE CUSTOMER NUMBER IS FOLLOWED BY A LIST OF
+        REPORT NUMBERS THAT ARE TO BE GENERATED FOR THAT CUSTOMER.
+        AGAIN, THE REPORT NUMBERS SHOULD BE SEPARATED BY COMMAS.
+
+                                EXAMPLE
+                                -------
+
+                        04077,1,5,6
+                        03111,1
+                        00112,1,2,3,4,5
+        NOTE: MAXIMUM NUMBER OF REPORTS PER CUSTOMER = 10.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.
+
+
+                                                              Page  7   
+
+
+
+                              APPENDIX-B.                               
+                              -----------
+
+
+              LISTING OF 1022 DESCRIPTOR FILE: RPTGEN.DMD
+
+
+          LOADING SECTION
+          INPUT D99998.TYM
+          OUTPUT D99998.DMS
+          STRUCTURE SECTION
+          FILLER 19
+          ATT TERMID     INTEGER LENGTH 2 RANGE 0 99
+          ATT TERMPORT   INTEGER LENGTH 3 RANGE 0 999
+          ATT ORIGNODE   INTEGER LENGTH 4 RANGE 0 9999
+          ATT NODECODE   INTEGER LENGTH 2 RANGE 0 99
+          FILLER 5
+          ATT TOTMIN     INTEGER LENGTH 6 RANGE 0 999999
+          ATT INPUTCHAR  INTEGER LENGTH 7 RANGE 0 9999999
+          ATT OUTPUTCHAR INTEGER LENGTH 7 RANGE 0 9999999
+          ATT TERMHOST   INTEGER LENGTH 5 RANGE 0 99999
+          FILLER 5
+          ATT USRNAM     TEXT    LENGTH 25
+          ATT CITY       TEXT    LENGTH 20
+          ATT STATE      TEXT    LENGTH 15
+          ATT BAUD       TEXT    LENGTH 10
+          ATT DENSITY    TEXT    LENGTH 6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.
+
+
+                                                              Page  8   
+
+
+
+                              APPENDIX-C.                               
+                              -----------
+
+                LIST OF TYMNET CUSTOMER REPORTS CURRENTLY AVAILABLE
+
+
+                REPORT                          DESCRIPTION
+                ------                          -----------
+
+                  1.                            ORIGINATING CITY SUMMARY
+                                                REPORT
+
+                  2.                            TYMNET USER NAME SUMMARY
+                                                REPORT
+
+                  3.                            HOST INTERFACE PORT
+                                                NUMBER SUMMARY REPORT
+
+                  4.                            ORIGINATING CITY SUMMARY
+                                                REPORT
+                                                BY TERMINATING HOST
+
+                  5.                            TYMNET USER NAME SUMMARY
+                                                REPORT
+                                                BY TERMINATING HOST
+
+                  6.                            HOST INTERFACE PORT
+                                                NUMBER SUMMARY REPORT
+                                                BY TERMINATING HOST
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.
+
+
+                                                              Page  9   
+
+
+
+                              APPENDIX-D.                               
+                              -----------
+
+
+                    DESCRIPTOR FILE  FOR: RPTGEN.CTL
+
+
+                FIELD                   DESCRIPTION             FORMAT
+                -----                   -----------             ------
+
+                 1.                     NUMBER OF LAST REPORT     I2
+                                        PROCESSED FOR THIS
+                                        CUSTOMER
+
+                 2.                     CUSTOMER NUMBER           I5
+
+                 3.                     FLAG FOR REPORT 1         I1
+
+                 4.                     FLAG FOR REPORT 2         I1
+
+                 5.                     FLAG FOR REPORT 3         I1
+
+                 6.                     FLAG FOR REPORT 4         I1
+
+                 7.                     FLAG FOR REPORT 5         I1
+
+                 8.                     FLAG FOR REPORT 6         I1
+
+                 9.                     FLAG FOR REPORT 7         I1
+
+                10.                     FLAG FOR REPORT 8         I1
+
+                11.                     FLAG FOR REPORT 9         I1
+
+                12.                     FLAG FOR REPORT 10        I1
+
+
+                NOTE: ALL FIELDS ARE SEPARATED BY BLANKS. IF A FLAG IS
+                      SET (EQUAL TO 1) THEN THE CORRESPONDING REPORT
+                      WILL BE GENERATED.
+
+
+
+
+.
+
+
+                                                              Page 10   
+
+
+
+                EXAMPLE:                                                
+
+                        10 04077 1 1 1 1 0 0 0 0 0 0
+
+                THIS CONTROL FILE INDICATES THAT ALL 10 REPORTS HAVE
+                BEEN CHECKED TO SEE IF THEY SHOULD BE GENERATED FOR
+                CUSTOMER 04077, AND SINCE FLAGS FOR REPORTS 1-4 ARE SET,
+                THEN, REPORTS 1-4 HAVE BEEN GENERATED FOR THIS CUSTOMER.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.
+
+
+
+
+
+
+                                                                          
