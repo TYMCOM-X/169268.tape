@@ -1,0 +1,497 @@
+!            PROGRAM:       LNKSUM.DMC
+!            AUTHOR         Rob Nielsen
+!            DATE:          August 27, 1986
+! 
+!            PURPOSE:       To summarize link performance data (bandwidth
+!                 utilization) as shown in Deluti for use in monthly trend
+!                 reports.
+! 
+!            DESCRIPTION:   The program is split into two DPL segments. The
+!                 first will create from the Deluti DUKS data base a temporary
+!                 file of links (node pairs) and the maximum utilization
+!                 for each link. The second goes through the temporary file for
+!                 a given bandwidth, as found in Supmap.Lin, and gathers the
+!                 range and percentile statistics.
+
+!            ALGORITHM:
+!                                 First Segment
+!                 Find all records in DUKS
+!                 Sort by link (Nod1 then Nod2)
+!                 For each link
+!                      Find its max bandwidth utilization (max of in or out)
+!                      Print Nod1 Nod2 Max Utilization to flat file
+!                 Open temporary data base LnkTmp.DMS
+!                 Delete all remaining records
+!                 Append the flat file just created
+
+!                                 Second Segment
+!                 For each speed of concern
+!                     Find all links in SUPMAP.LIN
+!                     Map to LNKTMP
+!                     Sort by max utilization (UTIL)
+!                     Find mean of the max UTIL values
+!                     Find values for .10, .25, .50, .75 and .90 percentiles
+!                          as well as absolute max and min
+!                     Get Counts of links with max UTIL in a given range
+!             
+!                 Repeat above process for all links in DUKS taken together
+!                 Delete all records from temporary data base LNKTMP.DMS
+!                 Erase LNKTMP.DMI
+
+!            ******************  FIRST PROGRAM ***************
+
+             OPEN (MSNTRACK)DUKS.
+             INIT 1 (MSNTRACK)LNKTMP.DMI.
+
+             DPL START.
+             DEFINE INTEGER Noad1 Noad2 MaxUtlztn Dait Today ThisYear &
+                            LastYear ThisMonth LastMonth Mindate MaxDate.
+             DEFINE TEXT 10 TodayText.
+                DEFINE INTEGER IULTZ OULTZ.
+
+             DBSET DUKS.
+
+!            
+!                 The next few statements will take all the Deluti data, not 
+!            just the most recent month. To use, remove the comments (!).
+
+!            FIND ALL.
+!            GETREC 1.
+!                 LET MinDate EQ DAT.
+!            GETREC SYSNREC.
+!                 LET MaxDate EQ DAT.
+
+             LET TodayText EQ TEXTR(SYSDATE).
+             LET Today EQ INT(TodayText).
+             LET Today EQ (Today-19000000).
+
+             LET ThisYear EQ (Today/10000).
+             LET ThisMonth EQ (Today-(ThisYear*10000))/100.
+
+             IF ThisMonth EQ 1 GOTO January.
+                  LET LastMonth EQ (ThisMonth-1).
+                  LET LastYear EQ ThisYear.
+             GOTO DatesDone.
+
+January:          LET LastMonth EQ 12.
+                  LET LastYear EQ (ThisYear-1).
+
+DatesDone:   LET MinDate EQ (LastYear*10000) + (LastMonth*100) + 1.
+             LET MaxDate EQ (ThisYear*10000) + (ThisMonth*100) + 1.
+             FIND DAT GE Mindate AND DAT LT Maxdate.
+
+!              *  *    *   *   *   *  * *  *   *   *   *  *    *   *   *
+!                 Find Max Utilization for each link
+             CALL FindMax.
+!              *  *    *   *   *   *  * *  *   *   *   *  *    *   *   *
+
+
+             GOTO TheEnd1.
+
+!            ***************   SUBROUTINE FINDMAX  ***********************
+
+!              This subroutine finds, for each node selected in the calling 
+!            program, the max utilization. It uses the variable MaxUtlztn to 
+!            keep track of the current maximum for the current link as it 
+!            passes through the records for a link. Variables Noad1 and Noad2 
+!            are used to keep track of the current link.  
+
+FindMax:     DBSET DUKS.
+             SORT BY NOD1 NOD2.
+
+!                Initialize Node checks and 1st max utilization value
+             GETREC LastLink1.    
+                 LET Noad1 EQ NOD1.
+                 LET Noad2 EQ NOD2.
+                 LET OUTLZ EQ UTLZO.
+LABEL1:          LET MaxUtlztn EQ OUTLZ.
+             STARTREC.
+
+NextLink1:   GETREC LastLink1.
+!                    Assign attribute DAT to Dait to avoid multirecord printout
+                  LET Dait EQ DAT.
+                  LET IUTLZ = UTLZI.
+LABEL2:         LET OUTLZ = UTLZO.
+LABEL3:           IF Nod1 NE Noad1 GOTO PrintData.
+                  IF Nod2 NE Noad2 GOTO PrintData.
+
+CheckIn:          IF IUTLZ GT MaxUtlztn GOTO NewMaxIn.
+CheckOut:         IF OUTLZ GT MaxUtlztn GOTO NewMaxOut.
+             GOTO NextLink1.
+
+NewMaxIn:         LET MaxUtlztn EQ IUTLZ.
+                  GOTO CheckOut.
+
+NewMaxOut:        LET MaxUtlztn EQ OUTLZ.
+             GOTO NextLink1.
+
+PrintData:        PRINT ON 1 NOAD1 NOAD2 MaxUtlztn Dait &
+                      FORMAT I5 1X I5 1X I2 1X I6 END.
+                  LET Noad1 EQ NOD1.
+                  LET Noad2 EQ NOD2.
+                  LET MaxUtlztn EQ IUTLZ.
+!             Now holding the first record for the next link so check its
+!             maximum before getting next record (returning to NextLink1)   
+                  GOTO Checkout.
+
+LastLink1:   PRINT ON 1 Noad1 Noad2 MaxUtlztn Dait &
+                     FORMAT I5 1X I5 1X I2 1X I6 END.
+             RETURN.
+
+
+!            **************** END OF FIRST PROGRAM  **************
+
+!                 Release (Save) LNKTMP.DMI so it can be loaded
+TheEnd1:     RELEASE 1.
+
+             DPL STOP.
+             DPL END.
+             
+!                 Load temporary data base
+             LOAD (MSNTRACK)LNKTMP.
+
+
+
+!            *************** START OF SECOND PROGRAM ******************
+
+!            PROGRAM ORGANIZATION
+!                 Main Program
+!                   InitArrays     Set range values, and link speeds, set
+!                                     all ouput values to 0.0
+!                   Main Loop
+!                      InitSpeed      Initialize values for a new speed
+!                      GetData        Get percentile values, range counts, and
+!                                        a count of nodes
+!                         Interval         Change cumulative counts to ranges
+!                      Printout       Print data for 1 node type
+! 
+!            NOTATION:
+!                 ALL CAPS: File names, attribute names, & DPL reserved words
+!                 Mixed:    Variables, labels, and subroutines.
+
+!            EXPANDING NUMBER OF RANGES
+!                 The program allows for the easy expansion of ranges from
+!            the current 5 to any number up to 10. Simply increase the values
+!            of MaxRange to the desired number of ranges and set
+!            the new boundaries(note that utilization can not exceed 100) in
+!            columns 1 of array UTLZrange in the subroutine InitArrays. If
+!            you load the output into a 1022 data base, you must also change
+!            the structure of the DMD file. See the subroutine Printout for
+!            the current structure.
+!                 You may not easily increase the number of percentile
+!            points taken but you can easily change which percentiles these are
+!            by changing the initialization of the array Percent in 
+
+!            *******************  MAIN PROGRAM *****************
+
+             OPEN (MSNTRACK)LNKTMP (PERSTATS)SUPMAP.LIN.
+             INIT 1 (MSNTRACK)LNKSUM.DMI.
+
+             DPL START.
+
+!              The variables Mindate and Maxdate are not included in the 
+!            variable declaration but are used in the second program. They were 
+!            defined in the first program and passed "globally to the second 
+!            program". Redefining them here would reset their values to 0.03.
+
+             DEFINE INTEGER UTLZrange(0:10,3) UTLZpercnt(7) SpeedCount  &
+                            RangeCount MaxRange Count LinkCount MeanUtlztn &
+                            Speeds.
+             DEFINE REAL Percent (7).
+             DEFINE TEXT 4 BandWidth (6).
+             DEFINE TEXT 3 SpeedType.
+             CALL InitArrays.
+
+!                       Get Min and Max Dates, global variables
+             DBSET LNKTMP.
+
+!                 Now statistics for the network as a whole
+             CALL InitSpeed.
+             CALL Network.
+
+!            * *  *    *   *   *   *  * *  *   *   *   *  *    *   *   *
+!                          MAIN LOOP OF PROGRAM
+
+!                 Take statistics on each link speed, one at a time
+             LET SpeedType EQ "   ".
+             LET SpeedCount EQ 1.
+
+NextType:    DBSET SUPMAP.
+             CALL InitSpeed.
+             FIND SPEED CT BandWidth(SpeedCount).
+                  IF SYSNREC EQ 0 GOTO NewType.
+
+             MAP TO LNKTMP VIA NODE TO NOD1 AND NEIGHBOR TO NOD2.
+                  IF SYSNREC EQ 0 GOTO NewType.
+                  CALL GetData.
+                  CALL Printout.
+
+NewType:          LET SpeedCount EQ (SpeedCount + 1).
+             IF SpeedCount LE Speeds GOTO NextType.
+
+!                          END OF MAIN LOOP
+!            * *  *    *   *   *   *  * *  *   *   *   *  *    *   *   *
+
+!                 Now take statistics on speeds not in InitArrays
+             CALL InitSpeed.
+             CALL Other.
+
+             GOTO TheEnd2.
+
+
+!            **************  SUBROUTINE INITARRAYS *********************
+
+!                 InitArrays will initialize the parameters that will
+!            hold throughout the program (eg UTLZ count ranges to select)
+!            as well as the Utilization output to be printed at the end of
+!            each pass through the main loop.
+! 
+!                 The program uses these arrays:
+! 
+!                 Bandwidth (6): A list of all bandwidths (a 4-character
+!            variable) to be covered by the SPEED attribute in SUPMAP.
+! 
+!                 UTLZRange (0:10,3): An array of up to 10 ranges of
+!            utilization values for which to get counts. The first element
+!            contains the upper boundary of each range, the second element
+!            will be asigned the cumlative count through the upeer boundary
+!            for that range, and the third elemnt contains the interval
+!            (actual) count of links for that range.
+!                 UTLZRange takes up to 10 ranges but the actual number of
+!            ranges used (<=10) is set by MaxRange.
+! 
+!               Percent (7) The 7 percentile points to be gathered for each
+!            speed
+
+InitArrays:  LET Bandwidth(1) EQ "9.6 ".
+             LET Bandwidth(2) EQ "14.4".
+             LET Bandwidth(3) EQ "19.2".
+             LET Bandwidth(4) EQ "28.8".
+             LET Bandwidth(5) EQ "38.8".
+             LET Bandwidth(6) EQ "56  ".
+
+             LET Speeds EQ 6.
+             LET MaxRange EQ 5.
+
+             LET UTLZrange (0,1) EQ 0      .
+             LET UTLZrange (1,1) EQ 20      .
+             LET UTLZrange (2,1) EQ 40      .
+             LET UTLZrange (3,1) EQ 60      .
+             LET UTLZrange (4,1) EQ 80      .
+             LET UTLZrange (5,1) EQ 99999999.
+             LET UTLZrange (6,1) EQ 99999999.
+             LET UTLZrange (7,1) EQ 99999999.
+             LET UTLZrange (8,1) EQ 99999999.
+             LET UTLZrange (9,1) EQ 99999999.
+             LET UTLZrange (10,1) EQ 99999999.
+
+             LET Percent (1) EQ .001.
+             LET Percent (2) EQ .10.
+             LET Percent (3) EQ .25.
+             LET Percent (4) EQ .50.
+             LET Percent (5) EQ .75.
+             LET Percent (6) EQ .90.
+             LET Percent (7) EQ .999.
+
+             RETURN.
+
+!            ***************  SUBROUTINE INITSPEED  ********************
+
+!                This subrouine initializes the output variables whenever
+!            a new type of link is encountered.
+
+InitSpeed:   LET Count EQ 0.
+InitNext:        LET UTLZrange(Count,2) EQ 0.
+                 LET UTLZrange(Count,3) EQ 0.
+                 LET Count EQ (Count+1).
+             IF Count LE 10 GOTO InitNext.
+
+             LET Count EQ 1.
+InitNext2:       LET UTLZpercnt(Count) EQ 0.
+                 LET Count EQ (Count+1).
+             IF Count LE 7 GOTO InitNext2.
+
+             LET LinkCount EQ 0.
+             LET MeanUtlztn EQ 0.
+
+             RETURN.
+
+!            **************  SUBROUTINE NETWORK *********************
+
+!              This subroutine does the same work as the main loop in the main 
+!            program except that it works on the network as a whole. A separate 
+!            subroutine exists because the array indexing in the main program 
+!            would not apply here.
+
+
+Network:     DBSET SUPMAP.
+             FIND ALL.
+             MAP TO LNKTMP VIA NODE TO NOD1 AND NEIGHBOR TO NOD2.             
+                  IF SYSNREC EQ 0 GOTO TheEnd2.
+                  CALL GetData.
+                     LET SpeedType EQ "ALL".
+                  CALL PrintOut.
+
+EndNetwrk:   RETURN.
+
+
+
+!            **************  SUBROUTINE OTHER *********************
+
+!              This subroutine does the same work as the main loop in the main 
+!            program except that it works on the bandwidths not found in the 
+!            main program. A separate subroutine exists to enhance readibility 
+!            of the main program.
+
+Other:       DBSET SUPMAP.
+             LET SpeedCount EQ 1.
+             FIND ALL.
+
+NextSpeed:   FIND LAST AND SPEED NCT Bandwidth(SpeedCount).
+                  LET SpeedCount EQ (SpeedCount+1).
+             IF SpeedCount LE Speeds GOTO NextSpeed.
+
+             IF SYSNREC EQ 0 GOTO EndOther.
+
+             MAP TO LNKTMP VIA NODE TO NOD1 AND NEIGHBOR TO NOD2.             
+                  IF SYSNREC EQ 0 GOTO TheEnd2.
+                  CALL GetData.
+                     LET SpeedType EQ "OTH".
+                  CALL PrintOut.
+
+EndOther:    RETURN.
+
+
+
+!            ***************  SUBROUTINE GETDATA **************************
+
+!                 This routine will collect the raw data for percentiles and
+!            ranges of max utilization. Getdata consists of three basic blocks 
+!            code. The first block sorts the records by utilization and takes 
+!            the total links and average CPS for the current bandwidth. The 
+!            second block uses the sorted order to take percentile points of 
+!            the utilizaition distribution. The third block counts the number 
+!            of links with max utilization within a given range. 
+
+!              Getdata is the heart of the program.
+
+!            * *  *    *   *   *   *  * *  *   *   *   *  *    *   *   *
+!                      BLOCK1:  TAKE MEANS AND TOTALS, SORT
+
+Getdata:     SORT KEY UTILIZATION.
+             LET I EQ 2.
+             LET LinkCount EQ SYSNREC.
+             EVALUATE MeanUtlztn MEAN(UTILIZATION).
+
+!                      END OF  BLOCK 1
+!            * *  *    *   *   *   *  * *  *   *   *   *  *    *   *   *
+
+!            * *  *    *   *   *   *  * *  *   *   *   *  *    *   *   *
+!                      BLOCK 2: TAKE PERCENTILE POINTS, MAX/MIN
+
+!              Getrec (k*SYSNREC) will get the value with the kth percentile 
+!              rank under the current sort.
+
+NextPrct:    GETREC StartRange INT((Percent(I) * REAL(SYSNREC))+0.5).
+                  LET UTLZpercnt(I) EQ UTILIZATION.
+                       LET I EQ (I+1).
+                       IF I LE 6 GOTO NextPrct.
+             GETREC StartRange 1.
+                  LET UTLZpercnt(1) EQ UTILIZATION.
+             GETREC StartRange SYSNREC.
+                  LET UTLZpercnt(7) EQ UTILIZATION.
+                  GOTO StartRange.
+
+!                             END OF BLOCK 2
+!            * *  *    *   *   *   *  * *  *   *   *   *  *    *   *   *
+
+!            * *  *    *   *   *   *  * *  *   *   *   *  *    *   *   *
+!                      BLOCK 3:  COUNT LINKS WITHIN UTILIZATION RANGES
+
+!                      STARTREC keeps the current sort
+StartRange:  STARTREC.
+             LET I EQ 1.
+
+UTLZrnge:    GETREC LastRange.
+Newrange:         IF UTILIZATION LE UTLZrange(I,1) GOTO UTLZrnge.
+                  LET UTLZrange(I,2) EQ (SYSRECNO-1).
+                  LET I EQ (I+1).
+            GOTO NewRange.
+
+LastRange:        LET UTLZrange(I,2) EQ SYSNREC.
+FillRange:        IF I GE MaxRange GOTO CallIntrvl.
+                       LET I EQ (I+1).
+                       LET UTLZrange(I,2) EQ SYSNREC.
+             GOTO FillRange.
+
+!                      Calculate interval counts from cumulative counts
+CallIntrvl:  CALL Interval.
+             GOTO EndData.
+
+!                      END OF BLOCK 3
+!            * *  *    *   *   *   *  * *  *   *   *   *  *    *   *   *
+
+
+EndData:     RETURN.
+
+
+!            ***************  SUBROUTINE INTERVAL  *****************
+
+!                 This subroutine takes the counts of links less than or equal
+!            a specified value, ie the top value of each range, and turns
+!            them into a count of nodes within a range of values. The
+!            cumulative counts are found in column 2 of UTLZrange and the
+!            range(interval) counts are returned to column 3
+
+Interval:    LET I EQ 1.
+
+UtlzIntrvl:  LET UTLZrange(I,3) EQ (UTLZrange(I,2) - UTLZrange(I-1,2)).
+             LET I EQ (I+1).
+             IF I LE MaxRange GOTO UtlzIntrvl.
+
+EndIntrval:  RETURN.
+
+!            **************** SUBROUTINE PRINTOUT ***************
+
+!              This subroutine prints out one line each time it is called. It 
+!            should be called when you have collected all the statistics for a 
+!            link speed. The different statements Print1, Print2, etc. will 
+!            print out different statistics.
+
+Printout:    IF SpeedType CT "ALL" GOTO PrintAll.
+             IF SpeedType CT "OTH" GOTO Prinr.
+
+             PRINT ON 1 Bandwidth(SpeedCount) LinkCount &
+             FORMAT A4 1X I4 1X $ END.
+             GOTO Print1a.
+
+PrintOther:  PRINT ON 1 SpeedType LinkCount &
+             FORMAT A4 1X I4 1X $ END.
+             GOTO Print1a.
+
+PrintAll:    PRINT ON 1 SpeedType LinkCount &
+             FORMAT A4 1X I4 1X $ END.
+
+Print1a:          LET I EQ 1.
+             PRINT ON 1 MeanUtlztn FORMAT I4 1X $ END.
+Print1:      PRINT ON 1 UTLZpercnt(I) FORMAT I4 1X $ END.
+                  LET I EQ (I+1).
+             IF I LE 7 GOTO Print1.
+
+                  LET I EQ 1.
+Print2:      PRINT ON 1 UTLZrange(I,3) FORMAT I4 1X $ END.
+                  LET I EQ (I+1).
+             IF I LE MaxRange GOTO Print2.
+
+             PRINT ON 1 MinDate MaxDate SYSDATE FORMAT I6 1X I6 1X D4 END.
+
+             RETURN.
+
+
+!            *****************  END OF PROGRAM ********************
+
+TheEnd2:     RELEASE 1.
+             DPL STOP.
+             DPL END.
+
+    
