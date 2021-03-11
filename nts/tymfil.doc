@@ -1,0 +1,450 @@
+
+ 
+ 
+ 
+                       ISIS NODE TYMFILE
+ 
+               EQUATE STATEMENTS and MACRO CALLS 
+ 
+ 
+ 
+ 
+ 
+           Updated 4 June 87 by C Nicoll, S Nilluka.
+ 
+8 April 88 CNicoll  Added definitions for NOSEG and REBTST.
+ 
+ 
+ 
+ 
+ **  IMPORTANT INFORMATION, Please read before using this document.  **
+ 
+     This document is not a sysgen manual.  It is designed to give
+     additional information to the person experienced with tymfiles.
+ 
+     This document refers ONLY to single machines running ISIS.
+ 
+     Definitions apply to Isis version 7.03 and Nodecode version 5.10:
+       .Statements preceeded by a "*" are no longer used and should
+        be deleted.
+       .Default values may be different for other versions.
+ 
+     All equates default to value 0 unless otherwise noted.  It is
+     recommended that statements be left out when the default value
+     applies.
+ 
+     All equate values default to radix Hexadecimal, unless otherwise
+     noted.  To use a different radix, precede the value by $0 for 
+     hex, $A for decimal, $8 for octal.
+ 
+     In the comments section of a statement, "x" after a number 
+     indicates that the number is hexadecimal.
+ 
+ 
+ 
+ 
+ 
+   "The contents of this manual were produced by Tymnet Training 
+    and Education for the sole purpose of guiding students through 
+    TTE courses.  Any duplication, distribution or use of these 
+    materials without the written consent of Tymnet Training and 
+    Education is prohibited by Law.
+ 
+    Copyright 1987 Network Systems Company, McDonnell Douglas Inc."
+ 
+ 
+
+
+I.   ENGINE HARDWARE STATEMENTS
+ 
+ 
+These define the hardware configuration of an ISIS-II Engine.
+ 
+ 
+MACHIN  EQ      #       :1 for TYMNET Engine (default), 2 for HDLC Micro
+                        :3 for TSI (future).
+ 
+* ENGINE  EQ    #       :1 specifies TYMNET engine. (Pre-Ver. 7.xx)
+ 
+ZITEL   EQ      #       :Specifies if MAC II or III board is used.  This
+                        :value should be 1 if MAC II/III, 0 if MAC I.
+                        :Always set to 0 for a Micro Engine.
+ 
+* MICRO   EQ    #       :Specifies the microcode level of the machine
+                        :   0 - basic Engine
+                        :   1 - async I/O enhancements
+                        :   2 - async/sync enhanced (default). 
+                        :ALL CURRENTLY SHIPPED HARDWARE HAVE BOTH
+                        :ASYNC/SYNC ENHANCED MICROCODE.
+ 
+BAUDR   EQ      #       :Specifies async baud rate range allowed,
+                        :to be matched by the proper strapping
+                        :on the multifunction board.  Choices are
+                        :   0 - range 75 to 1200 BPS
+                        :   1 - range 300 to 2400 BPS, Future use.
+                        :   2 - range 300 to 4800 BPS
+ 
+LOWSPD  EQ      #       :1 indicates very low speed async, 50 baud
+                        :for Telex as example.  Ignored if BAUDR is
+                        :not set to 0.
+ 
+NASYNG  EQ      #       :Specifies the number of async groups used.
+                        :There are two async groups per card; one 
+                        :group on a Micro Engine. If BAUDR is set to
+                        :2, be no more than 4 groups can be declared.
+ 
+N.ADA   EQ      #       :Set to 1, unless using disk or tape. 
+                        :Micro Engines are required to be set to 1.
+                        :0 - address is 091 (old style) 
+                        :1 - address is 0C1, required if using 
+                        :more than 8 async groups. 
+ 
+ESELCH  EQ      #       :1 indicates use of tape or 10 meg disk
+                        :and requires install of Eselch board.
+                        :If not set, and NTAPE OR NDISC > 0, this
+                        :statement will be forced to 1.
+ 
+* XSELCH  EQ      #     :1 Indicates presence of an extra ESELCH 
+                        :card.  This configuration was not
+                        :released, thus do not use this equate.
+ 
+ 
+
+XSYNC   EQ      #       :Set to 1 for an EXTRA sync card.
+                        :If Xsync is set to 0, Nsync defaults to 16,
+                        :If Xsync is set to 1, Nsync defaults to 32
+                        :and NASYNG restricted to 14d (7 cards) as 
+                        :the last async card uses the same device
+                        :address as the second sync card.
+ 
+NSYNC   EQ    $A#       :0 indicates there is no sync in the Engine.
+                        :1-16 assumes 1 sync board, 17-32 assumes 2.
+                        :Used to turn off un-necessary sync interrupts.
+                        :For HDLC micro, defines the number of 
+                        :sio ports simulating sync ports, as 
+                        :defined by S.REF's instead of M.REF's. 
+                  
+MSCDSK  EQ      #       :Number of MSC 1400 Controller BOARDS handling
+                        :160/300 MB disc drives, (NOT the number of
+                        :160/300 MB drives).  Each board will handle
+                        :4 disk drives.  If BAUDR 2, MSCDSK > 0
+                        :will force BAUDR to 0.
+ 
+NDISC   EQ      #       :Number of 10MB disk drives attached.
+                        :Maximum value is 2.
+ 
+NTAPE   EQ      #       :Number of tape drives.  Max of 4.  Note:
+                        :install will require eselch board for tape.
+ 
+NPRINT  EQ      #       :Number of high speed printers attached, up
+                        :to 8.  Printer motherboard will handle 4
+                        :printers, max 2 motherboards in a engine.
+                        :Printer addresses are 60-67.
+ 
+LBOOT   EQ      #       :1 reserves 4k in memory for the boot
+                        :program at abs. address 700.  (default
+                        :is 1). Pre-version 5.10/7.03 default = 0.
+ 
+M.NCARD EQ      #       :Number of SIO Mother boards (no more than 4).
+                        :If M.NCARD > 0, the following statements are
+                        :required:
+ 
+M.DAn   EQ      #       :SIO Motherboard number and address.  Numbering
+                        :begins at 0, with address 80x for the first 
+                        :motherboard and continues to address 83x for
+                        :the fourth M/B, by convention.
+                        :Example: M.DA0  EQ  $080.
+ 
+M.NPn   EQ      #       :Number of ports per motherboard, not to
+                        :exceed $A16 per M/B.  "n" is the motherboard
+                        :number as specified above.  Ports must be
+                        :declared in groups of two: 2, 4, 6, etc.
+ 
+ 
+ 
+ 
+ 
+ 
+
+II.  ISIS CONFIGURATION
+These statements refer to ISIS software configuration
+constraints that do not relate to the Engine hardware.
+ 
+NSLOT   EQ      #       :Maximum number of slots to be configured,
+                        :not counting slot 0 or Supervisor slots.
+ 
+NLU     EQ      #       :Specifies the maximum number of logical
+                        :units that may be assigned to any slot.
+ 
+SUP     EQ      #       :Set to 1 to indicate the ISIS-II node
+                        :will contain a Supervisor.
+ 
+BGMIN   EQ      #       :$040 default (in FASTC tics), maximum time
+                        :between background cycles to identify BG
+                        :overload conditions.   
+ 
+ASYNEW  EQ      #       :Specifies the type of ISIS async driver
+                        :the slots will interface to, with choices -
+                        :   0 - old driver system 
+                        :   1 - new & old driver systems 
+                        :   2 - new driver system - recommended
+                        :Old is used for V.1 Tymcom, V.2 Consat
+ 
+* CONSAT  EQ      #     :Set to 1 to indicate that async will be
+                        :in one of the slots.  In 5.08 of I2IS
+                        :this switch is necessary to activate 
+                        :the new async driver handling.  Not used
+                        :for version 7.xx I2IS.
+ 
+ 
+ 
+III. NODE CODE (SLOT 0) PARAMETERS
+These parameters are used to generate slot 0.
+ 
+TII     EQ      #       :Set to 1 to tell node code that it is
+                        :running on an Isis node and not a SOLO
+                        :node.  Still required!!
+ 
+REBTST  EQ      #       :1 to enable newest rebuild parameters.
+                        :For V. 5.22 TII.
+ 
+NOSEG   EQ      #       :If using TII 5.22 and I2IS 5.08, set to 0.
+                        :If using TII 5.22 and I2IS 7.xx, set to 1.
+ 
+MACHNM  EQ    $8#       :The node number (octal) assigned to this 
+                        :machine.
+ 
+HST0    EQ    $A#       :Kernel Host Number in decimal.
+ 
+NDP     EQ      #       :Total number of Dispatcher ports the
+                        :Node Code will process (default 100x).
+                        :Should be > or = to the maximum number
+                        :of simultaneous originating or 
+                        :terminating circuits on this node.
+
+
+PTHRU   EQ      #       :Passthroughs are inhibited when set to 1. 
+ 
+NPTHR   EQ      #       :Number of passthroughs permitted, default
+                        :is 100x.
+ 
+NLINES  EQ    $A#       :Number of sync lines defined in slot 0.
+                        :Default is the value of NLUS0 - SILINS.
+ 
+SILINS  EQ    $A#       :Number of SIO lines defined in slot 0.
+                        :Default is 0.
+ 
+IKNRNG  EQ      #       :1 to use Isis Kernel Negative Ring Indexing.
+                        :Set to 0 for 5.xx I2IS code, 1 for 7.xx.
+ 
+LNCKTM  EQ      #       :Number of 4 second intervals without 
+                        :activity allowed before line is dropped
+                        :and reset.  Default is 4, (16 seconds).
+ 
+OLDSUP  EQ      #       :Set to 1 if Sups in the net are version
+                        :41.01 or older.  Default is 0.
+  
+MEMRMK  EQ      #       :At assembly print out memory requirements for
+                        :1 - node code, 2 - node code and segments.
+  
+NXUBLK  EQ      #       :The number of simultaneous XRAY network
+                        :logins (default is 3).
+ 
+TIINEW  EQ      #       :Set to 1.  Used by Node Code to assist in 
+                        :XRAY statistic collection.
+ 
+TRKLVx  EQ      #       :Defaults A = 1, B = 2, C = 3, D = 4.
+                        :Mininum number of chracters rec. to
+                        :consider the circuit gushing.  Used to
+                        :effect earlier backpressure release.
+                        :Syntax:  TRKLVA  EQ  3.
+ 
+SQNUMB  EQ      #       :The declared number of characters, in
+                        :powers of 2, establishes the interval 
+                        :between acks sent for characters on a 
+                        :REBUILD enabled circuit.   
+ 
+INFLGT   EQ      #      :1 to enable the infinite logon timer.  
+                        :ie, no timeout at the "Please Log In". 
+ 
+DRSZ     EQ      #      :Use to set nodecode i/o rings size.
+                        :Default is $0400.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+IV.   NODE CODE OPTIONS
+ 
+OPTION(param1,param2,param3,param4,....)
+      Example: OPTION(REBLD,TLEV,CIRD) [preferred method] or
+               OPTION(REBLD)
+               OPTION(TLEV), etc.
+                        :Used to set trace, restart and rebuild
+                        :options.  Several options are currently
+                        :available as equates as well.
+ 
+     TLEV        :Enables the Xray SIO/SYNC link/line trace code.
+                 :Default is on.
+ 
+     NTLV        :Disables the Xray SIO/SYNC link/line trace code. 
+ 
+     NxxS        :For Software detected crashes, and
+     NxxH        :For Hardware detected crashes, where
+                 :xx = RS - restart - default for both.
+                 :     HT - halt node
+                 :     BT - go to boot
+                 :     ST - stop nodecode, leave Xray running.
+ 
+     CIRD        :Enable circuit display for Xray.
+ 
+     REBLD       :Enable circuit rebuild on this node.  Rebuild must
+                 :be in both origination and destination nodes.
+ 
+ 
+ 
+SLIMIT([slot],[circuits per minute],[slot reports per minute]) where:
+ 
+      [slot] is the slot number refered to.
+      [circuits per minute] controls the number of circuit requests
+       that the slot may process to the Supervisor in a minute.
+      [slot reports per minute] controls the number of slot reports
+       to the  Supervisor the slot may send per minute.
+ 
+HLIMIT([host number],[circuits per minute],[slot reports per minute])
+        where the arguments of the macro are identical to SLIMIT but 
+        restricted by host number.
+ 
+HSTSLT([host number],[slot #1],[slot #2],[slot #3],..,[slot #8]) where:
+ 
+       [host number] is the host number to be referred to.
+       [slot #1]....[slot #8] are the slots that host number may
+        be allowed to be reported from.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+V.   NETWORK CONFIGURATION (SLOT 0)
+ 
+These macro calls and equate statements identify how slot 0
+defines its neighbors.
+TIILNK([neighbor],[number of groups],[windowsize],[link type],[speed])
+ 
+     This macro call sets up definitions for known neighbors.
+     These are all the arguments, in the order of their definition
+     within the macro.  Only the neighbor node number is vital; all
+     other parameters may be omitted, if left at default.
+ 
+    [neighbor] the octal neighbor number the following definitions
+         are specified for.  If this neighbor never attaches 
+         to this node, the following values are never referred to.
+         All arguments after the node number may be left to default.
+     [number of groups] the number of network channel groups (at 16
+         channels per group) this link will come up with (default is 8).
+    ** This field is no longer used, but its place must be saved.
+       Numbers in this field are ignored. **
+     [windowsize] the network windowsize for the link, specified in
+         multiples of 4 to a maximum of 128 per link.  The default is 8.
+     [link type] SAT for satellite links; TER (default) for terrestrial.
+     [speed] the aggregate speed of all lines comprising the
+         link to the nearest defined value.  Valid values are:
+ 
+                2 2400 BPS         28 28.8 KBPS      MS >56 KBPS
+                4 4800 BPS         38 38.4 KBPS
+                9 9600 BPS         48 48 KBPS
+               19 19.2 KBPS        56 56 KBPS
+  
+         If this parameter is not specified or is defined as 
+      less than or equal to 28.8, the Node Code will calculate 
+      the link speed dynamically.  If the speed is greater than
+      28.8 and is defined by this statement, nodecode will use
+      the defined rather than the calculated link speed.  Link
+      speeds in excess of 56 KBPS are considered MS links.
+ 
+         It is recommended that the line speed on multi-line links
+      be the same across each line.  
+ 
+Examples:
+          TIILNK(2010)  :Default the windowsize, TERR link, allow
+                        :the node code to compute the link speed.
+ 
+          TIILNK(2010,,12)  :Set the windowsize to 12, default all
+                            :other values, compute link speed.
+ 
+          TIILNK(2010,,12,SAT,56)  :Set the windowsize to 12, define
+                                   : a satellite link at 56kbps.
+ 
+XLINKS  EQ      #       :Number of neighbors that will be allowed to
+                        :attach as "wild cards" (not predefined by the
+                        :TIILNK macro).  Defaults are Windowsize of 8, 
+                        :Group size of 8, and calculated link speed.
+                        :These values cannot be changed.
+
+VI.   SLOT RESOURCE ALLOCATION
+ 
+These tymfile statements allot slot-dependent resources.
+ 
+SnCORE  EQ      $A#     :Where n is the slot number, and # is the  
+                        :kbytes memory reserved for each slot. 
+NLUSn   EQ      #       :Number of logical units assigned to a 
+                        :slot where n = slot number.  NLUSn may be less
+                        :than NLU, but each logical unit must be 
+                        :defined by the following statement.  
+SnL#    x.REF()         :Where "n" = slot number, 
+                        :"#" is the number of the logical unit 
+                        :assigned, starting at 0 and numbered 
+                        :sequentially.
+                        :"x" refers to the individual references 
+                        :below:
+ 
+                A.REF(a)  identifies which async group is assigned
+                        to this logical unit.  Each async card has
+                        two groups, the first card has groups
+                        0 and 1, the second card groups 2 and 3, 
+                        etc. Group addressing is done at the board
+                        with hardware switches.
+ 
+                S.REF(a) identifies the sync port is defined for
+                        this logical unit. Ports 0-15 are on the   
+                        first sync card, 16-31 on the second.
+ 
+               M.REF(a,b) sets up SIO port assignment.  There are
+                        2 arguments: (a) the motherboard number (0-3) 
+                        and (b) the daughter card or interface card 
+                        (PSM) port number (in Hex).
+ 
+                P.REF(a) sets up a high speed printer assignment:
+                        the argument is the number of the printer
+                        defined.
+ 
+Q.BGn   EQ      #       :Where n slot number, specifies number of
+                        :engine clock tics allotted to the slot for
+                        :a background slice; default is 50ms (1E tics).
+ 
+Q.FGn   EQ      #       :Where n slot number, specifies number of 
+                        :engine clock tics for one foreground service.
+                        :Default is NLUS0/2 + 2 for slot 0.  For other
+                        :slots, it is NLUSn/3 + 5, where n = slot number.
+ 
+SnLIC   EQ    AUX  :Allows the slot to initiate network logins.
+                TL.SUS  :Suspend license used in APSS/ISRM.  
+                        :Ex. S1LIC  EQ  TL.AUX!TL.SUS  :both licenses.
+ 
+ 
+ 
+ 
+ 
+End of File.
+
+
+ U={œ
