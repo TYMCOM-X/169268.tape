@@ -1,0 +1,840 @@
+       ==================================================================
+                   Tymshare Network Technology Division
+                           Revision Information
+                            ISIS Version 7.00              Page 1 of 18
+       ==================================================================
+       FILE NAME    :  ISIS.INF                  DATE:  May 30, 1986
+       RELEASED BY  :  Bob Fox
+       ==================================================================
+
+       Changes from version 5.08 and 6.01 to 7.00
+       ------------------------------------------
+
+       1.   This release combines the  changes made in version  5.08 with
+            those  made  in Betatest  versions  6.00 and  6.01,  and also
+            contains  additional  enhancements  and   improvements.   The
+            changes made for 5.08 are listed in a separate section below.
+            Highlights of  the version 6.00/6.01  changes are  as follows
+            (see  the  appropriate  release  document  for  more detailed
+            info):
+
+               - Extended memory support.  The ISIS-II manual has
+                 complete documentation.  Note that this support is
+                 not so flexible that anything will run above the
+                 one megabyte boundary; in fact, most slots currently
+                 won't.
+
+               - Tymnet-I no longer supported.  The TII symbol in
+                 the ISIS TYM file is no longer needed.
+
+               - New KIO Connect SVC.  This allows any slot to
+                 create a KIO circuit to DDT or whatever.  It also
+                 requires that the ISIS TYM file have the symbol
+                 IKNRNG equated to 1 when the node code is assembled
+                 so that it knows to use this new SVC.
+
+               - ISIS DDT file system and ISRS (ISIS Slot Recovery
+                 System, not to be confused with the ISRM of APSS
+                 fame).  This allows slot code to be saved and restored
+                 on disk.
+
+               - ISIS history buffer allows minimum of 20 entries.
+
+               - Improvements to disk driver to include offset retries
+                 and better recalibrate facility.
+
+               - Timeouts on SIO device busy and error code returns
+                 on SIO SVCs (also added in version 5.08).
+
+       2.   This version supports  MXP (Multiple Extended  Processors), a
+            method of connecting multiple Engines so that they run as one
+            ISIS node  for greater  overall throughput.   Further details
+            are available in the ISIS/MXP documentation.
+
+            The MXP code is turned on by equating the symbol MXPNM to the
+            MXP machine  number (from 1  to 15) in  the TYM file,  and is
+            turned off by equating it to 0 (the default).  When  MXPNM is
+            on, several other TYM file options are used (see document).
+       ==================================================================
+                   Tymshare Network Technology Division
+                           Revision Information
+                            ISIS Version 7.00              Page 2 of 18
+       ==================================================================
+
+
+       3.   The  MXP machine  number is  kept in  a halfword  at location
+            F014A in segment "F" so that any slot can access it.   If the
+            machine is not configured for MXP, the value is zero;  thus a
+            slot can  easily determine  whether it is  running in  an MXP
+            machine or not.
+
+       4.   A slot monitor, called the "watchfrog timer", has  been added
+            to help detect a  slot that has gotten into  a non-productive
+            infinite  loop.   It  does  this  by  expecting  the  slot to
+            periodically indicate that it  is still running.  If  it does
+            not receive  such an  indication for 5  seconds, the  slot is
+            crashed with crash code 16.   There are two ways that  a slot
+            can indicate it is running:
+
+                a)  If the symbol SnFRG is equated to 1 in the ISIS TYM
+                    file, where "n" is the slot number, then the slot's
+                    Dismiss SVC will be used.  This allows slots to be
+                    monitored without any code changes.
+
+                b)  If a slot issues a Reset Watchfrog SVC, then it must
+                    continue to issue the Reset Watchfrog SVC to show
+                    that it is running.  This method gives better
+                    protection, since a Dismiss SVC could easily be part
+                    of an infinite loop.  The Reset Watchfrog SVC appears
+                    as follows:
+
+                        SVC   2,$A 47
+                        return point
+
+            If neither of these are done, then the slot is not monitored.
+
+       5.   A new SVC has been added to allow a slot with suspend license
+            to declare  a suspend group.   A suspend group  is a  list of
+            slots that  will automatically be  suspended if  the licensed
+            slot goes down.  When calling the SVC, R0 and R1 must contain
+            a 64-bit bit map with set bits corresponding to the  slots in
+            the suspend group, as follows:
+
+                L     R0,bits for slots 0-31
+                L     R1,bits for slots 32-63
+                SVC   2,$A 46
+                J     error-handler
+                return point
+
+            If  there is  an  error, R0  contains a  code  indicating the
+            reason:
+
+                1 = a bit was set for a slot that does not exist
+                2 = the slot does not have suspend license
+
+       6.   A slot with suspend  license may also now specify  an initial
+       ==================================================================
+                   Tymshare Network Technology Division
+                           Revision Information
+                            ISIS Version 7.00              Page 3 of 18
+       ==================================================================
+
+            suspend group, a group of slots that will be brought up  in a
+            suspended  state  after  a machine  restart  or  crash.  This
+            allows  the licensed  slot to  run first  and  determine what
+            other slots should be started.
+
+            The initial suspend group is declared in segment "E" of slots
+            with suspend license, at addresses E009C thru E00A3, as a 64-
+            bit bit map with set  bits corresponding to the slots  in the
+            initial suspend group.
+
+       7.   Five new commands have been added to DDT:
+
+                Q     - Resume a suspended slot.  If the slot's run bit is
+                        on, it will be executed.
+
+                J     - Suspend a slot.  If the slot is running, it will
+                        be stopped.
+
+                D     - Disable a slot's watchfrog timer.  Useful when
+                        debugging a slot that uses the watchfrog timer.
+
+                O     - Enable a slot's watchfrog timer.  The watchfrog
+                        timer will be enabled only if it was previously
+                        disabled via the DDT "D" command.
+
+                ?BOOT - Put the machine in its bootstrap.  This command
+                        works only if issued while in slot FF (the ISIS
+                        Kernel) and only if the machine's watchdog timer
+                        (a different animal) is enabled.
+
+       8.   For  compatibility  with  MXP,  the  DDT  ?CT  command prints
+            circuit connections in a slightly different way:
+
+                Port N-->sX:pYYYY
+
+            where "N" is  a port number in  the current slot, "X"  is the
+            destination slot number,  and "YYYY" is the  destination port
+            number.   On an  MXP machine,  additional fields  are printed
+            (see MXP documentation).
+
+       9.   A  new  SVC  has  been  added  to  get  information  from the
+            dispatcher.  This SVC  is used by  the DDT ?HOST,  ?CT, ?CPU,
+            and ?USE commands to get the information that they  need, but
+            it is also available to any user.
+
+            The SVC is called as follows:
+
+                R0 high byte = Function code
+                R0 2nd byte = Slot number
+                R0 low halfword = Port number (funcs 3 & 4 only)
+
+                SVC    2,$A 45              :SVC CALL
+                J      slot down or bad function
+       ==================================================================
+                   Tymshare Network Technology Division
+                           Revision Information
+                            ISIS Version 7.00              Page 4 of 18
+       ==================================================================
+
+                J      unassigned port (funcs 3 & 4 only)
+                Return value in R0
+
+                Function codes:
+                    0 = Test dispatcher status of slot
+                        Non-skip return if slot down
+                        Skip return if slot up
+                    1 = Reset input/output char counts to zero
+                          (in preparation for a report on throughput rate)
+                        Skip return if okay
+                    2 = Get input/output char counts
+                        Skip return if okay
+                        Returns bits 0-15:  Input char count
+                                bits 16-31: Output char count
+                    3 = Get port destination
+                        Double skip return if okay
+                        Returns bits 0-7:   Machine nmbr (0 if not MXP)
+                                bits 8-15:  Slot nmbr (-1 if not known)
+                                bits 16-31: Port or route nmbr
+                    4 = Get maximum port buffer usage
+                        Double skip return if okay
+                        Returns bits 0-15:  Output char count
+                                bits 16-31: Input char count
+
+       10.  Since only Tymnet-II is now supported, separate I2T2 and I2IG
+            files are  no longer necessary.   They are  incorporated into
+            the I2IS07.R00 file (see the sample command file).
+
+       11.  Several problems have been  fixed with the setting up  of the
+            MAC registers for the ?STAT command.  These could have caused
+            an  operations monitor  to  get an  erroneous  illegal memory
+            reference violation.
+
+       12.  Errors generated  by the SGU.DEF  macro now print  the global
+            unit number in the same radix it is specified (hex).
+
+       13.  The ISIS Slot Recovery  System (ISRS) has been fixed  to work
+            on  a supervisor  machine, and  a problem  with it  trying to
+            proceed even though the disk is not ready has been fixed.
+
+       14.  A problem  with the Resume  SVC that could  cause ISIS  to go
+            into  an infinite  loop has  been fixed.   This was  the most
+            conspicuous symptom of a  general problem caused by  the ISIS
+            Kernel referencing routines which were not in the Kernel, and
+            were thus interruptable; these routines have been moved.
+
+       15.  The  LBOOT  option  (reserve memory  for  the  bootstrap) now
+            defaults to on,  but may be turned  off by equating  LBOOT to
+            zero.
+
+       16.  This  version  requires  that both  enhanced  async  and sync
+            micro-code be present, so the MICRO specification in  the TYM
+            file is no longer needed.
+       ==================================================================
+                   Tymshare Network Technology Division
+                           Revision Information
+                            ISIS Version 7.00              Page 5 of 18
+       ==================================================================
+
+
+       17.  The Experimental SIO card (NXSIO) is no longer supported.
+
+       18.  It is now possible to eliminate the ISIS sync code completely
+            on machines with no sync (SIO only) and to specify the number
+            sync boards present in a clearer way by using the  new symbol
+            NSYNC in the ISIS TYM  file.  If NSYNC is equated to  0, then
+            no  sync  code  is  assembled  and  no  sync  interrupts  are
+            expected;  if  NSYNC is  1  to  16, then  one  sync  board is
+            assumed; and if NSYNC is  17 to 32, then two sync  boards are
+            assumed.  For compatibility with older TYM files, if NSYNC is
+            not specified,  then it defaults  to 16 if  XSYNC is  zero or
+            also not specified, or to 32 if XSYNC is equated to one.
+
+       19.  The interim async driver that was used when ASYNEW was 1 or 2
+            and CONSAT was 0 is no longer supported.  ASYNEW now switches
+            between the  oldest driver only  (0), newest  (Consat) driver
+            only (2),  or both (1),  and the CONSAT  equate is  no longer
+            used.
+
+       20.  There are now 1.5 stop bits output for the Baudot  baud rates
+            instead of two, which was incorrect.
+
+       21.  A problem was  fixed that caused a  mark bit to be  output at
+            the end  of a  break command when  4800 baud  interrupts were
+            enabled.  Therefore, if  multiple break commands  were issued
+            back-to-back to try  to make a  long break, some  hosts would
+            see it as several short  breaks or would be unable  to detect
+            the  break at  all.   In order  to  fix the  problem,  it was
+            necessary  to make  the length  of a  break command  be 18.75
+            milliseconds  with 4800  baud  interrupts.  The  length  of a
+            break with 1200 baud interrupts is still 75 milliseconds.
+
+       22.  The dispatcher now checks that only Logon  Character messages
+            (B3)  and Zapper  messages (9F)  are sent  on ports  in logon
+            state.  A port is in logon state between the time the Pseudo-
+            Needle message (B2) is received and the Logon OK message (B6)
+            is received.  Sending other messages while in logon state has
+            always been  illegal and could  confuse the node  code and/or
+            supervisor.  Now sending another message type will  cause the
+            slot to be crashed with a Dispatcher Crash.
+
+       23.  The  dispatcher now  checks whether  a slot  has  aux circuit
+            license  when  an   Aux  Circuit  Request  message   (08)  is
+            processed.   If  not,  then  the  usual  Pseudo-Needle Reject
+            message (09)  is sent  back indicating  the error.   This was
+            previously done  by the  node code,  but is  now done  by the
+            dispatcher for compatibility with MXP.
+
+       24.  A bug was fixed which caused the accounting arrays to  not be
+            initialized after  a machine restart  or crash,  thus leaving
+            them in an unknown state.
+       ==================================================================
+                   Tymshare Network Technology Division
+                           Revision Information
+                            ISIS Version 7.00              Page 6 of 18
+       ==================================================================
+
+
+       25.  A  bug was  fixed which  could cause  the final  project code
+            characters  of  a session  to  be sent  after  the accounting
+            termination had been sent.
+
+       26.  A bug  was fixed that  could cause slots  that had  the X.PNR
+            option set (ports not reusable until a zapper is  emitted) to
+            generate  incorrect accounting  data.  This  was  because the
+            dispatcher  channel could  be reassigned  after a  zapper was
+            received  but  before  the  slot  had  output  its accounting
+            addenda.  If this  happened, the accounting addenda  would be
+            associated with the invoice number of the new circuit.
+
+       27.  For slots with the X.PNR option set (ports not reusable until
+            a zapper is emitted),  the Zap w/Reason message (BE)  may now
+            also be  used to release  a port, in  addition to  the Zapper
+            (9F) and Detach (9E) messages.
+
+       28.  The  high-order  nibble  of the  accounting  addendum  in the
+            Accounting message  (B7) may now  be "F" as  well as  "E", to
+            support new accounting codes.
+
+       29.  The  reason code  in  the Zap  w/Reason (BE)  message  is now
+            actually passed to  the other side.   The node code  does not
+            yet check this value (since only one reason has  been defined
+            so far), so this  has not been a  problem up to now,  but new
+            codes may be defined later.
+
+       30.  The supervisor number is  now passed in the  Takeover message
+            (02) as documented.   It is not  clear whether the  node code
+            really sets this correctly yet, however.
+
+       31.  If  a  Host  Unacceptable  message  (0B)  is   received,  the
+            dispatcher  now removes  the offending  host number  from the
+            host table in segment "E".
+
+       32.  The host number field is no longer checked in the Report Host
+            Port  Availability  message  (0A)  or  the  Report  Host Cost
+            message (0C),  nor can  the host number  be changed  by these
+            messages.   The  relative  host  number  field  is   used  to
+            determine which host is being referenced, as before.
+
+       33.  A bug was fixed that  could cause the dispatcher to  tell the
+            user that a host was down  if the same host number was  up in
+            one slot and down in another.  The user is now  always routed
+            to the up host.
+
+       34.  A bug was fixed that caused circuits to not be torn down when
+            a Detach (9E)  was issued to a  port whose destination  was a
+            slothe same machine with the X.PNR option set (ports not
+            reusable until a zapper is emitted).
+       ==================================================================
+                   Tymshare Network Technology Division
+                           Revision Information
+                            ISIS Version 7.00              Page 7 of 18
+       ==================================================================
+
+
+       35.  The new dispatcher message C1 has been added to pass  the UUN
+            (Universal User Number) to  an interface slot when  a circuit
+            is built.  The  UUN will be sent  only if it is  requested in
+            the Pseudo-Needle Request.  The format of the UUN  Message is
+            as follows:
+
+                port number         2 bytes
+                msg type (C1)       1 byte
+                (unused)            1 byte
+                UUN                 4 bytes
+
+       36.  Problems have been fixed which caused the dispatcher  to save
+            bad data  in the machine's  crash table, including  the crash
+            code, if a crash occured within the dispatcher.
+
+       37.  The  start  addresses  for  a  DDT  "?STAT"  command  and the
+            auxilary  DDT command  list  function (DD.BGN  &  DD.BG2) are
+            obtained directly  from the  CTA table  rather than  the ISIS
+            user  block for  that slot.  Previously these  addresses were
+            loaded into the slot's ISIS user block during an "E" command.
+            This change allows the "?STAT" and auxilary  command function
+            to be used prior to executing a slot. A "?LMAC"  command must
+            have been successfully  completed, however, to  insure proper
+            MAC register set up.
+
+       38.  ISIS now looks at  "SUPMIC" if a Supervisor slot  is present.
+            If   (SUPMIC-1)   is  true,   the   Enhanced-async  microcode
+            instruction enable bit will be set in the  initial Supervisor
+            background  PSW.  ISIS disallows  any  async  (NASYNG>0) when
+            (SUPMIC-1)is true.
+
+       39.  ISIS was fixed to recover  from a drive fault error  from the
+            MSC  controler.  When  a drive  fault occurs,  the  drive not
+            ready flag is also enabled. ISIS previously reported that the
+            device was  unavailable and attempted  no recovery.  ISIS now
+            checks  for  drive  fault first  and  does  a  recalibrate if
+            present.  ISIS was  also changed  to report  this error  as a
+            controler error rather than device unavailable.
+
+       40.  The ISIS Dispatcher has  been changed to allow  '9E' (detach)
+            and 'BE' (zap with reason) during logon mode and  to disallow
+            a 'B3' (logon character) if not in logon mode. (NSR  196)
+
+       41.  The sync  initialization routine  has been  fixed so  that it
+            does not store the slot  in the sync oring.
+
+       42.  Fixed an ISIS dispatcher problem of accounting messages being
+            sent to a non-Node Code interface.
+
+       43.  Fixed  dispatcher  port 0  messages  '00' and  '01'  logic to
+            correctly index into the CNTRL bit array.
+       ==================================================================
+                   Tymshare Network Technology Division
+                           Revision Information
+                            ISIS Version 7.00              Page 8 of 18
+       ==================================================================
+
+
+       44.  Changed  breakpoint  logic  to  restore   breakpoints  before
+            changing  MAC register  sets to  prevent protection  error in
+            slot.
+
+       45.  Changed watchfrog timer to be updated when a dismiss  with an
+            arguement is performed. (NSR  222)
+
+       46.  Changed ISIS so that the FSYS switch no longer enables MSLOT.
+            If FSYS is  not enabled when MSOT  is enabled, MSLOT  will be
+            canceled.
+
+       47.  The  ISIS   dispatcher  has  been   changed  to   allow  'A0'
+            (backpressure on)  and 'A1'  (backpressure off)  during logon
+            mode.
+
+       48.  A patch area has been added for shared devices (HPATCH).
+
+       49.  The  Watchfrog timer  length can now  be changed in  the ISIS
+            Tymfile with the 'WFTIME' parameter. WFTIME should be equated
+            to  the number  of seconds  before the  Watchfrog  timer will
+            expire.  The timer default, if WFTIME is not specified,  is 5
+            seconds.
+
+       50.  The ISIS Flasher and Dispatcher processes have been allocated
+            a larger  execution quantum to  prevent race  conditions when
+            the process is timed-out while placing a message in the input
+            ring of  the node code.  This should fix  the problem  of the
+            node code crashing due to a partial dispatcher  message being
+            found (commonly a  foreground overload message) in  its input
+            ring.
+
+       51.  The MSC  disk error  recovery has  been changed  to not  do a
+            recalibrate  on  a  drive  that  is  not  selected.   Such  a
+            recalibrate  seems  to  cause  the  MSC  disk  controller  to
+            interrupt  on  a non-existant  device  causing  an unexpected
+            device interrupt crash in ISIS.
+
+       52.  A bug  in the XFER  SVC has been  fixed that caused  the user
+            block  of  the  process  to  be  corrupted  due  to  improper
+            indexing. One manifestation of this problem was for the PROBE
+            disk information  in the user  block to be  corrupted causing
+            various disk errors within PROBE. (NSR  229)
+
+       53.  Fixed a  bug where  an assembly error  would be  generated if
+            BAUDR was specified and no async devices were specified.
+
+       54.  A watchdog  message was added  that is sent  to XPI  from the
+            engine.   If the  XPI does  not recieve  this message  in the
+            specified time, XPI will crash with a watchdog  timeout. This
+            mechanism insures that XPI will crash if the engine crashes.
+       ==================================================================
+                   Tymshare Network Technology Division
+                           Revision Information
+                            ISIS Version 7.00              Page 9 of 18
+       ==================================================================
+
+
+       55.  Logic has been added  that will reset the XPI  before halting
+            it.  This solves the poroblem of DMA being locked up when the
+            XPI is halted.
+
+       56.  A new wait state has been added to ISIS. A slot may be put in
+            this  wait  state (not  executing)  if it  is  waiting  for a
+            response  from XPI.  If a  slot is  in this  state,  DDT will
+            indicate the slot is 'waiting for a response from  XPI'. This
+            wait   condition   will   be  cleared   if   the   engine  is
+            reinitialized.  Previously,  a  slot  would  be  frozen while
+            awaiting an XPI response.
+
+       57.  A bug in  the Watchfrog timer logic  that caused a  slot that
+            was  crashed due  to a  Watchfrog timeout  to  be immediately
+            crashed again has been fixed. (NSR  418)
+
+       58.  A bug  that caused the  10MB disk not  to be able  to recover
+            from an illegal cylinder address error has been fixed.
+
+       59.  Corrected problem in the dispatcher where dispatcher buffered
+            data  could  be  lost on  detach.  Corrected  problem  in the
+            dispatcher  where if  a needle  was rejected  on  an internal
+            circuit, the orange ball  that is reflected would be  lost in
+            the dispatcher. Corrected  a problem in the  dispatcher where
+            if a  slot sent a  gobbler during internal  circuit building,
+            some subsequent data sent by that slot could be lost.
+
+       60.  Corrected the  recieve character  length for  3767 equivalent
+            terminals (2741 at 300 baud).
+
+       61.  A slot in use message has been added for circuits to  DDT and
+            the  user is  reprompted for  slot number  if not  tied  to a
+            specific slot.
+
+       62.  A change was made  to the SYSMSG Supervisor slave  user block
+            to  allow  it  to be  able  to  access the  R/O  area  of the
+            Supervisor.
+
+       63.  A  bug  was fixed  that  caused  ISIS to  be  corrupted  if a
+            parameter was out of range in the node code sync SVC's.
+
+       64.  Because  of  problems  with  the  dispatcher's   handling  of
+            crashes, and  inconsistencies in  the previous  definition of
+            crash codes, some of the ISIS crash codes have  been changed.
+            Following is  a complete list  (suitable for framing)  of all
+            ISIS crash codes, including those added for MXP:
+                          ISIS Halt Displays
+                          ---- ---- --------
+
+       BAD00 8720      Parity error during initialization.
+       BAD00 8730      Unexpected I/O interrupt.
+       BAD00 8740      Illegal instruction during initialization.
+       BAD00 8750      MAC interrupt during initialization.
+       BAD00 8760      SVC trap during initialization.
+       BAD00 8763      Unable to connect slot on start-up.
+       BAD00 8790      Daughter board timeout during disconnect.
+
+       BAD02 8720      Parity error within kernel.
+       BAD02 8740      Illegal instruction within kernel.
+       BAD02 8750      Unexpected MAC interrupt during initialization.
+       BAD02 8763      Bad REPOP operation.
+       BAD02 8765      GCI crash within dispatcher. (*)
+
+       BAD04 8730      Unexpected enhanced-sync interrupt.
+       BAD04 8741      Bad MAC.
+       BAD04 8751      MAC register set 0 bad.
+       BAD04 8752      DMA device timeout.
+       BAD04 8762      Unexpected sync interrupt.
+       BAD04 8763      Wild transfer to low core.
+       BAD04 8765      WCI crash within dispatcher. (*)
+
+       BAD06 8762      Disk interrupt queue overrun.
+       BAD06 8765      WRE crash within dispatcher. (*)
+
+       BAD08 8763      Invalid routine address.
+       BAD08 8765      EMPTY crash within dispatcher. (*)
+
+       BAD0A 8763      Invalid queue address.
+       BAD0A 8765      TOPUT crash within dispatcher. (*)
+
+       BAD0C 8762      MSC controller locked during recalibrate.
+       BAD0C 8765      Accounting crash within dispatcher. (*)
+
+       BAD0E 8720      Parity error within dispatcher. (*)
+       BAD0E 8740      Illegal instruction within dispatcher. (*)
+       BAD0E 8750      Protection violation in dispatcher. (*)
+       BAD0E 8760      Illegal SVC within dispatcher. (*)
+       BAD0E 8761      Kernel crash. (*)
+       BAD0E 8763      System crash. (*)
+
+       BAD14 8763      Invalid channel I/O buffer address.
+
+       BAD18 8760      XPI timeout.
+       BAD18 8761      XPI halted.
+       BAD18 8762      Bad interrupt message from XPI.
+       BAD18 8763      XPI start-up check failure.
+       BAD18 8764      XPI crashed.
+       BAD18 8765      XPI too slow with KDIO.
+       BAD18 8766      Bad KDIO message from XPI.
+       BAD18 8767      MXP machine number mismatch.
+       BAD18 8768      XPI memory image not loaded.
+
+           (*) did not work properly before version 7.00
+       ==================================================================
+                   Tymshare Network Technology Division
+                           Revision Information
+                            ISIS Version 7.02              Page 12 of 18
+       ==================================================================
+
+       Changes from version 7.00 to 7.02
+       ---------------------------------
+
+       1.   Added support of Intelligent Peripheral Interface  (IPI). For
+            a detailed description see (ISIS:39)IPI.DOC.
+
+       2.   Added support of Tymnet sync emulation on HDLC  Micro Engine.
+            This facility allows an HDLC Micro Engine, which has only SIO
+            channels,  to support  Tymnet  sync lines.  The  only changes
+            necessary to  a standard  engine tymfile  are the  setting of
+            MACHIN to 2 (1 = engine, 2 = HDLC Micro Engine) and  NSYNC to
+            the number  of Tymnet  sync lines.  On  the HDLC  Micro, line
+            numbers specified in the S.REF macro and the M.REF  macro are
+            internally  referencing  the  same type  of  device  and thus
+            cannot be  duplicated. If  an S.REF  and M.REF  reference the
+            same line number, it will be flagged at assembly time.
+
+       3.   Added support of software serial number. This facility allows
+            ISIS  and ISIS  slots to  save the  time at  which  they were
+            generated  for  later  reference.   The  ?SLOT  command  will
+            display the time  in GMT that the  slot was generated  if the
+            information is provided  by the slot  in its CTA  table. ISIS
+            expects  the  information  to  be  in  the  following  format
+            beginning at location E00A4:
+
+                       MONTH   BS      1
+                       DAY     BS      1
+                       YEAR    BS      1
+                       HOUR    BS      1
+                       MINUTE  BS      1
+                       SECOND  BS      1
+
+            If the month field is zero, ISIS will assume no date has been
+            supplied.  The ISIS generation time is obtained by  the ?SLOT
+            in slot FF.
+
+       4.   The  information provided  by the  ?SLOT has  been increased.
+            This command  now provides  the slot  number, the  product id
+            code for the  slot, the version number  of the slot,  and the
+            time in GMT that the slot was generated. If ISIS  cannot find
+            a code  for the product  id number supplied  by the  slot, it
+            will place the  product id number in  the field.  If  no code
+            generation time is supplied  by the slot (see  sofware serial
+            number) ISIS  will leave the  field blank. If  a slot  is not
+            loaded, ISIS  will indicate  that fact as  none of  the above
+            information can be provided.  If a slot is of a  variety that
+            does not have a CTA table, ISIS will indicate that  the above
+            information is  not known.  A ?SLOT command  in slot  FF will
+            provide the above information for all the slots.
+
+       5.   Added  support of  the foreground  frequency  parameter. This
+            Tymfile  parameter  (FGFREQ) specifies  the  number  of clock
+       ==================================================================
+                   Tymshare Network Technology Division
+                           Revision Information
+                            ISIS Version 7.02              Page 13 of 18
+       ==================================================================
+
+            ticks  (FASTC)  between  ISIS's  running  of  the  foreground
+            processes. It defaults to 15d which was previously  the fixed
+            value.
+
+       6.   Added the dummy  STRLIN macro for use  in the Tymfile  by the
+            node code.
+       ==================================================================
+                   Tymshare Network Technology Division
+                           Revision Information
+                            ISIS Version 5.08              Page 15 of 18
+       ==================================================================
+
+       Changes from version 5.07 to 5.08
+       ---------------------------------
+
+       1.   A problem was fixed that  caused async ports set for  2741 or
+            Baudot  baud  rates  to give  spurious  break  indications on
+            input.
+
+       2.   A new mechanism has been devised for APSS to allow a  slot to
+            control the  execution state of  other slots.  There  are now
+            two  bits for  each  slot that  control whether  the  slot is
+            running:  the Run  bit is the old  one controlled by  the DDT
+            "E" and "H" commands and the Halt SVC and is 1 if the slot is
+            running; the Suspend bit is the new one controlled by the new
+            Suspend and Resume SVCs and  is 0 if the slot is  running.  A
+            slot is actually running only  if its Run bit is 1  *and* its
+            Suspend bit is 0.   This mechanism allows APSS to  turn slots
+            on and off without affecting their run state as set by DDT.
+
+            The Suspend SVC  is used to halt  a slot and set  its Suspend
+            bit.  The  slot issuing  this SVC  must be  properly licensed
+            (see below)  and the  slot number specified  must not  be the
+            same as the issuing slot.  It has the calling sequence:
+
+                LHI   R0,slot-nmbr
+                SVC   2,$A 43
+                J     error-handler
+                return point
+
+            The Suspend  SVC will  take the non-skip  return if  the slot
+            number is  invalid or if  the slot does  not have  the proper
+            license; otherwise it skips 4 bytes before returning.
+
+            The Resume SVC is used to reset a slot's Suspend bit.  If the
+            slot's Run bit is set at the time, the slot is started at its
+            start address (like the DDT "E" command).  If the slot cannot
+            be started because the MAC  is not properly set up,  then the
+            slot's Suspend bit  is still reset, but  its Run bit  is also
+            reset.  The slot issuing this SVC must be  properly licensed.
+            The calling sequence is:
+
+                LHI   R0,slot-nmbr
+                SVC   2,$A 44
+                J     error-handler
+                return point
+
+            The  Resume SVC  will take  the non-skip  return if  the slot
+            number  is  invalid;  otherwise  it  skips  4   bytes  before
+            returning.
+
+       3.   A new  slot license that  allows the use  of the  Suspend and
+            Resume SVCs, called TL.SUS,  has been added to the  TYM file.
+            It is specified by  equating the symbol SnLIC to  the desired
+       ==================================================================
+                   Tymshare Network Technology Division
+                           Revision Information
+                            ISIS Version 5.08              Page 16 of 18
+       ==================================================================
+
+            licenses for  slot "n"  all ORed  together.  For  example, if
+            slot 4 needed both TL.AUX (aux circuit license, currently the
+            only other  license) and  TL.SUS licenses,  the specification
+            would be:
+
+                S4LIC  EQ      TL.AUX!TL.SUS
+
+            Until the node code is changed to include a definition of the
+            symbol  TL.SUS,  however,  it is  necessary  to  specify this
+            license using the constant 1, like so:
+
+                S4LIC  EQ      TL.AUX!1
+
+       4.   Two  new  bit arrays  have  been added  to  segment  "F" that
+            indicate the state  of each slot  in the machine.   RNSLOT at
+            location  F013A contains  the Run  bits for  each slot  (0 if
+            halted,  1  if  runable) and  SSSLOT  at  F0142  contains the
+            Suspend bits (0 if runable, 1 if suspended).
+
+       5.   The message  printed by  DDT when  a user  logs into  a slot,
+            transfers to a slot, or types "\" has been changed to be more
+            informative.   It  now  prints the  slot  number,  the slot's
+            current  state and  the reason  the slot  is in  it's current
+            state.  The possible slot states are as follows:
+
+               down    - the slot is not running for some reason:
+                           not loaded - it has never been started since
+                                        the node was reloaded
+                           crashed    - the slot crashed with no restart
+                                        address set
+                           halted     - the slot has been halted by a
+                                        DDT command, a Halt SVC, or has
+                                        crashed with CRSTOP set on
+                           frozen     - the slot has been frozen by a
+                                        Freeze SVC, a DDT command, or
+                                        has crashed in debug mode
+
+
+               suspended - another slot has suspended this slot; this
+                           state can be printed in conjunction with one
+                           of the above states
+
+               running   - the slot is actually running because of a
+                           DDT command, a Resume SVC, or a restart from
+                           a crash (CRSTOP set off)
+
+
+            If the reason is because  of a crash, then the crash  type is
+            also  printed  (ill  mem ref,  dispatcher  crash,  ill instr,
+            etc.).  If the  slot is FF or  one of the  supervisor slaves,
+            then just a slot number is printed.
+       ==================================================================
+                   Tymshare Network Technology Division
+                           Revision Information
+                            ISIS Version 5.08              Page 17 of 18
+       ==================================================================
+
+
+       6.   The  SIO  SVC  code  developed  for  version  6.0,  with some
+            improvements, has been used in this version.  Therefore, this
+            code cannot get caught in a loop if an SIO  Motherboard hangs
+            up in  the busy state  and the SIO  SVCs now return  an error
+            code in the  high order halfword  of the calling  register if
+            they do a non-skip return.  The codes are listed in the ISIS2
+            document.
+
+       7.   When the machine is restarted, a reset-channel command is now
+            sent  to all  configured SIO  channels after  the reset-board
+            command is  issued.  This allows  gaps in  the daughter-board
+            port assignments for revision E SIO micro-code.  In addition,
+            a  delay  has been  added  after the  reset-board  command to
+            kludge around a disgusting SIO micro-code bug.
+
+       8.   The  Connect  Motherboard  SVC now  returns  with  the status
+            filled if a status address is specified.
+
+       9.   The entry in  the LENGTH table (segment  F) for the  Zap with
+            Reason (BE) message is now correct (2).
+
+       10.  Several  problems with  the ISIS  crash-machine  routine have
+            been corrected.
+
+       11.  A problem which caused an async port to hang up when  a break
+            was output with 4800 baud interrupts has been fixed.
+
+       12.  A problem  that caused garbage  to be output  on a  sync line
+            when marks should have been output has been fixed.
+
+       13.  The CONSAT switch in the TYM file now defaults to 1 if ASYNEW
+            is set to 1 or 2.
+
+       14.  A problem which caused the watchdog timer to timeout  if ISIS
+            had to zap a large  number of circuits has been  fixed.  This
+            was done by  putting the watchdog  timer tickle logic  in the
+            FLASHER foreground instead of background.
+
+       15.  Several problems  with running a  supervisor under  ISIS have
+            been fixed.  These include the MAC register settings  for the
+            supervisor background  slot and the  UN2 slave slot,  and the
+            zeroing out  of the supervisor/node-code  communications area
+            on machine restart.
+
+       16.  The 10  MB disk  controller is  now reset  when a  disk error
+            occurs, fixing some problems with the controller getting hung
+            up.
+
+       17.  A wild add to memory in the dispatcher has been  fixed.  This
+            could  have caused  several different  problems  depending on
+            what was assembled where.
+       ==================================================================
+                   Tymshare Network Technology Division
+                           Revision Information
+                            ISIS Version 5.08              Page 18 of 18
+       ==================================================================
+
+
+       18.  A problem which  happened when XSYNC  is set has  been fixed.
+            The problem caused part of segment F to get  overwritten when
+            the boot is loaded even though LBOOT is set.  This  showed up
+            as  several  symptoms, including  random  slots  reporting as
+            suspended, and DDT  and the dispatcher disagreeing  about the
+            state of a slot.
+
+       19.  The DDT  ?CPU command no  longer prints an  input/output ring
+            CPS for slot  FF, since this  is meaningless and  was causing
+            some problems.
+
+       20.  The DDT ?MEM command has been fixed to properly report single
+            and double bit errors.  They were previously reversed.
+
+       21.  The  history log  now  contains entries  for when  a  slot is
+            suspended and resumed.
+H@3
