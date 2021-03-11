@@ -1,0 +1,419 @@
+*** 
+*** process orig host file for daily stats
+***
+
+          integer iday, itime1, itime2, nohost
+          integer ihost(200), noport(200), nomin(100)
+          integer iuser(200), itraf(200)
+          integer ihour(24), inum(24), imin(24,60)
+          integer ichar(24), ifile(5), ofile(5)
+          real temp, rxhour, rchar, rxper
+          real rahour, raper, rnhour, rnper
+
+          call dbstrt(1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,
+     +                1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,
+     +                1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,
+     +                1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,
+     +                1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,
+     +                1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,
+     +                1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,
+     +                1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,
+     +                1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,
+     +                1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,
+     +                1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,
+     +                1,-1,1,-1,1,-1,1,-1,1,-1,1,-1)
+112       continue
+
+          type 400
+400       format(5x,'input file => ',$)
+          read(5,410) ifile
+410       format(5a5)
+          type 420
+420       format(5x,'output file => ',$)
+          read(5,410) ofile
+
+          open(20,ifile,input)
+          nohost = 0
+430       continue
+          read(20,440,err=430,end=480) ihost(nohost+1)
+440       format(i5)
+          nohost = nohost + 1
+          go to 430
+480       continue
+          close(20)
+
+          do 116 ii = 1, nohost
+               itraf(ii) = 0
+               iuser(ii) = 0
+               noport(ii) = 0
+               nomin(ii) = 0
+116       continue
+
+          open(22,ofile,output)
+          call getdt(ibdate,iendat)
+          inoday = 0
+
+111       continue
+
+          ikeep = ibdate
+          decode(5,204,ibdate)iday
+204       format(i5)
+          if (iday.lt.10000) go to 205
+          iday = iday + 800000
+          go to 206
+205       iday = iday + 900000
+206       continue
+
+          type 118, ibdate
+118       format(/,5x,A5)
+          call fopen(ibdate, iendat, iflag, nofile)
+* ibdate > iendat, processing over
+          if (iflag .eq. 1) go to 950
+* files exists in NETSTAT, process day
+          if (iflag .eq. 0) go to 982
+* file does not exist, go to next day
+          write(22,978) ikeep
+978       format(//,'***** ',a5,' files do not exist in the',
+     +           ' NETSTAT directory *****',//)
+          go to 111
+     
+982       continue
+          WRITE(22,972) IKEEP
+972       format(//,18X,'MAX',17X,'TOT',/,
+     +            1x,'host',2x,'ports',6x,'con-hr',7x,'%',
+     +            6X,'hours',7x,'  * ',
+     +            A5,' *',/)
+
+          do 900 ijk = 1, nohost
+
+          do 10 ii = 1, 24
+               ihour(ii) = 0
+               inum(ii) = 0
+               ichar(ii) = 0
+               do 5 jj = 1, 60
+                    imin(ii,jj) = 0
+5              continue
+10        continue
+          
+          do 121 jj = 1, nofile
+
+          call dbset(jj)
+          call dbfind('ORIGHOST','EQ',ihost(ijk))
+
+100       continue
+
+          call dbgrec($500)
+          call dbval('STARTDATE',isdate,
+     +               'ENDDATE',iedate,
+     +               'STARTTIME',istime,
+     +               'ENDTIME',ietime,
+     +               'TOTALCHARS',inum2)
+
+          if (isdate .lt. iday) istime = 0000
+          if (iedate .gt. iday) ietime = 2400
+          if (iedate .lt. iday) go to 200
+          ih1 = ietime / 100
+          im1 = ietime - (ih1*100)
+          ih2 = istime / 100
+          im2 = istime - (ih2*100)
+          inomin = (ih1 - ih2)*60 + (im1 - im2)
+          if (inomin .eq. 0) inomin = 1
+          ichar2 = inum2 / inomin
+
+          do 200 ii = 1, 24
+               itime1 = (ii - 1) * 100
+               itime2 = ii * 100
+               if (istime .ge. itime2) go to 150
+               if (ietime .le. itime1) go to 150
+               IF (ISTIME .Le. ITIME1) IST = 1
+               IF (ISTIME .Gt. ITIME1) IST = ISTIME - ITIME1
+               IF (IETIME .Ge. ITIME2) IET = 60
+               IF (IETIME .Lt. ITIME2) IET = IETIME - ITIME1
+               DO 233 kk = IST, IET
+                  ICHAR(II) = ICHAR(II) + ICHAR2
+                  IMIN(II,kk) = IMIN(II,kk) + 1
+                  IHOUR(II) = IHOUR(II) + 1
+233            CONTINUE
+150            continue
+200       continue
+
+          go to 100
+
+****** end of processing day
+500       continue
+121       continue
+
+*** consolidate day's results
+
+* characters
+          do 609 ii = 1, 24
+               if (ichar(ii) .gt. itraf(ijk)) 
+     +              itraf(ijk) = ichar(ii)
+609       continue
+
+* connect hours
+          ic = 0
+          icmax = 0
+          icmin = 100000
+          icave = 0
+          iminum = 0
+          do 600 ii = 1, 24
+               ic = ic + ihour(ii)
+               if (ihour(ii) .eq. 0) go to 601
+               if (ihour(ii) .lt. icmin) icmin = ihour(ii)
+               icave = icave + ihour(ii)
+               iminum = iminum + 1
+601            continue
+               if (ihour(ii) .lt. icmax) go to 600
+               idchar = ichar(ii)
+               icmax = ihour(ii)
+               ip = 0
+               do 694 ll = 1, 60
+                    if (ip .lt. imin(ii,ll)) ip = imin(ii,ll)
+694            continue
+               iduser = ip
+604            continue
+               if (ihour(ii) .gt. nomin(ijk))
+     +              nomin(ijk) = ihour(ii)
+600       continue
+
+* simultaneous users
+          do 650 ii = 1, 24
+               kk = ii
+               ip = 0
+               do 634 ll = 1, 60
+                    if (ip .lt. imin(ii,ll)) ip = imin(ii,ll)
+634            continue
+               if (ip .gt. iuser(ijk)) iuser(ijk) = ip
+650       continue
+               if (iminum .eq. 0) icmin = 0
+               if (iminum .eq. 0) iminum = 1
+               if (ic .eq. 0) ic = 1
+               rxhour = icmax / 60.0
+               rchar = idchar / 1000.0
+               rxper = (icmax*100.0) / ic
+               rnhour = ic / 60.0
+               if (rxhour .eq. 0) rnhour = 0
+               rnper = (icmin*100.0) / ic
+               rahour = icave / (60.0 * iminum)
+               raper = (icave*100.0) / (iminum*ic)
+             
+               write(22,984) ihost(ijk), rxhour,
+     +                       rxper,rnhour
+984            format(i5,2x,5x,2x,f10.2,2x,f6.2,2x,f10.2)
+
+900       continue
+
+          go to 111
+
+* get number of ports and write output flat file
+
+950       continue
+          go to 999
+ 
+          ikeep = 'TOTAL'
+          write(22,970) ikeep
+970       format(1x,'host',2x,'ports',8x,'con-hr',
+     +           2x,'users',8x,'k-char  *** ',a5,' ***'//)
+
+          do 990 ii = 1, nohost
+               rxhour = nomin(ii) / 60.0
+               rchar = itraf(ii) / 1000.0
+               write(22,980) ihost(ii), noport(ii), rxhour,
+     +                       iuser(ii), rchar
+980            format(i5,2x,i5,2x,f12.2,2x,i5,2x,f12.2)
+990       continue
+
+999       continue
+          CALL DBOPEN('(NETSTAT)ckts')
+          call dbclos
+          call dbend
+          close(14)
+
+          return
+          end
+
+*** subroutine GETDT***
+* get start and end dates from user
+***
+
+          subroutine getdt(IBEG,IEND)
+
+          integer IBEG, IEND
+
+          type 1010
+1010      format(///,
+     +         10X,'***** ',
+     +         'Please input dates in the format YMMDD.',
+     +         ' *****',////,
+     +         25X,'Beginning date:  ',$)
+          read(5,1020) IBEG
+1020      format(A5)
+          type 1030
+1030      format(/,
+     +         25X,'   Ending date:  ',$)
+          read(5,1020) IEND
+
+1099      continue
+          return
+          end
+
+*** subroutine FOPEN ***
+* opens 1022 files for use
+***
+
+          subroutine FOPEN(IBEG, IEND, IFL,NUMFIL)
+
+          integer IBEG, IEND
+          integer IFL, NUMFIL
+          integer FILEA(4), FILEB(4), FILEC(4), FILED(4)
+          integer icnt, dummy, mday
+          integer im1, im2, id1, id2, iy1, iy2
+
+101       continue
+          IFL = 0
+
+          call rtc(dummy,IBEG,1)
+          decode(1,100,dummy)icnt
+          iy1 = icnt
+          call rtc(dummy,IBEG,2)
+          decode(1,100,dummy) icnt
+100       format(I1)
+          im1 = icnt
+          call rtc(dummy,IBEG,3)
+          decode(1,100,dummy) icnt
+          im1 = im1*10 + icnt
+          call rtc(dummy,IBEG,4)
+          decode(1,100,dummy) icnt
+          id1 = icnt
+          call rtc(dummy,IBEG,5)
+          decode(1,100,dummy) icnt
+          id1 = id1*10 + icnt
+          
+          call rtc(dummy,IEND,1)
+          decode(1,100,dummy) iy2
+          call rtc(dummy,IEND,2)
+          decode(1,100,dummy) icnt
+          im2 = icnt
+          call rtc(dummy,IEND,3)
+          decode(1,100,dummy) icnt
+          im2 = im2*10 + icnt
+          call rtc(dummy,IEND,4)
+          decode(1,100,dummy) icnt
+          id2 = icnt
+          call rtc(dummy,IEND,5)
+          decode(1,100,dummy) icnt
+          id2 = id2*10 + icnt
+
+          if (iy1 .gt. iy2) go to 186
+          if (im1 .gt. im2) go to 186
+          if ((id1 .gt. id2) .and. (im1 .eq. im2)) go to 186
+
+          FILEA(1) = '(NETS'
+          FILEA(2) = 'TAT)'
+          FILEA(4) = '.DMS '
+          FILEB(1) = '(NETS'
+          FILEB(2) = 'TAT)'
+          FILEB(4) = '.DMS '
+          FILEC(1) = '(NETS'
+          FILEC(2) = 'TAT)'
+          FILEC(4) = '.DMS '
+          FILED(1) = '(NETS'
+          FILED(2) = 'TAT)'
+          FILED(4) = '.DMS '
+          call stc('A',FILEA,15)
+          call stc('B',FILEB,15)
+          call stc('C',FILEC,15)
+          call stc('D',FILED,15)
+
+          do 110 i = 1, 5
+               call rtc(dummy,IBEG,i)
+               call stc(dummy,FILEA,i+9)
+               call stc(dummy,FILEB,i+9)
+               call stc(dummy,FILEC,i+9)
+               call stc(dummy,FILED,i+9)
+110       continue
+
+          open(24,FILED,input,err=112)
+          NUMFIL = 4
+          close(24)
+          call dbopen(FILEA,FILEB,FILEC,FILED)
+          go to 120
+
+112       continue
+          open(24,FILEC,input,err=114)
+          close(24)
+          NUMFIL = 3
+          call dbopen(FILEA,FILEB,FILEC)
+          go to 120
+
+114       continue
+          open(24,FILEB,input,err=116)
+          close(24)
+          NUMFIL = 2
+          call dbopen(FILEA,FILEB)
+          go to 120
+
+116       continue
+          open(24,FILEA,input,err=118)
+          close(24)
+          NUMFIL = 1
+          call dbopen(FILEA)
+          go to 120
+
+118       continue
+          IFL = 2
+
+120       continue
+
+* increment IBEG by one day
+
+          mday = 30
+          if (im1 .eq. 2) mday = 28
+          if ((im1 .eq. 1) .or. (im1 .eq. 3)) mday = 31
+          if ((im1 .eq. 5) .or. (im1 .eq. 7)) mday = 31
+          if ((im1 .eq. 8) .or. (im1 .eq. 10)) mday = 31
+          if (im1 .eq. 12) mday = 31
+
+          id1 = id1 + 1
+          if (id1 .le. mday) go to 150
+          id1 = 1
+          im1 = im1 + 1
+          if (im1 .le. 12) go to 150
+          im1 = 1
+          iy1 = iy1 + 1
+          
+150       continue
+
+* replace IBEG with incremented date
+          ibl = ' '
+          encode(1,160,dummy) iy1
+160       format(I1)
+          call stc(dummy,IBEG,1)
+          icnt = im1 / 10
+          encode(1,160,dummy) icnt
+          if (eq(ibl,1,dummy,1,1)) dummy = '0'
+          call stc(dummy,IBEG,2)
+          icnt = im1 - (im1/10)*10
+          encode(1,160,dummy) icnt
+          if (eq(ibl,1,dummy,1,1)) dummy = '0'
+          call stc(dummy,IBEG,3)
+          icnt = id1 / 10
+          encode(1,160,dummy) icnt
+          if (eq(ibl,1,dummy,1,1)) dummy = '0'
+          call stc(dummy,IBEG,4)
+          icnt = id1 - (id1/10)*10
+          encode(1,160,dummy) icnt
+          if (eq(ibl,1,dummy,1,1)) dummy = '0'
+          call stc(dummy,IBEG,5)
+
+          go to 199
+
+186       continue
+          IFL = 1
+          go to 199
+
+199       continue
+          return
+          end
+  
