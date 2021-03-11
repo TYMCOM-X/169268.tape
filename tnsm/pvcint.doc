@@ -1,0 +1,373 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                   XCOM - PVC Feature for X.25 Interfaces
+                       INTERNAL STRUCTURE AND DESIGN
+
+
+
+
+
+
+
+
+
+
+                           Author: Frank Kotulak
+
+                        Major Interface Development
+                        Network Technology Division
+                               Tymshare, Inc.
+                              10261 Bubb Road
+                            Cupertino, CA  95014
+
+
+
+
+
+
+
+                           Date December 12, 1983
+
+
+
+                          Proprietary Information
+                            NOT FOR CUSTOMER USE
+
+
+doc:  (NETMID)PVCINT.DOC
+X.25 PVC Internal Structure.  Proprietary Information 12-Dec-1983     Page 2
+Table of Contents
+
+
+     1. Forward
+
+     2. Tables and Variables
+
+     3. Structure
+        3.1 Initialization
+        3.2 PVC Circuit Building/Detach
+                3.2.1 General Message Flow
+                3.2.2 High Host Specific Processing
+                3.2.3 Low Host Specific Processing
+        3.3 Packet Level
+                3.3.1 Coming UP
+                3.3.2 UP/DOWN
+                3.3.3 Going DOWN
+X.25 PVC Internal Structure.  Proprietary Information 12-Dec-1983     Page 3
+Forward
+
+
+     1.  Forward
+
+       This documents purpose is to describe the IMPLEMENTATION of the CCITT
+       specified  PVC  feature  in  the  XCOM  code.   This  is an INTERNALS
+       document and it assumes that the reader knows the general  XCOM  code
+       structure  and  understands  what  is  an  X.25  PVC.   This is not a
+       REFERENCE manual.  For the reader who doesn't know what  I'm  talking
+       about, it is suggested that the following be read first.
+
+                1980 CCITT Specification (as it pertains to PVC's)
+                X.25/X.75 Reference Manual
+                (NETMID:39)PVC.DOC
+                (NETMID:39)TUR.DOC
+                ISIS Reference Manual
+X.25 PVC Internal Structure.  Proprietary Information 12-Dec-1983     Page 4
+Forward
+
+
+     2.  Tables and Variables
+
+       TABLES and ARRAYS
+         All tables and arrays can be found in source element XCOMOP.
+         
+         Five tables are used to locate and manipulate PVC's,
+                LPC.LT - hw/link containing lowest defined PVC channel
+                HPC.LT - hw/link containing highest defined PVC channel
+                PVCLNK - hw/link contains pointer to first PVC channel
+                         described in PVCTAB for that link
+                PVCTAB - 4words/entry contains PVC information for each
+                         PCNL defined channel. Null entries can occur if
+                         no PVCHANNEL defined for a PCNL defined channnel.
+                PVCLOG - contains user defined (ie. PVCHANNEL macro) LOGON
+                         strings. Table is continuous and is pointed to from
+                         an element in PVCTAB
+         
+         Arrays,
+         
+         PVCTIK by IPORT - Holds number of ticks to loop thru before activating PVC
+            timer logic if in fact the PVCTMR bit is on.
+         PVCTMR by IPORT - If it is determined that a PVC circuit needs to be built
+            then the bit will be turned ON. This will activate a timer. PVCTIK 
+            will be used to set the timer length.
+         PVCCAL by IPORT - Once the PVC is established this bit will be turned ON
+         PVCSPC by IPORT - When the bit is ON, it indicates that a PVC Request 
+            Turkey message (99) has been sent by this interface and a PVC 
+            confirmation is expected. 
+         PVCOUT by EPORT - Serves to identify on this Interface those DTE's on the
+            other Interface who are 'Down'.
+         LO8 by DPORT -         Array of Originating Host #'s
+         
+         Variables,
+         
+         The following variables are used to provide offsets into PVCTAB,
+                PV.DHS  Destination Host number
+                PV.DCH  Destination Channel
+                PV.DLK  Destination Link
+                PV.TCT  Transmission thruput class
+                PV.TCR  Reception thruput class
+                PV.PWT  Packet window size for Transmission
+                PV.PWR  Packet window size for Reception
+                PV.PST  Packet size CODE for Transmission
+                PV.PSR  Packet size CODE for Reception
+                PV.ULG  Pointer into PVCLOG
+         
+         PV.LEN Length of dialect message 99
+         S.PVC  Shift count for PVCTAB
+         PWPVCR Indicates PVC is in build state, used to set PCKSTE array
+         PVCLCI  Used in RT to indicate that this packet is from a PVC
+X.25 PVC Internal Structure.  Proprietary Information 12-Dec-1983     Page 5
+Forward
+
+
+     3.  Structure
+
+       3.1 Initialization
+
+         For each LINKHOST that has PVC defined, mark host as shut instead 
+                of down.
+                /* done in (XCOMMI)STARTA */
+         
+         For each link, mark EPORT between LIC-1 & LCC as NOT AVAILABLE;
+         
+         For each PVC locate EPORT, IPORT, set PVC timer to 10 seconds on 
+                the IPORT.
+                /* done at (XCOMMI)INI400 */
+         
+         Place each Host supporting a PVC into a state whereby they are 
+                never reported DOWN to the supervisor, ie. they will report
+                as SHUT instead.
+                /* done at (XCOMMI)HST040 */
+X.25 PVC Internal Structure.  Proprietary Information 12-Dec-1983     Page 6
+Forward
+
+
+       3.2 PVC Circuit Building/Detach
+
+         3.2.1 General Message Flow
+
+           After the PVC build timer expires then,
+
+           High  Host  ------------------------------------------>   Network
+           Request for Pseud.  Ndl.  (07)
+
+           High  Host  <------------------------------------------   Network
+           Pseudo Needle (B2)
+
+           Low  Host   <------------------------------------------   Network
+           Needle (00)
+
+           High  Host  ------------------------------------------>   Network
+           Normal Logon Chars.  (B3)
+
+           High  Host  <------------------------------------------   Network
+           Norm.  Logon Stat.  (B4), Success.  Logon (B6)
+
+           Establishment of an IIX capability occurs next
+
+           Establishment of a Turkey level, then specialized Turkey messages
+           are exchanged
+
+           High Host  ------------------------------------------>  Low  Host
+           Turkey level request (2 or higher) (93)
+
+           High Host  <------------------------------------------  Low  Host
+           Turkey level response (2 or higher) (93)
+
+           High Host  ------------------------------------------>  Low  Host
+           Contains PVC info + DTE Status (99)
+
+           High Host  <------------------------------------------  Low  Host
+           Returns PVC Status + DTE Status (9A)
+
+           PVC CIRCUIT SHOULD NOW BE COMPLETE
+X.25 PVC Internal Structure.  Proprietary Information 12-Dec-1983     Page 7
+Forward
+
+
+         3.2.2 High Host Specific Processing
+           
+           When the PVC timer expires then
+                put Username in IEDBUF
+                send pseudo needle request (00,07) to ISIS; 
+                /* see (XCOMBK)ESTPRT */
+                set timer AUXTIM to 60 seconds on IPORT
+                        (timer for LOGON period);
+                Stop PVC timer (PVCTMR);
+                /* done at (XCOMMI)PVCBLD */
+           
+           If "unable to provide pseudo-needle" (ISIS 00,09) received then
+                For this IPORT : stop timer AUXTIM, set PVC timer to 60 
+                seconds and begin counting down again.
+           
+           If pseudo needle response (ISIS B2) received then
+                setup DPORT-IPORT mapping.
+                send login string (ISIS B3) 
+                STOP AUXTIM timer;
+                /* near (XCOMDP)ICP020 */
+           
+           If login failed (B4 non-continue, B5 or text of extended
+                login status)  /* LOGTCK in XCOMMI */
+                Detach circuit; free DPORT; set PVC timer to 60 seconds
+           
+           If login successful (ISIS B6) then /* see ICNCC XCOMDP */
+                if reached dumb host (not IIX capable) then
+                        Detach circuit; free DPORT; set PVC timer  60 secs
+           
+           If IIX dialect selection command /* GMEXP0 in XCOMDD */ then
+                if not(XCOM or DSP) dialect then
+                        Detach circuit; free DPORT; set PVC timer to 60 
+                        seconds
+                else (if XCOM or DSP)
+                        send IIX XCOM or DSP dialect response
+                        /* SNDDR in XCOMDD */
+                        send turkey level 2 msg. (93) /* TURKOK in XCOMDD */
+           
+           When turkey level msg (93) returned
+                if turkey level < 2 and in PWPVCR state then
+                        Detach circuit; free DPORT; set PVC timer to 
+                        60 seconds
+                else /* turkey level >= 2 and in PWPVCR state then */
+                        send turkey msg 99: PVC specification: set PVCSPC
+                        /* XCOMDD at ESP13 */
+X.25 PVC Internal Structure.  Proprietary Information 12-Dec-1983     Page 8
+Forward
+
+
+           If turkey msg PVC confirmation received and was expected 
+              (ie. PVCSPC set) then
+                Clear PVCSPC:
+                Set PVCOUT bit ON if Other DTE is "down"
+                If turkey msg (9A) PVC confirmation (success) then
+                        set packet state of this IPORT to "flow control ready"
+                        if "packet level up" on the respective link then
+                                queue a RESET packet
+                                (cause : network operational) to link
+                                thru IECBUF /* see (XCOMDD)ESP1A */
+                If turkey msg PVC confirmation (failure) received then
+                        detach circuit; free DPORT; set PVC timer to 60 seconds
+           else TRAP error by hanging slot
+           
+           If timer AUXTIM time-out on a IPORT then before circuit built
+                stop AUXTIM; set PVC timer to 10 seconds
+                try to build PVC when PVC timer expires.
+           
+           If circuit zapper received /* IZAP35 in DP */ then
+                detach circuit; free DPORT; set PVC timer to 60 seconds:
+                queue a reset packet to link (cause - network congestion)
+X.25 PVC Internal Structure.  Proprietary Information 12-Dec-1983     Page 9
+Forward
+
+
+         3.2.3 Low Host Specific Processing
+           
+           If needle received then
+                (nothing special here because we don't know if
+                 the circuit is going to be a PVC or not)
+                do the usual thing which may include selecting an IPORT,
+                 send an IIX dialect selection command
+           
+           If IIX dialect response then
+                (again we don't know if this is going to be a PVC or not
+                so continue normal processing)
+           
+           If turkey level message (93) (level=2 or higher) received then
+                return turkey level message (93) (level=2 or higher)
+           
+           If turkey msg. PVC specification (99) received then
+                /* see ESP19 in XCOMDD */
+                verify host numbers, link numbers, channel numbers,
+                  and throughput class codes
+                if verify fails then
+                        send turkey msg. PVC response indicating failure.
+                else /* good verify */
+                        set PVCCAL for this IPORT
+                        send turkey msg. (9A) PVC response indicating success.
+                        select EPORT according to the destination
+                          link#, channel#.
+                        packet state for IPORT is flow control ready.
+                        if "packet level up" on the respective link then
+                                queue a RESET packet (network operational)
+                                  to link;
+           
+           If zapper received then (see IZAP35 in DP)
+                clear DPORT and IPORT plus all mappings
+                        If packet level up
+                                send reset (network- congestion) onn
+                                  channel 0
+           
+X.25 PVC Internal Structure.  Proprietary Information 12-Dec-1983    Page 10
+Forward
+
+
+       3.3 Packet Level
+
+         This section describes the processing involved  with  the  loss  or
+         restablishment  of  the packet level (ie.  level 3) across the LINK
+         of the x-code.
+
+         3.3.1 Coming UP
+           
+           For each EPORT that has a PVC defined
+                if an IPORT is associated with it then
+                        if packet state of this IPORT is "flow control ready" 
+                                then send gobbler & turkey reset
+                                  (remote DTE operational)
+           /* see (XCOMMI)PKLVUP */
+
+
+
+         3.3.2 UP/DOWN
+           
+           If call request/accept, clear request/confirmation received 
+             on a PVC then
+                send a reset packet to link(local proc. error, 
+                  invalid packet for PVC)
+                send a reset to network (remote  proc. error, 
+                  invalid packet for PVC)
+           
+           If "DOWN" then
+                send a Reset pkt to the link for every packet received
+           /* see (XCOMRT)RTD100-RTD400 */
+
+
+
+         3.3.3 Going DOWN
+           
+           For each EPORT that has a PVC defined
+                if an IPORT is associated with it then
+                        if packet state of this IPORT is in 
+                          "flow control ready" then
+                                send gobbler & turkey reset (out of order)
+           /* see (XCOMMI)HANGAL */
+    
