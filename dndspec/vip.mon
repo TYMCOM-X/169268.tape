@@ -1,0 +1,987 @@
+
+
+
+
+
+
+
+
+
+              VIP Host and Terminal Interfaces
+
+
+                        Version 3.0
+
+
+                       Monitor Manual
+
+
+
+
+
+                          10/12/87
+
+                         MDC-TYMNET
+
+
+               Network Technology Development
+
+
+                Tymnet  Interconnect  System
+
+
+
+
+
+
+MDC-TYMNET's  proprietary  rights are  included in  the information
+disclosed  herein.  The  recipient,  by  receiving  this  document,
+agrees  that  neither  this document nor the information  disclosed
+herein   nor any  part thereof  shall be  reproduced or transferred
+to other documents or used or disclosed to others for manufacturing
+or  any other  purpose except as specifically authorized in writing
+by MDC-TYMNET. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+VIP Host and Terminal Interface V3.0, MON           10/12/87
+
+
+
+                      1.  VIP MONITOR
+
+
+This document  is a  description of the  VIP DDT  Monitor as
+implemented  in  Version 3.0  of  the  VIP code.
+
+
+1.1  GENERAL DESCRIPTION
+
+
+The  VIP Monitor  is  a  capability that  allows  Operations
+Support  to  detect  and   diagnose  software  and  hardware
+problems that  may effect VIP  operation.  The  Monitor will
+work on  both Host and Terminal  Interface for  VIP and IBM
+2946  protocols.  Some commands will  obviously function
+differently  depending  on  the  type  of  interface.   This
+release of  the VIP Monitor does  not allow the  operator to
+change the operation of the interface.
+
+
+1.1.1  How to run the Monitor (and how to stop it)
+
+In order to run the VIP  Monitor for a particular interface,
+you need  to know  the Kernel  Host Number  of the  Node the
+interface is in,  the slot number, and the  password for the
+username  TTMSTSMON.  Find  a terminal,  and  at the  Tymnet
+host number, a  semicolon, the password, a  carriage return,
+the slot number, and the command '?STAT'.  For Example:
+
+    please log in: 'TTMSTSMON:2232;GIANT'**
+    node: 2646
+    host: 2232
+
+    slot  : '2'**
+    *'?STAT'**
+
+    :>
+
+
+
+** In  the above  example, the  single quote  marks are  not
+actually typed in.  They indicate operator responses.
+
+The above example  would log you into the  node whose kernel
+host number is 2232, if the password to TTMSTSMON is GIANT
+and if TTMSTSMON can access slot two on that node.  There is
+no carriage return  needed after typing in  the slot number,
+although it doesn't hurt.
+
+The ':>' prompt is from the  VIP Monitor.  The '*' prompt is
+from ISIS DDT.  It's very  important to remember this, since
+
+
+
+                          Page 1
+
+
+
+
+
+
+
+VIP Host and Terminal Interface V3.0, MON           10/12/87
+
+
+
+Monitor Commands are  available only at the  Monitor Prompt,
+and DDT commands are available only at the DDT Prompt.
+
+Typing  '?STAT'  at the  DDT  Prompt  gets you  the  Monitor
+Prompt.  Typing 'QUIT' or a left  subset (Ex: 'QUI', or 'Q')
+at the Monitor Prompt gets you the DDT prompt.
+
+To  disconnect your  terminal  from the  slot  you can  type
+'Exit' or  any left  subset at  the Monitor  Prompt, or  the
+letter 'Z' twice at the DDT Prompt.
+
+Only one  terminal can be connected  to a slot at  once.  If
+you get  a 'Please log  in' prompt  right after typing  in a
+slot number, it  means that another circuit  is connected to
+that slot.
+
+
+1.1.2  The HELP Command
+
+
+The Help command  can be accessed by typing  any left subset
+of 'HELP'  or a question mark  at the Monitor  Prompt.  This
+command gives you a list of Valid Monitor Commands and a one
+line explanation  of what  that command  does.  There  are a
+couple of notes of explanation at the bottom and a reference
+to this document.
+
+You  will notice  that all  or part  of each  command is  in
+uppercase.  The letters in uppercase are required.  The
+letters in lowercase are optional.
+
+Three of the  commands require a numeric  argument.  This is
+indicated on  the HELP display  by a descriptor  enclosed in
+angle brackets.   Ex: '<bytes>'.  The argument  is REQUIRED.
+The monitor  will do nothing  until you enter  this required
+argument.   If you  type  a carriage  return  right after  a
+command that requires  an argument, you can  (must) enter it
+on the next line.  The Monitor will not ask you to enter the
+argument, it's up to you to remember.
+
+
+1.1.3  When You Make A Mistake
+
+
+The Monitor (not DDT) supports a very low level of character
+editing.  Typing a CTRL/A deletes the previous character.
+Successive CRTL/A's delete more  characters.  A CRTL/W
+deletes a whole word.  There is no indication of the editing
+given by the monitor.  You  must have faith.  Remember, this
+editing is available only at the ':>' prompt, and not at the
+'*' prompt.
+
+
+
+                          Page 2
+
+
+
+
+
+
+
+VIP Host and Terminal Interface V3.0, MON           10/12/87
+
+
+
+If  you  type  in  a  command  that  the  Monitor  does  not
+understand,  it  will ask  you  to  type a  backslash.   The
+Monitor  will  ignore  all  your input  until  it  sees  the
+backslash.  This feature works at the DDT prompt as well.
+
+You can  abort a long display  by typing a  CTRL/C.  This
+aborts not  only the display, but  the Monitor as  well.  It
+returns  you to  the  DDT prompt.   You  can  return to  the
+Monitor by using the '?STAT' command.
+
+
+1.2  COMMAND DESCRIPTIONS
+
+
+Let's start  first with  two helpful  DDT commands  that are
+available at the '*' prompt.  The first of these is '?HOST'.
+If the VIP is not running, this command displays the message
+this command displays the host number  of the VIP, the total
+number of  Tymnet ports  allowed, the  host status,  and the
+number of  ports being  used.  All VIP  have only  one host
+number,  which  is indicated  in  this  display as  '0  Host
+xxxxd', where  xxxx is the  decimal host number  reported by
+the VIP.  The host status for  a VIP is always 'answered'.
+
+The  other useful  DDT command  is  '?VERNO'.  This  command
+displays the  ISIS version number  and the VIP  code version
+number.
+
+
+1.2.1  The CONF Command
+
+
+The first Monitor  Command is 'CONf'.  'CON'  is the minimum
+left  subset   of  this  command.   This   command  displays
+information regarding the  configuration of the VIP  that is
+running in  this slot.  It  does not display  current status
+except for the current GMT date and time.
+
+This command displays the VIP host number, the protocol that
+this VIP is configured for, the VIP version number, and Line
+and Circuit configuration.
+
+For each  Line that  is configured  UP, 'CONF'  displays the
+logical line number,  the Res number, and all the  IA and TA
+numbers configured for this line.  Line numbers, IA numbers,
+and TA  numbers are hexadecimal.   Res numbers  are decimal.
+VIP IA and TA numbers  will not include poll, select, or
+device bits.  This means that  the VIP printer device will
+show up as TA 8, not TA E0.
+
+This command also  displays the Polled IA Index  for each IA
+
+
+
+                          Page 3
+
+
+
+
+
+
+
+VIP Host and Terminal Interface V3.0, MON           10/12/87
+
+
+
+in the display.   This index is present in all  VIP, but is
+significant only in 2946 extension cord VIPs.  In a 2946 ext
+cord HI, all IA's having the  same PIA Index will respond to
+a poll  for any  one of the  IA's.  In a  2946 TI,  only the
+first of a group  of IA's having the same PIA  Index will be
+polled, and the  VIP will expect data from any  of the other
+IA's in  the group.  VIP  will always have  a different PIA
+Index for each IA.
+
+If the VIP is  part of an extension cord (VIP  or 2946), the
+circuit number corresponding to each IA is also displayed.
+
+Following   Line   Configuration  information   is   Circuit
+Configuration.  There is a one line display for each circuit
+configured in  the VIP.  The  display indicates  whether the
+circuit is configured  active or not, and a  login string or
+username.  Host  Interface (HI)  will  display a  login
+string   in  the   form  USERNAME:<host-number>.    Terminal
+Interface  (TI)  will  display   a  username  that  is
+associated with this circuit.  It is a serious configuration
+error to have  two circuits in a TI VIP  associated with the
+same username.
+
+This command  should probably  be the  first one  given when
+trouble shooting.
+
+
+1.2.2  The CRASH Command
+
+
+The 'CRAs'  command displays the  crash count for  this slot
+since the  last code download.   It also displays  the crash
+code for the  last crash, and if the crash  count is greater
+than 1, it  displays two variables (CPOINT,  and CFROM) that
+will aid the  programming unit in tracking  down the problem
+if the crash was caused by software.
+
+The crash count is initialized to  1 the first time the slot
+is started after downloading.  You  should never see a crash
+count of zero.  Crash code 1 is the code for Manual Restart.
+A complete set of crash codes  is included as an appendix to
+this document.
+
+
+1.2.3  The CNT Command
+
+
+The  'CNT'  command  displays  the  current  value  of  some
+important  counters.  These  include the  count of  messages
+input and output  on each line, the count  of input messages
+with invalid checksums, the count of input messages that had
+
+
+
+                          Page 4
+
+
+
+
+
+
+
+VIP Host and Terminal Interface V3.0, MON           10/12/87
+
+
+
+an invalid  TA, the  number of  times an  input message  was
+discarded because HLIST (hold buffer  for messages going out
+on the net) was full, the count of line output attempts that
+failed, and in TI VIPs, the  number of output retry attempts
+on  the line.   Also  output is  the  highest percentage  of
+bufferlet space used (bufferlets are a hold area for network
+input messages), and  for VIPs, the number  of times the
+line output buffer filled up.
+
+High Invalid checksum counts could indicate a bad line or an
+overloaded VIP  or Engine.  Invalid  Ta counts  are probably
+caused by a  bad configuration.  HLIST full  counts indicate
+that the  VIP background couldn't  send on the  network fast
+enough.  This  is probably caused  by an  overloaded Engine.
+Output failure and high retry  counts are probably caused by
+line or modem failures.
+
+
+1.2.4  The CIR Command
+
+
+This command  displays the  current status  for all  the VIP
+circuits.   It shows  whether  the circuit  is  up or  down,
+whether startup messages  are outstanding, and if  there has
+been a  login failure  or the  circuit got  zapped.  If  the
+circuit  is  Up,  the  corresponding  ISIS  port  number  is
+displayed.
+
+
+1.2.5  The POLL Command
+
+
+The minimum left subset for this  command is the letter 'P'.
+This  command  displays  information   relevant  to  polling
+activity in  this VIP.  Since  there is  significant polling
+activity difference between HI VIPs  and TI VIPs, the output
+from this command is different for different VIP protocols.
+
+Let's first look  at output from a HI  (Secondary) VIP.  The
+VIP outputs an Up/Down indication  for each line.  This must
+be carefully interpreted.  The VIP does  not count a line as
+Down until  it has informed its  parter at the other  end of
+the circuit  that it  has not seen  any activity  (polls) on
+this line.   Therefore, if the circuit  is not Up,  the line
+indication will stay up even if  the line is not active.  If
+this  is  an  Ext  cord HI,  it  then  displays  an  Up/Down
+indication for  each polled IA on  this line.  This  has the
+same  meaning  as  line  Up/down above.   For  each  IA,  it
+displays the  current count of  polls received for  this IA.
+This count is  totally independent of circuit  problems, and
+so is the best  indication of whether a line or  IA is truly
+
+
+
+                          Page 5
+
+
+
+
+
+
+
+VIP Host and Terminal Interface V3.0, MON           10/12/87
+
+
+
+Up or  Down.  If the  poll count for  an IA does  not change
+between  successive 'Poll'  commands, then  that  IA is  not
+receiving any  polls.  If  all the  IA's on  a line  are not
+receiving polls, then the line is probably down.  If this is
+an Ext cord HI, then the circuit number associated with this
+IA, and an Up/Down indication is also displayed.
+
+The  display for  TI VIPs  (Primaries)  includes a  Supplier
+Polling/Not Polling  indication by line  and Polled  IA.  It
+also includes  the number of times  each Polled IA  has been
+polled.  The VIP does not poll terminal controllers until it
+knows that the  service Supplier is polling  its HI partner.
+It then displays  the Response Status  (whether  a
+controller  is  responding  to  polls).  Response Status can
+be Responding (controller is answering), Recovering
+(controller  recently   stopped  answering),  or Failing
+(controller has  not answered  for  at least  three times).
+If  the Response  Status is  Failing, then  this IA will
+only be polled at the slow poll interval.  This command then
+displays the circuit number and its status for the IA.
+
+
+1.2.6  The IRIN and ORIN Commands
+
+
+The 'Irin' and 'Orin' commands  display part of the contents
+of the  Network Input  or Output  ring buffers.   Both these
+commands  REQUIRE  the number  of  bytes  to display  as  an
+argument.  Both  commands may  be shortened  to one  letter.
+So, for  example, 'IRIN 100' will  display the  last hundred
+bytes in the input ring  buffer.  'ORIN 20' will display the
+last twenty bytes in the output ring buffer.
+
+The commands first  display the current fill  (lead) pointer
+and empty (trail) pointer.  Most of the time, both the above
+will be the  same or very close.  The  commands then display
+the number of bytes that will be output.  This is a function
+of the  argument you supplied, the  size of the  buffer, and
+will always be an even number.   If you request 21 bytes, 22
+bytes will be displayed.  If you request 5000 bytes, and the
+buffer is  only 3000  bytes long,  then 2998  bytes will  be
+displayed.  The bytes displayed are  always the last n bytes
+that were placed in the buffer.
+
+The  buffer is  displayed in  hexadecimal representation  of
+halfwords.  A  new line is started  every time an  ISIS port
+number is  found in the buffer.   All Messages in  the input
+and output buffers start with an ISIS port number.  The ISIS
+port number  for a VIP  circuit number is  available through
+the 'CIR' command.
+
+
+
+
+                          Page 6
+
+
+
+
+
+
+
+VIP Host and Terminal Interface V3.0, MON           10/12/87
+
+
+
+If you only want to see the current fill and empty pointers,
+then you can give the command  with an argument of zero, Ex:
+_0'.
+
+
+1.2.7  The SYNC Command
+
+
+This command may be shortened to  one letter.  It requires a
+line number as an argument.  It will display the entire line
+input buffer for the specified line.
+
+The buffer is displayed in  hex representation of halfwords.
+No character  framing is  done.  Multiple  halfwords of  all
+idles  (marking state)  are  suppressed  and the  number  of
+suppressed bytes  is displayed  enclosed in  angle brackets,
+Ex: <32> means  that 32 (decimal) bytes, or  16 halfwords of
+idle were not displayed.
+
+The line  input buffers are  rings.  This command  will mark
+the current fill location (the  next halfword that ISIS will
+fill) by  preceeding it with a  '*'.  The command  will stop
+suppressing  idles  in  order  to   show  the  current  fill
+position.
+
+Here's what to expect: VIP line buffers are always 256 bytes
+long.  Each character  is bit reversed, so  the sync pattern
+is '68'  not '16'.  IBM 2946  line buffers are  usually (but
+not necessarily always) 1024 bytes  long.  Each character is
+6 bits, not reversed, but inverted.  All 1 bits are actually
+0,  and all  0 bits  are actually  1.  The  sync pattern  is
+characters shows up in the sync  ring as 11 (decimal) 0 bits
+followed  by a  1 bit.   Remember  that the  display is  Hex
+representation, so  you won't see  11 zero  characters since
+each character represents 4 bits.
+
+The main  value of this command  is to see snapshots  of the
+line input  buffers.  If the  fill position and  contents of
+the buffer do  not change between successive  displays, then
+it probably means that there is no clock signal on the line.
+If the display  is all zeros, then the line  is probably not
+connected or there is a  problem with the modem.  Attempting
+to interpret the  actual contents of the ring is  a slow and
+tedious process, recommended only as a last resort.
+
+
+
+
+
+
+
+
+
+
+                          Page 7
+
+
+
+
+
+
+
+VIP Host and Terminal Interface V3.0, MON           10/12/87
+
+
+
+1.2.8  The TRACE Command
+
+
+The Monitor  command 'Trac', which  may be shortened  to one
+letter, saves certain  current statuses and counts  and then
+checks to see  if there are any changes  to these indicators
+every few seconds.   The trace period (seconds)  defaults to
+10 seconds, but  is configureable anywhere between  1 and 30
+seconds. This requires a reassembly of the VIP.
+
+The  command continues  to  run until  you  type an  escape.
+Typing any character other than escape causes the monitor to
+check  the indicators  immediatly, without  waiting for  the
+trace period to expire.
+
+When the 'TRAC' command is  given, it immediatly outputs the
+date and time  (GMT) as do all the other  commands.  It then
+only displays anything else if one of the indicators changes
+or if you type a character on the keyboard.
+
+If an indicator changes, the  diagnostic is preceeded by the
+GMT date  and time.  The date  and time are  never displayed
+more than once  each time the command runs a  check.  If you
+cause the  monitor to  run a  check prematurly  by typing  a
+character at the keyboard, it will display the date and time
+even if there are no diagnostics.
+
+Remember that the date and time  only indicate the time that
+the check  was run, not  when the status  indicator changed.
+However, since a check is usually  done every 10 seconds, it
+should be  very close.  The  order that the  diagnostics are
+displayed is not significant in any way.  They are displayed
+in the  order that they are  checked, not in the  order that
+they occured.
+
+This  command  traces  line Up/Down,  IA  Up/Down,  ier
+Polling/Not, Output  failure and  retry counts,  IA response
+status,  Circuit  Up/Down,  NOHOST   (login  failure,  zap),
+Startup Outstanding, VIP line output  buffer full count, and
+crash count.  Not  all the above indicators  are checked for
+each VIP, since some are protocol dependent.
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 8
+
+
+
+
+
+
+
+VIP Host and Terminal Interface V3.0, MON           10/12/87
+
+
+
+                2.  APPENDIX 1 - CRASH CODES
+
+
+
+
+               Code           Explanation
+
+               0000           Power Failure
+               0001           Manual Restart
+               0005           No chars in bufferlet
+               000E           Parity Error
+               0010           Dispatcher Crash
+               000F           Timeout list exhausted
+               0011           Illegal Instruction
+               0012           Illegal SVC
+               0013           System Crash
+               0014           Protection Violation
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 9
+
+
+
+
+
+
+
+VIP Host and Terminal Interface V3.0, MON           10/12/87
+
+
+
+              3.   APPENDIX 2 - SAMPLE OUTPUT
+
+
+
+
+please log in: TTMSTSMON:2232;
+
+node: 2646
+host: 2232
+
+slot  : 1
+*?HOST
+
+0 Host 2378d has 1d ports, is shut
+0d ports in use
+*?VERNO
+
+ISIS version: 502d, slot's version: 1.000
+
+*?STAT
+
+:>?
+
+29 Sep 83 16:45:09
+
+Help or ?      - Print this list
+Exit           - Disconnect terminal
+Quit           - Return to DDT
+CONf           - Display configuration
+CRAs           - Display info about last crash
+CNT            - Display counts
+CIR            - Display Circuit Status
+Poll           - Display Poll Status
+Irin <bytes>   - Display last <bytes> count bytes in IRING
+Orin <bytes>   - Display last <bytes> count bytes in ORING
+Sync <line>    - Display the line input buffer for <line>
+Trac           - Start a Trace session
+
+Trace sessions are ended by typing an escape character.  Any
+other character typed during a Trace session will cause an
+immediate status check.
+
+Full documentation is in (TTMSISIS2:54)VIPMON.DOC
+
+
+:>CONF
+
+29 Sep83 16:45:21
+
+Host 2378 2946 Non Ext cord HI
+Interface code version: 1.000
+
+
+
+                          Page 10
+
+
+
+
+
+
+
+VIP Host and Terminal Interface V3.0, MON           10/12/87
+
+
+
+Line Configuration:
+
+Line 00 Res 1
+Line configured Down
+
+Line 01 Res 9
+  IA 19  Pia Index 02
+  TA 10
+
+  IA 29  Pia Index 03
+  TA 10 11 12 13 14 15 16 17 18 19 1A 1B 1C 1D 1E 1F 20
+
+  IA 20  Pia Index 04
+  TA 10 11 12 13 14 15 16 17 18 19 1A 1B 1C 1D 1E 1F 20
+
+  IA 30  Pia Index 05
+  TA 10 11 12 13 14 15 16 17 18 19 1A 1B 1C 1D 1E 1F 20
+
+Circuit Configuration:
+
+  Circuit 01 Configured Active     Login string: TTMSPR00001:771
+
+
+
+:>CRA
+
+29 Sep 83  16:45:31
+
+Crash Count: 3
+Crash Code:  0001
+CFROM:  FFFFFFFF
+CPOINT: 00000000
+
+
+
+:>CIR
+
+29 Sep 83  16:45:36
+
+Circuit: 01
+Login Failure
+
+
+:>CNT
+29 Sep 83  16:45:40
+
+LINE 01
+Input Message Count: 214
+Output Message Count: 210
+Count of Invalid CCC's: 1
+Count of Messages with an Invalid TA: 1
+
+
+
+                          Page 11
+
+
+
+
+
+
+
+VIP Host and Terminal Interface V3.0, MON           10/12/87
+
+
+
+HLIST Full Count: 0
+Output Failure Count: 0
+
+Highest Percentage of Bufferlets Used: 23
+
+
+
+:>SYNC 1
+
+29 Sep 83  16:46:44
+
+Line 01
+
+FFFF FFFF F560 0387 D13F FFFF FFFF FFFF
+<46>
+F560 0387 310D FFFF FFFF FFFF
+<42>
+F560 0385 F117 FFFF FFFF FFFF F560 03F7
+97F1 1C71 C71E A26B 1C71 C71E A26B 9C71
+C71C 71C7 1C71 C71C 7B89 AC71 C71C 7A89
+AC71 C71C 7A89 AC71 C71C 7B89 AC71 C71C
+7A89 AC71 C71C 7A89 AE7E F11C 71EB AED1
+C71C 7DEA 26B1 C71C 71EA 26B1 C71C 71EA
+26B1 C71C 71EA 26B1 C71C 71EA 26B1 C71C
+71EA 26B9 C71C 71C7 1C71 C71C 71C7 B89A
+C71C 71C7 A89A C71C 71C7 A89A C71C 71FD
+C89A C71C 71C7 A89A C71C 71C7 A89A E7EE
+F1C7 1EBA ED1C 71C7 DEE2 6B1C 71C7 1EA2
+6B1C 71C7 1EA2 6B1C 71C7*FFFF FFFF FFFF
+FFFF
+<44>
+F560 0387 D13F FFFF FFFF FFFF
+<42>
+FAB0 01C3 9886 FFFF FFFF FFFF
+<42>
+F560 0385 F117 FFFF FFFF FFFF
+<44>
+F560 0385 D16B FFFF FFFF FFFF
+<42>
+F560 0385 B12D FFFF FFFF FFFF
+<44>
+F560 0385 511F FFFF FFFF FFFF
+<42>
+F560 0384 D141 FFFF FFFF FFFF
+<58>
+F560 0383 F129 FFFF FFFF FFFF
+<62>
+F560 0383 B113 FFFF FFFF FFFF
+<44>
+F560 0382 D17F FFFF FFFF FFFF
+<60>
+
+
+
+                          Page 12
+
+
+
+
+
+
+
+VIP Host and Terminal Interface V3.0, MON           10/12/87
+
+
+
+F560 0381 F17D FFFF FFFF FFFF
+<58>
+
+
+
+:>IRIN 0
+
+29 Sep 83  16:47:15
+
+Fill Pointer: 260
+Empty Pointer: 260
+Bytes to output: 0
+
+
+
+:>IRIN 100
+
+29 Sep 83  16:47:25
+
+Fill Pointer: 260
+Empty Pointer: 260
+Bytes to output: 100
+
+0001 0800
+0001 B400
+0001 B480
+0001 208D 8D8A E8EF F3F4 A0EE EFF4 A0E1 F6E1 E9EC E1E2 ECE5 A0F4
+E8F2 F5A0 EEE5 F48D 8A80
+0001 B200
+0001 0900
+0001 B400
+0001 B480
+0001 208D 8D8A E8EF F3F4 A0EE EFF4 A0E1 F6E1 E9EC E1E2 ECE5 A0F4
+E8F2 F5A0 EEE5 F48D 8A00
+
+:>EXI
+please log in:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 13
+
+
+
+
+
+
+
+
+
+
+
+                     TABLE of  CONTENT
+
+
+
+1.  VIP MONITOR  .......................................................1
+    1.1  GENERAL DESCRIPTION  ..........................................1
+         1.1.1  How to run the Monitor (and how to stop it)  ...........1
+         1.1.2  The HELP Command  ......................................2
+         1.1.3  When You Make A Mistake  ...............................2
+    1.2  COMMAND DESCRIPTIONS  .........................................3
+         1.2.1  The CONF Command  ......................................3
+         1.2.2  The CRASH Command  .....................................4
+         1.2.3  The CNT Command  .......................................4
+         1.2.4  The CIR Command  .......................................5
+         1.2.5  The POLL Command  ......................................5
+         1.2.6  The IRIN and ORIN Commands  ............................6
+         1.2.7  The SYNC Command  ......................................7
+         1.2.8  The TRACE Command  .....................................8
+
+2.  APPENDIX 1 - CRASH CODES  ..........................................9
+
+3.  APPENDIX 2 - SAMPLE OUTPUT  ........................................10
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                           - i -
+ @Vã
