@@ -1,0 +1,1272 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          CMT LU1 PRINTER SUPPORT GED
+
+
+                                   CMTI/3270
+
+
+
+
+
+
+
+                                     TYMNET
+                         NETWORK TECHNOLOGY DEVELOPMENT
+                                October 21, 1987
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ====================================================================
+      |   TYMNET's     proprietary  rights  are  included  in  the       |
+      |   information  disclosed herein.  The recipient, by receiving    |
+      |   this document, agrees that neither  this  document  nor  the   |
+      |   information  disclosed  herein nor any part thereof shall be   |
+      |   reproduced or transferred to  other  documents  or  used  or   |
+      |   disclosed  to  others  for  manufacturing  or  for any other   |
+      |   purpose except as  specifically  authorized  in  writing  by   |
+      |   TYMNET                                                         |
+      ====================================================================
+                                                                October 21, 1987
+
+
+
+
+
+
+
+                                  TABLE OF CONTENTS
+
+      Section                                                               Page
+
+
+
+      1.   Introduction                                                        1
+
+
+      2.   Data Stream Processing                                              2
+        2.1   Data Stream Format - DSP                                         2
+        2.2   SCS Control Code Processing                                      3
+        2.3   Data Stream Format - Character Mode                              5
+        2.4   Print Line Formatting - SHF Format Controls                      6
+        2.5   Print Page Formatting - SVF Format Controls                      7
+        2.6   Print Control                                                    8
+
+
+      3.   System Generation                                                   9
+        3.1   DEFLU1 - CMTI LU1 Printer Support Macro                          9
+        3.2   SCSTRN - SCS Transparent Data Macro                             10
+        3.3   SCSNLN - SCS New Line Function Macro                            10
+        3.4   MXCLMN - Maximum Column Print Position                          11
+        3.5   MXPAGE - Maximum Page Print Position                            12
+        3.6   PBUFSZ - Printer Buffer Size                                    12
+
+
+      4.   CMTI Operations Monitor - WCNT Command                             13
+
+
+      5.   Project Risks                                                      14
+
+
+                                   APPENDICES
+                                   ==========
+
+
+      I.   EBCDIC to ASCII Translation Table                                  16
+
+
+      II.  Sample Tymfile                                                     19
+
+
+
+
+
+
+
+
+                          CMTI/3270 LU1 Printer Support GED           CMTLU1.GED
+      Introduction                                              October 21, 1987
+
+
+
+
+
+
+                                  1 -  Introduction
+
+
+           This document  describes the support  for SNA Character  String (SCS)
+      controls  by  the CMTI/3270  Interface  (CMTI).  SCS  controls  are EBCDIC
+      control codes that  are used to  define a data  stream.  They are  used to
+      format the presentation on the printed page.
+
+
+           SCS control codes are  not supported by ASCII printers  with circuits
+      to CMTI via a TYMSAT.  CMTI, by interpreting the SCS control codes, allows
+      SCS data streams to be transmitted to these printers.
+
+
+           The data streams are forwarded  to CMTI by the SNA Host  Interface as
+      structured fields.  The structured  fields are part of a  Write Structured
+      Field  (WSF) command.   The WSF  commands consist  of a  WSF  command code
+      followed by one or more structured fields terminated with an ETX.
+
+
+           Data streams  containing SCS  control codes are  received by  the SNA
+      Host Interface and forwarded to CMTI via TYMNET using the  Display Systems
+      Protocol (DSP).  CMTI interprets the SCS control codes and  translates the
+      data  stream to  ASCII.  The  translated data  stream and  the interpreted
+      control codes are transmitted to the printer.
+
+
+           The data streams  are transmitted by  CMTI to the  printer associated
+      with  a CRT  as character  mode  data streams  via a  TYMSAT.   The TYMSAT
+      transmits the ASCII  characters to the  printer.  The character  mode data
+      stream  consists of  the  translated ASCII  data and  the  interpreted SCS
+      control codes.
+
+
+           CMTI only supports serial printers that support form feed, line feed,
+      carriage return, back space, bell function, and sufficient columns for the
+      specific application.  See the CMTI/3270 External  Reference Specification
+      for further information regarding printer support.
+
+
+
+
+
+
+
+
+
+
+
+
+                          CMTI/3270 LU1 Printer Support GED           CMTLU1.GED
+      Data Stream Processing                                    October 21, 1987
+
+
+
+
+
+
+                             2 -  Data Stream Processing
+
+
+           The SCS  data stream  is received from  the SNA  Host Interface  as a
+      structured field within  a WSF command.   Normally, when WSF  commands are
+      received, CMTI  discards the command  and clears the  circuit to  the host
+      PAD.   When  CMTI is  configured  for  LU1 SCS  data  stream  support, WSF
+      commands  containing SCS  data streams  are not  discarded.  The  SCS data
+      structured field(s) are processed by CMTI and the data is then transmitted
+      to the printer.
+
+
+           There may be more than one structured field associated with  each WSF
+      command.  SCS data  stream structured fields may  not be mixed  with other
+      types of structured fields.  DSP commands containing WSF commands with SCS
+      data stream structured fields mixed with other types of  structured fields
+      are discarded by CMTI and the  circuit is cleared.  CMTI keeps a  count of
+      the number  of times  a circuit  is cleared due  to the  receipt of  a WSF
+      command with a structured field  type other than SCS data.  This  count is
+      initialized  to zero  whenever  the interface  is started.   The  count is
+      output by the WCNT command (for further information see Section 4).
+
+
+
+
+
+
+                            2.1  Data Stream Format - DSP
+
+
+           Data streams containing SCS control codes are received by CMTI as DSP
+      Commands.  An example follows:
+
+      | UCN | HDR | SEQ | ESC | WSF | LEN |  ID |  00 | SCS DATA | ETX |
+
+      The fields in the example are interpreted as follows:
+
+              UCN     DSP user circuit number (1 byte)
+              HDR     DSP header flags (1 byte)
+              SEQ     DSP sequence number (1 byte)
+              ESC     Escape, 27 (hex), (1 byte)
+              WSF     3270 WSF command code, F3 (hex), (1 byte)
+              LEN     Length of structured field (2 bytes)
+              ID      Structured field ID - SCS data, 41 (hex), (1 byte)
+              00      Zero (1 byte)
+              DATA    SCS data (LEN-4 bytes)
+              ETX     End of Text character
+
+
+
+                          CMTI/3270 LU1 Printer Support GED           CMTLU1.GED
+      Data Stream Processing                                    October 21, 1987
+
+
+           The  LEN  field may  contain  a value,  which  is the  length  of the
+      structured field,  or may be  zero.  If  the LEN field  is zero,  the data
+      field is variable length and is terminated by an ETX.
+
+
+
+
+
+
+                           2.2  SCS Control Code Processing
+
+
+           The  following  SCS control  codes  are expected  from  the  SNA Host
+      Interface  and  as such  are  interpreted and  the  interpreted  codes are
+      transmitted to the printer via the Tymsat.
+
+              CODE    EBCDIC      ASCII       NAME
+                              INTERPRETATION
+              ----    ------  --------------  ----
+
+               BS      16     08              Back Space
+               BEL     2F     07              Bell Function
+               CR      0D     0D              Carriage Return
+               ENP     14     Discarded       Enable Presentation
+               FF      0C     0C              Forms Feed
+               GE      08     Discarded       Graphic Escape
+               HT      05     *               Horizontal Tab
+               INP     24     Discarded       Inhibit Presentation
+               IRS     1E     0D0A            Interchange-Record Separator
+               LF      24     0A              Line Feed
+               NL      15     0D0A            New Line
+               SA      28     Discarded       Set Attribute
+               SHF     2BC1   *               Set Horizontal Format
+               SLD     2BC6   Discarded       Set Line Density
+               SVF     2BC2   *               Set Vertical Format
+               TRN     35     *               Transparent
+               VCS     04xx   0D0A            Vertical Channel Select
+               VT      0B     *               Vertical Tab
+
+      *  See following for interpretation 
+
+
+           The SCS control codes are interpreted as follows:
+
+
+           Back Space (BS):  Output as ASCII back space, 08 (hex), by CMTI.
+
+
+           Bell Function (BEL):  Output  as ASCII  bell function,  07  (hex), by
+                CMTI.
+
+
+
+
+                          CMTI/3270 LU1 Printer Support GED           CMTLU1.GED
+      Data Stream Processing                                    October 21, 1987
+
+
+           Carriage Return (CR):  Output as ASCII carriage return, 0D  (hex), by
+                CMTI.
+
+
+           Enable Presentation (ENP):  Discarded by CMTI.
+
+
+           Forms Feed (FF):  Output as ASCII forms feed, 0C (hex), by CMTI.
+
+
+           Graphic Escape (GE):  Discarded by CMTI.
+
+
+           Horizontal Tab (HT):  Output  as  ASCII  space,  20  (hex),  by CMTI.
+                Spaces are output until next horizontal tab stop is reached.  If
+                there are no  horizontal tab stops to  the right of  the current
+                print position, a single space is output.
+
+
+           Inhibit Presentation (INP):  Discarded by CMTI.
+
+
+           Interchange-Record Separater (IRS):  Output    as    ASCII   carriage
+                return/line feed, 0D0A (hex), by CMTI.
+
+
+           Line Feed (LF):  Output as ASCII line feed, 0A (hex), by CMTI.
+
+
+           New Line (NL):  Output  as  ASCII  carriage  return/line  feed,  0D0A
+                (hex), by CMTI.
+
+
+           Set Attribute (SA):  Discarded by CMTI.
+
+
+           Set Horizontal Format (SHF):  The two byte code and n  byte parameter
+                are discarded by CMTI.  The value of the Maximum  Print Position
+                parameters used to  specify the line  length.  The value  of the
+                Left Margin parameter is  used to specify the left  margin.  The
+                value of the Tab parameters  are used to set the  horizontal tab
+                stops.   See Section  2.4,  Print Line  Formatting,  for further
+                information regarding the SHF control code.
+
+
+           Set Line Density (SLD):  The two byte code and two byte parameter are
+                discarded by CMTI.
+
+
+           Set Vertical Format (SVF):  The two  byte code  and n  byte parameter
+                are  discarded by  CMTI.  The  value of  the Maximum  Print Line
+                parameters used to  specify the page  length.  The value  of the
+
+
+                          CMTI/3270 LU1 Printer Support GED           CMTLU1.GED
+      Data Stream Processing                                    October 21, 1987
+
+
+                Top Margin  parameter is  used to  specify the  top margin  of a
+                page.   The value  of  the Bottom  Margin parameter  is  used to
+                specify  the  bottom margin  of  a  page The  value  of  the Tab
+                parameters are used to set the vertical tab stops.   See Section
+                2.5, Print  Page Formatting,  for further  information regarding
+                the SVF control code.
+
+
+           Transparent (TRN):  The  one  byte  code  and  one  byte  length  are
+                discarded by CMTI.  The  n bytes of transparent data  are either
+                discarded  or  output  to  the  printer  without  translation as
+                specified by the SCSTRN macro.
+
+
+           Vertical Channel Select (VCS):  Output as ASCII  carriage return/line
+                feed, 0D0A (hex), by CMTI.
+
+
+           Vertical Tab (VT):  Output  as ASCII  line feed,  0A (hex),  by CMTI.
+                Line feeds are output  until next vertical tab stop  is reached.
+                If there  are no  vertical tab stops  below the  current printed
+                line position, a single line feed will be output.
+
+
+      Nulls are output as ASCII  space characters, 20 (hex).  All  other control
+      signals, 01 through 3F (hex), within the SCS data stream, except  as noted
+      above, are discarded  by CMTI and  output as a  ASCII dash, 2D  (hex). All
+      data characters, 40 through FF (hex), are translated from EBCDIC to ASCII.
+      EBCDIC characters that have no ASCII translation are translated  to nulls,
+      00, and output to the printer as ASCII space characters.  Transparent data
+      is not translated.
+
+
+
+
+
+
+                       2.3  Data Stream Format - Character Mode
+
+
+      The  interpreted  SCS  data  streams are  transmitted  to  the  printer as
+      character mode  data streams.   The data is  placed in  a print  buffer in
+      CMTI.  When the end of the block is received by CMTI, the entire buffer is
+      transmitted to the printer via the TYMSAT.
+
+
+
+
+
+
+
+
+
+
+                          CMTI/3270 LU1 Printer Support GED           CMTLU1.GED
+      Data Stream Processing                                    October 21, 1987
+
+
+                   2.4  Print Line Formatting - SHF Format Controls
+
+
+      The line length  may contain up to  255 character positions.   By default,
+      the  print line  length is  132 characters,  the left  margin is  at print
+      position 1, and horizontal tab  stops are all positions.  (When  there are
+      no horizontal tab stops, a horizontal  tab is output by CMTI as  a space.)
+      The right margin is not used in printing operations.  The format  is reset
+      to the default format at the circuit building process or by a  SHF control
+      code  with the  count byte  (CNT  parameter) of  one.  A  new  line format
+      operation is  performed by  CMTI as soon  as it  receives the  SHF control
+      code.
+
+
+      The  print line  format is  specified to  the 3270  CMTI by  the  SHF (Set
+      Horizontal  Format)  SCS  control  code.  The  SHF  control  code  has the
+      following format:
+
+
+      | SHF | CNT | MPP | LM | RM | TAB1 | ... | TABn |
+
+      The fields are interpreted as follows:
+
+              SHF     SHF control code 2BC1 (hex) (2 bytes)
+              CNT     Number of bytes to end of SHF string, including 
+                      CNT byte (1 byte)
+              MPP     Line length (1 byte)
+              LM      Column value of left most print position (1 byte)
+              RM      Not used in printing operations (1 byte)
+              TABn    Horizontal tab stop settings (1 byte per tab stop)
+
+
+      The value  of MPP is  used to specify  to CMTI the  print line  length.  A
+      carriage return  and line  feed are output  by CMTI  after the  last print
+      position in the line is reached.  (The line length may also  be determined
+      by the application transmitting a  NL character.) The value of LM  is used
+      to specify the left margin.   Spaces are output to the printer  to advance
+      to the left margin.  It is only used when the application transmitt  a CR,
+      FF or a NL character.  All  other characters will not advance to  the left
+      margin.  The value(s) of TABn are used to specify the tab stops.   The tab
+      stops are set  at the position(s) of  the values of the  TAB parameter(s).
+      When  CMTI receives  a horizontal  tab character  (HT), spaces  are output
+      until the  next tab stop  is reached.  If  there are no  tab stops  to the
+      right  of the  current print  position, a  single space  is output  to the
+      printer.
+
+
+      The line format specified by the most recent SHF control code is  used for
+      the current  print operation.   The SHF control  code may  be in  any data
+      position in the structured field(s) of a message block.  It  specifies the
+      print line format that is used until another SHF control code is received.
+      The  format  may  be  changed  repeatedly  within  a  WSF  command  by the
+
+
+                          CMTI/3270 LU1 Printer Support GED           CMTLU1.GED
+      Data Stream Processing                                    October 21, 1987
+
+
+      application  (i.e., within  each message  block).  The  print  line format
+      remains unchanged between print jobs unless a SHF control code is received
+      or the circuit is rebuilt.
+
+
+
+
+
+
+                   2.5  Print Page Formatting - SVF Format Controls
+
+
+      The  page length  may contain  up to  255 (decimal)  lines.   However, SVF
+      control can specify the MPL value to be up to 102 lines.  By  default, the
+      print page length is 66 (decimal) lines, the top margin is at line  1, the
+      bottom margin  is at line  66, and vertical  tab stops are  all positions.
+      (When there are no vertical tab stops, a vertical tab is output by CMTI as
+      a line feed.)  The format is  reset to the  default values at  the circuit
+      building  process  or by  a  SVF control  code  with the  counte (CNT
+      parameter) of one.   A new page format  operation is performed by  CMTI as
+      soon as it receives the SVF control code.
+
+
+      The  print page  format is  specified to  the 3270  CMTI by  the  SVF (Set
+      Vertical Format) SCS control code.  The SVF control code has the following
+      format:
+
+
+      | SVF | CNT | MPL | TM | BM | TAB1 | ... | TABn |
+
+      The fields are interpreted as follows:
+
+              SVF     SVF control code 2BC2 (hex) (2 bytes)
+              CNT     Number of bytes to end of SVF string, including 
+                      CNT byte (1 byte)
+              MPL     Maximum page length (1 byte)
+              TM      Line value of top most print position (1 byte)
+              BM      Line value of bottom most print position (1 byte)
+              TABn    Vertical tab stop settings (1 byte per tab stop)
+
+
+      The value of MPL is used to specify to CMTI the print line length.   It is
+      used to check the  validity of the top,  bottom and tab parameters  in the
+      SVF.  If the top or bottom margin is invalid, the values of TM or  BM will
+      be the same  as MPL.  Invalid  tabs will be ignored.   The value of  TM is
+      used to specify the top margin.  Line feeds will be sent to the printer to
+      reach the TM  value.  Advancement to the  top margin will only  occur when
+      CMTI receives a FF control code or when it reach the BM value.   The value
+      of BM is used to specify the bottom margin.  A form feed will be output to
+      the printer when BM is reached.  The values of tab are used to specify the
+      vertical tab stops.  Each  tab parameter represents one vertical  tab stop
+      position.  When CMTI  receives a vertical  tab character (VT),  line feeds
+
+
+                          CMTI/3270 LU1 Printer Support GED           CMTLU1.GED
+      Data Stream Processing                                    October 21, 1987
+
+
+      are output to  the terminal until  it reaches a  vertical tab stop.   If a
+      vertical tab stop is not found below the current line, a single  line feed
+      will be sent to the printer.
+
+
+      The page format specified by the most recent SVF control code is  used for
+      the  current print  operation.  It  remains unchanged  between  print jobs
+      unless a SVF control code is received or the circuit is rebuilt.
+
+
+
+
+
+
+                                  2.6  Print Control
+
+
+      The processed  SCS data is  placed by  CMTI into a  buffer.  When  the the
+      buffer if full, the entire buffer is transmitted to the printer.
+
+
+      CMTI may be configured, through the use of the SCSNLN macro, to perform or
+      to not perform a new line function at the end of each print operation.  If
+      a new line function is  performed, the next print operation begins  in the
+      first  position of  the following  line.  If  a new  line function  is not
+      performed, the  next print  operation begins in  the next  print position.
+      (See Section 3 for information regarding system generation.)
+
+
+      Note: If CMTI is configured to  perform a new line function at the  end of
+      each print operation, lines may  not be split between two  message blocks.
+      If CMTI is  not configured to  perform a new line  function at the  end of
+      each print operation, the application must supply a new line function or a
+      forms feed at the start of each print job.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          CMTI/3270 LU1 Printer Support GED           CMTLU1.GED
+      System Generation                                         October 21, 1987
+
+
+
+
+
+
+                                3 -  System Generation
+
+
+      There  are  three  system  generation  macros  and  three  special purpose
+      parameters used by CMTI for support of SCS data streams.  The DEFLU1 macro
+      is required for  SCS data stream support.   The SCSTRN is optional  and is
+      used for support of transparent data.  The SCSNLN macro determines whether
+      a new line function  is performed by CMTI at  the end of a  message block.
+      The three special purpose parameters are MXCLMN, MXPAGE and  PBUFSZ.  They
+      are optional  parameters and  need not be  defined in  the Tymfile  if the
+      default values are adequate.  MXCLMN defines the column length, MXPAGE the
+      page length, and PBUFSZ the buffer size length for storing SCS  data.  See
+      Appendix 2 for an example of the macros in a Tymfile.
+
+
+
+
+
+
+                     3.1  DEFLU1 - CMTI LU1 Printer Support Macro
+
+
+      The DEFLU1 macro must be included in the Tymfile to enable CMTI to examine
+      WSF commands  for SCS data  structured fields.  CMTI  is defaulted  not to
+      examine WSF commands so that  the code required for WSF processing  is not
+      included in the interface when not needed.
+
+
+      The DEFLU1 macro may be placed anywhere in the Tymfile, though for clarity
+      it should be  placed in the  first section of  the Tymfile with  the other
+      global definition macros.
+
+
+      The macro takes the following form:
+
+              DEFLU1(YES)             :examine WSF commands for SCS data
+
+
+      A YES parameter indicates that a WSF command along with the SCS  data must
+      be examined and processed by  CMTI.  A NO parameter indicates  no checking
+      of the WSF command.
+
+
+
+
+
+
+
+
+
+                          CMTI/3270 LU1 Printer Support GED           CMTLU1.GED
+      System Generation                                         October 21, 1987
+
+
+                       3.2  SCSTRN - SCS Transparent Data Macro
+
+
+      The SCSTRN macro is used to configure CMTI to support the  SCS Transparent
+      (TRN) control code.  The TRN control code takes the following format:
+
+              | TRN | CNT | TRANSPARENT DATA |
+
+      The fields are interpreted as follows:
+
+              TRN     TRN control code 35 (hex) (1 byte)
+              CNT     Length of transparent data field (1 byte)
+              DATA    CNT bytes of transparent data
+
+
+      The macro takes the following form:
+
+              SCSTRN(YES)             :Transparent data in SCS is valid
+
+
+      A YES indicates transparent data is  to be output by CMTI to  the printer.
+      A NO indicates transparent data is  to be discarded by CMTI.  A NO  is the
+      default parameter.  If it is  not defined in the Tymfile, it  is defaulted
+      to a NO parameter.
+
+
+
+
+
+
+                      3.3  SCSNLN - SCS New Line Function Macro
+
+
+      The SCSNLN macro is used to configure CMTI to perform or not perform a new
+      line function at the end of each message block transmitted to the printer.
+
+      The macro takes the following form:
+
+              SCSNLN(NO)              :NEW LINE NOT PERFORMED AT END OF
+                                      :MESSAGE BLOCK BY CMTI
+
+
+      A No parameter indicates that a new line function is not performed  at the
+      end  of the  message block.   a YES  parameter indicates  that a  new line
+      function is performed at the end of the message block.  YES is the default
+      parameter.
+
+
+
+
+
+
+
+
+                          CMTI/3270 LU1 Printer Support GED           CMTLU1.GED
+      System Generation                                         October 21, 1987
+
+
+                     3.4  MXCLMN - Maximum Column Print Position
+
+
+      The  MXCLMN  parameter  is  an  equate  statement  which  enables  CMTI to
+      determine the  size of the  bit array for  the horizontal tab  stop.  This
+      value  must be  equal or  greater than  the MPP  field in  the  SHF format
+      controls.  Please note, the equate  statement is not used for  setting the
+      default value for the line length at system startup time.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          CMTI/3270 LU1 Printer Support GED           CMTLU1.GED
+      System Generation                                         October 21, 1987
+
+
+
+      The equate statement takes the following form:
+
+              MXCLMN  EQ      $A 160  :The maximum line length is 160 (decimal)
+
+
+      The default value is 132  (decimal).  CMTI will allocate 9  half-words for
+      the bit array to store each horizontal tab stop position.
+
+
+
+
+
+
+                      3.5  MXPAGE - Maximum Page Print Position
+
+
+      The  MXPAGE  parameter  is  an  equate  statement  which  enables  CMTI to
+      determine the size of the bit array for the vertical tab stop.  This value
+      must be equal or  greater than the MPL  field in the SVF  format controls.
+      Please note,  the equate  statement is  not used  for setting  the default
+      value for the  page length at system  startup time.  The  equate statement
+      takes the following form:
+
+              MXPAGE  EQ      $A 24   :The maximum page length is 24 (decimal)
+
+
+      The default value is 102  (decimal).  CMTI will allocate 7  half-words for
+      the bit array to store each vertical tab stop position.
+
+
+
+
+
+
+                          3.6  PBUFSZ - Printer Buffer Size
+
+
+      The PBUFSZ parameter is an  equate statement which CMTI uses  to determine
+      the size of the  printer buffer.  The SCS  data are stored in  the printer
+      buffer and when it reaches the value in PBUFSZ, CMTI will begin  to print.
+      This method  of printing is  different from the  way CMTI prints  the 3270
+      data in the printer buffer  which starts printing when it reaches  the ETX
+      character.  The equate statement takes the following form:
+
+              PBUFSZ  EQ      $A 512  :buffer size is 512 bytes
+
+
+      The default value  for PBUFSZ is 256  (decimal) bytes.  Although  the size
+      can be increased, it should not exceed the maximum size of 1664 (decimal).
+
+
+
+
+                          CMTI/3270 LU1 Printer Support GED           CMTLU1.GED
+      CMTI Operations Monitor - WCNT Command                    October 21, 1987
+
+
+
+
+
+
+                     4 -  CMTI Operations Monitor - WCNT Command
+
+
+      Syntax:  WCNT
+
+
+      Default:  None
+
+
+      Description:  The  WCNT command  outputs the number  of times  (decimal) a
+      circuit has been cleared by CMTI due to the receipt of a WSF  command with
+      a structured field type other than SCS data.  This count is initialized to
+      zero whenever the CMTI interface is started.
+
+
+      An example of the command output follows:
+
+      COM -- CMT Operations Monitor         17Feb87 18:39:14
+
+      NODE:2222    HOST: 1111    SLOT: 3     VERSION: 4.00
+
+      Circuit Zaps Due to Invalid WSF Type: 14
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          CMTI/3270 LU1 Printer Support GED           CMTLU1.GED
+      Project Risks                                             October 21, 1987
+
+
+
+
+
+
+                                  5 -  Project Risks
+
+
+      The default  printer line  length is  for 132  characters, left  margin is
+      print position one, and tab stops are all positions.  The host application
+      must  either assume  the same  default print  line format  or  specify the
+      format with a SHF control code  at the start of each print job.   When the
+      print line format  is changed by  an SHF control  code, the new  format is
+      used to all process all  subsequent data (i.e., for the remaining  data in
+      the current and following  message blocks) until another SHF  control code
+      is received  or the  circuit is  rebuilt.  The  default print  line format
+      takes effect upon circuit build.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          CMTI/3270 LU1 Printer Support GED           CMTLU1.GED
+                                                                October 21, 1987
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                     *   ****  ****  ***** *   * ****  ***** *   *
+                    * *  *   * *   * *     **  * *   *   *    * * 
+                   ***** ****  ****  ****  * * * *   *   *     *  
+                   *   * *     *     *     *  ** *   *   *    * * 
+                   *   * *     *     ***** *   * ****  ***** *   *
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          CMTI/3270 LU1 Printer Support GED           CMTLU1.GED
+      EBCDIC to ASCII Translation Table                         October 21, 1987
+
+
+
+
+
+
+                   APPENDIX I.   EBCDIC to ASCII Translation Table
+
+
+
+      The default  translation table follows.   The translations may  be changed
+      through  the  use of  the  CHRMAP  and REMAP  macros.   See  the CMTI/3270
+      External   Reference   Specification   for   information   regarding   the
+      modification of the translation table(s).
+
+              Graphic   EBCDIC    ASCII 
+              _______   ______    _____ 
+              
+              
+              NULL        00        00
+              SOH         01        01
+              STX         02        02
+              ETX         03        03
+              EOT         37        04
+              ENQ         2D        05
+              ACK         2E        06
+              BEL         2F        07
+              BS          16        08
+              HT          05        09
+              LF          25        0A
+              VT          0B        0B 
+              FF          OC        OC
+              CR          OD        OD
+              SO          0E        0E
+              SI          0F        0F
+              DLE         10        10
+              DC1         11        11
+              DC2         12        12
+              DC3         13        13
+              DC4         3C        14
+              NAK         3D        15
+              SYN         32        16
+              ETB         26        17
+              CAN         18        18
+              EM          19        19
+              SUB         3F        1A
+              ESC         27        1B
+              FS          22        1C
+              GS          1D        1D
+              RS          1E        1E
+              US          1F        1F
+              SP          40        20
+              1,!         4F        21
+              "           7F        22
+              #           7B        23
+
+                          CMTI/3270 LU1 Printer Support GED           CMTLU1.GED
+      EBCDIC to ASCII Translation Table                         October 21, 1987
+
+
+              $           5B        24
+              %           6C        25
+              &           50        26
+              '           7D        27
+              (           4D        28
+              )           5D        29
+              *           5C        2A
+              +           4E        2B
+              ,           6B        2C
+              -           60        2D
+               .          4B        2E
+              /           61        2F
+              0           F0        30
+              1           F1        31
+              2           F2        32
+              3           F3        33
+              4           F4        34
+              5           F5        35
+              6           F6        36
+              7           F7        37
+              8           F8        38
+              9           F9        39
+              :           7A        3A
+              ;           5E        3B
+              <           4C        3C
+              =           7E        3D
+              >           6E        3E
+              ?           6F        3F
+              @           7C        40
+              A           C1        41
+              B           C2        42
+              C           C3        43
+              D           C4        44
+              E           C5        45
+              F           C6        46
+              G           C7        47
+              H           C8        48
+              I           C9        49
+              J           D1        4A
+              K           D2        4B
+              L           D3        4C
+              M           D4        4D
+              N           D5        4E
+              O           D6        4F
+              P           D7        50
+              Q           D8        51
+              R           D9        52
+              S           E2        53
+              T           E3        54
+              U           E4        55
+              V           E5        56
+              W           E6        57
+              X           E7        58
+
+                          CMTI/3270 LU1 Printer Support GED           CMTLU1.GED
+      EBCDIC to ASCII Translation Table                         October 21, 1987
+
+
+              Y           E8        59
+              Z           E9        5A
+              c,[         4A        5B
+              \           E0        5C
+              !,]         5A        5D
+              -,^         5F        5E
+              _           6D        5F
+              `           79        60
+              a           81        61
+              b           82        62
+              c           83        63
+              d           84        64
+              e           85        65
+              f           86        66
+              g           87        67
+              h           88        68
+              i           89        69
+              j           91        6A
+              k           92        6B
+              l           93        6C
+              m           94        6D
+              n           95        6E
+              o           96        6F
+              p           97        70
+              q           98        71
+              r           99        72
+              s           A2        73
+              t           A3        74
+              u           A4        75
+              v           A5        76
+              w           A6        77
+              x           A7        78
+              y           A8        79
+              z           A9        7A
+              {           C0        7B
+              |           6A        7C
+              }           D0        7D
+              TILDE       A1        7E
+              DEL         07        7F
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          CMTI/3270 LU1 Printer Support GED           CMTLU1.GED
+      Sample Tymfile                                            October 21, 1987
+
+
+
+
+
+
+                            APPENDIX II.   Sample Tymfile
+
+
+      :   Demonstration CMT/3270 for Tymshare Hosts 1100, 1200
+      :   Node: 2000  Kernel: 999     Slot: 1  Host: 1000
+
+              SUBTTL CMT/3270 TYM FILE
+              DEFHST(1000,8,2)
+              DEFHDR(Welcome to the Demonstration of the CMT/3270)
+
+      : MISCELLANEOUS PARAMETERS
+
+      NCRSAV  EQ      3                       :NUMBER OF CRASH TABLES TO SAVE
+                                              :IF NCRSAV > 0, set CRSTOP to 0
+      CRSTOP  EQ      0                       :DON'T HALT ON CRASH
+      NUMLCK  EQ      1                       :NUMERIC LOCK FEATURE ENABLED
+              DEFTRC(ON)                      :GENERATES CODE FOR COM
+              DEFPRT(SKIP)                    :SKIP BLANK LINES ON TTY TERM
+              DEFCUD(6,LEFT)                  :SAVE 6 CHAR OF USERNAME IN CUD
+              DEFSTA(ON)                      :ENABLE STATUS LINE
+              DEFLU1                          :SUPPORTS SCS DATA TO PRINTER
+              SCSTRN                          :SUPPORTS SCS TRN CONTROL CODE
+                                              :TRANSPARENT DATA TO PRINTER
+              SCSNLN(NO)                      :NEW LINE NOT PERFORMED AT END
+                                              :OF MESSAGE BLOCK BY CMTI
+      : DEFINE ELEMENTS
+
+              DEFELE(WILDCD,331061100"8D"8D"8D"8D)    :ELEMENT 1, ANY ADDRESS
+
+      : DEFINE STORED LOGON STRINGS
+
+              DEFSTR(P1200,TO HOST 1200/PRINTER,TO1200,WILDCD,TO1200,WILDCD)
+
+      : DEFINE MANUAL LOGON STRINGS
+
+              MANUAL(MANST1)                  :MANUAL LOGON - CRT ONLY
+              MANPTR(MANST2)                  :MANUAL LOGON - CRT/PRINTER
+
+      : MENU DEFINITIONS
+
+              DEFMEN(MENU2,MANST1,MANST2)
+
+      : DEFINE USERS
+
+              DEFUSR(NCHANG)
+              DEFTTY(-1)
+              MENUSR(MENU2)
+          
+      DEFCAL("0E"01"02"03"04"05"06"07)
+
+                          CMTI/3270 LU1 Printer Support GED           CMTLU1.GED
+      Sample Tymfile                                            October 21, 1987
+
+
+
+      : TERMINAL TYPES
+
+      DEFTRM  MACRO [
+              ADD69M                  :ADDS VIEWPOINT 60/90
+              ADD78M                  :ADDS VIEWPOINT 78
+              ]
+
+      : CHARACTER TRANSLATION
+
+              CHRMAP []               :NO CHANGES TO TRANSLATION TABLE(S)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          CMTI/3270 LU1 Printer Support GED           CMTLU1.GED
+8@n
