@@ -1,0 +1,697 @@
+                                                              October 4, 1984
+
+
+
+
+
+
+
+
+                  ****    ***    ***   *****   ***   *****
+                  *   *  *   *  *   *    *    *   *     * 
+                  *   *  *   *  *   *    *    *   *    *  
+                  ****   *   *  *   *    *    * * *   *** 
+                  *   *  *   *  *   *    *    *   *    *  
+                  *   *  *   *  *   *    *    *   *    *  
+                  ****    ***    ***     *     ***     *  
+
+
+
+
+                             ****    ***    ****
+                             *   *  *   *  *    
+                             *   *  *   *  *    
+                             *   *  *   *  *    
+                             *   *  *   *  *    
+                             *   *  *   *  *    
+                             ****    ***    ****
+
+
+
+
+                                 BOOT07.DOC
+                      ENGINE BOOT WITH XPI LOAD SUPPORT
+
+                                R. B. VanDyke
+                         NETWORK TECHNOLOGY DIVISION
+                               October 4, 1984
+
+
+
+
+
+
+
+
+
+
+    ====================================================================
+    |       THIS DOCUMENT IS THE SOLE PROPERTY AND CONFIDENTIAL        |
+    |       INFORMATION  OF  TYMSHARE,  INC.,  AND  MAY  NOT BE        |
+    |       COPIED  IN  WHOLE OR IN PART  OR  DISCLOSED  TO ANY        |
+    |       THIRD PARTY  WITHOUT THE PRIOR  WRITTEN  CONSENT OF        |
+    |       TYMSHARE.                                                  |
+    ====================================================================
+
+
+
+                         ENGINE BOOT WITH XPI LOAD SUPPORT         BOOT07.DOC
+                                                              October 4, 1984
+
+
+
+
+
+
+
+                                 TABLE OF CONTENTS
+
+      Section                                                            Page
+
+
+      1.   INTRODUCTION                                                     1
+        1.1   EXTERNAL INTERFACE SPECIFICATIONS                             1
+
+      2.   DEVICE INTERFACE SPECIFICATIONS                                  2
+        2.1   SYNC LINES                                                    3
+        2.2   SIO LINES                                                     4
+        2.3   ESELCH                                                        4
+        2.4   300MB DISK DRIVE                                              4
+        2.5   THE WATCH DOG TIMER                                           4
+        2.6   THE ENGINE CONSOLE                                            5
+        2.7   SEMICONDUCTOR MEMORY - ECC                                    5
+        2.8   THE XPI                                                       5
+
+      3.   GENERAL DESCRIPTION                                              6
+
+      4.   GENERAL OPERATION                                                8
+        4.1   WATCH-DOG TIMER SWITCH                                        8
+        4.2   SELECTION OF BOOT                                             8
+           4.2.1    ENGINE CONSOLE DISPLAYS DURING LOAD                     8
+
+        4.3   SIO AND SYNC LINE PROCEDURE                                   9
+
+
+                                   APPENDICES
+                                   ==========
+
+
+      I.   CHECKSUM FOR SYNC AND SIO                                       10
+        I-1   ALGORITHM FOR VERTICAL CHECKSUM                              10
+        I-2   ALGORITHM FOR DIAGONAL CHECKSUM                              10
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                         ENGINE BOOT WITH XPI LOAD SUPPORT         BOOT07.DOC
+                                                              October 4, 1984
+
+
+
+
+
+      1 -  INTRODUCTION
+
+
+
+      BOOT07  is a  version of  the Engine  bootstrap loader  which  has been
+      modified to support the XPI component of the MXP systems as a down-load
+      device.  It retains the  SYNC, and SIO loading capabilities  of "LBOOT"
+      (i.e.  BOOT06).  However, to  accomodate new code and data  required by
+      the XPI loader the TTY,  TAPE, 10MB disk and MSC1400 disk  loaders have
+      been removed.
+
+
+      1.1  EXTERNAL INTERFACE SPECIFICATIONS
+
+
+      BOOT07 interfaces with:
+
+
+           1.  An operator.
+
+           2.  Tymnet-I solo node code.
+
+           3.  Tymnet-II solo node code.
+
+           4.  ISIS-II.
+
+           5.  The ISIS code save routine.
+
+           6.  The  "Watch  dog  timer"  on  the  Engines multi-function
+               printed circuit board.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      1                  ENGINE BOOT WITH XPI LOAD SUPPORT         BOOT07.DOC
+      DEVICE INTERFACE SPECIFICATIONS                         October 4, 1984
+
+
+
+
+
+      2 -  DEVICE INTERFACE SPECIFICATIONS
+
+
+
+      BOOT07 interfaces with the following devices:
+
+
+           1.  Sync lines.
+
+           2.  SIO lines.
+
+           3.  The XPI component of the MXP system.
+
+           4.  The watch dog timer (and associated switch) on the multi-
+               function card.
+
+           5.  The Engine console.
+
+           6.  The ECC log on semiconductor memory.
+
+
+      Support of the following load  devices HAS BEEN REMOVED from  BOOT07 in
+      order to accomodate the new code and data required the XPI.
+
+
+           1.  The RS-232 port on the multi-function card (TTY port).
+
+           2.  The ESELCH.
+
+           3.  Tape drives (using the ESELCH).
+
+           4.  Small (10MB) disk drives (using the ESELCH).
+
+           5.  Large (300MB) disk drives (MSC140).
+
+
+      The ability to laod from these devices was removed to provide space for
+      the new code and data which proides XPI load support
+
+
+
+
+
+
+
+
+
+
+
+
+
+      2                  ENGINE BOOT WITH XPI LOAD SUPPORT         BOOT07.DOC
+      DEVICE INTERFACE SPECIFICATIONS                         October 4, 1984
+
+
+      2.1  SYNC LINES
+
+
+      Sync lines are scanned looking  for a down line load  header (x'3232').
+      If one is found,  loading begins on that  line, and all other  Sync and
+      SIO lines are ignored.  The format of down-line load packets is
+
+                     "3232 RR 0AAAAA DD....DD C1C1 C2C2 FFFF"
+
+      Where:
+
+
+           3232    = Sync pattern
+
+           RR      = Record type as follows:
+
+                       00  -  Transfer (start-up) command
+                       01  -  38x Load command, number is length,
+                              38x bytes max.
+                       80  -  Dump command.  The boot always sends
+                              38x bytes to it's neighbor.
+
+           0AAAAA  = Address referenced by record type.
+
+           DD...DD = Data bytes (38x bytes, always) defined as:
+
+                       00-7Fx - 1 byte of normal data.
+                       80     - Escape, next data is 80-85.
+                       81-83x - Not used.
+                       84     - Compressed 00's, next byte is count.
+                       85     - Compressed FF's, next byte is count.
+                       86-FFx - 1 byte of normal data.
+
+           C1C1    = 1st 16 bit checksum (vertical).
+
+           C2C2    = 2nd 16 bit checksum (diagonal).  See attached
+                     description of checksum for computation of
+                     vertical and diagonal checksums.
+
+           FFFF    = Pad.  At least 2 bytes of marking state.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      3                  ENGINE BOOT WITH XPI LOAD SUPPORT         BOOT07.DOC
+      DEVICE INTERFACE SPECIFICATIONS                         October 4, 1984
+
+
+      2.2  SIO LINES
+
+
+      The LOADII/down-load record format for SIO is the same as for Sync.  At
+      each occurrence of  an enhanced-asynch clock  interrupt one of  the SIO
+      lines  at I/O  address x'80'  is scanned.   If a  down-line-load header
+      (x'3232') is found,  loading begins on that  line.  All other  sync and
+      SIO lines will  be ignored for the  remainder of the load/dump.   If no
+      further load/dump records appear on the selected line within 60 seconds
+      the boot will time-out.  This causes the boot to reset and reinitialize
+      the Engine, and to resume scanning SIO lines for input.
+
+      The SIO  motherboards reset  when the  boot first  starts, and  after a
+      time-out, are at I/O address x'80' through x'90', inclusive.
+
+
+      2.3  ESELCH
+
+
+      The ESELCH at  I/O address x'F0' is  normally used in  conjunction with
+      the TAPE and DISK controllers.  Because these devices are not supported
+      in BOOT07 the only commands issued to it is:
+
+
+           1.  Reset.
+
+
+
+      2.4  300MB DISK DRIVE
+
+
+      The  large disk  at I/O  address x'F8'  uses it's  own  controller, and
+      therefore does not use the ESELCH.  The only commands issued to it is:
+
+
+           1.  Reset.
+
+
+
+      2.5  THE WATCH DOG TIMER
+
+
+      If the watch dog timer  is not re-set approximately every 2  seconds by
+      programmed I/O it will, when armed, cause the boot to be re-loaded from
+      PROM into RAM.
+
+      The boot PROMs, located  on the Engines multi-function  printed circuit
+      board assembly, contain in addition to the boot program a  header which
+      is used by the CPU micro-code during the ROM-to-RAM copy.   This header
+      is NOT itself copied into RAM.
+
+      The first two halfwords (4 bytes) of the header contain the new program
+
+
+      4                  ENGINE BOOT WITH XPI LOAD SUPPORT         BOOT07.DOC
+      DEVICE INTERFACE SPECIFICATIONS                         October 4, 1984
+
+
+      counter (x'720' in the  current version).  The third  halfword contains
+      the RAM address  at which the  CPU is to  begin placing the  boot.  The
+      fourth halfword  contains the size  of BOOT07, and  thus the  amount of
+      data (i.e.   BOOT07 program and  data) to be  copied.  For  BOOT07 this
+      value is x'0B00'.
+
+
+      2.6  THE ENGINE CONSOLE
+
+
+      The engine console is updated  by the boot during operation so  that an
+      an operator may more  easily monitor boot status.  See  the 'OPERATION'
+      section of this document for a description of these displays.
+
+
+      2.7  SEMICONDUCTOR MEMORY - ECC
+
+
+      The boot clears the error log on up to 8 semiconductor memory boards by
+      referencing I/O addresses x'78' to x'7F'.
+
+
+      2.8  THE XPI
+
+
+      Nothing here.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      5                  ENGINE BOOT WITH XPI LOAD SUPPORT         BOOT07.DOC
+      GENERAL DESCRIPTION                                     October 4, 1984
+
+
+
+
+
+      3 -  GENERAL DESCRIPTION
+
+
+
+      The function of  the bootstrap program is  to transfer data  from input
+      devices to memory  (load), and to transfer  data from memory  to output
+      devices (dump).  The area to  be dumped is limited to x'0'  to x'FFFFF'
+      (1 meg).  The area to be loaded is limited to x'0' to 4k less  than the
+      end of memory, up to a maximum of x'FEFFF'.
+
+      The  bootstrap is  initially copied  from PROM  into low  RAM addresses
+      x'700' to x'13FF'.  It begins execution by determining how  much system
+      memory  is available,  up  to a  maximum of  1  meg.  This  is  done by
+      attempting to decrement the contents of memory locations at the  end of
+      successively  lower 32-k  blocks until  a successful  memory  access is
+      detected.
+
+      Once the boot detects the  extent of Engine memory it  relocates itself
+      into the last (i.e.   highest) 4k.  It then performs  a non-destructive
+      write to the first 1 meg of memory (from 0 to x'FFFFF') by adding  0 to
+      existing  memory  contents.   This initializes  and  resets  ECC (error
+      correcting circuitry) present in Engine semiconductor memory.
+
+      The error  logs for  the semiconductor memory  are then  cleared.  This
+      process manifests itself to the observer by causing both the  amber and
+      red LEDs at the front of each memory board to be extinguished.
+
+      BOOT07 next resets the following DMA devices:
+
+
+           1.  SIO mother boards at addresses x'80' to x'90'.
+
+           2.  MSC disk controller at address x'F8'.
+
+           3.  ESELCH at address x'F0'.
+
+           4.  The XPI at I/O address x'88'.
+
+
+      The bootstrap then patches low  memory locations x'48' to x'6B'  with 6
+      RX3 jump instructions.  Normally each jump instruction would correspond
+      to a different type of boot, as shown below:
+
+                 0048 - Entry address for restoring low core.    
+                 004E - Entry address for MSC1400 disk boot.     
+                 0054 - Entry address for MAG tape boot.         
+                 005A - Entry address for SYNC, SIO and XPI boot.
+                 0060 - Entry address for TTY boot.              
+                 0066 - Entry address for disk boot.             
+
+
+      6                  ENGINE BOOT WITH XPI LOAD SUPPORT         BOOT07.DOC
+      GENERAL DESCRIPTION                                     October 4, 1984
+
+
+      However, because BOOT07 no longer supports disc, tape, or tty operation
+      this jump table has been reconfigured as follows:
+
+                 0048 - Entry address for restoring low core.    
+                 004E - Entry address for SYNC, SIO and XPI boot.
+                 0054 - Entry address for SYNC, SIO and XPI boot.
+                 005A - Entry address for SYNC, SIO and XPI boot.
+                 0060 - Entry address for SYNC, SIO and XPI boot.
+                 0066 - Entry address for SYNC, SIO and XPI boot.
+
+
+      Having completed  its initialization, BOOT07  transfers control  to the
+      SYNC/SIO/XPI boot.
+
+      Once the program has relocated  itself to high RAM all working  data is
+      contained in the last 4k.  Any memory below that may be read or written
+      into.  This includes, but is not limited to, x'00700' to  x'012FF', and
+      the MAC registers starting at x'00300'.  Attempts to write  (from SYNC,
+      SIO, or XPI) into the last 4k of memory, or above, will not  be ACK'ed.
+      This condition can be detected at a terminal running LOADII by  a fixed
+      number  of  received  records,  with  an  ever  increasing   number  of
+      transmitted records.
+
+      When  the  bootstrap  loads from  PROM,  control  will  transfer, after
+      relocation, to the SYNC/SIO/XPI bootstrap.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      7                  ENGINE BOOT WITH XPI LOAD SUPPORT         BOOT07.DOC
+      GENERAL OPERATION                                       October 4, 1984
+
+
+
+
+
+      4 -  GENERAL OPERATION
+
+
+
+      As an operator you have several options you may exercise.   The options
+      available to you include:
+
+
+           1.  Position of  the watch  dog timer  switch located  at the
+               front of the engines multi-function board.
+
+           2.  Selection of load or dump.
+
+
+
+      4.1  WATCH-DOG TIMER SWITCH
+
+
+      The watch-dog timer switch  has two (stable) positions, one  for arming
+      the watch dog timer, and one for disarming it.  If you want the boot to
+      be loaded from PROM whenever the code in your machine  stops re-setting
+      the watch dog timer, you should arm the watch dog timer.
+
+
+      4.2  SELECTION OF BOOT
+
+
+      To select a specfic boot device (i.e.  sync/SIO/XPI, tape, disc) follow
+      the instructions outlined for that particular device.
+
+
+      4.2.1  ENGINE CONSOLE DISPLAYS DURING LOAD
+
+      The boot program  reports its current  load/dump status on  the Engines
+      front panel display as follows:
+
+            Display                      Current status
+          =+====+====             =======================================
+          x F000 BA5E             Boot is initializing the ECC in the
+                                  semiconductor memory.  xF000 is the
+                                  address of the Boot parameter block.
+
+          0 0000 0007             Scanning sync and SIO lines, looking
+          :   :    :              for a down line load header.  The
+          :   :    :              version number is in the last byte.
+          :   :    :              (Version 7 is the Engine boot with XPI
+          F 0000 0007             load support.
+
+          0 3800 addr             Just loaded a x'38' byte data record
+                                  into address 'addr'.
+
+      8                  ENGINE BOOT WITH XPI LOAD SUPPORT         BOOT07.DOC
+      GENERAL OPERATION                                       October 4, 1984
+
+
+          0 0070 5AFE             This display indicates that the low
+                                  core locations have been copied back
+                                  from high core, and that if you press
+                                  [RUN] the machine will start running at
+                                  location x'00070'.
+
+
+      4.3  SIO AND SYNC LINE PROCEDURE
+
+
+      The SIO  and SYNC dump  and load routines  utilize the first  SYNC card
+      ports (0-F), and the first  SIO motherboard ports (0-F) only.   This is
+      consistent with Tymnet-II solo code, which outputs down line  load data
+      to the first sync card, or first SIO motherboard.
+
+      Ther are two options available for SYNC/SIO loads.
+
+
+           1.  If the  boot has  already been loaded,  you may  halt the
+               machine and  start execution at  x'5A'.  This is  done by
+               typing  [PSW] [DATA]  [SET] [5]  [A] [ADDR]  [READ].  The
+               console display  should read "0  005A 4300".  If  it does
+               not, then  the boots  jump table (in  low core)  has been
+               destroyed.  One should then use the second  procedure for
+               booting from SIO or sync.
+
+               If this  display, as described  above, is  correct merely
+               press [RUN].   The display will  change to "x  y000 BA5E"
+          for about 6  seconds, and then  to "0-F 0000  0006".  Use
+               LOADII to load over a SYNC or SIO line.
+
+           2.  The second option is  to bring the boot back  into memory
+               from the  PROMs on the  multi-function card.  To  do this
+               flip  the  watch  dog  timer  switch  into  its momentary
+               (upward) postion, and  release.  The boot will  be copied
+               into memory (at address x'700') and will  relocate itself
+               into the last  4k of memory.   It displays "x  y000 BA5E"
+               and "-F 0000 0006" as described above.  After it displays
+               "0-F 000  0006" you can  use LOADII to  load over  SIO or
+               sync.
+
+
+      If for any reason the  SIO/SYNC boot does not receive a  down-line load
+      record for 60  seconds it will time-out.   This will force the  boot to
+      restart; this will re-initate the search for a line with incoming down-
+      load data.
+
+
+
+
+
+
+
+
+      9                  ENGINE BOOT WITH XPI LOAD SUPPORT         BOOT07.DOC
+      CHECKSUM FOR SYNC AND SIO                               October 4, 1984
+
+
+
+
+      APPENDIX I.   CHECKSUM FOR SYNC AND SIO
+
+
+      Two checksums are transmitted.  The first is a 'vertical' checksum, the
+      second is a 'diagonal' checksum.
+
+
+      I-1  ALGORITHM FOR VERTICAL CHECKSUM
+
+
+
+           1.  Load 0 into accumulator.
+
+           2.  Get a half word of data.
+
+           3.  XOR data with accumulator.
+
+           4.  Go to step 2.
+
+
+
+      I-2  ALGORITHM FOR DIAGONAL CHECKSUM
+
+
+
+           1.  Load 0 into accumulator.
+
+           2.  Get a half word of data.
+
+           3.  Rotate 16  bit accumulator  left 1  bit.  High  order bit
+               becomes low order bit.
+
+           4.  XOR data with accumulator.
+
+           5.  Go to step 2.
+
+
+      Note that the diagonal checksum includes the vertical checksum.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      10                 ENGINE BOOT WITH XPI LOAD SUPPORT         BOOT07.DOC
+ d3*+
