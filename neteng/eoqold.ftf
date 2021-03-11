@@ -1,0 +1,2973 @@
+*    Program EOQ (Version 1.0) * 
+* This program determines the number of ports to 
+* order given a piecewise linear demand over a 
+* N month period.  The order quantity is found 
+* so that the operation costs (order, holding,...)  
+* is minimized.  
+* This program takes as an initial input the 
+* horizon period and the review frequency.  Currently,
+* the combinations horizon period review frequency 
+* are limited to 6. Once the choice is made, 
+* the user is prompted for the pilot number and 
+* posssibly for the pilot number of the closest site 
+* from which fe(s)can be 
+* sent to install ports.  The program accesses 
+* the 1022 database to extract information such as 
+* city, state, site id and node number.  
+* The subroutine compmile is used to compute the 
+* distance to the closest manned site using the 
+* VH coordinates.  The user is then prompted for the 
+* current number of ports, and connect hours.  
+* The user is required to supply the forecasted data points.  
+* Missing data points (in connect hours) are computed 
+* using a linear growth model between the supplied data points.  
+* The demand in conncect hours is then translated in ports 
+* using the Erlang loss formula (subroutine PORTS).  The 
+* demand in ports is then is into an optimization 
+* routine that examines all possible combinations of updates.  
+* Currently, the 6 combinations of horizon-review frequency 
+* implies 8 possible update schedule.  These possibilities 
+* are examined and the cheapest one is chosen.  
+* The results are then printed.  
+* 
+*                                       Mallek Khellaf 
+*                                       Nancy Lau
+*                                       August 87.  
+* 
+* VARIABLES DEFINITION 
+
+*   IYEAR:         present year
+*   IMONTH:        present month
+*   IDAY:          present day
+*   ICNCTD:        current number of connect hours
+*   NPA:           area code of pilot number
+*   NXX:           prefix of pilot number
+*   XXX:           last 4 digits of pilot number
+*   FREQ:          interval of time (in month) between rotary reviews
+*   HORIZ:         horizon period (in months)
+*   RSPONS:        used for storage
+*   YES:           used for storage
+*   NPORTS:        current number of ports (can include pending orders to be
+*                                          implemented soon)
+*   NFRCST :       numbe of month in the future at which connect hours 
+*                  are known
+*   MONTH:         used as an index
+*   D:             used for storage
+*   DEMAND:        integer array of dimension 12 containing the demand in ports
+*                  for the next 12 months
+*   INITX:         used as index or storage
+*   INITY:                   "
+*   FINALX:                  "
+*   FINALY:                  "
+*   DET:                     "
+*   DETA:                    "
+*   DETB:                    "
+*   A:                       "
+*   B:                       "
+*   Q1:            number of desired ports during months freq   to 2*freq
+*   Q2:                      "                           2*freq to 3*freq   
+*   Q3:                      "                           3*freq to horiz
+*   TCOST:         total operating cost over the  horizon
+*   HLDCST:        holding cost in $/port/month (read from file 11)
+*   ORDCST:        order processing cost and database update cost 
+*                  (read from file 12)
+*   MILES:         distance from closest fe location
+*   COST:          used for storage
+*   ACT:           array of dimension 3 containing the number of ports to 
+*                  instal for each of the next 3 trimesters
+
+* DECLARATION STATEMENTS
+
+       INTEGER YEAR,YEAR1,YEAR2,MONTH,DAY,D
+       INTEGER FEST, FECITY(3), INFL2
+       INTEGER NPA,NXX,XXXX,YES,IDSITE,PILOT(3)
+       INTEGER FREQ,HORIZ,T1,T2,T3,WATCH,CONCT(12),CITY(4)
+       DIMENSION IDATE(2),MAP(12),STATE(12),PG(12),GROWTH(12)
+       INTEGER DEMAND(12) ,ACT(3),RSPONS, INFLAG
+       INTEGER FINALX,FINALY,Q1,Q2,Q3,HLDCST,ORDCST,FINAL
+       DIMENSION INDMS(4,4),IPORT(4), INODE(10)
+       DIMENSION INPFIL(4), IARRY(10)
+
+* OPENING NECESSARY FILES TO BE READ
+
+*      file unit 11 : (neteng)MILGE.CST      (milage cost)
+*      file unit 12 : (neteng)INSTL.CST      (installation cost)
+
+       OPEN(11,'(neteng)INSTL.CST',INPUT,ERR=110)
+       OPEN(12,'(neteng)MILGE.CST',INPUT,ERR=120)
+       GOTO 109
+
+ 110   TYPE 116
+ 116   FORMAT(' FILE INSTL.CST NOT FOUND. EXECUTION HALTED')
+       STOP
+ 120   TYPE 126
+ 126   FORMAT(' FILE MILGE.CST NOT FOUND.  EXECUTION HALTED')
+       STOP
+
+ 109   CONTINUE
+ 
+*        CLOSE(11)
+*        CLOSE(12)
+
+* DEFINING ARRAY MAP AND OTHER VARIABLES
+
+       MAP(1)= 3HJan
+       MAP(2)= 3HFeb
+       MAP(3)= 3HMar
+       MAP(4)= 3HApr
+       MAP(5)= 3HMay
+       MAP(6)= 3HJun
+       MAP(7)= 3HJul
+       MAP(8)= 3HAug
+       MAP(9)= 3HSep
+       MAP(10)=3HOct
+       MAP(11)=3HNov
+       MAP(12)=3HDec
+       Y      ='Y'
+       N      ='N'
+       ZERO   ='0'
+       ONE    ='1'
+       TWO    ='2'
+       THREE  ='3'
+
+       CALL DBSTRT(
+     +               1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,
+     +               1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,
+     +               1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,
+     +               1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,
+     +               1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,
+     +               1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,
+     +               1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,
+     +               1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,
+     +               1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,
+     +               1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,
+     +               1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1)
+
+* CHECK IF FILES EXIST
+
+       ICKTS = 0
+       IFILE = 1
+
+       INDMS(IFILE,1) = '(NETE'
+       INDMS(IFILE,2) = 'NG  )'
+       INDMS(IFILE,3) = 'FEMIL'
+       INDMS(IFILE,4) = 'E.DMS'
+
+       ASSIGN 4001 TO ICONT
+       OPEN(16,'(neteng)FEMILE.DMS',INPUT,ERR=117)
+       CLOSE(16)
+       IFILE = IFILE + 1
+
+4001   CONTINUE
+
+       INDMS(IFILE,1) = '(DBTA'
+       INDMS(IFILE,2) = 'RIFF)'
+       INDMS(IFILE,3) = 'LATA.'
+       INDMS(IFILE,4) = 'DMS  '
+ 
+       ASSIGN 4002 TO ICONT
+       OPEN(16,'(DBTARIFF)LATA.DMS',INPUT,ERR=117)
+       CLOSE(16)
+       IFILE = IFILE + 1
+
+4002   CONTINUE
+
+       INDMS(IFILE,1) = '(NEWP'
+       INDMS(IFILE,2) = 'RT)PO'
+       INDMS(IFILE,3) = 'RTS.D'
+       INDMS(IFILE,4) = 'MS   '
+
+       ASSIGN 4003 TO ICONT
+       OPEN(16,'(NEWPRT)PORTS.DMS',INPUT,ERR=117)
+       CLOSE(16)
+       IFILE = IFILE + 1
+
+4003   CONTINUE
+
+       INDMS(IFILE,1) = '(NETS'
+       INDMS(IFILE,2) = 'TAT)C'
+       INDMS(IFILE,3) = 'KTS.D'
+       INDMS(IFILE,4) = 'MS    '
+
+       ASSIGN 4005 TO ICONT
+       ICKTS = 0
+       OPEN(16,'(NETSTAT)CKTS.DMS',INPUT,ERR=117)
+       CLOSE(16)
+
+4005   CONTINUE
+       IF (IFILE .EQ. 4 .AND. ICKTS .EQ. 0) GO TO 4004
+       IF (IFILE .EQ. 4 .AND. ICKTS .EQ. 1) GO TO 4006
+       TYPE 4008
+4008   FORMAT(' REQUIRED FILE(S) MISSING. EXECUTION HALTED.',/)
+       STOP
+       
+117    TYPE 3001,(INDMS(IFILE,JJ),JJ=1,4)
+3001   FORMAT(' FILE ',4A5,' NOT FOUND.',/)
+       ICKTS = 1
+       GO TO ICONT
+
+4004   CALL DBOPEN('(NETENG)FEMILE','(DBTARIFF)LATA',
+     +             '(NEWPRT)PORTS','(NETSTAT)CKTS')
+
+       GO TO 113
+
+4006   CALL DBOPEN('(NETENG)FEMILE','(DBTARIFF)LATA',
+     +             '(NEWPRT)PORTS')
+
+* CALLING THE INITIAL SCREEN ROUTINE
+113    CALL SCREEN1(ITTY)
+
+* CALLING THE TERMINAL INITIALIZATION ROUTINE
+
+       CALL TERM(ITTY)
+
+* INPUT BY USER OR BY FILE
+
+       call clear(itty)
+
+83     TYPE 85
+85     FORMAT(/,' INPUT FOR THIS RUN OF THE EOQ PROGRAM WILL BE:',////)
+       TYPE 87
+87     FORMAT ('     1.  MANUAL- USER SUPPLIED',/)
+       TYPE 89
+89     FORMAT ('     2.  A USER SUPPLIED  FILE',/)
+       TYPE 86
+86     FORMAT(/,'    => ',$)
+       READ(5,991,ERR=86) INFLAG
+991    FORMAT(I1)
+       IF (INFLAG .EQ. 1) GO TO 93
+       IF (INFLAG .NE. 2) GO TO 86
+
+       TYPE 95
+95     FORMAT(//,' INPUT FILE NAME (MAX 20 CHARACTERS): ',$)
+       READ (5,97,ERR=95) (INPFIL(JJ),JJ=1,4)
+97     FORMAT(4A5)
+       OPEN(14,INPFIL,INPUT,ERR=99)
+       GO TO 93
+99     TYPE 107,(INPFIL(JJ),JJ=1,4)
+107    FORMAT(' FILE ',4A5,' DOES NOT EXIST.')
+       GO TO 83
+
+93     CONTINUE
+
+* INITIALIZING DEMAND,CONNECT,PG,STATE
+
+ 5999  CONTINUE
+
+       INFL2 = 0
+       DO 44 I=1,12
+          DEMAND(I)=0
+          PG(I)=0.0
+          STATE(I)=1H 
+          CONCT(I)=0.0
+ 44    CONTINUE
+
+       idsite = 0
+       horiz=12
+       freq=3
+
+* CALLING THE DATE DTE ROUTINE WITH NO PRINTING OPTION
+
+       IPRINT=0
+       CALL DTE(MAP,IYEAR,IMONTH,IDAY,IPRINT,FREQ,HORIZ)
+
+* STARTS PROMPTING FOR INFORMATION
+
+       IF (INFLAG .EQ. 1) GO TO 9010
+
+       READ (14,2010,END=649) P1,P2,P3
+       GO TO 2012
+
+ 9010  TYPE 1010
+ 1010  FORMAT(' ENTER THE PILOT NUMBER   (NPANXXXXXX;10 DIGITS) ->',$)
+
+       READ(5,2010,ERR=9010) P1,P2,P3
+ 2010  FORMAT(A3,A3,A4)
+
+       DO 2093 I=1,3
+            CALL RTC(DUMMY,P1,I)
+            IF (DUMMY .LT. '0' .OR. DUMMY .GT. '9') GOTO 9010
+            CALL RTC(DUMMY,P2,I)
+            IF (DUMMY .LT. '0' .OR. DUMMY .GT. '9') GOTO 9010
+            CALL RTC(DUMMY,P3,I)
+            IF (DUMMY .LT. '0' .OR. DUMMY .GT. '9') GOTO 9010
+2093   CONTINUE
+            CALL RTC(DUMMY,P3,4)
+            IF (DUMMY .LT. '0' .OR. DUMMY .GT. '9') GOTO 9010
+
+2012   DECODE(3,2011,P1)NPA
+2011   FORMAT(I3)
+       DECODE(3,2011,P2)NXX
+       DECODE(4,2014,P3)XXXX
+2014   FORMAT(I4)
+
+* CALLING ROUTINE THAT CHECKS IF THE NUMBER IS VALID
+* AND RETURNS THE NODE,CITY,STATE IF FOUND.
+
+       CALL ROTINF(NPA,NXX,XXXX,NNODE,CITY,ST,NPORTS,
+     +      P1,P2,P3,PILOT,INFLAG)
+
+* IF NOT IN PORTS DATABASE, NODE = 0, NEXT RECORD
+       IF (NNODE .NE. 0) GO TO 2015
+       IF (INFLAG .EQ. 1) GO TO 5999
+       CALL ONECHR("14)
+       TYPE 2020, NPA, NXX, XXXX
+2020   FORMAT(/////,' PILOT NUMBER : ',I3,'/',I3,'-',I4)
+       TYPE 2022
+2022   FORMAT (//,10X,'NOT FOUND IN PORTS DATABASE')
+       GO TO 2133
+
+* CALLING ROUTINE THAT ACCESS THE FILE (NETENG)FEMILE.DMS
+* LOOK FOR THE ROTARY UNDER REVIEW AND EXTRACT THE MILEAGE
+* TO CLOSEST LOCATION. IF RECORD IS NOT FOUND IT IS
+* APPENDED TO THE FILE.
+
+2015   CALL FEMILE(NPA,NXX,XXXX,MILES,IDSITE,ITTY,P1,P2,P3,
+     +             NPA2,NXX2,ICKTS,INFLAG, FECITY, FEST)
+
+       IF (INFLAG .EQ. 1) GO TO 2140
+       IF ((NPA2 .NE. 0) .OR. (NXX2 .NE. 0)) GO TO 2140
+
+C    NOT FOUND IN FEMILE, GO TO NEXT PILOT NUMBER IN FILE
+       CALL ONECHR("14)
+       TYPE 2024,NPA,NXX,XXXX
+2024   FORMAT(/////,' PILOT NUMBER : ',I3,'/',I3,'-',I4)
+       TYPE 2026
+2026   FORMAT(//,10X,'NOT FOUND IN FEMILE DATABASE')
+       GO TO 2133
+
+2140   CALL FRCST(NPORTS, CONCT, PILOT, ICNCTD, ICTFLG,PERCENT,MAP,
+     +            NPA,NXX,XXXX,ITTY,INFLAG, INFL2)
+       IF (ICTFLG .NE. 2) GO TO 2137
+       IF (INFLAG .NE. 2) GO TO 5999
+
+* NO FORECAST, GO TO NEXT PILOT NUMBER IN FILE
+       CALL ONECHR("14)
+       TYPE 2028,NPA,NXX,XXXX
+2028   FORMAT(/////,' PILOT NUMBER : ',I3,'/',I3,'-',I4)
+       TYPE 2030
+2030   FORMAT(//,10X,'NO FORECAST FOUND FOR PILOT NUMBER',
+     +        /,10X,'OR ALL FORECASTS WERE ZERO')
+ 
+2133   READ(14,2135) EXTRA
+       READ(14,2135), EXTRA
+       READ(14,2135), EXTRA
+2135   FORMAT(A6)
+
+       GO TO 5999
+
+* THIS PART OF THE PROGRAM FINDS ALL THE FORECASTED POINTS
+* IN CONNECT HOURS FOR MONTHS 1 TO 12 ASSUMING A PIECEWISE
+* LINEAR VARIATION (SEE REPORT)
+
+2137   CALL LNFRT(CONCT,ICNCTD)
+
+* CALL THE ROUTINE THAT DISPLAYS CURRENT INFORMATION AND 
+* ALLOWS CHANGES TO BE MADE
+
+       IF (INFLAG .EQ. 2) GO TO 2101
+
+       CALL DSPINF(NPA,NXX,XXXX,CITY,ST,NNODE,
+     +                     IDSITE,MILES,NPORTS,ICNCTD,
+     +                     PERCENT,CONCT,HORIZ,MAP,IMONTH,PILOT,ITTY,
+     +                     P1,P2,P3,NPA2,NXX2,ICKTS,FECITY,FEST,INFL2)
+*      CALL CLEAR(ITTY)
+
+* THIS PART OF THE PROGRAM TRANSLATES THE CONNECT HOURS TO PORTS
+* USING THE ERLANG LOSS FORMULA
+* USING THE SUBROUTINE PORTS
+* Also computing forecasted growth
+
+2101   DO 67 I=1,12
+
+            IOPTION=0
+            CALL PORTS(DEMAND(I),PG(I),CONCT(I),PERCENT,IOPTION)
+            growth(i)=((float(conct(i))-float(icnctd))*100.0)
+     +             /float(icnctd)
+
+ 67    CONTINUE
+
+* calling the combination frequency-horizon choice routine
+
+       IF (INFLAG .EQ. 1) GO TO 69
+       READ (14,63) FREQ
+63     FORMAT(I1)
+
+       READ(14,66) RHORIZ
+66     FORMAT(A2)
+       DECODE(2,65,RHORIZ) HORIZ
+65     FORMAT(I2)
+       IF (HORIZ .GT. 12) HORIZ = HORIZ / 10
+       GO TO 71
+
+69     CALL COMBI(FREQ,HORIZ,ITTY,GROWTH)
+
+* CHECKING IF CURRENT FORECAST IS SATISFIED BY SUPPLY
+* BEFORE NEXT REVIEW
+
+71     WATCH=0
+       DO 73 IL=1,FREQ
+            IF(DEMAND(IL).GT.NPORTS) WATCH=1
+            IF(DEMAND(IL).GT.NPORTS) WATCH=1
+            IF(DEMAND(IL).GT.NPORTS) WATCH=1
+73     CONTINUE
+
+* THIS PART OF THE PROGRAM EVALUATES THE  POSSIBLE
+* CASES OF UPDATES AND PICKS THE LEAST EXPENSIVE ONE.
+
+       TCOST=1000000000.0
+
+* CASE 1:  ACT(1)=ACT(2)=ACT(3)=0
+* In this case the current number of ports is enough
+* for the entire horizon
+
+ 102   CONTINUE
+
+       INIT=FREQ+1
+       FINAL=HORIZ
+       CALL MAXIM(INIT,FINAL,DEMAND,MAXDEM)
+       IF(NPORTS.GE.MAXDEM) GOTO 101
+       GOTO 200
+ 101   COST=0.0
+       ACT(1)=0
+       ACT(2)=0
+       ACT(3)=0
+       INIT=1
+       FINAL=HORIZ
+       CALL HLDING(HLDCST,INIT,FINAL,DEMAND,MAXDEM,COST)
+       IF(COST.LE.TCOST) TCOST=COST
+ 200   CONTINUE
+
+*   CASE2: ACT(1)>0,ACT(2)=ACT(3)=0
+*   In this case only one update is made to be
+*   implemented by the next review.
+
+       COST=0.0
+       INIT=FREQ+1
+       FINAL=HORIZ
+       CALL MAXIM(INIT,FINAL,DEMAND,MAXDEM)
+       Q1=MAXDEM
+       Q2=Q1
+       Q3=Q2
+       CLOSE( 11)
+       OPEN(11,'(NETENG)INSTL.CST',INPUT)
+       READ(11,3010)HLDCST,ORDCST
+ 3010  FORMAT(2I5)
+ 210   READ(11,3020,END=299) N1,N2,J1
+ 3020  FORMAT(3I5)
+       T1=Q1-NPORTS
+       IF(T1.LT.N1) GOTO 210
+       IF(T1.GT.N2) GOTO 210
+       COST=COST+ORDCST+J1
+ 299   CONTINUE
+       CLOSE( 12)
+       OPEN(12,'(NETENG)MILGE.CST',INPUT)
+ 220   READ(12,3020)M1,M2,J1
+       IF(MILES.LT.M1) GOTO 220
+       IF(MILES.GT.M2) GOTO 220
+       COST=COST+J1
+
+ 250   CONTINUE
+       INIT=1
+       FINAL=FREQ
+       CALL HLDING(HLDCST,INIT,FINAL,DEMAND,NPORTS,COST)
+       INIT=FREQ
+       FINAL=HORIZ
+       CALL HLDING(HLDCST,INIT,FINAL,DEMAND,Q1,COST)
+       IF(TCOST.LE.COST) GOTO 300
+
+* A CHEAPER STRATEGY HAS BEEN FOUND
+       TCOST=COST
+       ACT(1)=Q1-NPORTS
+       ACT(2)=Q2-Q1
+       ACT(3)=Q3-Q2
+
+ 300   CONTINUE
+
+
+       IF(FREQ.EQ.3.AND.HORIZ.EQ.6)  GOTO 999
+       IF(FREQ.EQ.4.AND.HORIZ.EQ.8)  GOTO 999
+       IF(FREQ.EQ.6.AND.HORIZ.EQ.12) GOTO 999
+
+* CASE 3:  ACT(1)=0,ACT(2)>0,ACT(3)=0
+* In this case, only one action is taken to be implemented
+* by the end of second review.
+
+       INIT=FREQ+1
+       FINAL=2*FREQ
+       CALL MAXIM(INIT,FINAL,DEMAND,MAXDEM)
+       IF(MAXDEM.GT.NPORTS)  GOTO 400
+       COST=0
+       Q1=NPORTS
+       INIT=2*FREQ +1
+       FINAL=HORIZ
+       CALL MAXIM(INIT,FINAL,DEMAND,MAXDEM)
+       Q2=MAXDEM
+       Q3=Q2
+       CLOSE( 11)
+       OPEN(11,'(NETENG)INSTL.CST',INPUT)
+       READ(11,3010)HLDCST,ORDCST
+ 310   READ(11,3020,END=399) N1,N2,J1
+       T2=Q2-Q1
+       IF(T2.LT.N1) GOTO 310
+       IF(T2.GT.N2) GOTO 310
+       COST=COST+ORDCST+J1
+ 399   CONTINUE
+       CLOSE( 12)
+       OPEN(12,'(NETENG)MILGE.CST',INPUT)
+ 320   READ(12,3020)M1,M2,J1
+       IF(MILES.LT.M1) GOTO 320
+       IF(MILES.GT.M2) GOTO 320
+       COST=COST+J1
+
+ 350   CONTINUE
+       INIT=1
+       FINAL=2*FREQ
+       CALL HLDING(HLDCST,INIT,FINAL,DEMAND,Q1,COST)
+       INIT=2*FREQ
+       FINAL=HORIZ
+       CALL HLDING(HLDCST,INIT,FINAL,DEMAND,Q2,COST)
+       IF(TCOST.LE.COST) GOTO 400
+
+* A CHEAPER STRATEGY HAS BEEN FOUND
+       TCOST=COST
+       ACT(1)=Q1-NPORTS
+       ACT(2)=Q2-Q1
+       ACT(3)=Q3-Q2
+
+ 400   CONTINUE
+
+* CASE 4:    ACT(1)>0,ACT(2)>0,ACT(3)=0
+
+       COST=0
+       I2=2*FREQ
+       I4=4*FREQ
+       INIT=FREQ+1
+       FINAL=2*FREQ
+       CALL MAXIM(INIT,FINAL,DEMAND,MAXDEM)
+       Q1=MAXDEM
+       INIT=2*FREQ+1
+       FINAL=HORIZ
+       CALL MAXIM(INIT,FINAL,DEMAND,MAXDEM)
+       Q2=MAXDEM
+       IF(MAXDEM.LT.Q1) Q2=Q1
+       Q3=Q2
+       CLOSE( 11)
+       OPEN(11,'(NETENG)INSTL.CST',INPUT)
+       READ(11,3010)HLDCST,ORDCST
+ 510   READ(11,3020,END=599) N1,N2,J1
+       T1=Q1-NPORTS
+       IF(T1.LT.N1) GOTO 510
+       IF(T1.GT.N2) GOTO 510
+       COST=COST+ORDCST+J1
+       CLOSE( 11)
+       OPEN(11,'(NETENG)INSTL.CST',INPUT)
+       READ(11,3010)HLDCST,ORDCST
+ 511   READ(11,3020,END=599) N1,N2,J1
+       T2=Q2-Q1
+       IF(T2.LT.N1) GOTO 511
+       IF(T2.GT.N2) GOTO 511
+       COST=COST+J1
+ 599   CONTINUE
+       CLOSE( 12)
+       OPEN(12,'(NETENG)MILGE.CST',INPUT)
+ 520   READ(12,3020)M1,M2,J1
+       IF(MILES.LT.M1) GOTO 520
+       IF(MILES.GT.M2) GOTO 520
+       COST=COST+2*J1
+
+ 550   CONTINUE
+       INIT=1
+       FINAL=FREQ
+       CALL HLDING(HLDCST,INIT,FINAL,DEMAND,NPORTS,COST)
+       INIT=FREQ
+       FINAL=2*FREQ
+       CALL HLDING(HLDCST,INIT,FINAL,DEMAND,Q1,COST)
+       INIT=2*FREQ
+       FINAL=HORIZ
+       CALL HLDING(HLDCST,INIT,FINAL,DEMAND,Q2,COST)
+
+       IF(TCOST.LE.COST) GOTO 600
+
+* A CHEAPER STRATEGY HAS BEEN FOUND
+
+       TCOST=COST
+       ACT(1)=Q1-NPORTS
+       ACT(2)=Q2-Q1
+       ACT(3)=Q3-Q2
+
+ 600   CONTINUE
+
+       IF(FREQ.EQ.3.AND.HORIZ.EQ.9)  GOTO 999
+       IF(FREQ.EQ.4.AND.HORIZ.EQ.12) GOTO 999
+
+* CASE 5:    ACT(1)=0,ACT(2)=0,ATC(3)>0
+
+       INIT=FREQ+1
+       FINAL=3*FREQ
+       CALL MAXIM(INIT,FINAL,DEMAND,MAXDEM)
+       IF(MAXDEM.GT.NPORTS)  GOTO 500
+       COST=0
+       Q1=NPORTS
+       Q2=Q1
+       INIT=3*FREQ +1
+       FINAL=HORIZ
+       CALL MAXIM(INIT,FINAL,DEMAND,MAXDEM)
+       Q3=MAXDEM
+       IF(MAXDEM.LTQ3=Q2
+       CLOSE( 11)
+       OPEN(11,'(NETENG)INSTL.CST',INPUT)
+       READ(11,3010)HLDCST,ORDCST
+ 410   READ(11,3020,END=499) N1,N2,J1
+       T3=Q3-Q2
+       IF(T3.LT.N1) GOTO 410
+       IF(T3.GT.N2) GOTO 410
+       COST=COST+ORDCST+J1
+ 499   CONTINUE
+       CLOSE( 12)
+       OPEN(12,'(NETENG)MILGE.CST',INPUT)
+ 420   READ(12,3020)M1,M2,J1
+       IF(MILES.LT.M1) GOTO 420
+       IF(MILES.GT.M2) GOTO 420
+       COST=COST+J1
+ 450   CONTINUE
+       INIT=1
+       FINAL=3*FREQ
+       CALL HLDING(HLDCST,INIT,FINAL,DEMAND,Q1,COST)
+       INIT=3*FREQ
+       FINAL=HORIZ
+       CALL HLDING(HLDCST,INIT,FINAL,DEMAND,Q3,COST)
+       IF(TCOST.LE.COST) GOTO 500
+
+* A CHEAPER STRATEGY HAS BEEN FOUND
+
+       TCOST=COST
+       ACT(1)=Q1-NPORTS
+       ACT(2)=Q2-Q1
+       ACT(3)=Q3-Q2
+
+ 500   CONTINUE
+
+* CASE 6:   ACT(1)>0,ACT(2)=0,ACT(3)>0
+
+       COST=0
+       I3=3*FREQ
+       I4=4*FREQ
+
+       INIT=FREQ+1
+       FINAL=3*FREQ
+       CALL MAXIM(INIT,FINAL,DEMAND,MAXDEM)
+       Q1=MAXDEM
+       Q2=Q1
+       INIT=3*FREQ+1
+       FINAL=HORIZ
+       CALL MAXIM(INIT,FINAL,DEMAND,MAXDEM)
+       Q3=MAXDEM
+       IF(MAXDEM.LT.Q2) Q3=Q2
+       CLOSE( 11)
+       OPEN(11,'(NETENG)INSTL.CST',INPUT)
+       READ(11,3010)HLDCST,ORDCST
+ 610   READ(11,3020,END=699) N1,N2,J1
+       T1=Q1-NPORTS
+       IF(T1.LT.N1) GOTO 610
+       IF(T1.GT.N2) GOTO 610
+       COST=COST+ORDCST+J1
+       CLOSE( 11)
+       OPEN(11,'(NETENG)INSTL.CST',INPUT)
+       READ(11,3010)HLDCST,ORDCST
+ 611   READ(11,3020,END=699) N1,N2,J1
+       T3=Q3-Q2
+       IF(T3.LT.N1) GOTO 611
+       IF(T3.GT.N2) GOTO 611
+       COST=COST+J1
+ 699   CONTINUE
+       CLOSE( 12)
+       OPEN(12,'(NETENG)MILGE.CST',INPUT)
+ 620   READ(12,3020)M1,M2,J1
+       IF(MILES.LT.M1) GOTO 620
+       IF(MILES.GT.M2) GOTO 620
+       COST=COST+2*J1
+
+ 650   CONTINUE
+       INIT=1
+       FINAL=FREQ
+       CALL HLDING(HLDCST,INIT,FINAL,DEMAND,NPORTS,COST)
+       INIT=FREQ
+       FINAL=3*FREQ
+       CALL HLDING(HLDCST,INIT,FINAL,DEMAND,Q1,COST)
+       INIT=3*FREQ
+       FINAL=HORIZ
+       CALL HLDING(HLDCST,INIT,FINAL,DEMAND,Q3,COST)
+
+       IF(TCOST.LE.COST) GOTO 700
+
+* A CHEAPER STRATEGY HAS BEEN FOUND
+
+       TCOST=COST
+       ACT(1)=Q1-NPORTS
+       ACT(2)=Q2-Q1
+       ACT(3)=Q3-Q2
+
+ 700   CONTINUE
+
+* CASE 7:    ACT(1)=0,ACT(2)>0,ACT(3)>0
+
+       COST=0
+       I2=2*FREQ
+       I3=3*FREQ
+       I4=4*FREQ
+       INIT=FREQ+1
+       FINAL=2*FREQ
+       CALL MAXIM(INIT,FINAL,DEMAND,MAXDEM)
+       IF(MAXDEM.GT.NPORTS) GOTO 800
+       Q1=NPORTS
+       INIT=2*FREQ+1
+       FINAL=3*FREQ
+       CALL MAXIM(INIT,FINAL,DEMAND,MAXDEM)
+       Q2=MAXDEM
+       IF(Q1.GT.Q2) Q2=Q1
+       INIT=3*FREQ+1
+       FINAL=HORIZ
+       CALL MAXIM(INIT,FINAL,DEMAND,MAXDEM)
+       Q3=MAXDEM
+       IF(Q2.GT.Q3) Q3=Q2
+       CLOSE( 11)
+       OPEN(11,'(NETENG)INSTL.CST',INPUT)
+       READ(11,3010)HLDCST,ORDCST
+ 710   READ(11,3020,END=799) N1,N2,J1
+       T2=Q2-Q1
+       IF(T2.LT.N1) GOTO 710
+       IF(T2.GT.N2) GOTO 710
+       COST=COST+ORDCST+J1
+       CLOSE( 11)
+       OPEN(11,'(NETENG)INSTL.CST',INPUT)
+       READ(11,3010)HLDCST,ORDCST
+ 711   READ(11,3020,END=799) N1,N2,J1
+       T3=Q3-Q2
+       IF(T3.LT.N1) GOTO 711
+       IF(T3.GT.N2) GOTO 711
+       COST=COST+J1
+ 799   CONTINUE
+       CLOSE( 12)
+       OPEN(12,'(NETENG)MILGE.CST',INPUT)
+ 720   READ(12,3020)M1,M2,J1
+       IF(MILES.LT.M1) GOTO 720
+       IF(MILES.GT.M2) GOTO 720
+       COST=COST+2*J1
+
+ 750   CONTINUE
+       INIT=1
+       FINAL=2*FREQ
+       CALL HLDING(HLDCST,INIT,FINAL,DEMAND,Q1,COST)
+       INIT=2*FREQ
+       FINAL=3*FREQ
+       CALL HLDING(HLDCST,INIT,FINAL,DEMAND,Q2,COST)
+       INIT=3*FREQ
+       FINAL=HORIZ
+       CALL HLDING(HLDCST,INIT,FINAL,DEMAND,Q3,COST)
+
+       IF(TCOST.LE.COST) GOTO 800
+
+* A CHEAPER STRATEGY HAS BEEN FOUND
+
+       TCOST=COST
+       ACT(1)=Q1-NPORTS
+       ACT(2)=Q2-Q1
+       ACT(3)=Q3-Q2
+
+ 800   CONTINUE
+
+* CASE 8:    ACT(1)>0,ACT(2)>0,ACT(3)>0
+
+       COST=0
+       I2=2*FREQ
+       I3=3*FREQ
+       I4=4*FREQ
+       INIT=FREQ+1
+       FINAL=2*FREQ
+       CALL MAXIM(INIT,FINAL,DEMAND,MAXDEM)
+       Q1=MAXDEM
+       INIT=2*FREQ+1
+       FINAL=3*FREQ
+       CALL MAXIM(INIT,FINAL,DEMAND,MAXDEM)
+       Q2=MAXDEM
+       IF(Q1.GT.Q2) Q2=Q1
+       INIT=3*FREQ+110
+       FINAL=HORIZ
+       CALL MAXIM(INIT,FINAL,DEMAND,MAXDEM)
+       Q3=MAXDEM
+       IF(Q2.GT.Q3) Q3=Q2
+       CLOSE( 11)
+       OPEN(11,'(NETENG)INSTL.CST',INPUT)
+       READ(11,3010)HLDCST,ORDCST
+ 810   READ(11,3020,END=899) N1,N2,J1
+       T1=Q1-NPORTS
+       IF(T1.LT.N1) GOTO 810
+       IF(T1.GT.N2) GOTO 810
+       COST=COST+ORDCST+J1
+       CLOSE( 11)
+       OPEN(11,'(NETENG)INSTL.CST',INPUT)
+       READ(11,3010)HLDCST,ORDCST
+ 811   READ(11,3020,END=899) N1,N2,J1
+       T2=Q2-Q1
+       IF(T2.LT.N1) GOTO 811
+       IF(T2.GT.N2) GOTO 811
+       COST=COST+J1
+ 899   CONTINUE
+       CLOSE( 11)
+       OPEN(11,'(NETENG)INSTL.CST',INPUT)
+       READ(11,3010)HLDCST,ORDCST
+ 812   READ(11,3020,END=898) N1,N2,J1
+       T3=Q3-Q2
+       IF(T3.LT.N1) GOTO 812
+       IF(T3.GT.N2) GOTO 812
+       COST=COST+J1
+ 898   CONTINUE
+       CLOSE( 12)
+       OPEN(12,'(NETENG)MILGE.CST',INPUT)
+ 820   READ(12,3020)M1,M2,J1
+       IF(MILES.LT.M1) GOTO 820
+       IF(MILES.GT.M2) GOTO 820
+       COST=COST+3*J1
+
+ 850   CONTINUE
+       INIT=1
+       FINAL=FREQ
+       CALL HLDING(HLDCST,INIT,FINAL,DEMAND,NPORTS,COST)
+       INIT=FREQ
+       FINAL=2*FREQ
+       CALL HLDING(HLDCST,INIT,FINAL,DEMAND,Q1,COST)
+       INIT=2*FREQ
+       FINAL=3*FREQ
+       CALL HLDING(HLDCST,INIT,FINAL,DEMAND,Q2,COST)
+       INIT=3*FREQ
+       FINAL=HORIZ
+       CALL HLDING(HLDCST,INIT,FINAL,DEMAND,Q3,COST)
+
+       IF(TCOST.LE.COST) GOTO 999
+
+* A CHEAPER STRATEGY HAS BEEN FOUND
+
+       TCOST=COST
+       ACT(1)=Q1-NPORTS
+       ACT(2)=Q2-Q1
+       ACT(3)=Q3-Q2
+
+ 999   CONTINUE
+       CLOSE(11)
+       CLOSE(12)
+
+       IF (INFLAG .EQ. 2) GO TO 6746
+       TYPE 532
+ 532   FORMAT(' IS YOUR PRINTER READY?',/,' TYPE ANY KEY WHEN',
+     +           ' READY',$)
+       READ (5,6743) ANY
+ 6743  FORMAT(A1)
+       
+ 6746   CALL CLEAR(ITTY)
+
+* PRINTING THE RESULT
+ 
+       CALL ONECHR("14)
+
+       IF(IDSITE.EQ.0) SITE='   '
+       IF(IDSITE.NE.0) ENCODE(4,562,SITE)IDSITE
+ 562   FORMAT(I4)
+
+       II = 1
+ 579   IF ((II .GT. 4) .OR. (CITY(II) .EQ. '     '))
+     +      GO TO 570
+       IARRY(II) = CITY(II)
+       II = II + 1
+       GO TO 579
+
+ 570   CALL STC(',',IARRY(II),1)
+       CALL STC(' ',IARRY(II),2)
+       CALL RTC(DUMMY,ST,1)
+       CALL STC(DUMMY,IARRY(II),3)
+       CALL RTC(DUMMY,ST,2)
+       CALL STC(DUMMY,IARRY(II),4)
+       CALL RTC(DUMMY,ST,3)
+       CALL STC(DUMMY,IARRY(II),5)
+
+       DO 589 I = II + 1,5
+            IARRY(I) = '     '
+ 589   CONTINUE
+
+       TYPE 566, (PILOT(I),I=1,3),(IARRY(I),I=1,5)
+ 566   FORMAT(' PILOT: ',3A5,15X,'CITY, STATE: ',5A5)
+
+       CALL DBSET(3)
+       DO 597 II = 1, 9
+            IARRY(II) = '     '
+ 597   CONTINUE
+
+       IARRY(7) = PILOT(1)
+       IARRY(8) = PILOT(2)
+       IARRY(9) = PILOT(3)
+       IARRY(4) = 'EQ'
+       IARRY(1) = 'PILOT'
+       CALL DBFIND('FIX.',3,3,IARRY)
+
+       DO 627 I = 1, 10
+            INODE(I) = 0
+ 627   CONTINUE
+
+       II = 1
+
+ 578   CALL DBGREC($582)
+       CALL DBVAL('NODE',ITNODE)
+       IF (ITNODE .EQ. INODE(II)) GO TO 578
+       IF (INODE(II) .NE. 0) II = II + 1
+       INODE(II) = ITNODE
+       GO TO 578
+
+ 582   II = 1
+
+ 637   IF (INODE(II) .EQ. 0) GO TO 657
+
+       ENCODE(5,647,IARRY(II)) INODE(II)
+ 647   FORMAT(I5)
+       II = II + 1
+       GO TO 637
+
+ 657   DO 667 JJ = II,10
+            IARRY(JJ) = '     '
+ 667   CONTINUE
+
+       TYPE 576, SITE, (IARRY(I),I=1,6)
+ 576   FORMAT(' SITE ID:  ',A4,20X,'NODE(S):  ',3(A5,1X),/,
+     +        45X,3(A5,1X),/)
+
+       IF(MILES.NE.0) GOTO 2245
+       TYPE, 452
+ 452   FORMAT(' SITE IS MANNED')
+       GOTO 2247
+ 2245  TYPE 454, MILES
+ 454   FORMAT(' UNMANNED SITE; FE(S) TRAVELING DISTANCE IS:',I4,
+     +        ' MILES')
+
+       II = 1
+ 779   IF ((II .GT. 4) .OR. (FECITY(II) .EQ. '     '))
+     +      GO TO 770
+       IARRY(II) = FECITY(II)
+       II = II + 1
+       GO TO 779
+
+ 770   CALL STC(',',IARRY(II),1)
+       CALL STC(' ',IARRY(II),2)
+       CALL RTC(DUMMY,ST,1)
+       CALL STC(DUMMY,IARRY(II),3)
+       CALL RTC(DUMMY,ST,2)
+       CALL STC(DUMMY,IARRY(II),4)
+       CALL RTC(DUMMY,ST,3)
+       CALL STC(DUMMY,IARRY(II),5)
+
+       DO 789 I = II + 1,5
+            IARRY(I) = '     '
+ 789   CONTINUE
+
+       TYPE 766,(IARRY(I),I=1,5)
+ 766   FORMAT(6X,'FE CITY, STATE: ',5A5,/)
+
+ 2247  CONTINUE
+
+       IPRINT=0
+       CALL DTE(MAP,IYEAR,IMONTH,IDAY,IPRINT,FREQ,HORIZ)
+
+       TYPE 889,IDAY,MAP(IMONTH),IYEAR
+ 889   FORMAT(' CURRENT DATE:',6X,I2,'-',A3,'-',I2)
+       NMONTH = IMONTH + FREQ
+       NYEAR = IYEAR
+       IF (NMONTH .LE. 12) GO TO 819
+       NMONTH = NMONTH - 12
+       NYEAR = NYEAR + 1
+
+819    continue
+
+       TYPE 613, NPORTS
+ 613   FORMAT(/,' CURRENT NO. OF PORTS:',I4)
+
+       TYPE 677, ICNCTD
+ 677   FORMAT(' CURRENT NO. OF CONNECT HOURS: ',I4)
+
+       TYPE 687, PERCENT
+ 687   FORMAT(' CURRENT % OF CALLS DURING HEAVIEST TRAFFIC',
+     +        ' HOUR:  ',F5.1,/)
+
+       TYPE 697,FREQ
+ 697   FORMAT(' REVIEW FREQUENCY:',2X,I2,' MONTHS')
+
+       TYPE 707,HORIZ
+ 707   FORMAT(' HORIZON:',11X,I2,' MONTHS',/)
+
+       T=(TCOST)/FLOAT(HORIZ)
+
+       TYPE 1110, HORIZ,T
+ 1110  FORMAT(/,' EXPECTED MONTHLY COST OVER THE NEXT',I3,
+     +          ' MONTHS: $',F10.2,/)
+
+       IJ=IYEAR
+       II=IMONTH+1
+       JMONTH=IMONTH+HORIZ
+       IF(JMONTH.LE.12) GOTO 567
+       JMONTH=JMONTH-12
+       IJ=IYEAR+1
+                
+ 567   CONTINUE
+       TYPE 588, MAP(II),IYEAR,MAP(JMONTH),IJ
+ 588   FORMAT(/,10X,' *** FORECAST OF PORTS FROM ',A3,'-',I2,
+     +       ' TO ',A3,'-',I2,' ***',//,
+     +       '  MONTH/   !  CONNECT HRS/ !   NUMBER OF   !',
+     +       '   PGRADE   !',/,
+     +       '   YEAR    !  BUSINESS DAY !  PORTS NEEDED !',
+     +       ' PERCENTAGE !',/,
+     +       ' ---------------------------------------',
+     +       '---------------')
+
+       IBOUND=HORIZ/2
+       IF(IBOUND*2.NE.HORIZ)IBOUND=IBOUND+1
+
+       DO 456 I=1,HORIZ
+C            I2=I+IBOUND
+            J=I+IMONTH
+            K = IYEAR
+            IF (J .GT. 12) K = K + 1
+            IF(J.GT.12) J=J-12
+C            J2=I2+IMONTH
+C            IF(J2.GT.12) J2=J2-12    
+            IF(PG(I).EQ.0.0) PP1=3H   
+C            IF(PG(I2).EQ.0.0) PP2=3H   
+            IF(PG(I).NE.0.0) ENCODE(3,561,PP1)PG(I)
+C            IF(PG(I2).NE.0.0) ENCODE(3,561,PP2)PG(I2)
+ 561        FORMAT(F3.1)
+
+C            IF(I.NE.IBOUND) GOTO 569
+C            IF(IBOUND.EQ.HORIZ/2) GOTO 569
+
+            TYPE 568, MAP(J),K,STATE(J),CONCT(I),DEMAND(I),PP1
+ 568        FORMAT(2X,A3,'/',I2,4X,A1,8X,I4,10X,I4,10X,A3)
+            GOTO 456
+
+C 569        TYPE 564, MAP(J),STATE(J),CONCT(I),DEMAND(I),PP1,
+C     +                   MAP(J2),STATE(J2),CONCT(I2),DEMAND(I2),PP2
+C 564        FORMAT(1X,A3,1X,A1,4X,I4,6X,I4,8X,A3,6X,A3,1X,A1,
+C     +                4X,I4,6X,I4,8X,A3) 
+
+ 456   CONTINUE
+
+       IF (INFL2 .EQ. 1) TYPE 717
+       IF (INFL2 .EQ. 2) TYPE 727
+       IF (INFL2 .EQ. 3) TYPE 737
+       IF (INFL2 .EQ. 4) TYPE 743
+       IF (INFL2 .EQ. 5) TYPE 757
+
+717    FORMAT(/,' **** EXPONENTIAL SMOOTHING FORECAST',
+     +        ' VALUES USED',/)
+727    FORMAT(/,' **** G SITE FORECAST VALUES USED, NO',
+     +        ' CHANGES MADE',/)
+737    FORMAT(/,' **** CONSTANT GROWTH FORECAST USED',/)
+743    FORMAT(/,' **** MONTH-BY-MONTH VALUES WERE PROVIDED',/)
+757    FORMAT(/,' **** ONE POINT WAS PROVIDED',/)
+
+747    CONTINUE
+
+ 813   TYPE 817,IDAY,MAP(NMONTH),NYEAR
+ 817   FORMAT(/,17X,' ***NEXT REVIEW DATE***',/,
+     +        24X,I2,'-',A3,'-',I2)
+
+       TYPE 631
+ 631   FORMAT(//,18X,' ***ORDER QUANTITY***',/)
+
+C       TYPE 632
+C 632   FORMAT( ' NUMBER OF PORTS TO BE INSTALLED:',8X,'DUE DATE:')
+          
+       IRVIEW=HORIZ/FREQ
+       DO 900 I=1,IRVIEW-1
+            I3=I*FREQ
+            J=I3+IMONTH
+            IF(J.LE.12) GOTO 7101
+            J=J-12
+            IY=IYEAR+1
+            GOTO 7111
+ 7101       IY=IYEAR
+ 7111       TYPE 1100, ACT(I),MAP(J),IY
+ 1100       FORMAT(' NUMBER OF PORTS TO BE INSTALLED: ',I5,
+     +             '   DUE DATE: ',A3,'-',I2)
+ 900   CONTINUE
+
+       IF(WATCH.EQ.0) GOTO 51
+
+       TYPE 2800,FREQ 
+ 2800  FORMAT(/,' WARNING: ROTARY WILL BE UNDER ENGINEERED'
+     1          ' IN THE NEXT',I3,'  MONTHS')
+
+ 51    CONTINUE
+
+* COMPUTING EXPECTED MONTHLY COST OVER NEXT HORIZON PERIOD:
+
+       TYPE 1111
+ 1111  FORMAT(/,12X,'*** remarks ***')
+
+       TYPE 577
+ 577   FORMAT(/,' TROUBLE TICKET ISSUED',
+     +          ' (Y/N)?',//,' TICKET #:',
+     +          //,' DATE ISSUED:',/)
+
+       IF (INFLAG .EQ. 2) GO TO 5999
+       CALL ONECHR("14)
+
+       TYPE 972
+972    FORMAT (' EXIT? (1=Y/0=N)',/)
+C972   FORMAT(/////////////,' EXIT? (1=Y/0=N)',/)
+       READ(5,639)IRES
+ 639   FORMAT(A1)
+
+       IF((IRES.EQ.'0').OR.(IRES.EQ.'N')) GOTO 5999
+
+649    CALL DBCLOS
+       CALL DBEND
+
+       CALL ONECHR("14)
+
+       STOP
+       END
+
+**********************************************************************
+
+       SUBROUTINE HLDING(HLDCST,INIT,FINAL,DEMAND,Q,COST)
+
+* This subroutine computes the holding cost if inventory is
+* Q for a demand between init and final
+
+       INTEGER HLDCST,INIT,FINAL,Q
+       INTEGER DEMAND(12)
+
+       LIMIT=FINAL-1
+
+       DO 2 I=INIT,LIMIT
+               
+            I1=I+1
+
+            IF(DEMAND(I).GE.Q.AND.DEMAND(I1).GE.Q) GOTO 10
+            IF(DEMAND(I).GT.Q.AND.DEMAND(I1).LT.Q) GOTO 20
+            IF(DEMAND(I).LT.Q.AND.DEMAND(I1).GT.Q) GOTO 30
+            IF(DEMAND(I).LE.Q.AND.DEMAND(I1).LE.Q) GOTO 40
+
+ 40         COST=COST+FLOAT(HLDCST)*(FLOAT(Q)-FLOAT((DEMAND(I)+
+     +          DEMAND(I1)))/2.0)
+            GOTO 1
+
+ 30         J=I+1
+            IF(DEMAND(J).LE.Q) GOTO 30
+            J=J-1
+            COST=COST+FLOAT(HLDCST)*(FLOAT(Q)-FLOAT((DEMAND(I)+
+     +          DEMAND(J)))/2.0)
+            GOTO 1
+
+ 20         J=I+1
+            IF(DEMAND(J).GT.Q) GOTO 20
+            COST=COST+FLOAT(HLDCST)*(FLOAT(Q)-FLOAT((DEMAND(J)+
+     +          DEMAND(I1)))/2.0)
+            GOTO 1
+
+ 10         CONTINUE
+            GOTO 1
+
+ 1           CONTINUE
+ 2     CONTINUE
+
+       RETURN
+       END
+
+********************************************************************
+
+        SUBROUTINE MAXIM(INIT,FINAL,DEMAND,MAXDEM)
+
+* This subroutine returns the maximum element of the vector demand
+* in the variable MAXDEM between subscript init and final.
+
+       INTEGER DEMAND(12)
+       INTEGER INIT,FINAL,MAXDEM
+
+       MAXDEM=-100
+
+       DO 1 I=INIT,FINAL
+            IF(MAXDEM.GE.DEMAND(I)) GOTO 1
+            MAXDEM=DEMAND(I)
+ 1     CONTINUE
+
+       RETURN
+       END
+
+*******************************************************************
+
+       SUBROUTINE CLEAR(ITTY)
+
+* This subroutine clears the screen of 425 terminals
+
+       INTEGER CLEA1,CLEA2
+
+       IF(ITTY.NE.425.AND.ITTY.NE.444) RETURN
+
+       CLEA1="33
+       IF(ITTY.EQ.425) CLEA2="73
+       IF(ITTY.EQ.444) CLEA2="112
+
+       CALL ONECHR(CLEA1)
+       CALL ONECHR(CLEA2)
+
+       RETURN
+       END
+
+*********************************************************************
+
+       SUBROUTINE DTE(MAP,IYEAR,IMONTH,IDAY,IPRINT,FREQ,HORIZ)
+
+* This subroutine returns the current date in IYEAR,IMONTH,IDAY
+* If IPRINT=1 it prints the current date and the date in 3 months
+
+       DIMENSION IDATE(2),MAP(12),M(3)
+       LOGICAL   L(3)
+       INTEGER CLEA1,CLEA2,YEAR1,YEAR2,FREQ,HORIZ
+
+       CALL DATE(IDATE)
+       CALL DATCON(IDATE,ID,IERR)
+       IYEAR=ID/10000
+       IMONTH=(ID-IYEAR*10000)/100
+       IDAY=(ID-IYEAR*10000-IMONTH*100)
+
+       YEAR1=8
+       YEAR2=7
+       NEXMON=IMONTH+FREQ
+       IF(NEXMON.LE.12) GOTO 210
+       NEXMON=NEXMON-12
+       NYEAR=IYEAR+1
+       GOTO 221
+ 210   CONTINUE
+       NYEAR=IYEAR
+ 
+ 221   IF(IPRINT.EQ.1) GOTO 211
+       IF(IPRINT.NE.1) GOTO 212
+
+ 211   TYPE 6, IDAY,MAP(IMONTH),IYEAR,FREQ
+6      FORMAT(' CURRENT DATE:',6X,I2,'-',A3,'-',I2,6X,'REVIEW',
+     +         ' FREQUENCY:', 2X,I2,' MONTHS')
+
+       TYPE 7, IDAY,MAP(NEXMON),NYEAR,HORIZ
+ 7     FORMAT(' NEXT REVIEW DATE:',2X,I2,'-',A3,'-',I2,6X,
+     +         'HORIZON:',11X,I2,' MONTHS')
+
+ 212   IPRINT=0
+
+       RETURN
+       END
+
+***********************************************************************
+*                                                                     *
+*                       SUBROUTINE: DATCON                            *
+*                                                                     *
+*       THIS SUBROUTINE CONVERTS A DATE FROM FORMAT: DD-MMM-YY        *
+*       WHE DD AND YY ARE INTEGER AND MMM IS ALPHA TO A FORMAT OF     *
+*       YYMMDD (WHERE YY=YEAR,MM=MONTH,DD=DAY AND ALL ARE NUMERIC.    *
+*                                                                     *
+*       I:      SYSDAT  2WORD ARRAY CONTAINING DATE IN FORMAT:        *
+*                       DD-MMM-YY.                                    *
+*                                                                     *
+*       O:      IDATE   INTEGER VARIABLE CONTAINING DATE CONVERTED    *
+*                       TO YYMMDD FORMAT.                             *
+*                                                                     *
+*       O:      IERR    ERROR FLAG. SET AS FOLLOWS.                   *
+*                       -1 = FATAL ERROR                              *
+*                        0 = NO ERROR                                 *
+*                                                                     *
+***********************************************************************
+
+       SUBROUTINE DATCON(SYSDAT,IDATE,IERR)
+
+       INTEGER SYSDAT(2),MONTBL(12)
+
+       MONTBL(1)="453035600000
+       MONTBL(2)="433134200000
+       MONTBL(3)="467036200000
+       MONTBL(4)="407416200000
+       MONTBL(5)="467037100000
+       MONTBL(6)="453535600000
+       MONTBL(7)="453535400000
+       MONTBL(8)="407534700000
+       MONTBL(9)="517136000000
+       MONTBL(10)="477076400000
+       MONTBL(11)="473376600000
+       MONTBL(12)="423134300000
+
+* CONVERT DAY AND YEAR TO INTEGER VARIABLES
+
+       CALL RTC (ICHAR,SYSDAT,1)
+       DECODE (1,110,ICHAR)ID1
+110    FORMAT  (I1)
+       CALL RTC (ICHAR,SYSDAT,2)
+       DECODE (1,110,ICHAR)ID2
+       CALL RTC (ICHAR,SYSDAT,8)
+       DECODE (1,110,ICHAR)ID3
+       CALL RTC (ICHAR,SYSDAT,9)
+       DECODE (1,110,ICHAR)ID4
+
+* CONVERT MONTH TO AN INTEGER VARIABLE
+       K=1
+       DO 120 I=4,6
+       CALL RTC (ICHAR,SYSDAT,I)
+       CALL STC (ICHAR,IMNTH,K)
+       K=K+1
+120    CONTINUE
+
+       DO 125 I=1,12
+            IF (IMNTH.EQ.MONTBL(I)) GO TO 130
+125    CONTINUE
+
+       TYPE 127,IMNTH
+127    FORMAT (5X,'ERROR!! SYSTEM RETURNED UNRECOGNIZABLE MONTH NAME: '
+     X,A5,/)
+       IERR=-1
+       GO TO 999
+
+* FINALLY PUT SYSTEM DATE INTO YYMMDD FORMAT.
+
+130    IDATE=ID3*100000+ID4*10000+I*100+ID1*10+ID2
+
+* FINISHED. RETURN
+
+999    RETURN
+       END
+
+****************************************************************
+
+       SUBROUTINE COMPMILE(AREA1,EXCHG1,XXXX1,AREA2,EXCHG2,MILAGE,
+     +                         ERROR,IDSITE,ICKTS)
+
+
+*  **      PROGRAM:       (ANALYSIS)MILES.FTF (originally)
+*  **      AUTHOR:        Rob Nielsen
+*  **      DATE:          May 27, 1986
+
+*  **      PURPOSE:       To return a value for mileage between 2 sites,
+*  **           given user supplied site id's or npa's and nnx's.
+
+*  **      OUTLINE:
+*  **
+*  **           1) The program prompts the user for
+*  **                a) whether to exit or run again
+*  **                b) whether he knows site or npa nnx
+*  **                c) site id or npa nnx for 1st site
+*  **                d) site id or npa nnx for 2nd site
+
+*  **           2) If sites are supplied, the program searches the data
+*  **                base (netstat)CKTS for npa's and nnx's
+
+*  **           3) The data base (dbtariff)LATA is searched for V and H
+
+*  **           4) Mileage is calculated from V and H coordinates
+
+       INTEGER AREA1, AREA2, EXCHG1, EXCHG2, SITNO1, SITNO2, RUNNO
+       INTEGER ERROR, RUNTYP,XXXX1,NNODE,idsite
+       LOGICAL EXIT
+       REAL MILAGE
+
+*           CALL DBSTRT(1,0,1,0,1,0,1,0,1,0,1,0)
+*           CALL DBERR(-1)
+
+* Check if data bases are missing or are being updated
+       CALL CHECKFILES (ERROR)
+
+       IDSITE = 0
+       IF (ICKTS .EQ. 1) GO TO 5010        
+       call ckts (sitno1, sitno2, area1, exchg1, area2,
+     +                      exchg2, error,idsite)
+
+* Initialize values for next run
+
+5010   SITNO1 = 0
+       SITNO2 = 0
+
+       MILAGE = 0.0
+       EXIT = .FALSE.
+       ERROR = 0
+
+* Get V and H coordinates from LATAS and compute miles
+       CALL LATA (AREA1, EXCHG1, AREA2, EXCHG2, MILAGE, ERROR)
+
+ 199   RETURN
+       END
+
+**********************  SUBROUTINE CHECKFILES  **********************
+
+*  **      This subroutine checks for nonexistent or updating data bases
+*  **         by trying to open them.
+
+       SUBROUTINE CHECKFILES (ERROR)
+              
+       INTEGER ERROR
+
+       ERROR = 0
+       OPEN (21, '(NETSTAT)CKTS.DMS', INPUT, ERR = 110)
+       CLOSE (21)
+       OPEN (21, '(DBTARIFF)LATA.DMS', INPUT, ERR = 110)
+       CLOSE (21)
+           
+       GOTO 199
+
+ 110   ERROR = 21
+
+       TYPE 200
+ 200   FORMAT(' DATABASE (NETSTAT)CKTS.DMS OR/AND'
+     +        ' (DBTARIFF)LATA.DMS NONEXISTENT OR BEING UPDATED',/,
+     +            ' EXECUTION CONTINUED')
+
+ 199   RETURN
+       END
+
+*********************** SUBROUTINE CKTS ****************************
+
+       SUBROUTINE CKTS (SITNO1, SITNO2, AREA1, EXCHG1, AREA2,
+     +                      EXCHG2, ERROR,IDSITE)
+
+       INTEGER AREA1, AREA2, EXCHG1, EXCHG2, SITNO1, SITNO2
+       INTEGER ERROR,idsite
+
+*  **      Subroutine CKTS, if called, takes a pair of sites
+*  **      (area1,nxx1) and returns THE SITE ID 
+**         If a site is not found, it assigns blank values to the 
+*  **      variable idsite.
+
+* Use Data Base (NETSTAT) CKTS
+
+       CALL DBSET(4)
+
+       CALL DBFIND('NPA1','EQ',AREA1,'AND','NXX1','EQ',EXCHG1)
+            
+       CALL DBGREC($110)
+
+       CALL DBVAL('SITE1',IDSITE)
+       GOTO 199
+
+ 110   CONTINUE
+       IDSITE=0
+
+ 199   CONTINUE
+
+       RETURN
+       END
+
+*********************************************************************
+
+       SUBROUTINE LATA (AREA1, EXCHG1, AREA2, EXCHG2, MILAGE,
+     +                      ERROR)
+
+       INTEGER AREA1, AREA2, EXCHG1, EXCHG2, ERROR
+       INTEGER HORIZ1, HORIZ2, VERT1, VERT2
+       REAL MILAGE, HDIFF, VDIFF
+
+
+*  **           Subroutine LATA finds a pair of VH coordinates for a
+*  **      given pair of npas and nnxs and then calculates the distance
+*  **      between the points. If an npa nnx combination is not found,
+*  **      it marks ERROR 11 if they are from point 1 and ERROR 12
+*  **      if they come from point 2.
+
+* Use Data Base (dbtariff)LATA
+       CALL DBSET(2)
+
+       CALL DBFIND('NPA','EQ',AREA1,'AND','NNX','EQ',EXCHG1)
+       CALL DBGREC($110)
+       CALL DBVAL('V',VERT1,'H',HORIZ1)
+
+ 115   CALL DBFIND('NPA','EQ',AREA2,'AND','NNX','EQ',EXCHG2)
+       CALL DBGREC($120)
+       CALL DBVAL('V',VERT2,'H',HORIZ2)
+
+       VDIFF = FLOAT (VERT2 - VERT1)
+       HDIFF = FLOAT (HORIZ2 - HORIZ1)
+       MILAGE = SQRT ((VDIFF**2 + HDIFF**2)/10.0)
+       GOTO 199
+
+ 110   ERROR = 11
+       GOTO 115
+ 120   ERROR = 12
+
+ 199   CONTINUE
+
+       RETURN
+       END
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                         C
+C                       PORTS ANALYSIS PROGRAM                            C
+C                            VERSION 6.0                                  C
+C                                                                         C
+C  AUTHOR : G.P. RAVIKUMAR                          SEPTEMBER 27, 1985    C
+C           MANAGEMENT SCIENCES                                           C
+C                                                                         C
+C  REVISED : K. CORCORAN, ROB NIELSEN               MAY 8, 1986           C
+C            MANAGEMENT SCIENCES                                          C
+C                                                                         C
+C                                                                         C
+C  THIS VERSION IS AN ENHANCEMENT OF VERSION 5.0, IN ORDER TO             C
+C  DISTINGUISH BETWEEN CARRIED AND OFFERED TRAFFIC AS AN INITIAL INPUT.   C
+C                                                                         C
+C                                                                         C
+C  THIS PROGRAM CALCULATES THE PGRADE FOR GIVEN CARRIED OR OFFERED        C
+C  TRAFFIC AND A GIVEN NUMBER OF PORTS USING THE ERLANG-B OR EXTENDED     C
+C  ERLANG-B FORMULAS.  CONVERSELY, FOR A SPECIFIED PGRADE LEVEL, IT CAN   C
+C  ALSO CALCULATE THE NUMBER OF PORTS REQUIRED TO ACHIEVE THIS LEVEL.     C
+C                                                                         C
+C                                                                         C
+C  TYPE OUT THE FILE (ANALYSIS:28) PORTS.DOC   FOR DOCUMENTATION ON HOW   C
+C  TO RUN THIS PROGRAM AND OTHER INFORMATION.                             C
+C                                                                         C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+       SUBROUTINE PORTS(NPRT,PGRADE,IHOURS,PKPRCT,PROMPT)
+
+       INTEGER CALLS, DAYHRS, CHOICE, OPTION, PORTS,PROMPT
+
+       DIMENSION PEAK(24,24)
+
+       DATA PEAK/100.,23*0.,
+     +0.,0.,22*0.,
+     +0.,0.,0.,21*0.,
+     +0.,0.,0.,0.,20*0.,
+     +27.,25.,22.,17.,9.,19*0.,
+     +23.,21.,19.,16.,13.,8.,18*0.,
+     +19.,18.,17.,16.,14.,9.,7.,17*0.,
+     +17.,16.,15.,14.,13.,12.,8.,5.,16*0.,
+     +17.,16.,14.,13.,12.,11.,9.,5.,3.,15*0.,
+     +16.,15.,14.,13.,12.,11.,8.,6.,3.,2.,14*0.,
+     +15.,14.,13.,12.,11.,10.,9.,6.,4.,3.,3.,13*0.,
+     +14.,13.,12.,12.,10.,9.,9.,6.,5.,4.,3.,3.,12*0.,
+     +14.,13.,12.,11.,10.,9.,8.,7.,6.,4.,3.,2.,1.,11*0.,
+     +13.,12.,12.,11.,10.,9.,8.,7.,6.,4.,3.,2.,2.,1.,10*0.,
+     +13.,12.,11.,11.,10.,9.,8.,7.,6.,4.,3.,2.,2.,1.,1.,9*0.,
+     +12.,12.,11.,11.,10.,9.,8.,7.,6.,5.,2.,2.,2.,1.,1.,1.,8*0.,
+     +192*0./
+
+       CHOICE=1H1
+       HOURS=FLOAT(IHOURS)
+
+       CALLS=1.
+       IF(PROMPT.EQ.0) GOTO 170
+
+ 79    TYPE 80
+ 80    FORMAT(' ENTER TOTAL CONNECT HOURS PER DAY: ->',$)
+       READ (5,45) HOURS
+ 45    FORMAT(G5)
+       IF (HOURS .LT. .0001) GOTO 79
+
+ 120   TYPE 130
+ 130   FORMAT (' ENTER THE PERCENTAGE OF CALLS THAT OCCURS'
+     +       ,/,' DURING THE HEAVIEST TRAFFIC HOUR OF THE DAY: ->',$)
+       READ (5,45) PKPRCT
+       IF (PKPRCT .GE. 4.17 .AND. PKPRCT .LE. 100.0) GO TO 170
+       TYPE 140
+ 140   FORMAT(' *** PERCENTAGE SHOULD BE BETWEEN 4.17 & 100 ***'/)
+       GO TO 120
+
+ 170   CONTINUE
+
+       OPTIME=0.0
+       OPCONN = CALLS * OPTIME/3600.
+
+       ERLANG = (HOURS+OPCONN)*(PKPRCT/100.)
+
+       IF (CHOICE .EQ. '2') GO TO 250
+
+* DETERMINE NUMBER OF LINES FOR A GIVEN PGRADE
+
+       GRADE=1.0
+
+ 220   GRADE=GRADE/100.0
+
+       IF (OPTION .EQ. '1') ERLANG=ERLANG/(1.0-GRADE)
+
+* ALGORITHM TO CALCULATE NUMBER OF LINES FOR A GIVEN PGRADE
+
+       NPRT1=1
+       PGRDE1=1.0
+ 230   PGRDE1 = (ERLANG*PGRDE1)/(FLOAT(NPRT1)+ERLANG*PGRDE1)
+       IF (PGRDE1.LE.GRADE) GO TO 240
+       NPRT1 = NPRT1+1
+       GO TO 230
+
+ 240   NPRT=NPRT1
+       PGRADE=PGRDE1*100.0
+       GO TO 330
+
+* DETERMINE PGRADE FOR A GIVEN NUMBER OF LINES AND GIVEN CARRIED TRAFFIC
+
+ 250   TYPE 260
+ 260   FORMAT (' ENTER NUMBER OF PORTS ',30X,': ',$)
+       READ (5,45) IPORTS
+       IF (IPORTS .LT. 1) GOTO 250
+       IF (OPTION .EQ. '2') GO TO 300
+       IF (IPORTS.GE.ERLANG) GO TO 264
+
+       TYPE 261
+ 261   FORMAT (' *** THE NUMBER OF PORTS SHOULD BE GREATER THAN',/,
+     +            '     THE NUMBER OF ERLANGS ***',/)
+
+       TYPE 262, ERLANG, IPORTS
+ 262   FORMAT (' *** YOU HAVE ENTERED ', F5.1, ' ERLANGS AND ',
+     +              I4, ' PORTS ***',/)
+
+       GO TO 250
+
+ 264   IF (IPORTS.EQ.0) GO TO 300
+       IF (ERLANG.EQ.0.0) GO TO 290
+       IF (ERLANG.GT.IPORTS) GO TO 250
+
+ 265   EPSLN=0.001
+
+       A=0.0
+       B=0.0
+       B=(IPORTS)/2.0
+ 270   B=2.0*B
+
+       CALL ESTMT(IPORTS, B, PGRDE4, NPRT4)
+       FCNVAL1=PGRDE4
+       FCNB=B*(1-FCNVAL1)-ERLANG
+
+       IF (FCNB.LT.0) GO TO 270
+       IF (B.GT.(IPORTS)) A=B/2.0
+
+ 280   C=(A+B)/2.0
+
+       CALL ESTMT(IPORTS, C, PGRDE4, NPRT4)
+       FCNVAL1=PGRDE4
+       FCNC=C*(1-FCNVAL1)-ERLANG
+
+       IF (FCNC.LT.0) A=C
+       IF (FCNC.GT.0) B=C
+       IF (FCNC.EQ.0) GO TO 290
+
+       IF (ABS(A-B).GT.EPSLN) GO TO 280
+
+ 290   IF (ERLANG.EQ.0.0) FCNVAL1=0
+
+       PGRDE2=FCNVAL1
+       NPRT=IPORTS
+       PGRADE=PGRDE2*100.0
+       GO TO 330
+
+* DETERMINE PGRADE FOR A GIVEN NUMBER OF LINES AND GIVEN OFFERED TRAFFIC
+
+ 300   NPRT3 = 0
+       PGRDE3 = 1.0
+ 310   IF (NPRT3.EQ.IPORTS) GO TO 320
+       NPRT3=NPRT3+1
+       PGRDE3=(ERLANG*PGRDE3)/(FLOAT(NPRT3)+ERLANG*PGRDE3)
+       GO TO 310
+
+ 320   NPRT=NPRT3
+       PGRADE=PGRDE3*100.0
+       GO TO 330
+
+* OUTPUT NUMBER OF PORTS AND PGRADE
+
+ 330   IF (OPTION .EQ. '2') GO TO 345
+
+       GO TO 20
+
+ 345   TYPE 346, NPRT,PGRADE
+ 346   FORMAT(///10X,'******************************************',
+     -             /10X,'*',40X,'*',
+     -             /10X,'*',9X,'NUMBER OF PORTS  = ',I5,7X,'*',
+     -             /10X,'*',40X,'*',
+     -             /10X,'*',9X,'EFFECTIVE PGRADE =', F5.1,' %',6X,'*',
+     -             /10X,'*',40X,'*',
+     -             /10X,'*',9X,'(GIVEN OFFERED TRAFFIC)',8X,'*',
+     -             /10X,'*',40X,'*',
+     -             /10X,'******************************************'//)
+
+       GO TO 20
+
+ 20    RETURN
+       END
+
+*****************************************************************
+
+*  THIS SUBROUTINE ESTIMATES OFFERED TRAFFIC
+
+       SUBROUTINE ESTMT(IPORTS, ERL, PGRDE4, NPRT4)
+
+       NPRT4=0
+       PGRDE4=1.0
+ 350   IF (NPRT4.EQ.IPORTS) GO TO 360
+            NPRT4=NPRT4+1
+            PGRDE4=(ERL*PGRDE4)/(FLOAT(NPRT4)+ERL*PGRDE4)
+            GO TO 350
+ 360   PGRDE4=PGRDE4
+
+       RETURN
+       END
+
+***************************************************************************
+
+       SUBROUTINE SCREEN1(ITTY)
+
+       INTEGER MODE
+
+ 1000  CALL CLEAR(ITTY)
+
+       DO 1 I=1,5
+ 1          TYPE 100
+
+ 100   FORMAT(' ')  
+
+       TYPE 110
+ 110   FORMAT(6X,'   ****************************************** ',/,
+     1      6X,  '   *                                          *',/,
+     1      6X,  '   *  WELCOME    TO    THE    EOQ    PROGRAM  *',/,
+     1      6X,  '   *                                          *',/,
+     1      6X,  '   *                                          *',/,      
+     1      6X,  '   *    FOR    LOCAL    ROTARY    UPGRADE     *',/,
+     1      6X,  '   *                                          *',/,
+     1      6X,  '   *                                          *',/,
+     1      6X,  '   *               VERSION 1.0                *',/,
+     1      6X,  '   ********************************************')
+
+       type 100
+       TYPE 100
+
+*       TYPE 200
+*200    FORMAT('  press any key to continue '$)
+
+*       READ(5,300,ERR=1100)MODE
+* 300   FORMAT(a1)
+
+ 1100  RETURN
+       END
+
+********************************************************************
+
+       SUBROUTINE DSPINF(NPA,NXX,XXXX,CITY,ST,NNODE,
+     +                     IDSITE,MILES,NPORTS,ICNCTD,
+     +                     PERCENT,CONCT,HORIZ,MAP,IMONTH,PILOT,ITTY,
+     +                     P1,P2,P3,NPA2,NXX2,ICKTS,
+     +                     FECITY, FEST,INFL2)
+
+* This subroutine shows the valuess of the parameters and 
+* and allows the user to change entries if desired
+
+       INTEGER NPA,NXXX,XXXX,IDSITE,MILES,CITY(4),CONCT(12)
+       INTEGER MAP(12),HORIZ,PILOT(3), INODE(10)
+       INTEGER FECITY(3), FEST, FEPIL(3)
+       INTEGER IARRY(12)
+
+11     CONTINUE
+
+       CALL CLEAR(ITTY)
+
+       TYPE 5,PILOT(1),PILOT(2),PILOT(3)
+ 5     FORMAT('       CURRENT VALUES FOR PILOT: ',3A5,/)
+
+       TYPE 40, CITY(1),CITY(2),CITY(3),CITY(4),ST
+ 40    FORMAT('  1. CITY:',4A5,4X,'   2. STATE: ',A3,/)
+
+       IF(IDSITE.EQ.0) SITE='   '
+       IF(IDSITE.NE.0) ENCODE(4,562,SITE)IDSITE
+ 562   FORMAT(I4)
+
+C       TYPE 60, NNODE,SITE
+C 60    FORMAT('  3. NODE:',I5,18X,'    4. SITE ID: ',A4,/)
+
+       DO 919 II = 1, 10
+            INODE(II) = 0
+            IARRY(II) = '     '
+919    CONTINUE
+
+       IARRY(7) = PILOT(1)
+       IARRY(8) = PILOT(2)
+       IARRY(9) = PILOT(3)
+       IARRY(4) = 'EQ'
+       IARRY(1) = 'PILOT'
+
+       CALL DBSET(3)
+       CALL DBFIND('FIX.',3,3,IARRY)
+
+       II = 1
+93     CALL DBGREC($99)
+       CALL DBVAL('NODE',ITNODE)
+       IF (ITNODE .EQ. INODE(II)) GO TO 93
+       IF (INODE(II) .NE. 0) II = II + 1
+       INODE(II) = ITNODE
+       GO TO 93
+
+99     II = 1
+
+97     IF (INODE(II) .EQ. 0) GO TO 102
+       ENCODE(5,13,IARRY(II)) INODE(II)
+13     FORMAT(I5)
+       II = II + 1
+       GO TO 97
+
+102    DO 19 JJ = II,10
+            IARRY(JJ) = '     '
+19     CONTINUE
+
+       TYPE 25, (IARRY(I),I=1,3), SITE, (IARRY(I),I=4,6)
+25     FORMAT('  3. NODE(S):',3(A5,1X),2X,'    4. SITE ID: ',
+     +        A4,/,13X,3(A5,1X))
+       
+       TYPE 80, MILES,NPORTS,(FECITY(I),I=1,3),FEST
+ 80    FORMAT('  5. FE(S) TRAVELING DIST.:',I5,5X,
+     +         '6. CURRENT NO. OF PORTS:',I5,/,
+     +         5X,'FE CITY, STATE: ',3A5,A3,/)
+
+C       TYPE 90, NPORTS
+C 90    FORMAT('  6. CURRENT NUMBER OF PORTS: ',I5,/)
+
+       TYPE 100, ICNCTD
+ 100   FORMAT('  7. CURRENT NUMBER OF CONNECT HOURS:',G5,/) 
+       TYPE 110, PERCENT
+ 110   FORMAT('  8. CURRENT PERCENTAGE OF CALLS DURING',/,
+     +         '     HEAVIEST TRAFFIC HOUR OF DAY       :',F5.1,/)
+       TYPE 120
+ 120   FORMAT('  9. FORECAST')
+
+       IBOUND=HORIZ/2
+       IF(IBOUND*2.NE.HORIZ)IBOUND=IBOUND+1
+
+       DO 456 I=1,IBOUND
+            I2=I+IBOUND
+            J=I+IMONTH
+            IF(J.GT.12) J=J-12
+            J2=I2+IMONTH
+            IF(J2.GT.12) J2=J2-12    
+
+            IF(I.NE.IBOUND) GOTO 569
+            IF(IBOUND.EQ.HORIZ/2) GOTO 569
+
+            TYPE 568, MAP(J),CONCT(I)
+ 568        FORMAT(10X,A3,4X,I4)
+            GOTO 456
+
+  569        TYPE 564, MAP(J),CONCT(I),
+     +              MAP(J2),CONCT(I2)
+ 564         FORMAT(10X,A3,4X,I4,
+     +              4X,A3,4X,I4)
+ 456   CONTINUE
+
+       TYPE 190
+ 190   FORMAT(/,' SELECT THE PARAMETER TO BE CHANGED:',/,
+     +            '                   0 FOR NO CHANGES ->',$)
+
+       READ(5,210,ERR=11) IRES
+ 210   FORMAT(I1)
+
+       IF(IRES.GE.10) GOTO 11
+       IF(IRES.LE.0) GOTO 9999
+
+       GOTO(401,402,403,404,405,406,407,408,409) IRES
+
+ 401   TYPE 504
+ 504   FORMAT(' ENTER NEW CITY: ->',$)
+       READ(5,604,ERR=401) CITY(1),CITY(2),CITY(3),CITY(4)
+ 604   FORMAT(4A5)
+       GOTO 11
+
+ 402   TYPE 505
+ 505   FORMAT(' ENTER NEW STATE: ->',$)
+       READ(5,605,ERR=402) ST
+ 605   FORMAT(A5)
+       GOTO 11
+
+ 403   TYPE 506
+ 506   FORMAT(' ENTER NEW NODE: ->',$)
+       READ(5,606,ERR=403) NNODE
+ 606   FORMAT(I4)
+       GOTO 11
+
+ 404   TYPE 507
+ 507   FORMAT(' ENTER NEW SITE ID: ->',$)
+       READ(5,607,ERR=404) IDSITE
+ 607   FORMAT(I4)
+
+       CALL DBSET(1)
+
+       CALL DBFIND('NPA','EQ',P1,'AND','NXX','EQ',P2,'AND','XXXX'
+     +              ,'EQ',P3)
+
+       CALL DBGREC($4002,1)
+
+       CALL DBCHNG('SITEID',IDSITE)
+
+4002   CONTINUE
+
+       GOTO 11
+
+ 405   CONTINUE
+
+ 1203  TYPE 1200
+ 1200  FORMAT(' DO YOU WANT TO ENTER                   ',//,
+     +        '          1. A NEW FE SITE PILOT NUMBER?',/,
+     +        '          2. THE ACTUAL TRAVELING DISTANCE? ->',$)
+
+       READ(5,1201,ERR=1203) IRESP
+ 1201  FORMAT(I1)
+        
+       IF(IRESP.LE.0.OR.IRESP.GE.3) GOTO 1203
+       IF (IRESP .EQ. 1) GO TO 2202
+
+ 416   TYPE 508
+ 508   FORMAT(' ENTER NEW FE TRAVELING DISTANCE: ->',$)
+       READ(5,608,ERR=416) MILES
+ 608   FORMAT(I5)
+       GOTO 415
+
+ 2202  TYPE 2301
+ 2301  FORMAT(' ENTER NEAREST FE PILOT NUMBER:-> ',$)
+
+       READ(5,2310,ERR = 2202) NPA2,NXX2
+ 2310  FORMAT(I3,I3)
+
+* CALL SUBROUTINE TO COMPUTE MILEAGE TO NEAREST FE
+
+       ZZ=0.0
+       IERROR=0
+       CALL COMPMILE(NPA,NXX,XXXX,NPA2,NXX2,ZZ,IERROR,
+     +                IDSITE,ICKTS)
+
+       IF(IERROR.EQ.0) GO TO 7
+       CALL CLEAR(ITTY)
+ 224   TYPE 222
+ 222   FORMAT(' THE NUMBER WAS NOT FOUND IN THE DATABASE',/,
+     +         '                                         ',/,
+     +         '                    1.REENTER THE NUMBER?',/,
+     +         '  DO YOU WANT TO:   2.IGNORE THE MESSAGE?',/,
+     +         '                    3.EXIT              ?  ->',$)
+       READ(5,223,ERR=224) IRESP
+ 223   FORMAT(I1)
+         
+       IF(IRESP.EQ.1)      GOTO 2202
+       IF(IRESP.EQ.2)      GOTO 7
+       IF(IRESP.EQ.3)      STOP
+
+ 7     MILES=IFIX(ZZ)
+
+* USING FILE FEMILE
+
+ 415   CONTINUE
+
+       CALL PILOTS(NPA2, NXX2, NPA, FEPIL)
+       CALL STC(' ', FEPIL,8)
+       CALL STC(' ',FEPIL,9)
+       CALL STC(' ',FEPIL,10)
+
+       DO 692 II = 1,3
+           FECITY(II) = '     '
+692    CONTINUE
+
+       DO 701 II = 1, 12
+            IARRY(II) = '     '
+701    CONTINUE
+
+       IARRY(1) = 'PILOT'
+       IARRY(3) = 'CT'
+       IARRY(5) = FEPIL(1)
+       IARRY(6) = FEPIL(2)
+
+       CALL DBSET(3)
+       CALL DBFIND('FIX.',2,3,IARRY)
+       CALL DBGREC($707)
+
+       DO 706 II = 1,12
+            IARRY(II) = '     '
+706    CONTINUE
+
+       IARRY(1) = 'NCITY'
+       CALL DBVAL('FIX.',4,2,IARRY)
+       CALL DBVAL('NSTATE',FEST)
+
+       DO 711 II = 1,3
+            FECITY(II) = IARRY(II + 4)
+711    CONTINUE
+707    CONTINUE
+
+       CALL DBSET(1)
+
+       CALL DBFIND('NPA','EQ',P1,'AND','NXX','EQ',P2,'AND','XXXX'
+     +              ,'EQ',P3)
+
+       CALL DBGREC($4000,1)
+
+       CALL DBCHNG('FENPA',NPA2,'FENXX',NXX2,'FEMILES',
+     +             MILES,'FESTATE',FEST)
+
+       DO 716 II = 1,12
+            IARRY(II) = '     '
+716    CONTINUE
+
+       IARRY(1) = 'FECIT'
+       IARRY(2) = 'Y'
+       DO 721 II = 1,3
+            IARRY(II + 4) = FECITY(II)
+721    CONTINUE
+
+       CALL DBCHNG('FIX.',4,2,IARRY)
+
+ 4000  CONTINUE
+
+       GOTO 11
+
+ 406   TYPE 509
+ 509   FORMAT(' ENTER NEW CURRENT NUMBER OF PORTS: ->',$)
+       READ(5,609,ERR=406) NPORTS
+ 609   FORMAT(I5)
+       GOTO 11
+
+ 407   TYPE 510
+ 510   FORMAT(' ENTER NEW CURRENT NUMBER OF CONNECT ',
+     +        'HOURS PER DAY: ->',$)
+       READ(5,610,ERR=407) ICNCTD
+ 610   FORMAT(G4)
+
+ 2051  FORMAT(G4)
+
+* The forecast for month 1 has to be recomputed
+
+       CONCT(1)=IFIX(FLOAT(CONCT(2)+ICNCTD)/2.0)    
+
+* COMPUTING THE NUMBER OF PORTS CURRENTLY NEEDED
+
+       MODE=0
+       CALL PORTS(INTPRT,PA,ICNCTD,PERCENT,MODE)
+       GOTO 11
+
+ 408   TYPE 511
+ 511   FORMAT(' ENTER NEW PERCENTAGE FOR PEAK HOUR: ->',$)
+       READ(5,611,ERR=408) PERCENT
+ 611   FORMAT(G4)
+       GOTO 11
+
+ 409   CALL NEWFRT(CONCT,ICNCTD,IMONTH,MAP,ITTY,INFL2)
+       GOTO 11
+
+ 9999  CONTINUE
+
+       RETURN
+       END
+
+**************************************************************
+
+       SUBROUTINE COMBI(FREQ,HORIZ,ITTY,GROWTH)
+
+* This subroutine displays the possible combinations of review
+* frequency- horizon period and prompst the user for a choice.
+
+       INTEGER FREQ,HORIZ
+       DIMENSION GROWTH(12)
+
+100    CALL CLEAR(ITTY)
+
+       TYPE 1
+1      FORMAT(//,'     FREQUENCY OF REVIEW - HORIZON PERIOD',
+     +        ' COMBINATIONS ALLOWED')
+
+       TYPE 2
+2      FORMAT(///,
+     +  ' CHOICE     FREQENCY (MONTHS)    HORIZON(MONTHS)',/,
+     +  ' ------     -----------------     --------------',/,
+     +  '     1.            3                   6        ',/,
+     +  '     2.            3                   9        ',/,
+     +  '     3.            3                  12        ',/,
+     +  '     4.            4                   8        ',/,
+     +  '     5.            4                  12        ',/,
+     +  '     6.            6                  12        ')
+    
+       TYPE 500, GROWTH(6),GROWTH(12)
+ 500   FORMAT(//,' GROWTH FORECAST FOR NEXT  6 MONTHS: ',F6.1,'%',/,
+     +           ' GROWTH FORECAST FOR NEXT 12 MONTHS: ',F6.1,'%')
+       TYPE 1030
+ 1030  FORMAT(//,' ENTER THE COMBINATION CHOICE:  ->',$)
+       READ(5,1031,ERR=100)IRES
+ 1031  FORMAT(I2)
+
+       IF(IRES.EQ.1) GOTO 10
+       IF(IRES.EQ.2) GOTO 20
+       IF(IRES.EQ.3) GOTO 30
+       IF(IRES.EQ.4) GOTO 40
+       IF(IRES.EQ.5) GOTO 50
+       IF(IRES.EQ.6) GOTO 60
+       GOTO 100
+
+10     FREQ=3
+       HORIZ=6
+       GOTO 9999
+
+20     FREQ=3
+       HORIZ=9
+       GOTO 9999
+
+30     FREQ=3
+       HORIZ=12
+       GOTO 9999
+
+40     FREQ=4
+       HORIZ=8
+       GOTO 9999
+
+50     FREQ=4
+       HORIZ=12
+       GOTO 9999
+
+60     FREQ=6
+       HORIZ=12
+
+9999   CONTINUE
+      
+       RETURN
+       END    
+
+***************************************************************
+
+       SUBROUTINE ROTINF(NNPA,NNXX,NXXXX,NODE,CITY,
+     +        STATE,NOPRT,P1,P2,P3,PILOT,INFLAG)
+
+* This subroutine takes as an input the npa , nxx and xxxx numbers
+* of a rotary and transforms them into a string in pilot(3).
+* The (newprt)ports database is searched for the record and information
+* such as node city and state are returned.
+
+       DIMENSION ARRY(10), IPTR(5), CITY(4)
+       INTEGER PILOT(3)
+
+       NODE = 0
+       OPEN (21, '(NEWPRT)PORTS.DMS', INPUT, ERR = 5000)
+       CLOSE (21)
+
+ 680   CALL DBSET(3)
+
+* CONVERT PILOT NUMBER FROM NUMBER TO CHARACTER
+* FOR NOW, READ IN AS CHARACTERS
+
+       DO 3005 I = 1, 10
+ 3005       ARRY(I) = '     '
+   
+* Converting npa,nxx,xxxx into a string in array pilot
+
+*       CALL PILOTS(NNPA,NNXX,NXXXX,PILOT)
+
+       SLASH='/'
+       HYPHEN='-'
+
+       DO 545 I=1,3
+            CALL RTC(DUMMY,P1,I)
+            CALL STC(DUMMY,PILOT,I)
+ 545   CONTINUE
+
+       CALL STC(SLASH,PILOT,4)
+       DO 546 I=1,3
+            CALL RTC(DUMMY,P2,I)
+            CALL STC(DUMMY,PILOT,4+I)
+ 546   CONTINUE
+            CALL STC(HYPHEN,PILOT,8)
+       DO 547 I=1,4
+            CALL RTC(DUMMY,P3,I)
+            CALL STC(DUMMY,PILOT,8+I)
+ 547   CONTINUE
+
+       DO 550 I=1,15
+            CALL RTC(DUMMY,PILOT,I)
+            CALL STC(DUMMY,ARRY,30+I)
+ 550   CONTINUE
+   
+       ARRY(1) = 'PILOT'
+       ARRY(4) = 'EQ'
+
+       CALL DBFIND('FIX.',3,3,ARRY)
+       call DBSRCH('MODEM','ne','MPVC')
+
+       NOPRT = 0
+       CALL DBNREC(NOPRT)
+
+       CALL DBGREC($5050,1)
+
+       DO 15 I = 1, 4
+ 15         CITY(I) = '     '
+
+       DO 12 I = 1,10
+ 12         ARRY(I) = '     '
+
+       CALL DBVAL('NSTATE', STATE, 'NODE', NODE)
+
+       ARRY(1) = 'NCITY'
+       ARRY(5) = CITY(1)
+       ARRY(6) = CITY(2)
+       ARRY(7) = CITY(3)
+       ARRY(8) = CITY(4)
+       CALL DBVAL('FIX.',4,2,ARRY)
+
+       DO 300 I = 1, 4
+ 300        CITY(I) = ARRY(I+4)
+
+       GOTO 5200
+
+ 5000  IF (INFLAG .EQ. 2) GO TO 5200
+       type 5100
+ 5100  format(' could not open file (newprt)ports')
+
+       GOTO 5200
+
+ 5050  IF (INFLAG .EQ. 2) GO TO 5200
+       TYPE 5070
+ 5070  FORMAT(' RECORD NOT FOUND IN PORTS DATABASE',/)
+
+ 5200  return
+       end
+      
+**************************************************************
+
+       subroutine pilots(npa,nxx,xxxx,PILOT)
+
+* This subroutine takes npa, nxx and xxxx as an input and
+* stores them as a character string in the array pilot
+* (left adjusted).
+
+       INTEGER   PILOT(3),INU(3)
+       INTEGER   XXXX
+
+       SLASH='/'
+       HYPHEN='-'
+
+       ENCODE(3,5100,INU(1))  NPA
+       ENCODE(3,5100,INU(2))  NXX
+       ENCODE(4,5200,INU(3))  XXXX
+
+ 5100  FORMAT(I3)
+ 5200  FORMAT(I4)
+
+       CALL RTC(DUMMY,INU(1),1)
+       CALL STC(DUMMY,PILOT,1)
+
+       CALL RTC(DUMMY,INU(1),2)
+       CALL STC(DUMMY,PILOT,2)
+  
+       CALL RTC(DUMMY,INU(1),3)
+       CALL STC(DUMMY,PILOT,3)
+
+       CALL STC(SLASH,PILOT,4)
+
+       CALL RTC(DUMMY,INU(2),1)
+       CALL STC(DUMMY,PILOT,5)
+
+       CALL RTC(DUMMY,INU(2),2)
+       CALL STC(DUMMY,PILOT,6)
+  
+       CALL RTC(DUMMY,INU(2),3)
+       CALL STC(DUMMY,PILOT,7)
+
+       CALL STC(HYPHEN,PILOT,8)
+
+       CALL RTC(DUMMY,INU(3),1)
+       CALL STC(DUMMY,PILOT,9)
+
+       CALL RTC(DUMMY,INU(3),2)
+       CALL STC(DUMMY,PILOT,10)
+  
+       CALL RTC(DUMMY,INU(3),3)
+       CALL STC(DUMMY,PILOT,11)
+
+       CALL RTC(DUMMY,INU(3),4)
+       CALL STC(DUMMY,PILOT,12)
+
+       RETURN
+       END
+
+************************************************************
+
+* SUBROUTINE FEMILE - TO FIND MILEAGE OF CLOSEST FE
+
+       SUBROUTINE FEMILE(NNPA,NNXX,NXXXX,NMILES,IDSITE,ITTY,
+     +                     P1,P2,P3,NPA2,NXX2,ICKTS,INFLAG,
+     +                     FECITY, FEST)
+
+* THIS SUBROUTINE  ACCESSES THE FILE (NETENG)FEMILE.DMS
+* LOOK FOR THE ROTARY UNDER REVIEW AND EXTRACT THE MILEAGE
+* TO CLOSESTS LOCATION. IF RECORD IS NOT FOUND IT IS
+* APPENDED TO THE FILE.
+
+* START DATABASE OPERATIONS; OPEN DATA FILE
+*        OPEN(V21,'(NETENG)FEMILES.DMS',INPUT,ERR=2201)
+*        CLOSE(21)
+
+       dimension CITY(3), FECITY(3), PIL1(3)
+       dimension FEPIL(3), ARRY(12), ARRY2(12)
+       integer ST, FEST
+
+       CALL DBSET(1)
+
+* SEARCH FOR GIVEN PILOT NUMBER
+
+C         CALL DBFIND('NPA','EQ',NNPA,'AND','NXX','EQ',NNXX,'AND',
+C     X        'XXXX','EQ',NXXXX)
+
+       CALL DBFIND('NPA','EQ',P1,'AND','NXX','EQ',P2,'AND',
+     X               'XXXX','EQ',P3)
+
+       CALL DBGREC($2201,1)
+
+       CALL DBVAL('FENPA',NPA2,'FENXX',NXX2,'FEMILES',NMILES,
+     X        'SITEID',IDSITE, 'FESTATE',FEST)
+
+       DO 991 II = 1, 10
+            ARRY(II) = '     '
+991    CONTINUE
+
+       ARRY(1) = 'FECIT'
+       ARRY(2) = 'Y'
+
+       CALL DBVAL('FIX.',3,2,ARRY)
+       DO 993 II = 1, 3
+            FECITY(II) = ARRY(II+3)
+993    CONTINUE
+       
+       GOTO 2400
+
+* IF VALUES ARE NOT FOUND, PROMPT USER FOR NEAREST FE PILOT NUMBER
+ 2201  CONTINUE
+       IF (INFLAG .EQ. 1) GO TO 2202
+       NPA2 = 0
+       NXX2 = 0
+       NMILES = 0
+       GO TO 2380
+
+ 2202  TYPE 2301
+ 2301  FORMAT(' ENTER NEAREST FE PILOT NUMBER ',/,
+     +         '           0 IF SITE IS MANNED:-> ',$)
+       READ(5,2310,ERR = 2202) NPA2,NXX2
+ 2310  FORMAT(I3,I3)
+
+       IF (NPA2 .NE. 0) GOTO 5
+
+       NPA2 = NNPA
+       NXX2 = NNXX
+       NMILES = 0
+C       GOTO 10
+
+* CALL SUBROUTINE TO COMPUTE MILEAGE TO NEAREST FE
+
+ 5     ZZ=0
+       IERROR=0
+       CALL COMPMILE(NNPA,NNXX,NXXXX,NPA2,NXX2,ZZ,IERROR,
+     +                IDSITE,ICKTS)
+
+       IF(IERROR.EQ.0) GO TO 7
+       CALL CLEAR(ITTY)
+ 224   TYPE 222
+ 222   FORMAT(' THE NUMBER WAS NOT FOUND IN THE DATABASE',/,
+     +         '                                         ',/,
+     +         '                    1.REENTER THE NUMBER?',/,
+     +         '  DO YOU WANT TO:   2.IGNORE THE MESSAGE?',/,
+     +         '                    3.EXIT              ?  ->',$)
+       READ(5,223,ERR=224) IRESP
+ 223   FORMAT(I1)
+         
+       IF(IRESP.EQ.1)      GOTO 2202
+       IF(IRESP.EQ.2)      GOTO 7
+       IF(IRESP.EQ.3)      STOP
+
+ 7     NMILES=IFIX(ZZ)
+
+ 10    CONTINUE
+
+       CALL DBSET(1)
+
+       CALL DBADD('NPA',P1,'NF1','/','NXX',P2,'NF2','-','XXXX',
+     +        P3,'FENPA',NPA2,'NF3','/','FENXX',NXX2,'FEMILES',
+     +        NMILES,'SITEID',IDSITE)
+
+       CALL PILOTS(NNPA, NNXX, NXXXX, PIL1)
+       CALL PILOTS(NPA2, NXX2, NXXXX, FEPIL)
+
+       DO 301 II = 1, 10
+            ARRY(II) = '     '
+            ARRY2(II) = '     '
+301    CONTINUE
+
+       DO 305 II = 1, 3
+            CITY(II) = '     '
+            FECITY(II) = '     '
+305    CONTINUE
+
+       ARRY(1) = 'PILOT'
+       ARRY(4) = 'EQ'
+       ARRY(7) = PIL1(1)
+       ARRY(8) = PIL1(2)
+       ARRY(9) = PIL1(3)
+
+       ARRY2(1) = 'PILOT'
+       ARRY2(4) = 'CT'
+       ARRY2(7) = FEPIL(1)
+       ARRY2(8) = FEPIL(2)
+       CALL STC(' ',ARRY2,38)
+       CALL STC(' ',ARRY2,39)
+       CALL STC(' ',ARRY2,40)
+
+       CALL DBSET(3)
+       CALL DBFIND('FIX.',3,3,ARRY)
+       CALL DBGREC($320)
+
+       DO 309 II = 1,10
+            ARRY(II) = '     '
+309    CONTINUE
+
+       ARRY(1) = 'NCITY'
+       CALL DBVAL('FIX.',4,2,ARRY)
+       CALL DBVAL('NSTATE',ST)
+
+320    CALL DBSET(3)
+       CALL DBFIND('FIX.',3,3,ARRY2)
+       CALL DBGREC($318)
+
+       DO 314 II = 1, 10
+            ARRY2(II) = '     '
+314    CONTINUE
+
+       ARRY2(1) = 'NCITY'
+       CALL DBVAL('FIX.',4,2,ARRY2)
+       CALL DBVAL('NSTATE',FEST)
+
+318    DO 319 II = 1, 3
+           CITY(II) = ARRY(II + 4)
+           FECITY(II) = ARRY2(II + 4)
+319    CONTINUE
+
+       CALL DBSET(1)
+
+       CALL DBFIND('NPA','EQ',P1,'AND','NXX','EQ',P2,
+     +             'AND','XXXX','EQ',P3)
+       CALL DBGREC($2380)
+
+       DO 324 II = 1, 10
+            ARRY(II) = '     '
+            ARRY2(II) = '     '
+324    CONTINUE
+
+       ARRY(1) = 'CITY'
+       ARRY2(1) = 'FECIT'
+       ARRY2(2) = 'Y'
+
+       DO 329 II = 1, 3
+            ARRY(II + 3) = CITY(II)
+            ARRY2(II + 3) = FECITY(II)
+329    CONTINUE
+
+       CALL DBCHNG('FIX.',3,2,ARRY)
+       CALL DBCHNG('FIX.',3,2,ARRY2)
+       CALL DBCHNG('STATE',ST,'FESTATE',FEST)
+
+* CLOSE FILES
+
+ 2380  CONTINUE
+
+ 2400  RETURN
+       END
+
+******************************************************************
+
+* SUBROUTINE AVEPEAK - TO FIND AVERAGE PERCENTAGE TOTAL TRAFFIC
+
+       SUBROUTINE AVEPEAK(NNPA,NNXX,NXXXX,NAVEPER)
+
+*  This subroutine acccesses the file (NETENG)eoq.inf and searches
+*  for the percentage of calss that occurs during the heaviest
+*  traffic hour.
+
+       INTEGER NNPA,NNXX,NXXXX
+       REAL NAVEPER
+
+* LITERAL CONSTANTS
+
+       LCPILOT = 'OT # '
+       LCAVE = 'BUSIN'
+
+* INITIALIZE AVERAGE PERCENTAGE VARIABLE TO 0
+
+       NAVEPER = 0.0
+
+* OPEN FILE 
+
+       OPEN (25, '(NETENG)EOQ.INF', INPUT,ERR=1043)
+
+* READ, CONVERT, SEARCH FOR CORRECT PILOT NUMBER
+
+ 705   READ(25,710,END = 805) FILL1,RPILOT,RNPA,FILL2,RNXX,FILL3,RXXXX
+ 710   FORMAT(A63,A5,A3,A1,A3,A1,A4)
+
+* IF WRONG LINE OF REPORT OR IF PILOT NUMBER DOES NOT MATCH
+
+       IF (.NOT. EQ(RPILOT,1,LCPILOT,1,5)) GO TO 705
+
+       ENCODE(3,711,CNPA)NNPA
+       IF (.NOT. EQ(RNPA,1,CNPA,1,3)) GO TO 705
+
+       ENCODE(3,711,CNXX)NNXX
+       IF (.NOT. EQ(RNXX,1,CNXX,1,3)) GO TO 705
+
+       ENCODE(4,707,CXXXX)NXXXX
+       IF (.NOT. EQ(RXXXX,1,CXXXX,1,4)) GO TO 705
+
+ 711   FORMAT(I3)
+ 707   FORMAT(I4)
+
+
+* FOUND CORRECT PILOT NUMBER, FIND AVERAGE PERCENTAGE
+
+ 715   READ(25,720,END = 810) RAVE,FILL4,RAVEPER,FILL5
+ 720   FORMAT(A5,A57,A4,A14)
+
+       IF (.NOT. EQ(RAVE,1,LCAVE,1,5)) GO TO 715
+
+* FOUND AVERAGE PERCENTAGE, SET VARIABLE VALUE
+
+       DECODE(4,801,RAVEPER)NAVEPER
+ 801   FORMAT(F4.1)
+
+       GOTO 810
+
+* IF VALUE IS NOT FOUND, PROMPT USER FOR NAVEPER
+ 805   CONTINUE
+       GOTO 1044
+
+ 1043  TYPE 1046
+ 1046  FORMAT(' FILE EOQ.INF NOT ACCESSED')
+
+ 1044  TYPE 1045
+ 1045  FORMAT(
+     +  ' ENTER THE PERCENTAGE OF CALL THAT OCCURS DURING',/,
+     +  ' THE HEAVIEST TRAFFIC HOUR OF THE  DAY:         ->',$)
+       READ(5,809,ERR=1044) NAVEPER
+ 809   FORMAT (F4.1)
+ 
+* EXIT OUT OF SUBROUTINE
+ 810   CLOSE(25)
+       RETURN
+       END
+
+***************************************************
+
+       SUBROUTINE NEWFRT(CONCT,ICNCTD,IMONTH,MAP,ITTY,INFL2)
+      
+* This subroutine updates the forecast either by a linear growhth for
+* the connect hours or point by point
+
+       INTEGER CONCT(12),MAP(12), INFL2
+
+       CALL CLEAR(ITTY)
+
+ 4     TYPE 1
+ 1     FORMAT(' HOW DO YOU WANT TO UPDATE THE FORECAST?',/,     
+     +         '                     1.  A CONSTANT GROWTH MODEL',/,
+     +         '                     2.  MONTH BY MONTH         ',/,
+     +         '                     3.  ENTER A SINGLE POINT   ',
+     +         '->',$)
+
+ 3     READ(5,2,ERR=3)IRESP
+ 2     FORMAT(I1)
+
+       IF(IRESP.EQ.2) GOTO 20
+       IF(IRESP.EQ.1) GOTO 10
+       IF(IRESP.EQ.3) GOTO 30
+       GOTO 4
+
+ 10    TYPE 11
+ 11    FORMAT('  ENTER GROWTH RATE (EXAMPLE 22 FOR 22%): ->',$)
+       INFL2 = 3
+
+       READ(5,12,ERR=10) RATE
+ 12    FORMAT(F2.0)
+
+       IHOUR=IFIX(((100.0+RATE)*FLOAT(ICNCTD))/100.0)
+
+ 15    TYPE 13
+ 13    FORMAT('  ENTER MONTH OF FORECAST (EXAMPLE FEB): -> ',$)
+       READ(5,14,ERR=15) NEXMON
+ 14    FORMAT(A3)
+          
+       DO 16 I=1,12
+            IF(MAP(I).NE.NEXMON) GOTO 16
+            JJ=I-IMONTH
+            IF(JJ.LE.0) JJ=JJ+12
+            GOTO 17
+ 16    CONTINUE
+       GOTO 15
+
+ 17    DO 18 I=1,12
+            CONCT(I)=0
+ 18    CONTINUE
+
+       CONCT(JJ)=IHOUR
+
+       CALL LNFRT(CONCT,ICNCTD)
+
+       GOTO 9999
+
+ 20    CONTINUE
+
+       INFL2 = 4
+       DO 21 I=1,12
+            J=IMONTH+I
+            IF(J.GT.12) J=J-12         
+ 23         TYPE 22, MAP(J),CONCT(I)
+ 22         FORMAT(' CONNECT HOURS FORECASTED FOR ',A3,' :',I4,/,
+     +          ' ENTER THE NEW VALUE (CR FOR SAME VALUE): ->',$)
+            READ(5,489,ERR=23) DUMMY
+ 489        FORMAT(A4)
+            IF(DUMMY.LE.'0'.OR.DUMMY.GT.'10000000') GOTO 21           
+            DECODE(4,24,DUMMY)CONCT(I)
+ 24         FORMAT(I4)
+ 21    CONTINUE
+
+       GOTO 9999
+
+ 30    TYPE 13
+       INFL2 = 5
+
+       READ(5,14,ERR=30)NEXMON
+
+       DO 36 I=1,12
+            IF(MAP(I).NE.NEXMON) GOTO 36
+            JJ=I-IMONTH
+            IF(JJ.LE.0) JJ=JJ+12
+            GOTO 37
+ 36    CONTINUE
+       GOTO 30
+     
+ 37    DO 38 I=1,12
+            CONCT(I)=0
+ 38    CONTINUE
+
+ 42    TYPE 41
+ 41    FORMAT(' ENTER CONNECT HOURS FORECASTED FOR THE MONTH: ->',$)
+       READ(5,24,ERR=42)CONCT(JJ)
+
+       CALL LNFRT(CONCT,ICNCTD)
+
+ 9999  RETURN
+       END
+
+************************************************************
+
+       SUBROUTINE LNFRT (CONCT,ICNCTD)
+
+* This subroutine takes the vector conect as an input 
+* and fills the 0 entry with the values obtained by
+* drawing a line between the non zero entries.
+
+       INTEGER CONCT(12),FINALX,FINALY   
+       
+       INITY=  ICNCTD
+       INITX=  0
+       MONTH=1
+ 21    IF(CONCT(MONTH).NE.0) GOTO 25
+ 22    MONTH=MONTH+1
+       IF(MONTH.GT.12) GOTO 30
+       GOTO 21
+ 25    CONTINUE
+       FINALY = CONCT(MONTH)
+       FINALX = MONTH
+       IF(FINALX.GT.INITX+1) GOTO 29
+       INITX=FINALX
+       INITY=FINALY
+       GOTO 22
+
+* COMPUTING THE PARAMETERS OF THE LINE JOINING (INITX,INITY) AND
+* (FINALX,FINALY)
+
+ 29    DET=FLOAT(INITX-FINALX)
+       DETA=FLOAT(INITY-FINALY)
+       DETB=FLOAT(INITX*FINALY - INITY*FINALX )
+       A=DETA/DET
+       B=DETB/DET
+ 
+* COMPUTING THE FORCASTE BETWEN MONTH INITX AND FINALX
+* ASSUMING A CONSTANT GOWHT AT RATE A
+
+       N1=INITX+1
+       N2=FINALX-1
+       IF(N1.GT.N2) GOTO 28
+       DO 26 I=N1,N2
+
+* 245     FORMAT(' COMPUTING FORCST FOR',I2,2X,I4)
+       CONCT(I)=IFIX(A*FLOAT(I)+B)
+*      TYPE 245,I,CONCT(I)
+ 26    CONTINUE
+ 28    CONTINUE
+       INITX=FINALX
+       INITY=FINALY
+       MONTH=INITX
+       GOTO 22
+
+* EXTENDING FORECAST TO THE 12TH MONTH IF NECESSAY
+
+ 30    CONTINUE
+       IL=1
+ 42    IF(CONCT(IL).NE.0) GOTO 41
+       IL2=IL-2
+       IL1=IL-1
+       INITX=IL2
+       FINALX=IL1
+       INITY=CONCT(IL2)
+       FINALY=CONCT(IL1)
+       DET=FLOAT(INITX-FINALX)
+       DETA=FLOAT(INITY-FINALY)
+       DETB=FLOAT(INITX*FINALY - INITY*FINALX )
+       A=DETA/DET
+       B=DETB/DET
+       CONCT(IL)=IFIX(A*FLOAT(IL)+B)
+ 41    IL=IL+1
+       IF(IL.GT.12) GOTO 31
+       GOTO 42
+
+ 31    CONTINUE
+
+       RETURN
+       END
+
+****************************************************************
+*
+*                     SUBROUTINE FRCST
+C*******************
+C          INPUT:  PILOT (3A5) - PILOT NUMBER
+C
+C                  NPORTS (I5) - CURRENT NUMBER OF PORTS
+C
+C         OUTPUT:  CONCT (12I5) - FORECAST FOR 12 MONTHS
+C                                 (ONLY 6 POINTS, EVEN MONTHS)
+C
+C                  ICNCTD (I5)  - CURRENT CONNECT HOURS
+C      
+C                  CNTFLAG (I1) - ERROR FLAG (REC NOT FOUND)
+C                                 1) INPUT BY HAND
+C                                 2) GO TO NEXT REVIEW
+C                                 3) EXIT PROGRAM
+
+       SUBROUTINE FRCST(NPORTS, CONCT, PILOT, ICNCTD, CNTFLG,PERCENT,
+     +                     MAP,NPA,NXX,XXXX,ITTY,INFLAG,INFL2)
+
+       INTEGER PILOT(3), RPILOT(3), CITY(4), AFLAG, INFL2
+       INTEGER NPORTS, CONCT(12), ICNCTD,MAP(12)
+       INTEGER INVAL(12), CNTFLG,NPA,NXX,XXXX
+
+* OPEN FILE FOR INPUT
+
+       CNTFLG = 0
+       OPEN(20, '(NETENG)EOQCON.DAT', INPUT, ERR=700)
+
+* READ FILE SEQUENTIALLY FOR PILOT NUMBER
+
+300    READ(20, 400, END = 600, ERR = 300) (RPILOT(I), I=1,3),
+     2     (CITY(I), I=1,4), ICNCTD, (INVAL(I), I=1,12),
+     3     AFLAG
+
+400    FORMAT(1X, 2A5, A2, 2X, 4A4, 2X, I5, 1X, 
+     2        6(1X,I5), 1X,
+     3        6(1X,I5), 1X, A1)
+
+       IF (PILOT(1) .NE. RPILOT(1)) GO TO 300
+       IF (PILOT(2) .NE. RPILOT(2)) GO TO 300
+       IF (.NOT. EQ(PILOT,11,RPILOT,11,2)) GO TO 300
+
+* FOUND PILOT NUMBER
+
+       IF (INFLAG .EQ. 1) GO TO 401
+
+* IF FILE INPUT, DEFAULT TO LOWEST POSITIVE FORECAST
+
+       ICNT = 0
+       IF (NPORTS .LE. 16) ICNT = 6
+       IF (INVAL(6) .GT. INVAL(12)) ICNT = 6
+       IF (INVAL(6) .LT. 0) ICNT = 6
+       IF (INVAL(12) .LT. 0) ICNT = 0
+       IF (AFLAG .EQ. '+') ICNT = 0
+       GO TO 402
+
+* MANUAL INPUT, ASK USER WHICH FORECAST TO USE
+
+401    CONTINUE
+
+       CALL CLEAR(ITTY)
+
+       TYPE 502
+502    FORMAT(30X,'FORECASTS:',//)
+       TYPE 504
+504    FORMAT(10X,'MONTH',5X,'1. EXPONENTIAL',10X,'2. G SITE',/,
+     +        10X,'-----',5X,'--------------',10X,'---------',//)
+
+       DO 506 II = 1, 6
+            KK = II * 2
+            TYPE 508, KK, INVAL(II), INVAL(II + 6)
+508         FORMAT(12X,I2,10X,I5,17X,I5)
+506    CONTINUE
+
+409    TYPE 512
+512    FORMAT(//,10X,'WHICH FORECAST (1/2) : ',$)
+       READ (5, 514, ERR= 512) JJ
+514    FORMAT(I1)
+
+       IF ((JJ .LE. 0) .OR. (JJ .GE. 3)) GO TO 409
+       IF (JJ .EQ. 1) ICNT = 0
+       IF (JJ .EQ. 2) ICNT = 6
+       IF (JJ .EQ. 1) INFL2 = 1
+       IF (JJ .EQ. 2) INFL2 = 2
+
+402    CONTINUE
+
+       DO 500 II = 1, 6
+            CONCT(II*2 -1)=0
+            CONCT(II * 2) = INVAL(II + ICNT)
+            IF (CONCT(II * 2) .EQ. 0) IZERO = IZERO + 1
+500    CONTINUE
+
+       IF (IZERO .LT. 6) GO TO 603
+       CNTFLG = 2
+       IF (INFLAG .NE. 2) GO TO 642
+       GO TO 800
+
+642    TYPE 602
+602    FORMAT(//,5X,'THE FORECASTS ARE ALL ZERO')
+       GO TO 607
+* access the file (NETENG)EOQ.inf and searches
+* for the percentage of calls that occur during the heaviest
+* traffic hour.
+
+603    IF (INFLAG .EQ. 1) GO TO 605
+       READ (14,623) PERCENT
+623    FORMAT(F4.1)
+C       DECODE(5,627,RPERC) PERCENT
+C627    FORMAT(F5.1)
+       GO TO 609
+
+605    call AVEPEAK(NPA,NXX,XXXX,PERCENT)
+
+609    GO TO 800
+
+* FRCST FILE NOT FOUND
+700    IF (INFILE .NE. 2) GO TO 702
+       CNTFLG = 2
+       GO TO 800
+
+702    TYPE 704
+704    FORMAT(//,5X,' FILE CONTAINING FORECAST NOT FOUND')
+       GOTO 607
+
+* PILOT NUMBER IS NOT FOUND
+
+600    IF (INFLAG .NE. 2) GO TO 601
+       CNTFLG = 2
+       GO TO 800
+
+601    TYPE 604
+604    FORMAT(//,5X,'THE PILOT NUMBER WAS NOT FOUND')
+607    TYPE 608
+608    FORMAT(//,10X,'CHOOSE:             TO:')
+       TYPE 612
+612    FORMAT(/,10X,'-------             -----------')
+       TYPE 616
+616    FORMAT(//, 10X,'   1                INPUT VALUES BY HAND')
+       TYPE 620
+620    FORMAT(//, 10X,'   2                GO TO NEXT REVIEW')
+       TYPE 624
+624    FORMAT(//, 10X,'   3                STOP PROGRAM',///)
+626    TYPE 628
+628    FORMAT(20X,'=> ',$)
+       READ(5,632,ERR=626) CNTFLG
+632    FORMAT(I1)
+
+       IF (CNTFLG .EQ. 1) GO TO 650
+       IF (CNTFLG .EQ. 2) GO TO 800
+       IF (CNTFLG .EQ. 3) STOP
+       CALL CLEAR(ITTY)
+       GOTO 607
+
+ 650   CONTINUE
+
+* PROMPTING FOR THE CURRENT CONNECT TIME
+
+ 1043  TYPE 1041
+ 1041  FORMAT(' ENTER THE CURRENT NUMBER OF CONNECT HOURS',
+     +         ' PER DAY: ->',$)
+       READ(5,2051,ERR=1043) ICNCTD
+ 2051  FORMAT(G4)
+
+* access the file (NETENG)EOQ.inf and searches
+* for the percentage of calls that occur during the heaviest
+* traffic hour.
+
+       call AVEPEAK(NPA,NXX,XXXX,PERCENT)
+
+* PROMPTING FOR THE FORECASTED INFORMATION
+      
+       CALL CLEAR(ITTY)
+
+ 1056  TYPE 1050
+ 1050  FORMAT(' ENTER THE NUMBER OF MONTHS WHERE FORECASTED',/, 	
+     +         ' CONNECT HOURS ARE AVAILABLE:                ->',$)
+       READ(5,2055,ERR=1056) NFRCST
+ 2055  FORMAT(I2)
+       INFL2 = 4
+     
+       DO 100 I =1, NFRCST
+
+ 1061  TYPE 1060, I
+ 1060  FORMAT(' ENTER MONTH OF DATA POINT ',I3,': ->',$)
+       READ(5,2060,ERR=1061) MMM 
+ 2060  FORMAT(A3)
+
+* MARKING MONTHS THAT HAD AVAILABLE FORECASTED DATA	
+
+       DO 575 J=1,12
+            If(MAP(J).EQ.MMM)MONTH=J
+ 575   CONTINUE
+*      STATE(MONTH)=1H*
+
+* MAPPING INDEX TO ACTUAL MONTH
+
+       IF(MONTH.LE.IMONTH)MONTH=MONTH+12
+       MONTH=MONTH-IMONTH
+
+ 1071  TYPE 1070
+ 1070  FORMAT(' ENTER THE NUMBER OF CONNECT HOURS PER DAY: ->',$)
+       READ(5,1080,ERR=1071)CONCT(MONTH)
+ 1080  FORMAT(I4)
+           
+ 100   CONTINUE
+
+* EXIT OUT OF SUBROUTINE
+
+800    CLOSE(20)
+
+       RETURN
+       END
+
+************************************************************
+
+       SUBROUTINE TERM(ITTY)
+
+ 3     TYPE 1
+ 1     FORMAT(//,'  PLEASE ENTER YOUR TERMINAL TYPE:',/,
+     +           '                     1.  MODEL 425',/,
+     +           '                     2.  MODEL 444',/,
+     +           '                     3.  OTHER    ->',$)
+
+       READ (5,2,ERR=3)ITTY
+ 2     FORMAT(I1)
+
+       IF(ITTY.LT.1.AND.ITTY.GT.3) GOTO 3
+       IF(ITTY.EQ.1) ITTY=425
+       IF(ITTY.EQ.2) ITTY=444
+       IF(ITTY.EQ.3) ITTY=0
+
+       RETURN
+       END
+
+***********************************************************
+   ,û
