@@ -1,0 +1,1277 @@
+                                                                July 23, 1984
+
+
+
+
+
+
+
+
+                  ****    ***    ***   *****   ***    *** 
+                  *   *  *   *  *   *    *    *   *  *    
+                  *   *  *   *  *   *    *    *   *  *    
+                  ****   *   *  *   *    *    * * *  * ** 
+                  *   *  *   *  *   *    *    *   *  **  *
+                  *   *  *   *  *   *    *    *   *  *   *
+                  ****    ***    ***     *     ***    *** 
+
+
+
+
+                             ****    ***    ****
+                             *   *  *   *  *    
+                             *   *  *   *  *    
+                             *   *  *   *  *    
+                             *   *  *   *  *    
+                             *   *  *   *  *    
+                             ****    ***    ****
+
+
+
+
+                                 BOOT06.DOC
+
+                         NETWORK TECHNOLOGY DIVISION
+                                July 23, 1984
+
+
+
+
+
+
+
+
+
+
+    ====================================================================
+    |       THIS DOCUMENT IS THE SOLE PROPERTY AND CONFIDENTIAL        |
+    |       INFORMATION  OF  TYMSHARE,  INC.,  AND  MAY  NOT BE        |
+    |       COPIED  IN  WHOLE OR IN PART  OR  DISCLOSED  TO ANY        |
+    |       THIRD PARTY  WITHOUT THE PRIOR  WRITTEN  CONSENT OF        |
+    |       TYMSHARE.                                                  |
+    ====================================================================
+
+
+
+
+
+                                    ENGINE BOOT                    BOOT06.DOC
+                                                                July 23, 1984
+
+
+
+
+
+
+
+                                 TABLE OF CONTENTS
+
+      Section                                                            Page
+
+
+      1.   INTRODUCTION                                                     1
+        1.1   EXTERNAL INTERFACE SPECIFICATIONS                             1
+
+      2.   DEVICE INTERFACE SPECIFICATIONS                                  2
+        2.1   SYNC LINES                                                    3
+        2.2   SIO LINES                                                     4
+        2.3   TTY PORT                                                      4
+        2.4   ESELCH                                                        4
+           2.4.1    TAPE DRIVE                                              5
+           2.4.2    10MB DISK DRIVES                                        5
+
+        2.5   300MB DISK DRIVE                                              6
+        2.6   THE WATCH DOG TIMER                                           6
+        2.7   THE ENGINE CONSOLE                                            7
+        2.8   SEMICONDUCTOR MEMORY - ECC                                    7
+
+      3.   GENERAL DESCRIPTION                                              8
+
+      4.   GENERAL OPERATION                                               10
+        4.1   WATCH-DOG TIMER SWITCH                                       10
+        4.2   SELECTION OF BOOT                                            10
+           4.2.1    ENGINE CONSOLE DISPLAYS DURING LOAD                    10
+
+        4.3   SIO AND SYNC LINE PROCEDURE                                  11
+        4.4   GENERAL TAPE AND DISK BOOT PROCEDURES                        12
+           4.4.1    SMALL (10MB) DISK DUMP/LOAD PROCEDURE                  12
+              4.4.1.1     DIAGNOSTIC CODES FOR DISC                        13
+
+           4.4.2    LARGE (300MB) DISK DUMP/LOAD PROCEDURE                 13
+              4.4.2.1     DIAGNOSTIC CODES FOR MSC1400 DISC                14
+
+           4.4.3    TAPE DUMP/LOAD PROCEDURE                               15
+              4.4.3.1     DIAGNOSTIC CODES FOR TAPE                        16
+
+
+                                   APPENDICES
+                                   ==========
+
+
+      I.   INTERNAL INFORMATION                                            17
+
+
+      II.  CHECKSUM FOR SYNC AND SIO                                       19
+
+                                    ENGINE BOOT                    BOOT06.DOC
+                                                                July 23, 1984
+
+
+        II-1  ALGORITHM FOR VERTICAL CHECKSUM                              19
+        II-2  ALGORITHM FOR DIAGONAL CHECKSUM                              19
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                    ENGINE BOOT                    BOOT06.DOC
+                                                                July 23, 1984
+
+
+
+
+
+      1 -  INTRODUCTION
+
+
+
+      LBOOT is  the Engine  bootstrap loader supporting  SYNC card,  SIO card
+      TTY, TAPE, disk and MSC1400 disk.
+
+
+      1.1  EXTERNAL INTERFACE SPECIFICATIONS
+
+
+      The BOOT interfaces with:
+
+
+           1.  An operator.
+
+           2.  Tymnet-I solo node code.
+
+           3.  Tymnet-II solo node code.
+
+           4.  ISIS-II.
+
+           5.  The ISIS code save routine.
+
+           6.  The  "Watch  dog  timer"  on  the  Engines multi-function
+               printed circuit board.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      1                             ENGINE BOOT                    BOOT06.DOC
+      DEVICE INTERFACE SPECIFICATIONS                           July 23, 1984
+
+
+
+
+
+      2 -  DEVICE INTERFACE SPECIFICATIONS
+
+
+
+      LBOOT interfaces with the following devices:
+
+
+           1.  Sync lines.
+
+           2.  SIO lines.
+
+           3.  The RS-232 port on the multi-function card (TTY port).
+
+           4.  The ESELCH.
+
+           5.  Tape drives (using the ESELCH).
+
+           6.  Small (10MB) disk drives (using the ESELCH).
+
+           7.  Large (300MB) disk drives (MSC140).
+
+           8.  The watch dog timer (and associated switch) on the multi-
+               function card.
+
+           9.  The Engine console.
+
+           10. The ECC log on semiconductor memory.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      2                             ENGINE BOOT                    BOOT06.DOC
+      DEVICE INTERFACE SPECIFICATIONS                           July 23, 1984
+
+
+
+
+      2.1  SYNC LINES
+
+
+      Sync lines are scanned looking  for a down line load  header (x'3232').
+      If one is found,  loading begins on that  line, and all other  Sync and
+      SIO lines are ignored.  The format of down-line load packets is
+
+                     "3232 RR 0AAAAA DD....DD C1C1 C2C2 FFFF"
+
+      Where:
+
+
+           3232    = Sync pattern
+
+           RR      = Record type as follows:
+
+                       00  -  Transfer (start-up) command
+                       01  -  38x Load command, number is length,
+                              38x bytes max.
+                       80  -  Dump command.  The boot always sends
+                              38x bytes to it's neighbor.
+
+           0AAAAA  = Address referenced by record type.
+
+           DD...DD = Data bytes (38x bytes, always) defined as:
+
+                       00-7Fx - 1 byte of normal data.
+                       80     - Escape, next data is 80-85.
+                       81-83x - Not used.
+                       84     - Compressed 00's, next byte is count.
+                       85     - Compressed FF's, next byte is count.
+                       86-FFx - 1 byte of normal data.
+
+           C1C1    = 1st 16 bit checksum (vertical).
+
+           C2C2    = 2nd 16 bit checksum (diagonal).  See attached
+                     description of checksum for computation of
+                     vertical and diagonal checksums.
+
+           FFFF    = Pad.  At least 2 bytes of marking state.
+
+
+
+
+
+
+
+
+
+
+
+
+      3                             ENGINE BOOT                    BOOT06.DOC
+      DEVICE INTERFACE SPECIFICATIONS                           July 23, 1984
+
+
+      2.2  SIO LINES
+
+
+      The LOADII/down-load record format for SIO is the same as for Sync.  At
+      each occurrence of  an enhanced-asynch clock  interrupt one of  the SIO
+      lines  at I/O  address x'80'  is scanned.   If a  down-line-load header
+      (x'3232') is found,  loading begins on that  line.  All other  sync and
+      SIO lines will  be ignored for the  remainder of the load/dump.   If no
+      further load/dump records appear on the selected line within 60 seconds
+      the boot will time-out.  This causes the boot to reset and reinitialize
+      the Engine, and to resume scanning SIO lines for input.
+
+      The SIO  motherboards reset  when the  boot first  starts, and  after a
+      time-out, are at I/O address x'80' through x'90', inclusive.
+
+
+      2.3  TTY PORT
+
+
+      The TTY port may be used in conjunction with NAD to perform loads.  The
+      only commands issued to the TTY port are:
+
+
+           1.  Disable interrupts.
+
+           2.  Enter read mode.
+
+           3.  Sense status looking for 'busy', 'overflow', or 'break'.
+
+           4.  Read data.
+
+
+
+      2.4  ESELCH
+
+
+      The ESELCH at  I/O address x'F0' is  used in conjunction with  the TAPE
+      and DISK controllers.  The only commands issued to it are:
+
+
+           1.  Stop.
+
+           2.  Read.
+
+           3.  Write.
+
+           4.  Write start and ending address.
+
+           5.  Read ending address.
+
+           6.  Sense status.
+
+
+
+      4                             ENGINE BOOT                    BOOT06.DOC
+      DEVICE INTERFACE SPECIFICATIONS                           July 23, 1984
+
+
+      2.4.1  TAPE DRIVE
+
+      The tape drives at I/O addresses x'C0', x'D0', x'E0' and x'F0' (units 0
+      to  3) are  used in  conjunction with  the ESELCH.   The  only commands
+      issued to the tape controller are:
+
+
+           1.  Rewind.
+
+           2.  Clear.
+
+           3.  Read.
+
+           4.  Write.
+
+           5.  Skip file.
+
+           6.  Write file mark.
+
+           7.  Backspace record (for error retry).
+
+           8.  Read extended status.
+
+
+
+      2.4.2  10MB DISK DRIVES
+
+      The small (10MB)  disk (unit 0 removable  only) is used  in conjunction
+      with the ESELCH.  The commands issued to the disk controller are:
+
+
+           1.  Clear.
+
+           2.  Reset.
+
+           3.  Read.
+
+           4.  Write.
+
+           5.  Home (recalibrate).
+
+           6.  Seek.
+
+
+
+
+
+
+
+
+
+
+
+
+      5                             ENGINE BOOT                    BOOT06.DOC
+      DEVICE INTERFACE SPECIFICATIONS                           July 23, 1984
+
+
+      2.5  300MB DISK DRIVE
+
+
+      The  large disk  at I/O  address x'F8'  uses it's  own  controller, and
+      therefore does not use the ESELCH.  The only commands issued to it are:
+
+
+           1.  Clear.
+
+           2.  Disable.
+
+           3.  Read.
+
+           4.  Write.
+
+           5.  Set address.
+
+           6.  Sense status.
+
+
+      Because this disk uses logical sector numbers all disk head movement is
+      automatically done  for the  program by the  controller.  The  MSC disk
+      controller at  I/O address  x'F8' is reset  when the  sync or  SIO boot
+      first starts in order to halt any DMA activity that may be in progress.
+
+
+      2.6  THE WATCH DOG TIMER
+
+
+      If the watch dog timer  is not re-set approximately every 2  seconds by
+      programmed I/O it will, when armed, cause the boot to be re-loaded from
+      PROM into RAM.
+
+      The boot PROMs, located  on the Engines multi-function  printed circuit
+      board assembly, contain in addition to the boot program a  header which
+      is used by the CPU micro-code during the ROM-to-RAM copy.   This header
+      is NOT itself copied into RAM.
+
+      The first two halfwords (4 bytes) of the header contain the new program
+      counter (x'720' in the  current version).  The third  halfword contains
+      the RAM address  at which the  CPU is to  begin placing the  boot.  The
+      fourth halfword  contains the size  of BOOT06, and  thus the  amount of
+      data (i.e.   BOOT06 program and  data) to be  copied.  For  BOOT06 this
+      value is x'0A00'.
+
+
+
+
+
+
+
+
+
+
+      6                             ENGINE BOOT                    BOOT06.DOC
+      DEVICE INTERFACE SPECIFICATIONS                           July 23, 1984
+
+
+      2.7  THE ENGINE CONSOLE
+
+
+      The engine console is updated  by the boot during operation so  that an
+      an operator may more  easily monitor boot status.  See  the 'OPERATION'
+      section of this document for a description of these displays.
+
+
+      2.8  SEMICONDUCTOR MEMORY - ECC
+
+
+      The boot clears the error log on up to 8 semiconductor memory boards by
+      referencing I/O addresses x'78' to x'7F'.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      7                             ENGINE BOOT                    BOOT06.DOC
+      GENERAL DESCRIPTION                                       July 23, 1984
+
+
+
+
+
+      3 -  GENERAL DESCRIPTION
+
+
+
+      The function of  the bootstrap program is  to transfer data  from input
+      devices to memory  (load), and to transfer  data from memory  to output
+      devices (dump).  The area to  be dumped is limited to x'0'  to x'FFFFF'
+      (1 meg).  The area to be loaded is limited to x'0' to 4k less  than the
+      end of memory, up to a maximum of x'FEFFF'.
+
+      The  bootstrap is  initially copied  from PROM  into low  RAM addresses
+      x'700' to x'13FF'.  It begins execution by determining how  much system
+      memory  is available,  up  to a  maximum of  1  meg.  This  is  done by
+      attempting to decrement the contents of memory locations at the  end of
+      successively  lower 32-k  blocks until  a successful  memory  access is
+      detected.
+
+      Once the boot detects the  extent of Engine memory it  relocates itself
+      into the last (i.e.   highest) 4k.  It then performs  a non-destructive
+      write to the first 1 meg of memory (from 0 to x'FFFFF') by adding  0 to
+      existing  memory  contents.   This initializes  and  resets  ECC (error
+      correcting circuitry) present in Engine semiconductor memory.
+
+      The error  logs for  the semiconductor memory  are then  cleared.  This
+      process manifests itself to the observer by causing both the  amber and
+      red LEDs at the front of each memory board to be extinguished.
+
+      The BOOT next resets the following DMA devices:
+
+
+           1.  SIO mother boards at addresses x'80' to x'90'.
+
+           2.  MSC disk controller at address x'F8'.
+
+           3.  ESELCH at address x'F0'.
+
+
+      The bootstrap then patches low  memory locations x'48' to x'6B'  with 6
+      RX3  jump  instructions.   Each  jump  instruction  corresponds   to  a
+      different type of boot, as shown below:
+
+                   0048 - Entry address for restoring low core. 
+                   004E - Entry address for MSC1400 disk boot.  
+                   0054 - Entry address for MAG tape boot.      
+                   005A - Entry address for SYNC, and SIO  boot.
+                   0060 - Entry address for TTY boot.           
+                   0066 - Entry address for disk boot.          
+
+
+
+
+      8                             ENGINE BOOT                    BOOT06.DOC
+      GENERAL DESCRIPTION                                       July 23, 1984
+
+
+      Having completed its initialization, the BOOT transfers control  to the
+      SYNC/SIO boot.
+
+      Once the program has relocated  itself to high RAM all working  data is
+      contained in the last 4k.  Any memory below that may be read or written
+      into.  This includes, but is not limited to, x'00700' to  x'012FF', and
+      the MAC registers starting at x'00300'.  Attempts to write  (from SYNC,
+      or SIO) into the last 4k of memory, or above, will not be ACK'ed.  This
+      condition  can be  detected at  a terminal  running LOADII  by  a fixed
+      number  of  received  records,  with  an  ever  increasing   number  of
+      transmitted records.
+
+      When  the  bootstrap  loads from  PROM,  control  will  transfer, after
+      relocation, to the SYNC/SIO bootstrap.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      9                             ENGINE BOOT                    BOOT06.DOC
+      GENERAL OPERATION                                         July 23, 1984
+
+
+
+
+
+      4 -  GENERAL OPERATION
+
+
+
+      As an operator you have several options you may exercise.   The options
+      available to you include:
+
+
+           1.  Position of  the watch  dog timer  switch located  at the
+               front of the engines multi-function board.
+
+           2.  Selection of load or dump.
+
+
+
+      4.1  WATCH-DOG TIMER SWITCH
+
+
+      The watch-dog timer switch  has two (stable) positions, one  for arming
+      the watch dog timer, and one for disarming it.  If you want the boot to
+      be loaded from PROM whenever the code in your machine  stops re-setting
+      the watch dog timer, you should arm the watch dog timer.
+
+
+      4.2  SELECTION OF BOOT
+
+
+      To select a  specific boot device  (i.e.  SYNC/SIO, tape,  disc) follow
+      the instructions outlined for that particular device.
+
+
+      4.2.1  ENGINE CONSOLE DISPLAYS DURING LOAD
+
+      The boot program  reports its current  load/dump status on  the Engines
+      front panel display as follows:
+
+            Display                      Current status
+          =+====+====             =======================================
+          x F000 BA5E             Boot is initializing the ECC in the
+                                  semiconductor memory.  xF000 is the
+                                  address of the Boot parameter block.
+
+          0 0000 0006             Scanning sync and SIO lines, looking
+          :   :    :              for a down line load header.  The
+          F 0000 0006             version number is in the byte.
+
+          0 3800 addr             Just loaded a x'38' byte data record
+                                  into address 'addr'.
+
+          F FFFF xxxx             About to load from TTY, or loaded
+
+      10                            ENGINE BOOT                    BOOT06.DOC
+      GENERAL OPERATION                                         July 23, 1984
+
+
+                                  successfully.
+
+          d dddd 00xx             TTY loading, where d dddd is a
+                                  decrementing number of bytes left to
+                                  load, and xx is the byte currently
+                                  being loaded.
+
+          0 C0DE 800x             This is an error (or completion) code
+                                  issued by a tape or disk load/dump.
+                                  See the tables under each device for
+                                  any specific code.  Code 800E indicates
+                                  a successful operation.
+
+          0 0070 5AFE             This display indicates that the low
+                                  core locations have been copied back
+                                  from high core, and that if you press
+                                  [RUN] the machine will start running at
+                                  location x'00070'.
+
+
+      4.3  SIO AND SYNC LINE PROCEDURE
+
+
+      The SIO  and SYNC dump  and load routines  utilize the first  SYNC card
+      ports (0-F), and the first  SIO motherboard ports (0-F) only.   This is
+      consistent with Tymnet-II solo code, which outputs down line  load data
+      to the first sync card, or first SIO motherboard.
+
+      Ther are two options available for SYNC/SIO loads.
+
+
+           1.  If the  boot has  already been loaded,  you may  halt the
+               machine and  start execution at  x'5A'.  This is  done by
+               typing  [PSW] [DATA]  [SET] [5]  [A] [ADDR]  [READ].  The
+               console display  should read "0  005A 4300".  If  it does
+               not, then  the boots  jump table (in  low core)  has been
+               destroyed.  One should then use the second  procedure for
+               booting from SIO or sync.
+
+               If this  display, as described  above, is  correct merely
+               press [RUN].   The display will  change to "x  y000 BA5E"
+               for about 6  seconds, and then  to "0-F 0000  0006".  Use
+               LOADII to load over a SYNC or SIO line.
+
+           2.  The second option is  to bring the boot back  into memory
+               from the  PROMs on the  multi-function card.  To  do this
+               flip  the  watch  dog  timer  switch  into  its momentary
+               (upward) postion, and  release.  The boot will  be copied
+               into memory (at address x'700') and will  relocate itself
+               into the last  4k of memory.   It displays "x  y000 BA5E"
+               and "-F 0000 0006" as described above.  After it displays
+               "0-F 000  0006" you can  use LOADII to  load over  SIO or
+               sync.
+
+      11                            ENGINE BOOT                    BOOT06.DOC
+      GENERAL OPERATION                                         July 23, 1984
+
+
+      If for any reason the  SIO/SYNC boot does not receive a  down-line load
+      record for 60  seconds it will time-out.   This will force the  boot to
+      restart;  this will  re-initiate the  search for  a line  with incoming
+      down-load data.
+
+
+      4.4  GENERAL TAPE AND DISK BOOT PROCEDURES
+
+
+      There are parameter blocks for disk, tape, and MSC1400 disk  boot.  The
+      parameter block is located near the  end of memory, at the start  - the
+      "base" -  of the relocated  BOOT.  This address  is displayed  when the
+      boot is first started as "xy000 BA5E", where "xy" is the "base" address
+      of the relocated boot.
+
+      To boot from disk or tape:
+
+
+           1.  Allow  the  Engine  boot-strap  to  fully  initialize the
+               Engine;   wait   for   the  left   most   digit   of  the
+               console/front-panel to begin incrementing from 0 to F.
+
+           2.  Press  [PSW] to  halt  the machine;  enter  parameters as
+               described below.  The parameter block MUST  be configured
+               before  branching to  disk,  tape, or  MSC1400  disk boot
+               loading!
+
+
+      The disk, tape, and MSC1400 disk bootstraps provide various diagnostics
+      should some part of the device interface fail.  The value  displayed on
+      the right half of the  console indicates the type of  failure detected.
+      The left half  of the console  contains the message  "CODE", indicating
+      that this is an  error code.  See device specific  loading instructions
+      for diagnostic messages.
+
+
+      4.4.1  SMALL (10MB) DISK DUMP/LOAD PROCEDURE
+
+      The  small  disk  bootstrap   program  resets  the  channel   and  disk
+      controller, and seeks to the desired cylinder.  Next the  start address
+      and end address are passed to the channel for data transfer.  A read or
+      write command,  as defined  in the  parameter block,  is issued.   If a
+      given cylinder is filled, a seek command to the next cylinder is issued
+      until all data is transfered to or from disk.  A completion code  of "0
+      C0DE 800E" indicates a successful operation.
+
+
+
+
+
+
+
+
+
+      12                            ENGINE BOOT                    BOOT06.DOC
+      GENERAL OPERATION                                         July 23, 1984
+
+
+
+                          - PARAMETER BLOCK - 10MB DISC -
+                            ===========================  
+
+
+             +-------------------------------+------------------------------+
+      xy000  | memory start address  (should be even)              (4 bytes)|
+             +-------------------------------+------------------------------+
+      xy004  | memory end address    (should be odd)               (4 bytes)|
+             +-------------------------------+------------------------------+
+      xy008  | initial disk cylinder         |                              |
+             +-------------------------------+------------------------------+
+      xy00A  | read=0130/write=0210          |       halfword
+             +-------------------------------+
+
+
+      Entry address for 10MB dump/load = 00066
+
+
+
+      4.4.1.1  DIAGNOSTIC CODES FOR DISC
+
+      The following codes  are issued by the  small disc boot  procedure upon
+      detection of error:
+
+              ENGINE CONSOLE          MEANING                       
+              --------------          -------                       
+
+                0 C0DE 8000  -  Disk is not responding.             
+                0 C0DE 8001  -  Disk restore operation failed.      
+                0 C0DE 8000  -  Disk seek operation fail.           
+                0 C0DE 8000  -  Disk controller failed.             
+                0 C0DE 8004  -  Disk selector channel status is bad.
+                0 C0DE 8005  -  Disk controller status is bad.      
+                0 C0DE 800E  -  Success.                            
+
+
+
+      4.4.2  LARGE (300MB) DISK DUMP/LOAD PROCEDURE
+
+      The MSC1400 disk bootstrap  program resets the disk  controller, places
+      the starting memory  address into a  packet, calculates the  word count
+      for data transfers, gets the  read or write command from  the parameter
+      block and passes the packet address to the controller.
+
+
+
+
+
+
+
+
+
+
+      13                            ENGINE BOOT                    BOOT06.DOC
+      GENERAL OPERATION                                         July 23, 1984
+
+
+
+      If you are using a  standard 300mb disk configuration the  initial disk
+      record may be computed as
+
+                               "IDR=815*CC+19*TT+RR"
+
+      where:
+
+                           CC = Cylinder,               
+                           TT = Track (head) number, and
+                           RR = Record (sector) number. 
+
+
+      "IDR" must, of  course, be converted to  hex before it is  entered into
+      the disk  parameter block.   Each record contains  256 bytes.   Code "0
+      C0DE 800E" indicates a successful operation.
+
+                         - PARAMETER BLOCK - 300MB DISC -
+                           ============================  
+
+
+             +-------------------------------+------------------------------+
+      xy000  | memory start address          |                      (4bytes)|
+             +-------------------------------+------------------------------+
+      xy004  | memory end address            |                      (4bytes)|
+             +-------------------------------+------------------------------+
+      xy008  | initial disk record, this is a logical record number (4bytes)|
+             +-------------------------------+------------------------------+
+      xy00C  | read=20/write=14 : drive 0-3  |
+             +-------------------------------+
+
+
+      Entry address for 300MB dump/load = 0004E.
+
+
+
+      4.4.2.1  DIAGNOSTIC CODES FOR MSC1400 DISC
+
+      The following codes are issued by the MSC1400 disc boot  procedure upon
+      detection of error:
+
+              ENGINE CONSOLE          MEANING                       
+              --------------          -------                       
+
+                0 C0DE 8000  -  Disk is not responding.             
+                0 C0DE 8001  -  Invalid drive number.               
+                0 C0DE 8002  -  Disk controller status bad.         
+                0 C0DE 800E  -  Success.                            
+
+
+
+
+
+
+      14                            ENGINE BOOT                    BOOT06.DOC
+      GENERAL OPERATION                                         July 23, 1984
+
+
+      4.4.3  TAPE DUMP/LOAD PROCEDURE
+
+      When setting  up the memory  addresses in the  tape parameter  block be
+      careful to
+
+
+           1.  Start on an even halfword boundary, and...
+
+           2.  Set the end address to an odd byte boundary.
+
+
+      For example, if you wish to read  in 4k from tape into the first  4k of
+      memory you should enter Starting Address=0 0000, Ending Address=0 0FFF.
+      If you specify  an even ending  address the byte  immediately following
+      the last address  you specified will also  be written, but will  not be
+      accurate.
+
+      The  tape  bootstrap program  will  select a  channel,  reset  the tape
+      controller, skip to the required  file, and load or write the  block in
+      the  file  sequentially,  from  the  starting  address  defined  in the
+      parameter block until an end of file or the ending address is reached.
+
+      Code "0 C0DE 800E" is the completion code for a successful operation.
+
+      Each block is 1024 bytes.  The first record is a control record  and is
+      not loaded.
+
+                            - PARAMETER BLOCK - TAPE -
+                              ======================  
+
+
+             +-------------------------------+------------------------------+
+      xy000  | memory start address  (should be even)               (4bytes)|
+             +-------------------------------+------------------------------+
+      xy004  | memory end address  (should be odd)                  (4bytes)|
+             +-------------------------------+------------------------------+
+      xy008  | initial tape file             |       halfword
+             +-------------------------------+
+      xy00A  | read=2130/write=2210          |       halfword
+             +-------------------------------+
+      xy00C  | drive   0-3 :     x'00'       |       1 byte for drive  
+             +-------------------------------+
+
+
+      Entry address for tape load/dump = 00054.
+
+
+
+
+
+
+
+
+
+      15                            ENGINE BOOT                    BOOT06.DOC
+      GENERAL OPERATION                                         July 23, 1984
+
+
+      4.4.3.1  DIAGNOSTIC CODES FOR TAPE
+
+         ENGINE CONSOLE                  MEANING                          
+         --------------                  -------                          
+
+           0 C0DE 8001  -  Tape is not responding or invalid drive number.
+           0 C0DE 8002  -  Tape BOT (beginning of tape) is not found.     
+           0 C0DE 8003  -  File not found (eot) or skip file error.       
+           0 C0DE 8004  -  Tape select channel status is bad.             
+           0 C0DE 8005  -  Tape controller status is bad.                 
+           0 C0DE 8006  -  Tape is write protected for write operation.   
+           0 C0DE 8008  -  Write tape mark error for write only.          
+           0 C0DE 800E  -  Success.                                       
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      16                            ENGINE BOOT                    BOOT06.DOC
+      INTERNAL INFORMATION                                      July 23, 1984
+
+
+
+
+      APPENDIX I.   INTERNAL INFORMATION
+
+
+      If desired, the  tape and/or disk boots  may be called from  a program.
+      (For example  the ISIS  code save routine,  frequently used  in private
+      network configurations).
+
+      Set up the device parameter  block prior to calling either the  tape or
+      disk routines.   The location of  the parameter block  can be  found by
+      examining any of the jumps at x'48' through x'66').
+
+      Next do a jump and link, using register 9, to the address stored in the
+      jump (x'68' for small disk) PLUS TWO.  Adding two to the  address skips
+      over the "LIS R9,0" at the start of each of these routines.   After the
+      Boot  has  completed  the requested  operation,  or  received  an error
+      condition, it  will check register  9.  If R9  contains a zero  it will
+      display the terminating condition on the console.  If R9 is not zero it
+      will link-return to that address.
+
+      The return code, indicating  success or failure of the  operation, will
+      be returned in register 1.  It should be noted that no  other registers
+      are preserved.  You will be returned to the register set you called the
+      boot from, with  all interrupts disabled.   The jumps at  x'48' through
+      x'6B' are NOT rewritten.  A sample program follows:
+
+                  RA      0               : BASE 16 FOR DEFAULT RADIX.
+          DSKBOT  EQ      0066            : ADDRESS FOR JUMP TO SMALL DISK
+                                          : BOOT.
+          START   L       R1,DSKBOT+2     : GET ADDRESS POINTED TO BY
+                                          : JUMP TABLE.
+                  NI      R1,000FFFFF     : REMOVE '40' THAT WAS IN THE
+                                          : MOST SIG. BYTE.
+                  LR      R2,R1           : CREATE BASE ADDRESS (FOR
+                  NI      R2,000FF000     : DISK PARAMETER BLOCK).
+                  LM      R12,MYPARM      : GET MY DISK PARAMETERS.
+                  STM     R12,0,R2        : SAVE IN DISK PARAMETER BLOCK.
+                  JAL     R9,2,R1         : CALL DISK ROUTINE.
+                  CHI     R1,00E          : ALL OK ??
+                  JNBS    .               : NO, LOOP FOR EVER.
+                  :       :               : YES, CONTINUE....
+                  :       :
+          MYPARM  WC      00000           : STARTING ADDRESS TO WRITE.
+                  WC      10000           : ENDING ADDRESS TO WRITE.
+                  WC      00000000        : SET TO CYLINDER ZERO.
+                  WC      01300000        : DISK READ COMMAND.
+
+      Version 6 and  later boots all  have a jump  at location x'48'  and are
+      loaded in to memory in such a way that a jump to x'720' will  cause the
+      boot  to  relocate itself  back  into upper  memory.   Having relocated
+      itself it  will start running  the sync/SIO boot.   It is  necessary to
+      follow this convention so that Tymnet-II can:
+
+      17                            ENGINE BOOT                    BOOT06.DOC
+      INTERNAL INFORMATION                                      July 23, 1984
+
+
+                A.  Detect a version 6 or higher boot, and...
+
+                B.  It can jump to boot relocation upon  receipt of
+                    a DLOAD command.
+
+
+      The current intention is for Tymnet-II to use the last 4k of memory for
+      buffer space, thereby destroying the relocated copy of the boot.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      18                            ENGINE BOOT                    BOOT06.DOC
+      CHECKSUM FOR SYNC AND SIO                                 July 23, 1984
+
+
+
+
+      APPENDIX II.   CHECKSUM FOR SYNC AND SIO
+
+
+      Two checksums are transmitted.  The first is a 'vertical' checksum, the
+      second is a 'diagonal' checksum.
+
+
+      II-1  ALGORITHM FOR VERTICAL CHECKSUM
+
+
+
+           1.  Load 0 into accumulator.
+
+           2.  Get a half word of data.
+
+           3.  XOR data with accumulator.
+
+           4.  Go to step 2.
+
+
+
+      II-2  ALGORITHM FOR DIAGONAL CHECKSUM
+
+
+
+           1.  Load 0 into accumulator.
+
+           2.  Get a half word of data.
+
+           3.  Rotate 16  bit accumulator  left 1  bit.  High  order bit
+               becomes low order bit.
+
+           4.  XOR data with accumulator.
+
+           5.  Go to step 2.
+
+
+      Note that the diagonal checksum includes the vertical checksum.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      19                            ENGINE BOOT                    BOOT06.DOC
+`G[ø
