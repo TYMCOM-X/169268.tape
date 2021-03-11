@@ -1,0 +1,771 @@
+
+
+
+
+
+                                                       June 4, 1984
+
+
+
+
+
+
+                              *   *    ****   ***
+                              *   *    *   * *   *
+                               * *     *   * *
+                                *      ****  *
+                               * *     *     *
+                              *   * ** *     *   *
+                              *   * ** *      ***
+
+      ****    *   ****    ****  ****   ***  *****  ***   ***   ***  *
+      *   *  * *   *  *   *   * *   * *   *   *   *   * *   * *   * *
+      *   * *   *  *  *   *   * *   * *   *   *   *   * *     *   * *
+      ****  *   *  *  *   ****  ****  *   *   *   *   * *     *   * *
+      *     *****  *  *   *     * *   *   *   *   *   * *     *   * *
+      *     *   *  *  *   *     *  *  *   *   *   *   * *   * *   * *
+      *     *   * ****    *     *   *  ***    *    ***   ***   ***  *****
+
+     ***  ****  *****  ***  *** ***** ***  ***    *   ***** ***  ***  **  *
+    *   * *   * *     *   *  *  *      *  *   *  * *    *    *  *   * **  *
+    *     *   * *     *      *  *      *  *     *   *   *    *  *   * * * *
+     ***  ****  ***   *      *  ***    *  *     *   *   *    *  *   * * * *
+        * *     *     *      *  *      *  *     *****   *    *  *   * * * *
+    *   * *     *     *   *  *  *      *  *   * *   *   *    *  *   * *  **
+     ***  *     *****  ***  *** *     ***  ***  *   *   *   ***  ***  *  **
+
+                            Preliminary Version 1.0
+
+
+
+
+
+
+        Abstract
+
+            This document describes the specifications for a  PAD  Q-bit
+        protocol  for  use  by  X.PC  packet  protocol systems.  The PAD
+        protocol provides session and echo control functions.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               Table of Contents                               _____ __ ________
+
+
+        Introduction ..........................................  1
+
+        Q-Bit Packet Format ...................................  2
+
+        Echo Control Signals ..................................  3
+
+        Echo Control Procedures ...............................  5
+
+        Session Control Signals ...............................  8
+
+        Session Control Procedures ............................ 10
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+X.PC PAD Protocol Specification                                           Page 1
+Introduction
+
+
+                                  Introduction                                  ____________
+
+        This document describes the specifications for an  echo  control
+        and  session  level  protocol  intended for use with X.PC packet
+        level protocol.
+
+        The driver implemented by Tymnet for the IBM PC/XT and  Tymnet's
+        X.PC  Network  Server  will  support  this protocol.  The Packet
+        Assembler/Disassembler  (PAD)  function  within  these  products
+        implements the protocol.
+
+        The purpose of the echo control protocol  is  to  provide  local
+        echo control at the PAD.
+
+        The session protocol provides the ability to request, accept, or
+        clear sessions.
+
+        Details concerning X.PC packet level protocol are provided by:
+
+          X.PC Protocol Specification, September 8, 1983,
+            Tymshare Publication number 272
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+X.PC PAD Protocol Specification                                           Page 2
+Q-Bit Packet Format
+
+
+                              Q-Bit Packet Format                              _____ ______ ______
+
+        The values defined here are contained  within  X.PC  Q-bit  data
+        packets.  The q-bit packet format has two fields:
+
+              Field        Length
+            ---------------------------------------------
+               type        one octet
+               data        up to 255 octets (optional)
+
+        The type field identifies individual PAD signals.  The  optional
+        data   field  contains  additional  information  concerning  the
+        signal.  Valid type values are:
+
+                Value   Signal
+                --------------------------
+                 1      enable echo control (EON)
+                 2      disable echo control (EOFF)
+                 3      enter deferred echo mode (EDEM)
+                 4      leave deferred echo mode (LDEM)
+                 5      green ball, prepare to end deferred echo mode
+                 6      red ball, cancel green ball
+                 7      begin logical break
+                 8      end logical break
+                 9      session request
+                10      session accept
+                11      session clear
+                12      session clear accepted
+                13      yellow ball
+                14      orange ball, reflected yellow ball
+
+        The following sections describe each PAD q-bit packet and usage.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+X.PC PAD Protocol Specification                                           Page 3
+Echo Control Signals
+
+
+                              Echo Control Signals                              ____ _______ _______
+
+
+        Certain echo control signals are restricted in usage.  Thus,  it
+        becomes  necessary to distinguish between the Session-originator
+        (terminal  PAD)   and   the   Session-terminator   (host   PAD).
+        Furthermore,  certain  signals  are passed in only one direction
+        over a session (e.g.  EDEM), and others,  while  passing  around
+        the   session,   may   be   initiated  by  only  one  end  (e.g.
+        Green.Ball).
+
+        The initial state of the  terminal  PAD  is  echo  control  off.
+        Terminal  PAD  to  terminal  PAD connections do not generate any
+        echo control signals.
+
+        The term "application" refers to the program or user attached to
+        the terminal PAD.
+
+
+        Packet Name : Enable Echo Control                      ______ ____ _______
+        Type Field  : 1
+        Data Field  : none
+
+        Originates only at host PAD.   Instructs  the  terminal  PAD  to
+        handle  echo  control locally, using EDEM, LDEM, Green Ball, and
+        Red Ball logic.
+
+        Packet Name : Disable Echo Control                      _______ ____ _______
+        Type Field  : 2
+        Data Field  : none
+
+        Originates only at host PAD.  Instructs the terinal PAD to  stop
+        echoing  locally.   Suspends  the use of EDEM, LDEM, Green Ball,
+        and Red Ball Logic.
+
+        Packet Name : Enter Deferred Echo Mode                      _____ ________ ____ ____
+        Type Field  : 3
+        Data Field  : none
+
+        Originates only from the terminal PAD.  Indicates  to  the  host
+        PAD that the terminal PAD has temporarily stopped echoing.
+
+        Packet Name : Leave Deferred Echo Mode                      _____ ________ ____ ____
+        Type Field  : 4
+        Data Field  : none
+
+        Originates only from the terminal PAD.  Indicates  to  the  host
+        PAD that the teminal PAD has resumed echoing.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+X.PC PAD Protocol Specification                                           Page 4
+Echo Control Signals
+
+
+        Packet Name : Green Ball                      _____ ____
+        Type Field  : 5
+        Data Field  : none
+
+        Initiated only by terminal PADS.  Held by the host PAD until the
+        host PAD is ready to accept input, then returned to the terminal
+        PAD.
+
+        Receipt of a green ball by a terminal  PAD  indicates  that  the
+        host  PAD  is waiting for input.  The terminal PAD may decide to
+        leave deferred echo mode when this occurs.
+
+        A green ball may be destroyed if a red ball  catches  it.   This
+        usually happens at the host PAD while it is holding a green ball
+        while data is queued.
+
+        Packet Name : Red Ball                      ___ ____
+        Type Field  : 6
+        Data Field  : none
+
+        Initiated by terminal PADS, the Red Ball  is  used  to  "cancel"
+        Green Balls.  A Red Ball which catches a Green Ball causes it to
+        disappear, and the Red Ball then propagates around the  session,
+        immediately.  This signal is sent by the terminal PAD whenever a
+        Red- or Green ball is outstanding and:
+
+        1.  A character is received from the application;  or
+
+        2.  If an excessive amount of time has passed  since  the  Green
+          ball has been transmitted, and is feared lost;  or
+
+        3.  If an excessive amount of time has passed since a  Red  Ball
+          has been transmitted, and is feared lost.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+X.PC PAD Protocol Specification                                           Page 5
+Echo Control Procedures
+
+
+        Echo Control Procedures        ____ _______ __________
+
+
+        In the following procedures, "send" refers  to  sending  to  the
+        host PAD, "print" refers to sending to the application.  When an
+        ASCII character is received from the application the  effect  is
+        as if the following PASCAL procedures were called:
+
+        PROCEDURE receive(VAR char: INTEGER) { process input character }
+            BEGIN
+            c := MOD(char, X'80') { character without parity bit };
+               IF echo.on = TRUE
+               THEN echo(c,char) {perform echo logic}
+               ELSE send(char);
+            END;
+
+        PROCEDURE echo(VAR c, char: INTEGER) {echo input character }
+            BEGIN
+            IF deferred.echo.mode = TRUE
+            THEN
+              BEGIN
+              IF green.ball.out = TRUE
+              THEN
+                BEGIN
+                green.ball.out := FALSE;
+                  send(red.ball);
+                END;
+              send(char);
+              END;
+            ELSE {NOT deferred.echo.mode}
+              IF output.buffer.empty
+              THEN
+              CASE c OF
+                c=X'7F': {DEL,RUBOUT}
+                  BEGIN
+                    enter.dem;
+                    send(char);
+                  END;
+                c=X'7E': {tilde}
+                  BEGIN
+                    enter.dem;
+                    send(char);
+                  END;
+                c=X'7D': {ALTMODE,"}"}
+                  BEGIN
+                    enter.dem;
+                    send(char);
+                  END
+                c>X'20': {printable character}
+                  BEGIN
+                    print(char);
+                    send(char);
+                  END;
+                c=X'1B': { ESC }
+
+
+
+
+
+
+
+
+X.PC PAD Protocol Specification                                           Page 6
+Echo Control Procedures
+
+
+                  BEGIN
+                    enter.dem;
+                    send(char);
+                  END;
+                c=X'0D': { CR }
+                  BEGIN
+                    print(char);
+                    send(char);
+                  END;
+                c=X'0A': { LF }
+                  BEGIN
+                    print(char);
+                    send(char);
+                  END;
+                c=X'09': { HT }
+                  BEGIN
+                    enter.dem;
+                    send(char);
+                  END;
+                c=X'08': { BS }
+                  BEGIN
+                    enter.dem;
+                    send(char);
+                  END;
+                other:
+                  BEGIN
+                    enter.dem;
+                    send(char);
+                  END;
+                END;
+            ELSE {output buffer not empty}
+              BEGIN
+              enter.dem;
+              send(char);
+              END;
+            END;
+
+        PROCEDURE enter.dem {enter Deferred-Echo-Mode}
+            BEGIN
+            deferred.echo.mode := TRUE;
+            send(edem);
+            END;
+
+
+        Whenever deferred.echo.mode  is  TRUE  and  no.ball.out.flag  is
+        TRUE, then as soon as there is no output in progress (or queued)
+        no.ball.out.  flag is set FALSE and green.ball.out is  set  TRUE
+        and a Green.Ball is sent on the session.
+
+        If a character is input and defered.echo.mode and green.ball.out
+        are  both  TRUE, a Red.Ball is sent and green.ball.out is set to
+        FALSE.
+
+        If approximately 8 seconds have elapsed since either a Red.   or
+
+
+
+
+
+
+
+
+X.PC PAD Protocol Specification                                           Page 7
+Echo Control Procedures
+
+
+        Green.Ball  has been sent on the session, a Red.Ball is sent and
+        green.  ball.out is set to FALSE.
+
+        The terminal PAD takes the following actions when the noted echo
+        control signal is received from the host PAD:
+
+        Green.Ball:  If green.ball.out  is  FALSE,  the  Green  Ball  is
+          ignored;   else  it  and  ball.out.flag are set to FALSE -- if
+          deferred.  echo.mode is TRUE then  deferred.echo.mode  is  set
+          FALSE and a Leave.Deferred.Echo.Mode control signal is sent on
+          the session.
+
+        Red.Ball:  ball.out.flag is set to FALSE.
+
+        Enable.Echo:  If Echo.On is set, no action;   otherwise  enables
+          enables DEM logic to perform local echo.  restore local echo.
+
+        Disable.Echo:  If Echo.On is  set,  send  EDEM,  reset  Echo.On,
+          reset  DEM;   if  green.ball.out  then  send  Red.Ball;  reset
+          green.ball.  out.  Disables local echo function.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+X.PC PAD Protocol Specification                                           Page 8
+Session Control Signals
+
+
+                            Session Control Signals                            _______ _______ _______
+
+
+        Session control q-bit packets provide the ability to  establish,
+        accept,  and clear sessions between PADs.  Additional facilities
+        are provided to signal a logical break and to determine if  data
+        is queued for output to the application.
+
+        Packet Name : Begin Break                      _____ _____
+        Type Field  : 7
+        Data Field  : none
+
+        Originated by  either  terminal  or  host  PAD.   Indicates  the
+        beginning of a logical break.
+
+        Packet Name : End Break                      ___ _____
+        Type Field  : 8
+        Data Field  : none
+
+        Originated by either terminal or host PAD.  Indicates the end of
+        a logical break.
+
+        Packet Name : Session Request                      _______ _______
+        Type Field  : 9
+        Data Field  : username:host;password string
+
+        Originated by either terminal or host PAD.  Contains information
+        needed  to  validate the session request in the data field, i.e.
+        username:host;password.
+
+        The terminal PAD starts from the  lowest-numbered  PVC  channels
+        for  session requests to the host PAD.  The host PAD starts from
+        the highest-numbered PVC channel for  session  requests  to  the
+        terminal PAD.
+
+        In case of of session request collision, both  PADS  must  issue
+        session  clear,  and  then  wait  a  random time interval before
+        attempting to re-submit session requests.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+X.PC PAD Protocol Specification                                           Page 9
+Session Control Signals
+
+
+        Packet Name : Session Accept                      _______ ______
+        Type Field  : 10
+        Data Field  : session accept string
+
+        Originated by either the  terminal  or  host  PAD  in  order  to
+        indicate acceptance of a session request.
+
+        Packet Name : Session Clear                      _______ _____
+        Type Field  : 11
+        Data Field  : clearing cause code
+
+        Originated by either the host or terminal PAD.  May occur at any
+        time  after  a session request is submitted.  The clearing cause
+        code can have the following values:
+
+                Code    Reason
+                -------------------------------
+                  0 = normal end of call
+                  1 = out of ports
+                  2 = application unavailable
+                  3 = access not permitted
+                  4 = error in username
+                  5 = error in DTE address
+                  6 = error in password
+                  7 = format error
+                  8 = network error, data lost
+                  9 = invalid PAD signal
+
+        Packet Name : Session Clear Accept                      _______ _____ ______
+        Type Field  : 12
+        Data Field  : none
+
+        Originated by either the terminal or host PAD on  receipt  of  a
+        session clear signal.
+
+        Packet Name : Yellow Ball                      ______ ____
+        Type Field  : 13
+        Data Field  : none
+
+        Originated by the host PAD to determine if any data is queued at
+        the  terminal  PAD.   On receiving the yellow ball, the terminal
+        PAD sends an orange ball back to the host PAD when no more  data
+        is queued for output to the applicaion.
+
+        Packet Name : Orange Ball                      ______ ____
+        Type Field  : 14
+        Data Field  : none
+
+        Originated by  the  terminal  PAD  whenever  a  yellow  ball  is
+        received.
+
+
+
+
+
+
+
+
+
+
+
+
+X.PC PAD Protocol Specification                                          Page 10
+Session Control Procedures
+
+
+                           Session Control Procedures                           _______ _______ __________
+
+
+        Session Establishment        _______ _____________
+
+        Session are established between  PADs  by  the  use  of  session
+        request  and  session  accept  signals.   The session originator
+        sends a session request on an unused X.PC PVC channel and  waits
+        for either a session accept or session clear signal.
+
+        The session request contains optional information concerning the
+        originators  username,  destination host, and password.  The PAD
+        receiving a session request validates this information, and  may
+        choose to either accept or reject the session.
+
+        Session Data Flo     _______ ____ ____
+
+        The initial state of a terminal PAD at  session  start  is  echo
+        control off.  If the session is to a host PAD, the host PAD will
+        control the terminal PAD's echo function.
+
+        If the session is between terminal PADS, then no echo control is
+        used.
+
+        Yellow ball and orange ball signals are  typically  used  during
+        session  data  flow  to determine if the data queues are cleared
+        prior to issuing a session clear.  This insures that all data is
+        delivered before clearing the session.
+
+        Session Clearing        _______ ________
+
+        A session originator can issue a session clear at any time after
+        issuing a session request.
+
+        A destination PAD can issue a session clear at  any  time  after
+        receiving a session request.
+
+        In either case, a session clear accept must be sent in  response
+        to a session clear before the session is considered cleared.
+    
+dt1^
