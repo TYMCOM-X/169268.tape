@@ -1,0 +1,598 @@
+!            PROGRAM:       NODRPT.DMC
+!            AUTHOR         Rob Nielsen
+!            DATE:          September 24, 1986
+!            PURPOSE:       To produce reports of Deluti node statistics for
+!                 the trend analysis project. The reports will get their
+!                 data from the data base (MSNTRACK)NODSUM.DMS and, at this
+!                 initial writing will produce 3 reports:
+
+!             1. (MSNTRACK)NODRPT.1, a report of node counts for various
+!                 EXEC and CPS ranges
+!             2. (MSNTRACK)NODRPT.2, a report of percentile points for the
+!                 EXEC and CPS distributions
+!             3. (MSNTRACK)NODRPT.3, a report of average EXEC versus average
+!                 CPS for all node types
+
+!             DESCRIPTION:   To facilitate future expansion of the data
+!                 base, the data base data is read data is read into arrays
+!                 at the start of the program (This way new attribute names
+!                 only have to be added to 1 subroutine). The actual report
+!                 writer subroutines will keep track of the number of lines
+!                 and thereby place all notes in a footer at the bottom of
+!                 a 60 line page.
+!                  The algorithms for each report writer are very simple:
+
+!                      Write Heading
+!                      Write Title for Table 1
+!                      Write Table 1 data
+!                      Write Title for Table 2, if needed
+!                      Write Table 2 data, if needed
+!                      Write Footer
+!             NOTATION:
+!                 ALL CAPS: File names, attribute names, & DPL reserved words
+!                 Mixed:    Variables, labels, and subroutines.
+
+!            ******************  MAIN PROGRAM **********************
+
+             OPEN (MSNTRACK)NODSUM.
+
+             DPL START.
+             DBSET NODSUM.
+             LET SYSCASE EQ 1.
+
+!                 Note:  Arrays for node types and ranges of Exec/Cps values
+!                        are both dimensioned at 10. The actual count is set
+!                        by the programmer at the start of the main program
+!                        will set the actual value.
+
+             DEFINE INTEGER Blanks CpsPercent(10,7) ExecPercnt(10,7) &
+                            MeanCps(10) MeanExec(10) I MaxErange MaxCrange &
+                            Dait(2) Types Noads(10) Count(10).
+             DEFINE REAL CpsRange(10,10,2) ExecRange(10,10,2) TotPercent(10,2).
+             DEFINE TEXT 9 NoadType(10).
+             DEFINE TEXT 8 Erange(10).
+             DEFINE TEXT 6 Crange(10).
+             DEFINE TEXT 3 Percents(7).
+
+!                 Set the No of node types and Exec and Cps ranges to report
+             LET MaxErange EQ 5.
+             LET MaxCrange EQ 4.
+             LET Types EQ 4.
+
+!                 To report periods other than the last date
+!            change the assignments to Mindate and Maxdate below.
+
+             DBSET NODSUM.
+             FIND ALL.
+             EVALUATE Dait(1) MAX MINDATE.
+                  SEARCH MINDATE GE Dait(1).
+             EVALUATE Dait(2) MAX MAXDATE.
+             FIND LAST AND MINDATE GE Dait(1) and MAXDATE LE Dait(2).
+
+Reports:     CALL ReadData.
+             CALL Report1.
+             CALL Report2.
+             CALL Report3.
+
+             GOTO TheEnd.
+
+
+
+!            ***************  SUBROUTINE READDATA *******************
+
+!                 This subroutine will read all report data from the 1022
+!            data base Nodsum.DMS into arrays and will also set arrays of
+!            ranges, range values, and node types.
+
+ReadData:    DBSET NODSUM.
+
+!            Assign all node types
+                  LET NoadType(1) EQ "ALL NODES".
+                  LET NoadType(2) EQ "SWITCHER ".
+                  LET NoadType(3) EQ "CONSAT   ".
+                  LET NoadType(4) EQ "ISIS     ".
+
+             LET I EQ 1.
+             LET J EQ 1.
+
+             FIND MINDATE GE Dait(1) AND MAXDATE LE Dait(2).
+NextRecord:  GETREC LastRecord.
+                  IF NODETYPE CT "ALL NODES" GOTO All.
+                  IF NODETYPE CT "SWITCHER" GOTO Switch.
+                  IF NODETYPE CT "CONSAT" GOTO Consat.
+                  IF NODETYPE CT "ISIS" GOTO Isis.
+
+LastRecord:  GOTO EndReadata.
+
+
+
+All:         LET I EQ 1.
+             CALL AssignData.
+             GOTO NextRecord.
+
+Switch:      LET I EQ 2.
+             CALL AssignData.
+             GOTO NextRecord.
+
+Consat:      LET I EQ 3.
+             CALL AssignData.
+             GOTO NextRecord.
+
+Isis:        LET I EQ 4.
+             CALL AssignData.
+             GOTO NextRecord.
+
+EndReadata:  RETURN.
+
+!            **************  SUBROUTINE ASSIGNDATA ******************
+
+AssignData:  LET Percents(1) EQ "Min".
+             LET Percents(2) EQ "10%".
+             LET Percents(3) EQ "25%".
+             LET Percents(4) EQ "50%".
+             LET Percents(5) EQ "75%".
+             LET Percents(6) EQ "90%".
+             LET Percents(7) EQ "Max".
+
+             LET Erange(1) EQ "0  to 20".
+             LET Erange(2) EQ "21 to 40".
+             LET Erange(3) EQ "41 to 60".
+             LET Erange(4) EQ "61 to 80".
+             LET Erange(5) EQ "Over  80".
+
+             LET Crange(1) EQ "0 to 3".
+             LET Crange(2) EQ "3 to 6".
+             LET Crange(3) EQ "6 to 9".
+             LET Crange(4) EQ "Over 9".
+
+             LET CpsPercent(I,1) EQ CPSMIN.
+             LET CpsPercent(I,2) EQ CPS10PCT.
+             LET CpsPercent(I,3) EQ CPS25PCT.
+             LET CpsPercent(I,4) EQ CPS50PCT.
+             LET CpsPercent(I,5) EQ CPS75PCT.
+             LET CpsPercent(I,6) EQ CPS90PCT.
+             LET CpsPercent(I,7) EQ CPSMAX.
+
+             LET ExecPercnt(I,1) EQ EXECMIN.
+             LET ExecPercnt(I,2) EQ EXEC10PCT.
+             LET ExecPercnt(I,3) EQ EXEC25PCT.
+             LET ExecPercnt(I,4) EQ EXEC50PCT.
+             LET ExecPercnt(I,5) EQ EXEC75PCT.
+             LET ExecPercnt(I,6) EQ EXEC90PCT.
+             LET ExecPercnt(I,7) EQ EXECMAX.
+
+             LET CpsRange(I,1,1) EQ REAL(CPS3).
+             LET CpsRange(I,1,2) EQ REAL(CPS3) / REAL(NODES).
+             LET CpsRange(I,2,1) EQ REAL(CPS6).
+             LET CpsRange(I,2,2) EQ REAL(CPS6) / REAL(NODES).
+             LET CpsRange(I,3,1) EQ REAL(CPS9).
+             LET CpsRange(I,3,2) EQ REAL(CPS9) / REAL(NODES).
+             LET CpsRange(I,4,1) EQ REAL(CPSTOP).
+             LET CpsRange(I,4,2) EQ REAL(CPSTOP) / REAL(NODES).
+
+             LET ExecRange(I,1,1) EQ REAL(EXEC20).
+             LET ExecRange(I,1,2) EQ REAL(EXEC20) / REAL(NODES).
+             LET ExecRange(I,2,1) EQ REAL(EXEC40).
+             LET ExecRange(I,2,2) EQ REAL(EXEC40) / REAL(NODES).
+             LET ExecRange(I,3,1) EQ REAL(EXEC60).
+             LET ExecRange(I,3,2) EQ REAL(EXEC60) / REAL(NODES).
+             LET ExecRange(I,4,1) EQ REAL(EXEC80).
+             LET ExecRange(I,4,2) EQ REAL(EXEC80) / REAL(NODES).
+             LET ExecRange(I,5,1) EQ REAL(EXECTOP).
+             LET ExecRange(I,5,2) EQ REAL(EXECTOP) / REAL(NODES).
+
+             LET K EQ 1.
+NextK1:          LET TotPercent(I,1) EQ (Totpercent(I,1) + CpsRange(I,K,2)).
+                 LET K EQ (K + 1).
+             IF K LE MaxCRange GOTO NextK1.
+
+             LET K EQ 1.
+NextK2:          LET TotPercent(I,2) EQ (Totpercent(I,2) + ExecRange(I,K,2)).
+                 LET K EQ (K + 1).
+             IF K LE MaxERange GOTO NextK2.
+
+             LET Noads(I) EQ NODES.
+             LET MeanExec(I) EQ EXECMEAN.
+             LET MeanCps(I) EQ CPSMEAN.
+
+             RETURN.
+
+!            *****************************************************
+!            *******                                       *******
+!            *******         SUBROUTINE REPORT1            *******
+!            *******                                       *******
+!            *****************************************************
+
+
+Report1:     INIT 1 (MSNTRACK)NODRPT.1.
+
+!            *******  Print Heading for the Report  *********
+
+!            Lines 1 and 2 of Header
+                  PRINT ON 1 FORMAT // END.
+
+!            Lines 3 and 4 of Header
+                  LET Blanks EQ 27.
+                  CALL PrntBlanks.
+                  PRINT ON 1 FORMAT "N O D E    S U M M A R Y" END.
+
+!            Lines 5 and 6-8 of Header
+                  LET Blanks EQ 19.
+                  CALL PrntBlanks.
+                  PRINT ON 1 &
+                  FORMAT "Samples Taken Between: " $ END.
+                  PRINT ON 1 Dait(1) FORMAT I6  " AND "  $ END.
+                  PRINT ON 1 Dait(2) FORMAT I6 / END.
+                  LET Blanks EQ 15.
+                  CALL PrntBlanks.
+                  PRINT ON 1  &
+               FORMAT "Source:  Delay and Utilization Program (Deluti)" // END.
+
+
+!            ******** Print Heading for CPS table ***********
+
+!            Lines 1 and 2 of CPS header
+                  LET Blanks EQ 30.
+                  CALL PrntBlanks.
+                  PRINT ON 1 FORMAT "T H R O U G H P U T" / END.
+
+!            Line 3 of CPS header
+                  PRINT ON 1 FORMAT 1X "Range in Kilo CPS" 2x $ END.
+                  LET J EQ 1.
+NextLin11:             PRINT ON 1 NoadType(J) FORMAT 3X A9 1X $ END.
+                       LET J EQ (J+1).
+                  IF J LE Types GOTO NextLin11.
+                  PRINT ON 1 FORMAT END.
+
+!            Line 4 of CPS header
+                  PRINT ON 1 FORMAT 1X "  MAX (In + Out) " 2x $ END.
+                  LET J EQ 1.
+NextLin12:             PRINT ON 1 FORMAT 3X "  No     %"  $ END.
+                       LET J EQ (J+1).
+                  IF J LE Types GOTO NextLin12.
+                  PRINT ON 1 FORMAT END.
+
+!            Lines 5 through 8 of CPS header
+                  PRINT ON 1 FORMAT 1X "-----------------" 2x $ END.
+                  LET J EQ 1.
+NextLin13:             PRINT ON 1 FORMAT 3X "----  ----"  $ END.
+                       LET J EQ (J+1).
+                  IF J LE Types GOTO NextLin13.
+                  PRINT ON 1 FORMAT END.
+
+
+
+!            ********** Print Body of CPS Table *****************
+
+             LET I EQ 1.
+             LET J EQ 1.
+NextRow11:        PRINT ON 1 Crange(I) FORMAT /, 5X A8 7X $ END.
+NextCol11:        PRINT ON 1 CpsRange(J,I,1) (CpsRange(J,I,2) * 100.0) &
+                  FORMAT 3X F4 2X F2.1 $ END.
+                  LET J EQ (J+1).
+             IF J LE Types GOTO NextCol11.
+                  PRINT ON 1 FORMAT END.
+                  LET I EQ (I+1).
+                  LET J EQ 1.
+             IF I LE MaxCrange GOTO NextRow11.
+
+!            Print Class Means and Totals
+
+                  PRINT ON 1 FORMAT 1X "-----------------" 2x $ END.
+                  LET J EQ 1.
+NextLin17:             PRINT ON 1 FORMAT 3X "----  ----"  $ END.
+                       LET J EQ (J+1).
+                  IF J LE Types GOTO NextLin17.
+                  PRINT ON 1 FORMAT END.
+
+             LET J EQ 1.
+                  PRINT ON 1 FORMAT 5X "Class Totals : " $ END.
+NextCol12:        PRINT ON 1 Noads(J) (TotPercent(J,1) * 100.0) &
+                  FORMAT 3X I4 2X F3.0 $ END.
+                  LET J EQ (J+1).
+             IF J LE Types GOTO NextCol12.
+                  PRINT ON 1 FORMAT / END.
+
+             LET J EQ 1.
+                  PRINT ON 1 FORMAT 3X " CPS Class Ave : " $ END.
+NextCol13:        PRINT ON 1 MeanCps(J) FORMAT 8X I5 $ END.
+                  LET J EQ (J+1).
+             IF J LE Types GOTO NextCol13.
+                  PRINT ON 1 FORMAT /// END.
+
+
+!            ******** Print Heading for EXEC table ***********
+
+!            Lines 1 and 2 of EXEC  header
+                  LET Blanks EQ 30.
+                  CALL PrntBlanks.
+                  PRINT ON 1 FORMAT "E X E C   C O U N T" / END.
+
+!            Line 3 of EXEC header
+                  PRINT ON 1 FORMAT 1X "Range in EXEC Loop" 1x $ END.
+                  LET J EQ 1.
+NextLin14:             PRINT ON 1 NoadType(J) FORMAT 3X A9 1X $ END.
+                       LET J EQ (J+1).
+                  IF J LE Types GOTO NextLin14.
+                  PRINT ON 1 FORMAT END.
+
+!            Line 4 of EXEC header
+                  PRINT ON 1 FORMAT 1X " MIN (EXEC Count)" 1x $ END.
+                  LET J EQ 1.
+NextLin15:             PRINT ON 1 FORMAT 3X "  No     %"  $ END.
+                       LET J EQ (J+1).
+                  IF J LE Types GOTO NextLin15.
+                  PRINT ON 1 FORMAT END.
+
+!            Lines 5 through 8 of CPS EXEC header
+                  PRINT ON 1 FORMAT 1X "-----------------" 2x $ END.
+                  LET J EQ 1.
+NextLin16:             PRINT ON 1 FORMAT 3X "----  ----"  $ END.
+                       LET J EQ (J+1).
+                  IF J LE Types GOTO NextLin16.
+                  PRINT ON 1 FORMAT END.
+
+
+
+!            ********** Print Body of EXEC Table *****************
+
+             LET I EQ 1.
+             LET J EQ 1.
+NextRow12:        PRINT ON 1 Erange(I) FORMAT /, 5X A8 7X $ END.
+NextCol14:        PRINT ON 1 ExecRange(J,I,1) (ExecRange(J,I,2) * 100.0) &
+                  FORMAT 3X F4 2X F2.1 $ END.
+                  LET J EQ (J+1).
+             IF J LE Types GOTO NextCol14.
+                  PRINT ON 1 FORMAT END.
+                  LET I EQ (I+1).
+                  LET J EQ 1.
+             IF I LE MaxErange GOTO NextRow12.
+
+!            Print Class Means and Totals
+
+                  PRINT ON 1 FORMAT 1X "-----------------" 2x $ END.
+                  LET J EQ 1.
+NextLin18:             PRINT ON 1 FORMAT 3X "----  ----"  $ END.
+                       LET J EQ (J+1).
+                  IF J LE Types GOTO NextLin18.
+                  PRINT ON 1 FORMAT END.
+
+             LET J EQ 1.
+                  PRINT ON 1 FORMAT 5X "Class Totals : " $ END.
+NextCol15:        PRINT ON 1 Noads(J) (Totpercent(J,2) * 100.0)&
+                  FORMAT 3X I4 2X F3.0 $ END.
+                  LET J EQ (J+1).
+             IF J LE Types GOTO NextCol15.
+                  PRINT ON 1 FORMAT / END.
+
+             LET J EQ 1.
+                  PRINT ON 1 FORMAT 2X " Exec Class Ave : " $ END.
+NextCol16:        PRINT ON 1 MeanExec(J) FORMAT 9X I4 $ END.
+                  LET J EQ (J+1).
+             IF J LE Types GOTO NextCol16.
+                  PRINT ON 1 FORMAT // END.
+
+
+
+
+!            *****  Print Report Footer ***********
+
+             PRINT ON 1 &
+             FORMAT /,2X "KEY:  No--Number of Nodes in Given Range" END.
+             PRINT ON 1 &
+             FORMAT   2X "      % --Per Cent of Nodes in Given Range" END.
+
+             PRINT ON 1 FORMAT /, 2X, "NOTES: " &
+" 1)CPS and EXEC data come from daily XRAY observations. Each node is" END.
+             PRINT ON 1 FORMAT 2X &
+"  represented by its observed max CPS and min EXEC for the study period." END. 
+             PRINT ON 1 FORMAT /, 9X, &
+" 2)ALL NODES total includes nodes besides ISIS, SWITCHER, and CONSAT." END.
+
+!            ****** End of Subroutine ******
+
+             RELEASE 1.
+             RETURN.
+
+
+!            *****************************************************
+!            *******                                       *******
+!            *******         SUBROUTINE REPORT2            *******
+!            *******                                       *******
+!            *****************************************************
+
+
+Report2:     INIT 1 (MSNTRACK)NODRPT.2.
+
+!            *******  Print Heading for the Report  *********
+
+!            Lines 1-2 of Header
+                  PRINT ON 1 FORMAT // END.
+
+!            Lines 3-5 of Header
+                  LET Blanks EQ 22.
+                  CALL PrntBlanks.
+                  PRINT ON 1 FORMAT "N O D E   P E R F O R M A N C E" END.
+
+!            Lines 6-9 of Header
+                  LET Blanks EQ 15.
+                  CALL PrntBlanks.
+                  PRINT ON 1 &
+                  FORMAT "Samples Taken Between: " $ END.
+                  PRINT ON 1 Dait(1) FORMAT I6  " AND "  $ END.
+                  PRINT ON 1 Dait(2) FORMAT I6 / END.
+                  LET Blanks EQ 11.
+                  CALL PrntBlanks.
+                  PRINT ON 1  &
+                  FORMAT "Source: Delay and Utilization Program (Deluti)" END.
+
+
+!            ******** Print Header for CPS table ***********
+
+!            Lines 1 and 2 of CPS header
+                  LET Blanks EQ 27.
+                  CALL PrntBlanks.
+                  PRINT ON 1 FORMAT "T H R O U G H P U T" / END.
+
+!            Lines 3 and 4 of CPS header
+                  PRINT ON 1 FORMAT 2X "Percentile Point For" 4X $ END.
+                  LET J EQ 1.
+NextLin21:             PRINT ON 1 NoadType(J) FORMAT 2X A9 $ END.
+                       LET J EQ (J+1).
+                  IF J LE Types GOTO NextLin21.
+                  PRINT ON 1 FORMAT END.
+
+                  PRINT ON 1 FORMAT 2X " Max CPS (In + Out)  " 4X $ END.
+                  LET J EQ 1.
+NextLin22:             PRINT ON 1 FORMAT 4X " CPS" 2X $ END.
+                       LET J EQ (J+1).
+                  IF J LE Types GOTO NextLin22.
+                  PRINT ON 1 FORMAT END.
+
+
+!            Lines 5 and 6 of CPS header
+                  PRINT ON 1 FORMAT 2X "---------------------" 4X $ END.
+                  LET J EQ 1.
+NextLin23:             PRINT ON 1 FORMAT "   -------" $ END.
+                       LET J EQ (J+1).
+                  IF J LE Types GOTO NextLin23.
+                  PRINT ON 1 FORMAT END.
+
+
+
+!            ********** Print Body of CPS Table *****************
+
+             LET I EQ 1.
+             LET J EQ 1.
+NextRow21:        PRINT ON 1 Percents(I) FORMAT /, 15X A3 " :  " 4X $ END.
+NextCol21:        PRINT ON 1 CpsPercent(J,I) FORMAT 5X I5 $ END.
+                  LET J EQ (J+1).
+             IF J LE Types GOTO NextCol21.
+                  PRINT ON 1 FORMAT END.
+                  LET I EQ (I+1).
+                  LET J EQ 1.
+             IF I LE 7 GOTO NextRow21.
+
+!            Print Class Means and Totals
+
+                  PRINT ON 1 FORMAT 2X "----------------" 4X $ END.
+                  LET J EQ 1.
+NextLin24:             PRINT ON 1 FORMAT "    ------" $ END.
+                       LET J EQ (J+1).
+                  IF J LE Types GOTO NextLin24.
+                  PRINT ON 1 FORMAT END.
+
+             LET J EQ 1.
+                  PRINT ON 1 FORMAT 2X "   Class Mean CPS:  " 4X $ END.
+NextCol22:        PRINT ON 1 MeanCPS(J) FORMAT 5X I5 $ END.
+                  LET J EQ (J+1).
+             IF J LE Types GOTO NextCol22.
+                  PRINT ON 1 FORMAT / END.
+
+             LET J EQ 1.
+                  PRINT ON 1 FORMAT 2X "    Nodes Sampled:  " 4X $ END.
+NextCol23:        PRINT ON 1 Noads(J) FORMAT 6X I4 $ END.
+                  LET J EQ (J+1).
+             IF J LE Types GOTO NextCol23.
+                  PRINT ON 1 FORMAT // END.
+
+
+!            ******** Print Heading for EXEC table ***********
+
+!            Lines 1 and 2 of Exec header
+                  LET Blanks EQ 28.
+                  CALL PrntBlanks.
+                  PRINT ON 1 FORMAT "E X E C  C O U N T " / END.
+
+!            Lines 3 and 4 of Exec header
+                  PRINT ON 1 FORMAT 2X "Percentile Point For" 4X $ END.
+                  LET J EQ 1.
+NextLin25:             PRINT ON 1 NoadType(J) FORMAT 2X A9 $ END.
+                       LET J EQ (J+1).
+                  IF J LE Types GOTO NextLin25.
+                  PRINT ON 1 FORMAT END.
+
+                  PRINT ON 1 FORMAT 2X "   Min EXEC Count    " 4X $ END.
+                  LET J EQ 1.
+NextLin26:             PRINT ON 1 FORMAT 4X "EXEC" 2X $ END.
+                       LET J EQ (J+1).
+                  IF J LE Types GOTO NextLin26.
+                  PRINT ON 1 FORMAT END.
+
+
+!            Lines 5 and 6 of Exec header
+                  PRINT ON 1 FORMAT 2X "---------------------" 4X $ END.
+                  LET J EQ 1.
+NextLin27:             PRINT ON 1 FORMAT " ---------" $ END.
+                       LET J EQ (J+1).
+                  IF J LE Types GOTO NextLin27.
+                  PRINT ON 1 FORMAT END.
+
+
+
+!            ********** Print Body of EXEC Table *****************
+
+             LET I EQ 1.
+             LET J EQ 1.
+NextRow22:        PRINT ON 1 Percents(I) FORMAT /, 15X A3 " :  " 4X $ END.
+NextCol24:        PRINT ON 1 ExecPercnt(J,I) FORMAT 6X I4 $ END.
+                  LET J EQ (J+1).
+             IF J LE Types GOTO NextCol24.
+                  PRINT ON 1 FORMAT END.
+                  LET I EQ (I+1).
+                  LET J EQ 1.
+             IF I LE 7 GOTO NextRow22.
+
+!            Print Class Means and Totals
+
+                  PRINT ON 1 FORMAT 2X "---------------------" 4X $ END.
+                  LET J EQ 1.
+NextLin28:             PRINT ON 1 FORMAT "   -------" $ END.
+                       LET J EQ (J+1).
+                  IF J LE Types GOTO NextLin28.
+                  PRINT ON 1 FORMAT END.
+
+             LET J EQ 1.
+                  PRINT ON 1 FORMAT 2X "  Class Mean EXEC:  " 4X $ END.
+NextCol25:        PRINT ON 1 MeanExec(J) FORMAT 6X I4 $ END.
+                  LET J EQ (J+1).
+             IF J LE Types GOTO NextCol25.
+                  PRINT ON 1 FORMAT / END.
+
+             LET J EQ 1.
+                  PRINT ON 1 FORMAT 2X "    Nodes Sampled:  " 4X $ END.
+NextCol26:        PRINT ON 1 Noads(J) FORMAT 6X I4 $ END.
+                  LET J EQ (J+1).
+             IF J LE Types GOTO NextCol26.
+                  PRINT ON 1 FORMAT // END.
+
+
+!            *****  Print Report Footer ***********
+
+             PRINT ON 1 FORMAT /, 2X, &
+"NOTE:  CPS and EXEC data come from daily XRAY observations. Each node is", &
+"  represented by its observed max CPS and min EXEC for the study period." END. 
+
+!            ****** End of Subroutine ******
+
+             RELEASE 1.
+             RETURN.
+
+!            **************  SUBROUTINE REPORT3 **************
+
+Report3:     RETURN.
+
+!            **************  SUBROUTINE PRNTBLANKS **************
+
+PrntBlanks:  LET K EQ 1.
+NextBlank:        PRINT ON 1 FORMAT " " $ END.
+                  LET K EQ (K+1).
+             IF K LE Blanks GOTO NextBlank.
+
+             RETURN.
+
+!            **************  END OF PROGRAM   **************
+
+TheEnd:      DPL STOP.
+             DPL END.
+    8( ¥
