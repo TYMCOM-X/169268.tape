@@ -1,0 +1,576 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                     CMTI SEPARATE CIRCUIT PRINTER SUPPORT
+                            GENERAL EXTERNAL DESIGN
+
+                                  Norman Chin
+
+                                   CMTI/3270
+
+
+
+
+
+
+
+                         McDONNELL DOUGLAS CORPORATION
+                         NETWORK TECHNOLOGY DEVELOPMENT
+                               September 14, 1988
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ====================================================================
+     |   McDonnell  Douglas  Corporation's   proprietary   rights  are   |
+     |   included in the information disclosed herein.  The recipient,   |
+     |   by receiving this document, agrees that neither this document   |
+     |   nor the information disclosed herein  nor  any  part  thereof   |
+     |   shall be reproduced or transferred to other documents or used   |
+     |   or disclosed to others for manufacturing  or  for  any  other   |
+     |   purpose except  as  specifically  authorized  in  writing  by   |
+     |   McDonnell Douglas Corporation.                                  |
+      ====================================================================
+                                                              September 14, 1988
+
+
+
+
+
+
+
+                                  TABLE OF CONTENTS
+
+      Section                                                               Page
+
+
+
+      1.   Introduction                                                        1
+
+
+      2.   Separate Circuit For Printer                                        2
+        2.1   Handling of Print Buffer                                         2
+
+
+      3.   Printer Only Logon                                                  3
+        3.1   Getting the Printer ID                                           3
+
+
+      4.   System Generation                                                   4
+        4.1   SOLOPT - Printer Only Logon Macro                                4
+
+
+      5.   Limitations                                                         5
+
+
+                                   APPENDICES
+                                   ==========
+
+
+      I.   Sample Tymfile                                                      7
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                   CMTI/3270 Separate Circuit Printer Support - GED   SEPCIR.GED
+      Introduction                                            September 14, 1988
+
+
+
+
+
+
+                                  1 -  Introduction
+
+
+           This document describes the support of a separate circuit printer and
+      a printer only logon to a host interface.
+
+           Separate  circuit printer  refers  to the  ability of  CMTI  to build
+      circuits to  a host interface  with the CRT  and PRT devices  and interact
+      with  the sessions.   Normally,  when a  user  requests a  print  job, the
+      printer is busy  printing while the  terminal session remains  active.  In
+      its original design, CMTI may  not process any input from the  terminal or
+      the  host  while  it  is  printing.   This  depends  on  when  the printer
+      datastreams are processed.  For a long print job, it may be  impossible to
+      process any keyboard input or  CRT data comming from the host.   Since the
+      results are  unpredictable, CMTI  must be  changed so  that an  active CRT
+      device may be used to communicate with the session while the print  job is
+      actively printing.
+
+           Printer only logon refers to  the ability of CMTI to build  a circuit
+      to a  host interface with  only the printer  device and interact  with the
+      session.  A user who  only wants to use the  printer device to do  a print
+      job can now do so without  being logged in with a CRT device.   This frees
+      up the CRT device for  other users to use and  it allows a user to  send a
+      print job to a  printer from his terminal  without being logged in  to the
+      printer device.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                   CMTI/3270 Separate Circuit Printer Support - GED   SEPCIR.GED
+      Separate Circuit For Printer                            September 14, 1988
+
+
+
+
+
+
+                          2 -  Separate Circuit For Printer
+
+
+           The circuit building process for  logging in with a CRT and  PRT pair
+      remains  the same.   There are  two circuits  to the  HIF and  one  to the
+      CONSAT.  The difference  is the ability of  CMTI to accept input  from the
+      terminal and from the host  while the printer is busy.  This  requires two
+      changes to CMTI.
+
+           The first change is to not backpressure the terminal and the  host on
+      the CRT circuit when a printer buffer is scheduled for output.  Similarly,
+      if a CRT  screen buffer is  scheduled for output,  the PRT circuit  is not
+      backpressured.  Backpressure is  only applied to  the port which  fills up
+      the screen buffer.  This is either  caused by receipt of an ETX or,  if it
+      is a 132 column print, by reaching the maximum printer buffer  size.  This
+      backpressuring scheme allows data to  be retrieved from the IRING  while a
+      buffer is put on the active list.
+
+           The second change  is to have  the printer dispatcher  process active
+      ports, those which request output  to the printer, only up to  the maximum
+      transmit limit.  An end of print  string needs to be sent to  the terminal
+      when it  reaches this limit.   By sending this  end of print  string, CMTI
+      frees up  other output to  the terminal that  needs to be  transmitted for
+      this user.
+
+
+
+
+
+
+                            2.1  Handling of Print Buffer
+
+
+           The  print buffer  is handled  in one  of two  ways depending  on the
+      printout format determined by the WCC in the 3270 data stream.  If it is a
+      80 column print, CMTI fills up the buffer until it receives an ETX.  If it
+      is  a 132  column print,  CMTI only  fills the  buffer up  to  the maximum
+      allowed for a print buffer.  The  size of the print buffer is the  same as
+      the size of a screen buffer which is 1920 bytes.  When the buffer is full,
+      the rest of the data is stored in the bufferlet for later processing while
+      the circuit is being backpressured.  This feature allows an application to
+      send more than 1920 characters in a block at a time.
+
+           Processing data comming from  the CRT circuit is the  first priority.
+      The entire screen buffer must be transmitted to the terminal before giving
+      up its process.  When output is  done for the CRT, the printer  is checked
+      for any output.  If  there is printer output for  this user, it is  put on
+      the active list.  If there is not, CMTI checks the bufferlet.
+
+
+                   CMTI/3270 Separate Circuit Printer Support - GED   SEPCIR.GED
+      Printer Only Logon                                      September 14, 1988
+
+
+
+
+
+
+                               3 -  Printer Only Logon
+
+
+           A printer with an attached keyboard is allowed to log into CMTI  as a
+      printer only device.
+
+           If a printer with an attached keyboard is logged in as a printer only
+      device, the  user must supply  a terminal type  on the  terminal selection
+      screen.  The only  valid terminal type for  the printer only logon  is the
+      TTY emulation.  However, the validity is determined at the  host selection
+      screen  when the  user  selects his  logon.  The  terminal  selection menu
+      screen can be bypassed by using the DEFTTY macro in the Tymfile.
+
+           Once the  terminal is  selected, a list  of possible  destinations is
+      displayed on the screen.  This is based on the macro DEFMEN defined in the
+      Tymfile.  If there is only one selection for the destination, this menu is
+      bypassed.   Thus,  if  DEFTTY  and DEFMEN  are  correctly  defined  in the
+      Tymfile, a user does not have to use the keyboard after the username logon
+      for a printer only logon.
+
+           A user who is  logging into CMTI with  a printer that has  a keyboard
+      attached  to  it should  select  the  TTY terminal  type  at  the terminal
+      selection  screen.  Selecting  a terminal  type other  than the  TTY would
+      result in unpredictable printer behavior.
+
+
+
+
+
+
+                             3.1  Getting the Printer ID
+
+
+           Should a user forget his printer ID, it can be recalled by pressing a
+      control  key to  display it  on the  printer paper.   The key  sequence is
+      dependent upon  the terminal  selected on  the terminal  selection screen.
+      Refer to the specific terminal on the CMTERM.ERS manual to get the correct
+      key sequence.
+
+           The display of the printer ID depends on the macro LUNAME  defined in
+      the Tymfile.  If there  is not a match, the  error message of "ERROR  - NO
+      PRINTER ID" is displayed.  If there is a match, the string defined  in the
+      LUNAME is displayed.
+
+           A  printer  ID  will  be  initially  displayed  once  a   circuit  is
+      established.  The message "PRINTER  ID:" along with the string  defined in
+      the LUNAME is displayed if there is a match.  If there is not a match, the
+      message "PRINTER ID: NO MATCH" is displayed.
+
+
+                   CMTI/3270 Separate Circuit Printer Support - GED   SEPCIR.GED
+      System Generation                                       September 14, 1988
+
+
+
+
+
+
+                                4 -  System Generation
+
+
+           There is one required macro that can be used in a Tymfile.  The macro
+      SOLOPT is used to define a logon string for a printer only logon.
+
+
+
+
+
+
+                        4.1  SOLOPT - Printer Only Logon Macro
+
+
+           The macro SOLOPT is used in  the Tymfile to allow a user to  logon to
+      CMTI as a printer only device.  This macro is similar to the DEFSTR macro.
+      The logon  string for the  elements and  a label to  reference it  are the
+      required parameters in the macro.  This macro must also follow  the DEFELE
+      macros and precede other macros  which reference the label in  SOLOPT (eg.
+      DEFMEN).
+
+      The SOLOPT macro takes the following format:
+       
+              SOLOPT(label,text,ele0,ele1)
+       
+              a. label - a reference label which is used by the macro DEFMEN
+                 to allow a user to logon as a printer only device.  It is a
+                 required parameter.
+              b. text - character string describing this logon string and/or
+                 destination host, up to 76 characters.  It is required.
+              c. ele - element label as defined by the DEFELE macro.  Only
+                 two elements are required for the printer only logon (a
+                 network logon and the DSP logon).
+       
+
+           This macro may be  used more than once  in the Tymfile to  allow more
+      than one printer only logon.
+
+
+
+
+
+
+
+
+
+
+
+
+
+                   CMTI/3270 Separate Circuit Printer Support - GED   SEPCIR.GED
+      Limitations                                             September 14, 1988
+
+
+
+
+
+
+                                   5 -  Limitations
+
+
+           The speed of the printer is important when interacting with  the host
+      computer while  the printer  is printing.   Tests show  that a  slow speed
+      printer delay the  characters echo on the  screen.  This is caused  by the
+      printer sending the XOFF to the terminal which stops sending characters in
+      its buffer to the printer and  the CRT screen.  A user using a  slow speed
+      printer should not attempt to input from the keyboard while the printer is
+      printing although it is allowed to do so.  The display of the character on
+      the screen is just slow because  of the way the terminal handles  the XOFF
+      from the  printer.  However, the  echoing problem is  not affected  when a
+      high speed printer is attached to the terminal.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                   CMTI/3270 Separate Circuit Printer Support - GED   SEPCIR.GED
+                                                              September 14, 1988
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                     *   ****  ****  ***** *   * ****  ***** *   *
+                    * *  *   * *   * *     **  * *   *   *    * * 
+                   ***** ****  ****  ****  * * * *   *   *     *  
+                   *   * *     *     *     *  ** *   *   *    * * 
+                   *   * *     *     ***** *   * ****  ***** *   *
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                   CMTI/3270 Separate Circuit Printer Support - GED   SEPCIR.GED
+      Sample Tymfile                                          September 14, 1988
+
+
+
+
+
+
+                             APPENDIX I.   Sample Tymfile
+
+
+      :   Demonstration CMT/3270 for Tymshare Hosts 1100, 1200
+      :   Node: 2000  Kernel: 999     Slot: 1  Host: 1000
+       
+              SUBTTL CMT/3270 TYM FILE
+              DEFHST(1000,8,2)
+              DEFHDR(Welcome to the Demonstration of the CMT/3270)
+       
+      : MISCELLANEOUS PARAMETERS
+       
+      CRSTOP  EQ      1                       :DON'T HALT ON CRASH
+      NUMLCK  EQ      1                       :NUMERIC LOCK FEATURE ENABLED
+              DEFTRC(ON)                      :GENERATES CODE FOR COM
+              DEFPRT(SKIP)                    :SKIP BLANK LINES ON TTY TERM
+              DEFCUD(6,LEFT)                  :SAVE 6 CHAR OF USERNAME IN CUD
+              DEFSTA(ON)                      :ENABLE STATUS LINE
+              DEFLU1(YES)                     :SUPPORTS SCS DATA TO PRINTER
+              SCSTRN(YES)                     :SUPPORTS SCS TRN CONTROL CODE
+                                              :TRANSPARENT DATA TO PRINTER
+              SCSNLN(NO)                      :NEW LINE NOT PERFORMED AT END
+                                              :OF MESSAGE BLOCK BY CMTI
+      : DEFINE ELEMENTS
+       
+              DEFELE(TO1200,ISISTECH"BA1200"BBPASSWORD"0D)
+              DEFELE(WILDCD,331061100"8D"8D"8D"8D)    :ELEMENT 1, ANY ADDRESS
+       
+      : DEFINE STORED LOGON STRINGS
+       
+              DEFSTR(P1200,TO HOST 1200/PRINTER,TO1200,WILDCD,TO1200,WILDCD)
+       
+      : DEFINE MANUAL LOGON STRINGS
+       
+              MANUAL(MANST1)                  :MANUAL LOGON - CRT ONLY
+              MANPTR(MANST2)                  :MANUAL LOGON - CRT/PRINTER
+       
+      : DEFINE PRINTER ONLY LOGON
+       
+              SOLOPT(PTONLY,PRINTER ONLY LOGON,TO1200,WILDCD) : 1ST AVAILABLE
+       
+      : MENU DEFINITIONS
+       
+              DEFMEN(MENU1,PTONLY)
+              DEFMEN(MENU2,P1200,MANST1,MANST2)
+       
+      : DEFINE USERS
+       
+              DEFUSR(LLIU)
+
+                   CMTI/3270 Separate Circuit Printer Support - GED   SEPCIR.GED
+      Sample Tymfile                                          September 14, 1988
+
+
+              DEFTTY(-1)              :DISPLAY ALL TERMINAL SELECTIONS
+              MENUSR(MENU2)           :DISPLAY ALL LOGON SELECTIONS
+       
+              DEFUSR(NCHIN)
+              DEFTTY(1)               :TTY LOGON, MENU BYPASS
+              MENUSR(MENU1)           :1 SELECTION, PRT ONLY, MENU BYPASS
+          
+      DEFCAL("0E"01"02"03"04"05"06"07)
+       
+      : TERMINAL TYPES
+       
+      DEFTRM  MACRO [
+              VT100M                  :VT100 TERMINAL
+              TTYM                    :TTY TERMINAL
+              ]
+       
+      : CHARACTER TRANSLATION
+       
+              CHRMAP []               :NO CHANGES TO TRANSLATION TABLE(S)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                   CMTI/3270 Separate Circuit Printer Support - GED   SEPCIR.GED
+  
