@@ -1,0 +1,314 @@
+*  **      PROGRAM:       (ANALYSIS)MILES.FTF
+*  **      AUTHOR:        Rob Nielsen
+*  **      DATE:          May 27, 1986
+
+*  **      PURPOSE:       To return a value for mileage between 2 sites,
+*  **           given user supplied site id's or npa's and nnx's.
+
+*  **      OUTLINE:
+*  **
+*  **           1) The program prompts the user for
+*  **                a) whether to exit or run again
+*  **                b) whether he knows site or npa nnx
+*  **                c) site id or npa nnx for 1st site
+*  **                d) site id or npa nnx for 2nd site
+
+*  **           2) If sites are supplied, the program searches the data
+*  **                base (netstat)CKTS for npa's and nnx's
+
+*  **           3) The data base (dbtariff)LATA is searched for V and H
+
+*  **           4) Mileage is calculated from V and H coordinates
+
+
+           INTEGER AREA1, AREA2, EXCHG1, EXCHG2, SITNO1, SITNO2, RUNNO
+           INTEGER ERROR, RUNTYP
+           LOGICAL EXIT
+           REAL MILAGE
+
+           CALL DBSTRT(1,0,1,0,1,0,1,0,1,0,1,0)
+           CALL DBERR(-1)
+
+*  **         Check if data bases are missing or are being updated
+           CALL CHECKFILES (ERROR)
+                IF ((ERROR .GT. 20) .AND. (ERROR .LT. 30)) GOTO 120
+           CALL DBOPEN('(NETSTAT)CKTS','(TOPS)VH87')
+
+           RUNNO = 0
+
+*  **           Initialize values for next run
+
+  100      RUNNO = RUNNO + 1
+
+           AREA1 = 0
+           AREA2 = 0
+           EXCHG1 = 0
+           EXCHG2 = 0
+           SITNO1 = 0
+           SITNO2 = 0
+
+           MILAGE = 0.0
+           EXIT = .FALSE.
+           ERROR = 0
+
+           CALL PROMPT (RUNNO, AREA1, EXCHG1, AREA2, EXCHG2, SITNO1,
+     +                  SITNO2, EXIT, RUNTYP)
+
+           IF  (EXIT) GOTO 199
+
+*  **           Get NPA NNX from CKTS if user supplies site id's
+           IF (RUNTYP .EQ. '2') GOTO 110
+                CALL CKTS (SITNO1, SITNO2, AREA1, EXCHG1, AREA2, EXCHG2,
+     +                     ERROR)
+
+           IF (ERROR .GT. 0) GOTO 120
+
+*  **           Get V and H coordinates from LATAS and compute miles
+  110      CALL LATA (AREA1, EXCHG1, AREA2, EXCHG2, MILAGE, ERROR)
+
+  120      CALL WRTOUT (SITNO1, SITNO2, AREA1, AREA2, EXCHG1, EXCHG2,
+     +                  MILAGE, ERROR)
+
+*  **           Start Next Run
+           IF ((ERROR .LT. 20) .OR. (ERROR .GT. 30)) GOTO 100
+
+  199      CALL DBEND
+           STOP
+           END
+**********************  SUBROUTINE CHECKFILES  **********************
+
+*  **      This subroutine checks for nonexistent or updating data bases
+*  **         by trying to open them.
+
+           SUBROUTINE CHECKFILES (ERROR)
+              
+           INTEGER ERROR
+
+           ERROR = 0
+           OPEN (21, '(NETSTAT)CKTS.DMS', INPUT, ERR = 110)
+           CLOSE (21)
+           OPEN (21, '(TOPS)VH87.DMS', INPUT, ERR = 110)
+           CLOSE (21)
+           
+           GOTO 199
+
+  110      ERROR = 21
+  199      RETURN
+           END
+      
+
+**************************  SUBROUTINE PROMPT  **********************
+
+           SUBROUTINE PROMPT (RUNNO, AREA1, EXCHG1, AREA2, EXCHG2,
+     +                        SITNO1, SITNO2, EXIT, RUNTYP)
+
+           INTEGER AREA1, AREA2, EXCHG1, EXCHG2, SITNO1, SITNO2, RUNNO
+           INTEGER RUNTYP
+           LOGICAL EXIT
+
+
+*  **           Type Introduction on first run only
+           IF (RUNNO .GT. 1) GOTO 110
+
+           TYPE 210
+  210      FORMAT (15x, 'WELCOME TO THE PROGRAM MILEAGE',/,
+     +      5X,' THIS PROGRAM RETURNS THE MILEAGE BETWEEN TWO POINTS',/,
+     +      5X,' WHEN GIVEN AN INPUT OF TWO SITES OR TWO NPA NNX''S ',
+     +          /)
+
+
+
+*  **           Prompt for type of run requested (or exit)
+
+  110      TYPE 220
+  220      FORMAT (////, 1X,
+     +       'DO YOU WISH TO SUPPLY     1) SITEID OR     2) NPA NNX',/,
+     +        5X, '(NOTE--NPA NNX IS QUICKER)',/,
+     +        5X, '(ENTER ''1'' OR ''2'' ; CR TO EXIT)            : ' $)
+
+           ACCEPT 225, RUNTYP
+  225      FORMAT (A1)
+
+*  **           EXIT UPON CARRIAGE RETURN
+           IF ((RUNTYP .GT. '~') .AND. (RUNTYP .LT. '!')) GOTO 115
+*  **           REPEAT IF REPLY IS NOT 1 OR 2
+           IF ((RUNTYP .LT. '1') .OR. (RUNTYP .GT. '2')) GOTO 110
+
+           IF (RUNTYP .EQ. '1') GOTO 120
+           IF (RUNTYP .EQ. '2') GOTO 130
+  115           EXIT = .TRUE.
+                GOTO 199
+
+
+*  **           Prompt for Site Numbers
+
+  120      TYPE 230
+  230      FORMAT (/,1X, 'PLEASE ENTER SITE 1:  ' $)
+           ACCEPT 235, SITNO1
+  235           FORMAT (I4)
+                IF (SITNO1 .LT. 1) GOTO 120
+
+  125      TYPE 240
+  240      FORMAT (1X, 'PLEASE ENTER SITE 2:  ' $)
+           ACCEPT 235, SITNO2
+                IF (SITNO2 .LT. 1) GOTO 125
+           GOTO 199
+
+**           Prompt for NPA and NNX
+
+  130      TYPE 250
+  250      FORMAT (/,1X, 'PLEASE ENTER NPA AND NNX FOR POINT 1',/,
+     +              10X, '(USE 1 BLANK, EXAMPLE:  408 942)      : ' $)
+           ACCEPT 255, AREA1, EXCHG1
+  255           FORMAT (I3,1X,I3)
+                IF (AREA1 .LT. 1) GOTO 130
+                IF (EXCHG1 .LT. 1) GOTO 130
+
+  135      TYPE 260
+  260      FORMAT (1X,
+     +         'PLEASE ENTER NPA AND NNX FOR POINT 2', 11X, ': ' $)
+           ACCEPT 255, AREA2, EXCHG2
+                IF (AREA2 .LT. 1) GOTO 135
+                IF (EXCHG2 .LT. 1) GOTO 135
+
+
+
+  199      RETURN
+           END
+
+*********************** SUBROUTINE CKTS ****************************
+
+           SUBROUTINE CKTS (SITNO1, SITNO2, AREA1, EXCHG1, AREA2,
+     +                      EXCHG2, ERROR)
+
+           INTEGER AREA1, AREA2, EXCHG1, EXCHG2, SITNO1, SITNO2
+           INTEGER ERROR
+
+
+*  **           Subroutine CKTS, if called, takes a pair of sites
+*  **      (Sitno1, SitNo2) and returns their NPA's and NNX's
+*  **      If a site is not found, it marks ERROR 1 for Site 1
+*  **      and ERROR 2 for site 2.
+
+
+*  **           Use Data Base (NETSTAT) CKTS
+           CALL DBSET(1)
+
+           CALL DBFIND('SITE1','EQ',SITNO1)
+           CALL DBGREC($110)
+           CALL DBVAL('NPA1',AREA1,'NXX1',EXCHG1)
+
+  115      CALL DBFIND('SITE2','EQ',SITNO2)
+           CALL DBGREC($120)
+           CALL DBVAL('NPA2',AREA2,'NXX2',EXCHG2)
+
+           GOTO 199
+  110      ERROR = 1
+           GOTO 199
+  120      ERROR = 2
+
+  199      RETURN
+           END
+*********************** SUBROUTINE LATA ****************************
+
+           SUBROUTINE LATA (AREA1, EXCHG1, AREA2, EXCHG2, MILAGE,
+     +                      ERROR)
+
+           INTEGER AREA1, AREA2, EXCHG1, EXCHG2, ERROR
+           INTEGER HORIZ1, HORIZ2, VERT1, VERT2
+           REAL MILAGE, HDIFF, VDIFF
+
+
+*  **           Subroutine LATA finds a pair of VH coordinates for a
+*  **      given pair of npas and nnxs and then calculates the distance
+*  **      between the points. If an npa nnx combination is not found,
+*  **      it marks ERROR 11 if they are from point 1 and ERROR 12
+*  **      if they come from point 2.
+
+
+*  **           Use Data Base (dbtariff)LATA
+           CALL DBSET(2)
+
+           CALL DBFIND('NPA','EQ',AREA1,'AND','NXX','EQ',EXCHG1)
+           CALL DBGREC($110)
+           CALL DBVAL('VWIR',VERT1,'HWIR',HORIZ1)
+
+  115      CALL DBFIND('NPA','EQ',AREA2,'AND','NXX','EQ',EXCHG2)
+           CALL DBGREC($120)
+           CALL DBVAL('VWIR',VERT2,'HWIR',HORIZ2)
+
+           VDIFF = FLOAT (VERT2 - VERT1)
+           HDIFF = FLOAT (HORIZ2 - HORIZ1)
+           MILAGE = SQRT ((VDIFF**2 + HDIFF**2)/10.0)
+           GOTO 199
+
+
+  110      ERROR = 11
+           GOTO 115
+  120      ERROR = 12
+
+  199      RETURN
+           END
+
+***********************  SUBROUTINE WRTOUT *******************
+
+           SUBROUTINE WRTOUT (SITNO1, SITNO2, AREA1, AREA2, EXCHG1,
+     +                        EXCHG2, MILAGE, ERROR)
+
+           INTEGER AREA1, AREA2, EXCHG1, EXCHG2, SITNO1, SITNO2
+           INTEGER ERROR, ERRNO
+           REAL MILAGE
+
+
+           TYPE 110
+
+           IF (ERROR .EQ. 0) TYPE 120, MILAGE
+           IF ((ERROR .GT. 0) .AND. (ERROR .LT. 10)) TYPE 130, ERROR
+           ERRNO = ERROR - 10
+           IF ((ERROR .GE. 10) .AND. (ERROR .LT. 20)) TYPE 140, ERRNO
+           IF ((ERROR .GE. 20) .AND. (ERROR .LT. 30)) TYPE 145
+           
+
+  160      TYPE 150, SITNO1, SITNO2, AREA1, AREA2, EXCHG1, EXCHG2
+
+           GOTO 199
+
+
+
+
+  110      FORMAT (///,
+     +  10X,'**************************************************',/,
+     +  10X,'*                                                *')
+
+  120      FORMAT (
+     +  10X,'*     THE DISTANCE IS ',F6.0,
+     +                                  ' MILES               *')
+
+  130      FORMAT (
+     +  10X,'*      ERROR:  SITE ',I1,
+     +                           ' WAS NOT FOUND IN CKTS      *')
+
+  140      FORMAT (
+     +  10X,'*      ERROR:  NPA AND NNX FOR SITE ',I1,
+     +                                           ' NOT FOUND  *')
+                                                                       
+  145      FORMAT (
+     +  10X, '*    ERROR:  DATA BASE MISSING OR UPDATING       *',/,
+     +  10X, '*            PLEASE TRY AGAIN LATER              *')
+
+  150      FORMAT (
+     +  10X,'*                                                *',/,
+     +  10X,'*      SITE 1: ',I4,
+     +                         '             SITE 2: ',I4,
+     +                                                  '     *',/,
+     +  10X,'*         NPA:  ',I3,
+     +                         '                NPA:  ',I3,
+     +                                                  '     *',/,
+     +  10X,'*         NNX:  ',I3,
+     +                         '                NNX:  ',I3,
+     +                                                  '     *',/,
+     +  10X,'*                                                *',/,
+     +  10X,'**************************************************')
+
+  199      RETURN
+           END
