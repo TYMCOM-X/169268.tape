@@ -1,0 +1,392 @@
+ XASC2BCD:     PROCEDURE OPTIONS(MAIN);                                 XAS00010
+                                                                        XAS00020
+                                                                        XAS00030
+  /* THIS PROCEDURE TRANSLATES AN ASCII RAM INPUT TAPE    */            XAS00040
+  /* INTO AN EBCDIC FILE.                                */             XAS00050
+  /* BY THE USER. */                                                    XAS00060
+                                                                        XAS00070
+                                                                        XAS00080
+            DECLARE (SYSIN,SYSPRINT) FILE;                              XAS00090
+            DECLARE ASCIN FILE RECORD INPUT ENVIRONMENT ( LEAVE, FBS,   XAS00100
+              RECSIZE(240),TOTAL, BLKSIZE(4800));                       XAS00110
+ /* THE BLKSIZE OF 3600 WAS CHOSEN FOR RAM BLOCKING FACTOR OF 15 */     XAS00120
+                                                                        XAS00130
+            DECLARE EBCOUT FILE RECORD OUTPUT ENVIRONMENT(F,            XAS00140
+             RECSIZE(240),TOTAL);                                       XAS00150
+                                                                        XAS00160
+            DECLARE INREC CHARACTER(240);                               XAS00170
+            DECLARE REC_COUNT FIXED BINARY(31,0) INIT(0);               XAS00180
+            DECLARE FILE_COUNT FIXED BINARY(31,0) INIT(0);              XAS00190
+            DECLARE (ADDR,SUBSTR,TRANSLATE,PLIRETC) BUILTIN;            XAS00200
+                                                                        XAS00210
+                                                                        XAS00220
+            DECLARE XBITS(256) BIT(8) STATIC INITIAL                    XAS00230
+                              /* ASCII    EBCDIC      CHARACTER      */ XAS00240
+                              /* (HEX)    (HEX)                      */ XAS00250
+              ('00000000'B,   /* 00       00          NULL           */ XAS00260
+               '00000001'B,   /* 01       01          CNTL A         */ XAS00270
+               '00000010'B,   /* 02       02          CNTL B         */ XAS00280
+               '00000011'B,   /* 03       03          CNTL C         */ XAS00290
+               '00000100'B,   /* 04       04          CNTL D         */ XAS00300
+               '00000101'B,   /* 05       05          CNTL E         */ XAS00310
+               '00000110'B,   /* 06       06          CNTL F         */ XAS00320
+               '00000111'B,   /* 07       07          CNTL G         */ XAS00330
+               '00010110'B,   /* 08       16          BACKSPACE      */ XAS00340
+               '00000101'B,   /* 09       05          TAB            */ XAS00350
+               '00100101'B,   /* 0A       25          LINE FEED      */ XAS00360
+               '00001011'B,   /* 0B       0B          VERT. TAB      */ XAS00370
+               '00001100'B,   /* 0C       0C          FORM FEED      */ XAS00380
+               '00001101'B,   /* 0D       0D          CR             */ XAS00390
+               '00001110'B,   /* 0E       0E          CNTL N         */ XAS00400
+               '00001111'B,   /* 0F       0F          CNTL O         */ XAS00410
+                                                                        XAS00420
+               '00010000'B,   /* 10       10          CNTL P         */ XAS00430
+               '00010001'B,   /* 11       11          CNTL Q         */ XAS00440
+               '00010010'B,   /* 12       12          CNTL R         */ XAS00450
+               '00010011'B,   /* 13       13          CNTL S         */ XAS00460
+               '00010100'B,   /* 14       14          CNTL T         */ XAS00470
+               '00010101'B,   /* 15       15          CNTL U         */ XAS00480
+               '00010110'B,   /* 16       16          CNTL V         */ XAS00490
+               '00010111'B,   /* 17       17          CNTL W         */ XAS00500
+               '00011000'B,   /* 18       18          CNTL X         */ XAS00510
+               '00011001'B,   /* 19       19          CNTL Y         */ XAS00520
+               '00011010'B,   /* 1A       1A          CNTL Z         */ XAS00530
+               '00100111'B,   /* 1B       27          ESCAPE         */ XAS00540
+               '00011100'B,   /* 1C       1C          CNTL \         */ XAS00550
+               '00011101'B,   /* 1D       1D          CNTL           */ XAS00560
+               '00011110'B,   /* 1E       1E          CNTL ^         */ XAS00570
+               '00011111'B,   /* 1F       1F          CNTL _         */ XAS00580
+                                                                        XAS00590
+               '01000000'B,   /* 20       40          SPACE          */ XAS00600
+               '01011010'B,   /* 21       5A          !              */ XAS00610
+               '01111111'B,   /* 22       7F          "              */ XAS00620
+               '01111011'B,   /* 23       7B          #              */ XAS00630
+               '01011011'B,   /* 24       5B          $              */ XAS00640
+               '01101100'B,   /* 25       6C          %              */ XAS00650
+               '01010000'B,   /* 26       50          &              */ XAS00660
+               '01111101'B,   /* 27       7D          '              */ XAS00670
+               '01001101'B,   /* 28       4D          (              */ XAS00680
+               '01011101'B,   /* 29       5D          )              */ XAS00690
+               '01011100'B,   /* 2A       5C          *              */ XAS00700
+               '01001110'B,   /* 2B       4E          +              */ XAS00710
+               '01101011'B,   /* 2C       6B          ,              */ XAS00720
+               '01100000'B,   /* 2D       60          -              */ XAS00730
+               '01001011'B,   /* 2E       4B          .              */ XAS00740
+               '01100001'B,   /* 2F       61          /              */ XAS00750
+                                                                        XAS00760
+               '11110000'B,   /* 30       F0          0              */ XAS00770
+               '11110001'B,   /* 31       F1          1              */ XAS00780
+               '11110010'B,   /* 32       F2          2              */ XAS00790
+               '11110011'B,   /* 33       F3          3              */ XAS00800
+               '11110100'B,   /* 34       F4          4              */ XAS00810
+               '11110101'B,   /* 35       F5          5              */ XAS00820
+               '11110110'B,   /* 36       F6          6              */ XAS00830
+               '11110111'B,   /* 37       F7          7              */ XAS00840
+               '11111000'B,   /* 38       F8          8              */ XAS00850
+               '11111001'B,   /* 39       F9          9              */ XAS00860
+               '01111010'B,   /* 3A       7A          :              */ XAS00870
+               '01011110'B,   /* 3B       5E          ;              */ XAS00880
+               '01001100'B,   /* 3C       4C          <              */ XAS00890
+               '01111110'B,   /* 3D       7E          =              */ XAS00900
+               '01101110'B,   /* 3E       6E          >              */ XAS00910
+               '01101111'B,   /* 3F       6F          ?              */ XAS00920
+                                                                        XAS00930
+               '01111100'B,   /* 40       7C          @              */ XAS00940
+               '11000001'B,   /* 41       C1          A              */ XAS00950
+               '11000010'B,   /* 42       C2          B              */ XAS00960
+               '11000011'B,   /* 43       C3          C              */ XAS00970
+               '11000100'B,   /* 44       C4          D              */ XAS00980
+               '11000101'B,   /* 45       C5          E              */ XAS00990
+               '11000110'B,   /* 46       C6          F              */ XAS01000
+               '11000111'B,   /* 47       C7          G              */ XAS01010
+               '11001000'B,   /* 48       C8          H              */ XAS01020
+               '11001001'B,   /* 49       C9          I              */ XAS01030
+               '11010001'B,   /* 4A       D1          J              */ XAS01040
+               '11010010'B,   /* 4B       D2          K              */ XAS01050
+               '11010011'B,   /* 4C       D3          L              */ XAS01060
+               '11010100'B,   /* 4D       D4          M              */ XAS01070
+               '11010101'B,   /* 4E       D5          N              */ XAS01080
+               '11010110'B,   /* 4F       D6          O              */ XAS01090
+                                                                        XAS01100
+               '11010111'B,   /* 50       D7          P              */ XAS01110
+               '11011000'B,   /* 51       D8          Q              */ XAS01120
+               '11011001'B,   /* 52       D9          R              */ XAS01130
+               '11100010'B,   /* 53       E2          S              */ XAS01140
+               '11100011'B,   /* 54       E3          T              */ XAS01150
+               '11100100'B,   /* 55       E4          U              */ XAS01160
+               '11100101'B,   /* 56       E5          V              */ XAS01170
+               '11100110'B,   /* 57       E6          W              */ XAS01180
+               '11100111'B,   /* 58       E7          X              */ XAS01190
+               '11101000'B,   /* 59       E8          Y              */ XAS01200
+               '11101001'B,   /* 5A       E9          Z              */ XAS01210
+               '11000000'B,   /* 5B       C0                         */ XAS01220
+               '11100000'B,   /* 5C       E0          \              */ XAS01230
+               '11010000'B,   /* 5D       D0                         */ XAS01240
+               '11111010'B,   /* 5E       FA          ^              */ XAS01250
+               '01101101'B,   /* 5F       6D          _              */ XAS01260
+                                                                        XAS01270
+               '01111001'B,   /* 60       79          @              */ XAS01280
+               '10000001'B,   /* 61       81          A              */ XAS01290
+               '10000010'B,   /* 62       82          B              */ XAS01300
+               '10000011'B,   /* 63       83          C              */ XAS01310
+               '10000100'B,   /* 64       84          D              */ XAS01320
+               '10000101'B,   /* 65       85          E              */ XAS01330
+               '10000110'B,   /* 66       86          F              */ XAS01340
+               '10000111'B,   /* 67       87          G              */ XAS01350
+               '10001000'B,   /* 68       88          H              */ XAS01360
+               '10001001'B,   /* 69       89          I              */ XAS01370
+               '10010001'B,   /* 6A       91          J              */ XAS01380
+               '10010010'B,   /* 6B       92          K              */ XAS01390
+               '10010011'B,   /* 6C       93          L              */ XAS01400
+               '10010100'B,   /* 6D       94          M              */ XAS01410
+               '10010101'B,   /* 6E       95          N              */ XAS01420
+               '10010110'B,   /* 6F       96          O              */ XAS01430
+                                                                        XAS01440
+               '10010111'B,   /* 70       97          P              */ XAS01450
+               '10011000'B,   /* 71       98          Q              */ XAS01460
+               '10011001'B,   /* 72       99          R              */ XAS01470
+               '10100010'B,   /* 73       A2          S              */ XAS01480
+               '10100011'B,   /* 74       A3          T              */ XAS01490
+               '10100100'B,   /* 75       A4          U              */ XAS01500
+               '10100101'B,   /* 76       A5          V              */ XAS01510
+               '10100110'B,   /* 78       A6          W              */ XAS01520
+               '10100111'B,   /* 79       A7          X              */ XAS01530
+               '10101000'B,   /* 79       A8          Y              */ XAS01540
+               '10101001'B,   /* 7A       A9          Z              */ XAS01550
+               '11000000'B,   /* 7B       C0                         */ XAS01560
+               '01101010'B,   /* 7C       6A          \              */ XAS01570
+               '11010000'B,   /* 7D       D0                         */ XAS01580
+               '10100001'B,   /* 7E       A1          ^              */ XAS01590
+               '11111111'B,   /* 7F       FF          RUBOUT         */ XAS01600
+                                                                        XAS01610
+               '00000000'B,   /* 00       00          NULL           */ XAS01620
+               '00000001'B,   /* 01       01          CNTL A         */ XAS01630
+               '00000010'B,   /* 02       02          CNTL B         */ XAS01640
+               '00000011'B,   /* 03       03          CNTL C         */ XAS01650
+               '00000100'B,   /* 04       04          CNTL D         */ XAS01660
+               '00000101'B,   /* 05       05          CNTL E         */ XAS01670
+               '00000110'B,   /* 06       06          CNTL F         */ XAS01680
+               '00000111'B,   /* 07       07          CNTL G         */ XAS01690
+               '00010110'B,   /* 08       16          BACKSPACE      */ XAS01700
+               '00000101'B,   /* 09       05          TAB            */ XAS01710
+               '00100101'B,   /* 0A       25          LINE FEED      */ XAS01720
+               '00001011'B,   /* 0B       0B          VERT. TAB      */ XAS01730
+               '00001100'B,   /* 0C       0C          FORM FEED      */ XAS01740
+               '00001101'B,   /* 0D       0D          CR             */ XAS01750
+               '00001110'B,   /* 0E       0E          CNTL N         */ XAS01760
+               '00001111'B,   /* 0F       0F          CNTL O         */ XAS01770
+                                                                        XAS01780
+               '00010000'B,   /* 10       10          CNTL P         */ XAS01790
+               '00010001'B,   /* 11       11          CNTL Q         */ XAS01800
+               '00010010'B,   /* 12       12          CNTL R         */ XAS01810
+               '00010011'B,   /* 13       13          CNTL S         */ XAS01820
+               '00010100'B,   /* 14       14          CNTL T         */ XAS01830
+               '00010101'B,   /* 15       15          CNTL U         */ XAS01840
+               '00010110'B,   /* 16       16          CNTL V         */ XAS01850
+               '00010111'B,   /* 17       17          CNTL W         */ XAS01860
+               '00011000'B,   /* 18       18          CNTL X         */ XAS01870
+               '00011001'B,   /* 19       19          CNTL Y         */ XAS01880
+               '00011010'B,   /* 1A       1A          CNTL Z         */ XAS01890
+               '00100111'B,   /* 1B       27          ESCAPE         */ XAS01900
+               '00011100'B,   /* 1C       1C          CNTL \         */ XAS01910
+               '00011101'B,   /* 1D       1D          CNTL           */ XAS01920
+               '00011110'B,   /* 1E       1E          CNTL ^         */ XAS01930
+               '00011111'B,   /* 1F       1F          CNTL _         */ XAS01940
+                                                                        XAS01950
+               '01000000'B,   /* 20       40          SPACE          */ XAS01960
+               '01011010'B,   /* 21       5A          !              */ XAS01970
+               '01111111'B,   /* 22       7F          "              */ XAS01980
+               '01111011'B,   /* 23       7B          #              */ XAS01990
+               '01011011'B,   /* 24       5B          $              */ XAS02000
+               '01101100'B,   /* 25       6C          %              */ XAS02010
+               '01010000'B,   /* 26       50          &              */ XAS02020
+               '01111101'B,   /* 27       7D          '              */ XAS02030
+               '01001101'B,   /* 28       4D          (              */ XAS02040
+               '01011101'B,   /* 29       5D          )              */ XAS02050
+               '01011100'B,   /* 2A       5C          *              */ XAS02060
+               '01001110'B,   /* 2B       4E          +              */ XAS02070
+               '01101011'B,   /* 2C       6B          ,              */ XAS02080
+               '01100000'B,   /* 2D       60          -              */ XAS02090
+               '01001011'B,   /* 2E       4B          .              */ XAS02100
+               '01100001'B,   /* 2F       61          /              */ XAS02110
+                                                                        XAS02120
+               '11110000'B,   /* 30       F0          0              */ XAS02130
+               '11110001'B,   /* 31       F1          1              */ XAS02140
+               '11110010'B,   /* 32       F2          2              */ XAS02150
+               '11110011'B,   /* 33       F3          3              */ XAS02160
+               '11110100'B,   /* 34       F4          4              */ XAS02170
+               '11110101'B,   /* 35       F5          5              */ XAS02180
+               '11110110'B,   /* 36       F6          6              */ XAS02190
+               '11110111'B,   /* 37       F7          7              */ XAS02200
+               '11111000'B,   /* 38       F8          8              */ XAS02210
+               '11111001'B,   /* 39       F9          9              */ XAS02220
+               '01111010'B,   /* 3A       7A          :              */ XAS02230
+               '01011110'B,   /* 3B       5E          ;              */ XAS02240
+          '01001100'B,   /* 3C       4C          <              */ XAS02250
+               '01111110'B,   /* 3D       7E          =              */ XAS02260
+               '01101110'B,   /* 3E       6E          >              */ XAS02270
+               '01101111'B,   /* 3F       6F          ?              */ XAS02280
+                                                                        XAS02290
+               '01111100'B,   /* 40       7C          @              */ XAS02300
+               '11000001'B,   /* 41       C1          A              */ XAS02310
+               '11000010'B,   /* 42       C2          B              */ XAS02320
+               '11000011'B,   /* 43       C3          C              */ XAS02330
+               '11000100'B,   /* 44       C4          D              */ XAS02340
+               '11000101'B,   /* 45       C5          E              */ XAS02350
+               '11000110'B,   /* 46       C6          F              */ XAS02360
+               '11000111'B,   /* 47       C7          G              */ XAS02370
+               '11001000'B,   /* 48       C8          H              */ XAS02380
+               '11001001'B,   /* 49       C9          I              */ XAS02390
+               '11010001'B,   /* 4A       D1          J              */ XAS02400
+               '11010010'B,   /* 4B       D2          K              */ XAS02410
+               '11010011'B,   /* 4C       D3          L              */ XAS02420
+               '11010100'B,   /* 4D       D4          M              */ XAS02430
+               '11010101'B,   /* 4E       D5          N              */ XAS02440
+               '11010110'B,   /* 4F       D6          O              */ XAS02450
+                                                                        XAS02460
+               '11010111'B,   /* 50       D7          P              */ XAS02470
+               '11011000'B,   /* 51       D8          Q              */ XAS02480
+               '11011001'B,   /* 52       D9          R              */ XAS02490
+               '11100010'B,   /* 53       E2          S              */ XAS02500
+               '11100011'B,   /* 54       E3          T              */ XAS02510
+               '11100100'B,   /* 55       E4          U              */ XAS02520
+               '11100101'B,   /* 56       E5          V              */ XAS02530
+               '11100110'B,   /* 57       E6          W              */ XAS02540
+               '11100111'B,   /* 58       E7          X              */ XAS02550
+               '11101000'B,   /* 59       E8          Y              */ XAS02560
+               '11101001'B,   /* 5A       E9          Z              */ XAS02570
+               '11000000'B,   /* 5B       C0                         */ XAS02580
+               '11100000'B,   /* 5C       E0          \              */ XAS02590
+               '11010000'B,   /* 5D       D0                         */ XAS02600
+               '11111010'B,   /* 5E       FA          ^              */ XAS02610
+               '01101101'B,   /* 5F       6D          _              */ XAS02620
+                                                                        XAS02630
+               '01111001'B,   /* 60       79          @              */ XAS02640
+               '10000001'B,   /* 61       81          A              */ XAS02650
+               '10000010'B,   /* 62       82          B              */ XAS02660
+               '10000011'B,   /* 63       83          C              */ XAS02670
+               '10000100'B,   /* 64       84          D              */ XAS02680
+               '10000101'B,   /* 65       85          E              */ XAS02690
+               '10000110'B,   /* 66       86          F              */ XAS02700
+               '10000111'B,   /* 67       87          G              */ XAS02710
+               '10001000'B,   /* 68       88          H              */ XAS02720
+               '10001001'B,   /* 69       89          I              */ XAS02730
+               '10010001'B,   /* 6A       91          J              */ XAS02740
+               '10010010'B,   /* 6B       92          K              */ XAS02750
+               '10010011'B,   /* 6C       93          L              */ XAS02760
+               '10010100'B,   /* 6D       94          M              */ XAS02770
+               '10010101'B,   /* 6E       95          N              */ XAS02780
+               '10010110'B,   /* 6F       96          O              */ XAS02790
+                                                                        XAS02800
+               '10010111'B,   /* 70       97          P              */ XAS02810
+               '10011000'B,   /* 71       98          Q              */ XAS02820
+               '10011001'B,   /* 72       99          R              */ XAS02830
+               '10100010'B,   /* 73       A2          S              */ XAS02840
+               '10100011'B,   /* 74       A3          T              */ XAS02850
+               '10100100'B,   /* 75       A4          U              */ XAS02860
+               '10100101'B,   /* 76       A5          V              */ XAS02870
+               '10100110'B,   /* 78       A6          W              */ XAS02880
+               '10100111'B,   /* 79       A7          X              */ XAS02890
+               '10101000'B,   /* 79       A8          Y              */ XAS02900
+               '10101001'B,   /* 7A       A9          Z              */ XAS02910
+               '11000000'B,   /* 7B       C0                         */ XAS02920
+               '01101010'B,   /* 7C       6A          \              */ XAS02930
+               '11010000'B,   /* 7D       D0                         */ XAS02940
+               '10100001'B,   /* 7E       A1          ^              */ XAS02950
+               '11111111'B);  /* 7F       FF          RUBOUT         */ XAS02960
+                                                                        XAS02970
+                                                                        XAS02980
+            DECLARE XTABLE CHARACTER(256) BASED(P);                     XAS02990
+            DECLARE P POINTER INITIAL ((ADDR(XBITS)));                  XAS03000
+                                                                        XAS03010
+                                                                        XAS03020
+    ON TRANSMIT(ASCIN)                                                  XAS03030
+       BEGIN;                                                           XAS03040
+    PUT EDIT ('PERMANENT ERROR READING TAPE. FILE =',FILE_COUNT) (A);   XAS03050
+       END;                                                             XAS03060
+                                                                        XAS03070
+            ON ENDFILE(ASCIN) GOTO ABORT;                               XAS03080
+            OPEN FILE (ASCIN);                                          XAS03090
+                                                                        XAS03100
+    /* READ THE VOLUME LABEL */                                         XAS03110
+                                                                        XAS03120
+    READ FILE (ASCIN) INTO (INREC);                                     XAS03130
+    INREC =TRANSLATE(INREC,XTABLE);                                     XAS03140
+    IF SUBSTR(INREC,1,4) ='VOL1' THEN                                   XAS03150
+       BEGIN;                                                           XAS03160
+    PUT SKIP EDIT ('PROCESSING TAPE NUMBER : ',SUBSTR(INREC,5,6)) (A);  XAS03170
+    PUT SKIP EDIT ('OWNER : ',SUBSTR(INREC,38,14)) (A);                 XAS03180
+    DISPLAY ('  ');                                                     XAS03190
+                                                                        XAS03200
+       /* READ THE FILES */                                             XAS03210
+                                                                        XAS03220
+ FILE_LOOP:                                                             XAS03230
+       ON ENDFILE(ASCIN) GOTO DONE;                                     XAS03240
+                                                                        XAS03250
+       /* READ THE HDR1 RECORD */                                       XAS03260
+                                                                        XAS03270
+       READ FILE(ASCIN) INTO (INREC);                                   XAS03280
+       INREC =TRANSLATE(INREC,XTABLE);                                  XAS03290
+       IF SUBSTR(INREC,1,4) \='HDR1' THEN GOTO ABORT;                   XAS03300
+                                                                        XAS03310
+       /* READ THE HDR2 RECORD */                                       XAS03320
+                                                                        XAS03330
+       ON ENDFILE(ASCIN) GOTO HDR_END;                                  XAS03340
+       READ FILE(ASCIN) INTO (INREC);                                   XAS03350
+       INREC =TRANSLATE(INREC,XTABLE);                                  XAS03360
+       IF SUBSTR(INREC,1,4) \='HDR2' THEN GOTO ABORT;                   XAS03370
+       READ FILE(ASCIN) INTO (INREC);                                   XAS03380
+                                                                        XAS03390
+ HDR_END:                                                               XAS03400
+       CLOSE FILE(ASCIN);                                               XAS03410
+                                                                        XAS03420
+       /* READ THE DATA */                                              XAS03430
+                                                                        XAS03440
+       FILE_COUNT =FILE_COUNT + 1;                                      XAS03450
+       OPEN FILE (ASCIN);                                               XAS03460
+       ON ENDFILE(ASCIN) GOTO READ_TRAILER;                             XAS03470
+                                                                        XAS03480
+  READ_LOOP:                                                            XAS03490
+       READ FILE(ASCIN) INTO(INREC);                                    XAS03500
+       INREC =TRANSLATE(INREC,XTABLE);                                  XAS03510
+       IF SUBSTR(INREC,1,1) =' ' THEN GOTO READ_LOOP;                   XAS03520
+       REC_COUNT =REC_COUNT+1;                                          XAS03530
+       WRITE FILE(EBCOUT) FROM(INREC);                                  XAS03540
+       GOTO READ_LOOP;                                                  XAS03550
+                                                                        XAS03560
+                                                                        XAS03570
+ READ_TRAILER:                                                          XAS03580
+       CLOSE FILE(ASCIN);                                               XAS03590
+       OPEN FILE(ASCIN);                                                XAS03600
+       ON ENDFILE(ASCIN) GOTO ABORT;                                    XAS03610
+                                                                        XAS03620
+       READ FILE(ASCIN) INTO (INREC);                                   XAS03630
+                                                                        XAS03640
+       ON ENDFILE(ASCIN) GOTO EOF_END;                                  XAS03650
+                                                                        XAS03660
+       READ FILE(ASCIN) INTO (INREC);                                   XAS03670
+ EOF_END:                                                               XAS03680
+       CLOSE FILE(ASCIN);                                               XAS03690
+       OPEN FILE (ASCIN);                                               XAS03700
+                                                                        XAS03710
+    /* LOOP HERE */                                                     XAS03720
+       GOTO FILE_LOOP;                                                  XAS03730
+                                                                        XAS03740
+       END;                                                             XAS03750
+                                                                        XAS03760
+    ELSE                                                                XAS03770
+       DISPLAY('NOT A RAM TAPE!!!');                                    XAS03780
+                                                                        XAS03790
+ ABORT:                                                                 XAS03800
+    DISPLAY('TAPE IMPROPERLY FORMATTED.');                              XAS03810
+    CALL PLIRETC(1);                                                    XAS03820
+                                                                        XAS03830
+ DONE:                                                                  XAS03840
+    DISPLAY('DONE!');                                                   XAS03850
+ /*   PUT SKIP EDIT                                                     XAS03860
+       (FILE_COUNT,'  FILES   HAVE BEING PROCESSED !') (A);   */        XAS03870
+    PUT SKIP EDIT                                                       XAS03880
+       (REC_COUNT,'  RECORDS HAVE BEING PROCESSED !') (A);              XAS03890
+                                                                        XAS03900
+            END XASC2BCD;                                               XAS03910
+   +RO)W
