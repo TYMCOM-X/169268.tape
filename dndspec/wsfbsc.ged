@@ -1,0 +1,919 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                     WRITE STRUCTURED FIELD SUPPORT
+
+
+                  3270 POLLED BISYNC TERMINAL INTERFACE
+
+
+
+
+
+
+                     NETWORK TECHNOLOGY DEVELOPMENT
+                             March 25, 1987
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  ====================================================================
+  |  TYMNET's proprietary rights are included in the information     |
+  |  disclosed herein.  The recipient, by receiving this document,   |
+  |  agrees that neither this document nor the information disclosed |
+  |  herein nor any part thereof shall be reproduced or transferred  |
+  |  to other documents or used or disclosed to others for           |
+  |  manufacturing or for any other purpose except as specifically   |
+  |  authorized in writing by TYMNET.                                |
+  ====================================================================
+
+
+
+
+                                                           March 25, 1987
+
+
+
+
+
+
+
+                             TABLE OF CONTENTS
+
+  Section                                                            Page
+
+
+
+  1.   Introduction                                                     1
+
+
+  2.   Structured-Field Format                                          2
+
+
+  3.   Outbound Structured Fields                                       3
+
+
+  4.   Inbound Structured Fields                                        4
+
+
+  5.   Write Structured Field Command Support                           5
+    5.1   PBT Supports WSF Commands                                     5
+    5.2   PBT Does Not Support WSF Commands                             5
+
+
+  6.   System Generation                                                7
+    6.1   RPLTXT - Define Contents of Query Reply Response              7
+    6.2   DEFRPL - Define Default Query Reply Response                  8
+    6.3   RPLSEQ - Associate Query Reply Response with Device           8
+
+
+  7.   Bisync Operation Monitor - CONF Command                         10
+
+
+  8.   Documentation                                                   12
+
+
+  9.   PBT Canned Response to WSF Command                              13
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    PBT Write Structured Field Support         WSFBSC.GED
+
+
+
+
+  Introduction                                             March 25, 1987
+
+
+
+
+
+
+                             1 -  Introduction
+
+
+  This document describes the support for Write Structured Field commands
+  by the 3270 Polled Bisync Terminal Interface.
+
+
+  The Write  Structured Field command  is a write  command that  does not
+  contain explicit control information  and is used to send  encoded data
+  or control information in a variable form.
+
+
+  Currently, when the  3270 PBT receives a  WSF command, it  forwards the
+  message to the control unit.  If the control unit is not  configured to
+  support WSF commands, a rejection is exchanged and the  transmission is
+  aborted resulting in the termination of the network circuit.
+
+
+  WSF command support  is being implemented to  allow for SNA  support of
+  TSO for the Japanese market.  PBT provides a canned response to the WSF
+  command  for  Control  Units  that  do  not  support  WSF  commands but
+  communicate with the SNA Host Interface and with TSO on the Host.
+
+
+  Write Structured  Field commands  use binary data,  data that  could be
+  interpreted as bisync control characters, in the data stream.  As such,
+  the commands generally need to be transmitted as transparent data.  All
+  devices using WSF commands should be configured for transparency unless
+  it  is  certain  that  none  of the  data  in  the  fields  are control
+  characters.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    PBT Write Structured Field Support         WSFBSC.GED
+
+
+
+
+  Structured-Field Format                                  March 25, 1987
+
+
+
+
+
+
+                       2 -  Structured-Field Format
+
+
+       ----------------------------------------------------------------
+       | WSF | Structured Field | Structured Field | Structured Field |
+       |  F3 |      1           |      2           |      n           |
+       ----------------------------------------------------------------
+             /                  \
+            /                    \
+           /                      \
+          /                        \
+         /                          \
+        -------------------------------
+        |        |    |   Parameters  |
+        | Length | ID |     and/or    |
+        |        |    |      Data     |
+        -------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    PBT Write Structured Field Support         WSFBSC.GED
+
+
+
+
+  Outbound Structured Fields                               March 25, 1987
+
+
+
+
+
+
+                      3 -  Outbound Structured Fields
+
+         ID     NAME
+        ----    ----------------
+          00    Reset Partition
+       *  01    Read  Partition
+                  02 = Query
+                  03 = Query List
+                  6E = Read Modified All
+                  F2 = Read Buffer
+                  F6 = Read Modified
+       *  03    Erase/Reset
+          06    Load Programmable Symbols
+       *  09    Set Reply Mode
+          0B    Set Window Origin
+          0C    Create Partition
+          0D    Destroy Partition
+          0E    Activate Partition
+       *  40    Outbound 3270 DS
+          41    SCS Data
+          4A    Select Format Group
+          4B    Present Absolute Format
+          4C    Present Relative Format
+      **  D0    File Transfer
+        0F01    Set MSR Control
+        0F0A    Modify Partition
+        0F71    Outbound Text Header
+        0FC1    Outbound Type 1 Text
+
+    Note : *  Defined in IBM/USA and IBM/JAPAN/PC Manuals
+           ** Defined in IBM/JAPAN/PC Manual Only
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    PBT Write Structured Field Support         WSFBSC.GED
+
+
+
+
+  Inbound Structured Fields                                March 25, 1987
+
+
+
+
+
+
+                      4 -  Inbound Structured Fields
+
+
+         ID     Name
+        ----    ---------------------
+        
+          80    Inbound 3270 DS
+          81    Query Reply
+                * 81  Usable Area
+                  83  Text Partition
+                  84  Alpha Partition
+                * 85  Character Set
+                * 86  Color
+                * 87  Highlight
+                * 88  Reply Modes
+                  8A  Field Validation
+                  8B  MSR Control
+                * 8C  Field Outlining
+                  90  Format Presentation
+                **91  DBCS(SO/SI)
+                  92  Save/Restore Format
+                **95  DDM(Distributed Data Management)
+                  A0  Device Characteristics
+                  A1  RPQ Names
+                  A2  Data Stream
+                * A6  Implicit Partitions
+        0FB1    Inbound Text Header
+        0FC1    Inbound Type 1 Text
+        1034    Save/Restore Format Inbound
+
+    Note : *  Defined in IBM/USA and IBM/JAPAN/PC Manuals
+           ** Defined in IBM/JAPAN/PC Manual Only
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    PBT Write Structured Field Support         WSFBSC.GED
+
+
+
+
+  Write Structured Field Command Support                   March 25, 1987
+
+
+
+
+
+
+                5 -  Write Structured Field Command Support
+
+
+  The 3270 Polled Bisync Terminal Interface can be configured  to support
+  Write Structured Field commands  (i.e., the control units  connected to
+  PBT support WSF commands) or configured to not support Write Structured
+  Field commands (i.e., the control units connected to PBT do  no support
+  WSF commands).  How PBT processes the commands is determined by whether
+  or not it is configured to support WSF commands.
+
+
+
+
+
+
+                      5.1  PBT Supports WSF Commands
+
+
+  If  PBT is  configured to  support WSF  commands, it  forwards  all WSF
+  commands directly to the  control unit.  Under this  configuration, PBT
+  only  converts the  DSP data  into BSC  format and  forwards it  to the
+  control  unit.  The  control  unit either  accepts the  command,  if it
+  supports WSF commands, or generates a Sense/Status code, if it does not
+  support WSF commands.
+
+
+
+
+
+
+                  5.2  PBT Does Not Support WSF Commands
+
+
+  If  PBT is  not configured  to support  WSF commands,  it  examines the
+  structured field in the  WSF command immediately following  the command
+  code,  F3  (hex), to  determine  if  it is  Read  Partition  with Query
+  Operation.   For  Read  Partition  with  Query  Operation,   the  Field
+  Identifier is 01 (hex), the  Partition Identifier is FF (hex),  and the
+  Type is 02  (hex).  Thus, the entire  field would be  000501FF02 (hex).
+  For WSF commands with multiple structured fields, only the  first field
+  is examined.
+
+
+  When PBT receives a WSF  command that is not Read Partition  with Query
+  Operation, a Sense/Status  code of Operation  Check is returned  to the
+  Host PAD, the command is  flushed, and the circuit is  terminated.  The
+  Operations Check Sense/Status  code is 40C1  for IBM and  Fujitsu hosts
+  and C0C2 for  Hitachi hosts.  The value  may be changed by  placing the
+  following statement in the Tymfile:
+
+                    PBT Write Structured Field Support         WSFBSC.GED
+
+
+
+
+  Write Structured Field Command Support                   March 25, 1987
+
+
+
+  OPTION(IOPCHK,40C1)             :OP CHECK S/S IS 40C1 - IBM, FUJITSU
+  OPTION(HOPCHK,0C0C2)            :OP CHECK S/S IS C0C2 - HITACHI
+
+
+  If  the  WSF  command  is  Read  Partition  with  Query  Operation, the
+  predefined Query Reply with Partitions  is returned to the Host  PAD in
+  DSP data format as  if the CU has  acknowledged the query and  sent its
+  characteristics.  The command is flushed.
+
+
+  The Query  Reply with  Partitions is defined  by the  system generation
+  process  and PBT  does not  examine this  response.  However,  PBT does
+  format the reply as a DSP Response.
+
+
+  If PBT is  configured not to  support WSF commands,  individual control
+  units can be configured  to support these commands (see  description of
+  RPLSEQ macro).  In this case  the command is forwarded directly  to the
+  control  unit.  The  control  unit either  accepts the  command,  if it
+  supports WSF commands, or generates a Sense/Status code, if it does not
+  support WSF commands.  The Sense/Status code is forwarded by PBT to the
+  Host PAD.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    PBT Write Structured Field Support         WSFBSC.GED
+
+
+
+
+  System Generation                                        March 25, 1987
+
+
+
+
+
+
+                          6 -  System Generation
+
+
+  There are several macros  required to configure and define  the support
+  capability  for  Write  Structured  Field  commands  in  PBT.   PBT  is
+  defaulted to  support WSF commands  so that the  code required  for WSF
+  processing  is not  included  in the  interface when  not  needed.  The
+  support capability can be changed by the DEFRPL macro.
+
+
+  There are default replies for  both CRTs and printers included  in PBT.
+  The RPLTXT macro may be used to define an alternate default reply or to
+  define  additional  replies  that  may  be  associated  with individual
+  control units on the interface.
+
+
+
+
+
+
+           6.1  RPLTXT - Define Contents of Query Reply Response
+
+
+  Syntax: RPLTXT(label,b0,b1,b2,...,b14)
+
+
+  Description:   This macro  defines the  text for  the Query  Reply with
+  Partitions  that PBT  returns to  the Host  PAD when  a WSF  command is
+  received.  This macro can  be used to define alternate  default replies
+  or additional replies that are used on a per control unit basis.
+
+
+  The RPLTXT macro takes 16 arguments, the first being the label  for the
+  text string or  the label, CONT, used  to indicate the  continuation of
+  the reply defined in the previous RPLTXT macro.  The messages may be of
+  any length provided  there is sufficient  memory and they  don't exceed
+  3270 BSC block size limitations.
+
+
+  Example:
+
+  RPLTXT(WSF1,00,07,81,88,00,01,02)
+
+  RPLTXT(WSF2,00,11,81,0A6,00,00,0B,01,00,05)
+  RPLTXT(CONT,00,01,80,50,00,18)
+
+
+
+
+
+                    PBT Write Structured Field Support         WSFBSC.GED
+
+
+
+
+  System Generation                                        March 25, 1987
+
+
+             6.2  DEFRPL - Define Default Query Reply Response
+
+
+  Syntax: DEFRPL(label,type)
+
+
+  Description:  Inclusion of the DEFRPL macro in the Tymfile  defines all
+  control units as not supporting WSF commands.  As such,  PBT intervenes
+  in the processing of WSF commands.  The arguments are optional.   If no
+  arguments are included in  the macro statement, the canned  replies, as
+  defined in this document, are sent in response to WSF commands  of Read
+  Partitions with Query Operation.  There are two canned replies, one for
+  CRTs and one for printers.
+
+
+  Alternate  default replies  can  be defined  in the  Tymfile  using the
+  RPLTXT  macro.   To   define  alternate  default  replies,   the  label
+  associated with the reply is the first argument of the DEFRPL macro and
+  the device  type, either CRT  or PRINTER, is  the second  argument.  An
+  alternate default reply  may be defined  for either CRTs,  printers, or
+  both.  (Two DEFRPL macros must be included in the Tymfile to  define an
+  alternate reply for both printers and CRTs.)
+
+
+  Example: DEFRPL
+
+
+  PBT is configured  not to support WSF  commands and the  canned default
+  replies are sent  in response to WSF  commands of Read  Partitions with
+  Query Operation.
+
+  Example: DEFRPL(WSFCRT,CRT)
+           DEFRPL(WSFPRT,PRINTER)
+
+
+  PBT is configured not to support WSF commands and the alternate default
+  replies are sent  in response to WSF  commands of Read  Partitions with
+  Query Operation.  These replies are defined by the RPLTXT macro.
+
+
+
+
+
+
+         6.3  RPLSEQ - Associate Query Reply Response with Device
+
+
+  Syntax: RPLSEQ(label,type)
+
+
+  Description:  The RPLSEQ macro, used with the CUNIT macro,  defines the
+  label whose text is used as  a response to the WSF command  for devices
+
+
+                    PBT Write Structured Field Support         WSFBSC.GED
+
+
+
+
+  System Generation                                        March 25, 1987
+
+
+  on the current control unit.   The first argument, label, is  the label
+  associated with  a reply as  defined by the  RPLTXT macro.   The second
+  argument, type, is either CRT or PRINTER.  Replies for  CRTs, printers,
+  or both may be defined for each control unit.  If the  label, specified
+  in the  first argument,  is not  found during  assembly time,  an error
+  message is displayed.
+
+
+  IF PBT is configured to  not support WSF commands, the  current control
+  unit maybe be configured to  support these commands by entering  YES as
+  the  first argument  of  the RPLSEQ  macro.  WSF  commands  for devices
+  associated with  the current  control unit are  passed directly  to the
+  control unit.  The second argument is omitted when the RPLSEQ  macro is
+  used to configure an  individual control unit to support  WSF commands.
+  for the interface support WSF commands and others don't.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    PBT Write Structured Field Support         WSFBSC.GED
+
+
+
+
+  Bisync Operation Monitor - CONF Command                  March 25, 1987
+
+
+
+
+
+
+               7 -  Bisync Operation Monitor - CONF Command
+
+
+  Users are  able to determine,  via the BOM,  whether the  control units
+  connected  to PBT  are configured  to support  WSF commands.   The CONF
+  command  displays  the  configuration  of  the  entire  slot  and  thus
+  indicates whether or not a  given control unit is configured in  PBT as
+  supporting WSF commands.
+
+
+  The output of the CONF command indicates for each control  unit whether
+  it is configured  to support WSF commands.   A Y under the  WSF heading
+  indicates the associated control unit supports WSF commands.  A N under
+  the WSF heading indicates the associated control unit does  not support
+  WSF commands.  An example follows:
+
+  :>CONF
+
+  HBOM -- 3270PBH Bisync Operations Monitor
+  NODE  2062    SLOT  1    03Dec85 18:16:09
+
+
+  LINE  LADR  LID  #CU    HOST
+    0    40    00    1   HITACHI
+
+        CUN   CUADR  CID  #DEV   WSF
+         0     0C0   000     2    Y
+
+              DEV    DADR  DID  DTYP   COL  XPR   CHAR
+                0     0A0  000  C1920   N    N   KANA
+                1     0A1  001  P1920   N    N   KANJI
+
+        CUN   CUADR  CID  #DEV   WSF
+         0     0C1   001     2    N
+
+              DEV    DADR  DID  DTYP   COL  XPR   CHAR
+                2     0A0  002  C1920   N    N   ENGLISH
+                3     0A1  003  P1920   N    N   KANJI
+
+  LINE  LADR  LID  #CU    HOST
+    1    21    01    2   FUJITSU
+
+        CUN   CUADR  CID  #DEV   WSF
+         2     040   001     3    N
+
+              DEV    DADR  DID  DTYP   COL  XPR   CHAR
+                4     040  004  C1920   Y    N   ENGLISH
+                5     0C1  005  C1920   N    N   KANJI
+                6     0C2  006  P2560   N    N   KANA
+
+                    PBT Write Structured Field Support         WSFBSC.GED
+
+
+
+
+  Bisync Operation Monitor - CONF Command                  March 25, 1987
+
+
+
+        CUN   CUADR  CID  #DEV   WSF
+         3     0C1   003     2    Y
+
+              DEV    DADR  DID  DTYP   COL  XPR   CHAR
+                7     040  007  C3440   N    N   ENGLISH
+                8     0C1  008  C1920   N    N   ENGLISH
+
+  LINE  LADR  LID  #CU    HOST
+    2   0C2    02    2    IBM
+
+        CUN   CUADR  CID  #DEV   WSF
+         4     040   004     3    N
+
+              DEV    DADR  DID  DTYP   COL  XPR   CHAR
+           9     040  009  C1920   Y    N   ENGLISH
+               10     0C1  010  C1920   N    N   KANJI
+               11     0C2  011  P2560   N    N   KANA
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    PBT Write Structured Field Support         WSFBSC.GED
+
+
+
+
+  Documentation                                            March 25, 1987
+
+
+
+
+
+
+                            8 -  Documentation
+
+
+  Parts of this documentation are taken from the following manuals:
+
+     o  IBM 3270 Information Display System Data 
+        Stream Programmer's Guide, Order Number GA23-0059-1
+
+     o  IBM 5550 PC with Japanese 3270 Manual, 5600-JWF V4.01
+        Order Number N:SC18-2059-3, Appendix B
+        This manual is referred to as IBM/JAPAN/PC Manual in
+        the earlier sections.
+
+     o  TYMNET 3270 BSC System Generation Reference Manual
+
+     o  General Design Specification for Hitachi Protocol
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    PBT Write Structured Field Support         WSFBSC.GED
+
+
+
+
+  PBT Canned Response to WSF Command                       March 25, 1987
+
+
+
+
+
+
+                  9 -  PBT Canned Response to WSF Command
+
+
+  The canned responses to a  WSF Read Partition with Query  Operation are
+  stored in PBT.  There is a reply for CRTs and a reply for printers.
+
+
+  The canned response for CRTs (in hex) that is returned to the  Host PAD
+  indicates that the control unit  does not support WSF commands  but the
+  CRT does support Kanji.  The reply follows:
+
+
+  88001781810100005000180000652710006527100D1D0780002381858E000C18000000
+  000B00000000000000014C01228020F81818417F0172012C000A818C00000000000000
+  0B81910003018003020100078188000102000C81950000080008000101001681860008
+  00F4F100F200F300F400F500F600F700000D81870400F0F1F1F2F2F4F4001181A60000
+  0B01000050001800500018
+
+
+  The canned response for printers (in hex) that is returned to  the Host
+  PAD indicates that the control  unit does not support WSF  commands but
+  the printer does  support Kanji (as  sent by IBM3283-52  printer).  The
+  reply follows:
+
+
+  88001781813100009E007F00000100F0000100F0142007B0001B818588001420040000
+  0007000000000000008020F81C20417F000681880001
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    PBT Write Structured Field Support         WSFBSC.GED
+ w@™
