@@ -1,0 +1,508 @@
+.	<<	file --	ISIS2.CON	>>
+
+.SEC(|CONFIGURING AN ISIS SYSTEM|)
+	In order to configure an ISIS system, some knowledge is needed
+of the proposed applications, and their resource requirements.
+The ISIS environment itself takes 65-100 (or more) K-bytes of memory, and
+the NODE-CODE portion requires an additional 45-128 (or more) K-bytes,
+depending on the configuration.
+Individual applications require varying quantities of resources, and
+must be computed on a configuration-by-configuration basis.
+	Anyone configuring ISIS systems
+must currently go through a "feeling-out"
+process, where a proposed configuration is tried, and run through NAD
+to determine the resource requirements.
+To this end, the remainder of this chapter is devoted to an annotated
+example of the generation of a particular configuration.
+
+.SS(|FILES|)
+	An ISIS configuration is easiest to maintain through the use of
+several files on the PDP-10.  These include a file containing the
+configuration parameters (XXX.TYM file), and a corresponding command
+file (XXX.CMD file).  These are treated separately below.
+	NOTE...The file names used herein are descriptive ONLY, and are not
+intended to reflect real file names in directory (ISIS2).  The real file names
+are instead keyed with the appropriate version and revision levels.
+
+.SSS(|XXX.CMD FILE|)
+.TOPIC(|Command file|)
+	The command file is just that...a set of commands to NAD, normally
+telling NAD which other files to assemble (see NAD chapter for other
+usages).
+A typical command file for node IS (Isis System), would have the following
+form (shown is what you would see if you typed the file out;
+the quantities <i> are NOT in the file--they reference the notes
+following):
+.BEGIN GROUP VERBATIM
+
+;@(ISIS2)INIT.NAD	<a, b>
+;@IS.TYM		<c>
+;@(ISIS2)GOODGY.LAB	<d>
+;@(ISIS2)ISIS.NAD	<e>
+;@(ISIS2)TNET2.NAD	<f>
+;@(ISIS2)IGEN.I		<g>
+.END
+.SKIP 3
+.BEGIN GROUP OFFSET
+	<a>.  The ";@" tells NAD to assemble this file (INIT.NAD).
+This file, in turn, defines certain parameters and MACROS which will
+be invoked by subsequent files.
+	<b>.  There is no space between the ";@" and the "INIT.NAD".
+	<c>.  This file comes from your directory, and specifies the parameters
+according to which the configuration occurs.
+	<d>.  This line invokes the "good-guy" file for a particular
+sub-network.  This in turn determines which usernames may access ISIS DDT.
+	<e>.  This line tells NAD to assemble the ISIS source code
+according to the parameters in the IS.TYM file.
+(In certain cases, other files must be specified for special
+applications, such as Supervisor, Disc and Tape, etc.)
+	<f>.  This invokes the TYMNET-II node-code (slot 0)
+portion of the compilation.
+	<g>.  The invocation of this file is "optional"; it is required if
+the ~<MERLIN NIB-file binder> is to be used, as it generates several
+parameters used by MERLIN.
+If used, it will output a synopsis of the configuration,
+telling the resource requirements.
+.END
+
+.SSS(|XXX.TYM file|)
+	The XXX.TYM corresponds to the X.TYM files, familiar from
+TYMNET-I usage.  Below is a sample X.TYM file.
+Again, <a> refers to notes following:
+.BEGIN VERBATIM
+
+: IS.TYM	ISIS-II T-II - DEFINITION PARAMETERS - R03.00	<a>
+
+:		DEFAULT HARDWARE CONFIGURATION OVERRIDE		<b>
+NASYNG	EQ	4		:* NO. OF ASYNC GROUPS (2 GRP/CD)  <c>
+MICRO	EQ	1		:* 1 IF ENHANCED ASYNC MICRO-CODE  <d>
+
+:		ISIS CONFIGURATION CONSTRAINTS
+NSLOT	EQ	5		:  NO. OF SLOTS TO CONNECT	<e>
+NLU	EQ	4		:  MAX. NO. OF LOGICAL UNITS/SLOT  <f>
+
+:		NODE CONFIGURATION				<g>
+TII	EQ	1		:  1 IF TYMNET-II ON NODE	<h>
+XLINKS	EQ	4		:  EXTRA T-II LINKS
+SILINS	EQ	4		:  NUMBER OF SIO LINES
+NSP	EQ	080		:  NUMBER OF TYMNET II PORTS	<i>
+PTHRU	EQ	0		:  1 IF PASSTHROUGHS INHIBITED	<j>
+MACHNM	EQ	$8 2377		:  NODE NUMBER			<k>
+HST0	EQ	$A 377		:  ISIS KERNEL HOST NUMBER	<l>
+
+:		NETWORK CONFIGURATION				<m>
+	TYMNET(0,2030,8)					<n>
+	TYMNET(1,2004,4)
+	TYMNET(2,2006,)
+	TYMNET(3,2003)
+
+:	SLOT 0 - T-II NODE CODE					<o>
+NLUS0	EQ	4		:  NO. OF L.U.'S FOR NODE CODE	<p>
+S0L0	S.REF(0)						<q, r>
+S0L1	S.REF(1) 
+S0L2	S.REF(2) 
+S0L3	S.REF(5) 						<s>
+
+:	SLOT 1 - GATEWAY
+S1CORE	EQ	$A 40		:  SL0T 1 CORE SIZE IN K-BYTES	<t>
+NLUS1	EQ	1		:  NO. OF L.U.'S FOR SLOT 1
+S1L0	S.REF(4)
+
+:	SLOT 2 - TYMSAT
+S2CORE	EQ	$A 50
+NLUS2	EQ	4
+S2L0	A.REF(0)						<u>
+S2L1	A.REF(1)
+S2L2	A.REF(2)
+S2L3	A.REF(3)
+
+:	SLOT 3 - RAM
+S3CORE	EQ	$A 300
+NLUS3	EQ	0
+
+:	SLOT 4 - VAL
+S4CORE	EQ	$A 55
+NLUS4	EQ	0
+
+:	SLOT 5 - EXTENDED MEMORY APPLICATION
+S5CORE	EQ	$A 32
+NLUS4	EQ	0
+	DEFEXT(5,3,10000,10000,3)				<v>
+
+XGG	MACRO[							<w>
+	GG(0,2,ISIS)						<x>
+]
+.END
+.BEGIN OFFSET
+.SKIP 3
+	<a>.  This is a comment line...it is not required, but does make
+the file more readable.
+.BEGIN GROUP
+	<b>.  This set of parameters tells of the presence of
+various pieces of hardware.
+These are a mix of ISIS-II switch parameters, AND numbers of
+particular devices on the machine.
+The list of allowable parameters (and their default value) is:
+.BEGIN VERBATIM
+
+    ENGINE:    1    * Assume (REQUIRE!!) TYMNET ENGINE
+    XLINKS:    0      Extra Links - default window size = 8
+    NLINES:    0      Number of SYNC lines
+    SILINS:    0      Number of SIO lines
+    DEBUG:     0    * System-DEBUG mode
+.TOPIC(|SYSTEM-DEBUG MODE|)
+    N.ADA:     0    * Use old async device addresses
+    MICRO:     0    * Enhanced ENGINE Microcode not used
+    M.NCARD:   0      No Mother-boards present **
+    SYSDBG:    0    * TTY-port accesses DDT
+    WWVB:      0    * No WWVB receiver
+    SUP:       0    * No Supervisor configured
+    NPRINT:    0      No printers
+    XSELCH:    0    * No extra selector channel
+    XSYNC:     0    * No extra sync card
+    NASYNG:    0      No Asyng groups
+    NDISC:     0      No disc
+    NTAPE:     0      No tape
+    MSCDSK:    0      No MSC-1400 Disc-controller ***
+    DI.TRC:    1    * Dispatcher character trace turned on
+    ZITEL:     1      1 if using Zitel MAC
+    BAUD(BR1200)      1200 baud (BR4800 for 4800 baud)****
+    MSLOT      n    * Monitor slot present (n must equal NSLOT)
+
+
+       * denotes switch parameter
+       ** If Mother boards are declared present, for each define:
+		M.NPn	number of ports on card n;
+		M.DAn	device address of card n.
+       *** for each controller declared, define:
+		NMSCn	number of drives on controller n;
+		MSCDAn	Device Address of controller n.
+       **** The BAUD macro specifies to ISIS the expected baud rate.
+
+
+	As more development occurs, this list is likely to expand.
+.END
+.END
+	<c>.  There are two ASYNC groups per ASYNC CARD.
+An Async group consists of 16 consecutive async ports.
+By dividing the card into groups, we can assign different groups to
+different processes.
+We can also have code which services only those groups in actual use,
+rather than all groups possible.
+	<d>.  Enable the enhanced-ENGINE microcode.
+	<e>.  This is the number of USER slots to configure;  it is in addition
+to slot 0, and to any slots configured for special usage, such as the
+supervisor.  It corresponds to the highest numbered slot (connected to
+the dispatcher) in the machine.
+	<f>.  The maximum number of Logical Units for any slot.
+All peripheral devices are considered physical units, and are mapped
+into the contiguous, Logical units for each slot.
+Logical Units may be of the same (e.g., all sync lines) type, or may
+be different for some application (e.g., one unit is an async
+group, another is a printer).
+	<g>.  This set of parameters configure slot 0 (the node-code), in
+terms of resources.  (An ISIS system is ALWAYS a Base in TYMNET-I)!
+	<h>.  ISIS-II will operate with slot 0 containing either TYMNET-I or -II
+code, with no change to the various applications.  However, certain restrictions
+apply to TYMNET-I, and diagnostics need be generated if an attempt is made
+to use TYMNET-II configuration parameters with TYMNET-I.
+If T-II is invoked, then there are extra parameters which apply to
+TYMNET-II only!  These are defaulted, as shown below.
+	<i>.  NSP is a TYMNET-II parameter...
+the number of ports assigned to the node code (slot 0).
+	<j>.  PTHRU is set to 1 if the node is not to support passthroughs.
+	<k>.  The TYMNET node number.
+	<l>.  The TYMNET host number used to access the ISIS KERNEL.
+	<m>.  These parameters describe the position of the node in TYMNET.
+.BEGIN GROUP
+	<n>.  This MACRO invocation defines one network link:
+.BEGIN VERBATIM
+   Parameter	Usage
+       1	link number (decimal should be specified);
+       2	neighbor number (octal);
+       3	number of groups to use on this link (if TII = 0);
+				else
+       3	window size...must be multiple of 4 (if TII = 1).
+.END
+.END
+	<o>.  We finally come to allocating resources to each of the
+slots.  Slot 0 is special, in that the node-code defines
+it's own size at assembly time.  Slot 0 may also reference no devices
+other than sync or M-boards.
+	<p>.  A slot may have less than the maximum number of LU's assigned.
+However, there must be a definition for each LU specified.  The correct
+format is "NLUn" or "NLUnn", where n or nn is a decimal number.
+	<q>.  The correct format for these symbols is "SiLj" (Slot i Line j),
+where i and j may be 1- or 2-digit decimal numbers.
+	<r>.  This MACRO reference assigns Sync-line 0 to symbol S0L0.
+	<s>.  Note that logical units need not be assigned to successive
+physical units.
+Indeed, for many configurations, it is desirable (and necessary) to
+perform assignments such as sync lines 0, 1, 4, 5, 8, 9, 12, 13
+to successive logical units on the node code, in order to permit other
+interfaces to acquire enough of the special sync lines (those with
+terms, such as Clear-To-Send, available).
+	<t>.  This is the memory allocated to this slot.  Once the machine
+is up, no more memory can be assigned without reloading!
+.BEGIN GROUP
+	<u>.  Here we see a different type of logical unit assigned.
+In particular, this invocation is to Async-group 0.
+Devices which may be referenced are:
+.BEGIN INDENT 7, 10
+	Sync line (S.REF);
+	Async group (A.REF);
+	Printer (P.REF);
+	Experimental SIO card (X.REF);
+	Mother-board device (M.REF...note that this has 2 arguments:
+the card number and device number upon that card!).
+.END
+.END
+	<v>.  The DEFEXT macro defines the address limits and protection
+for the extended MAC area.  It takes the form:
+.BEGIN VERBATIM
+
+	DEFEXT (SLOT,BLOCK,STPG,NUM,PROT)
+
+     where
+	SLOT	slot number (may range from 0 - NSLOT)
+	BLOCK	block number (may range from 3 - 15)
+	STPG	starting (absolute) page number
+	NUM	number of pages
+	PROT	protection mask bits
+		1	execution access permitted
+		2	write access permitted
+		4	read access permitted (assumed if execution or
+			write access is specified)
+
+.END
+	<w>.  This section is used to specify additional users for a
+specific ISIS configuration, if a standard sub-net file is not used.
+This is done via the creation of a MACRO invoking the
+"GG" macro, of form:
+.BEGIN GROUP VERBATIM
+
+	GG(LICENCE,ACCESS,NAME)
+
+		where:
+
+LICENCE:	may be 0, or any combination of the following ("!" is
+		the logical OR function):
+		L.DISC ! L.SYA!L.SYP!L.SYR
+		!L.SUA ! L.S0A!L.S0P!L.S0R
+		!L.P!L.H!L.L!L.E!L.R
+ACCESS:		-1 if all access allowed; else unique slot #
+NAME:		user name (up to 8 chars long)
+
+.END
+	<x>.  This validates a user "ISIS", with no licences, to log into
+slot 2 (only).
+.END
+
+.SS(|GENERATION|)
+.TOPIC(|system generation|)
+.TOPIC(|ISIS system generation|)
+.TOPIC(|generation, ISIS|)
+	To generate a node from the above files, we execute the following
+session fragment:
+.BEGIN VERBATIM
+
+-R NAD								<a>
+101979								<b>
+;X   IS.CMD							<c>
+
+;@   (ISIS2)INIT.NAD						<d>
+
+End of assembly
+;@   IS.TYM							<d>
+
+End of assembly
+;@   (ISIS2)GOODGY.LAB						<d>
+
+End of assembly							<e>
+;@   (ISIS2)ISIS.NAD
+
+SYNC 7AA 0F54							<f>
+CLOCKS 0F54 1854
+FLASH 1854 1940
+KCAREA 1A00 2000
+KERNEL 2000 5564
+DDT 5600 7300
+   3376d bufferlets allocated to dispatcher			<g>
+DISPAT 7300 13000
+End of assembly
+;@   (ISIS2)TNET2.NAD						<h>
+
+   Slot 0 CTA assembled at: 13000x, 20000x bytes		<i>
+End of assembly
+;@   (ISIS2)IGEN.I
+
+ ............................................
+
+
+
+    ***  ISIS-II  ***						<j>
+      Version 2.0d						<k>
+     >>> ENGINE <<<						<l>
+TYMNET-II, Version 471.12o					<m>
+    KERNEL host is 377						<n>
+4 interface slots
+
+ expects 1 async board, device address is 91
+        enhanced micro-coded async
+
+node 2377 has 4 sync lines:					<o>
+line 0d is physical line 0
+line 1d is physical line 1
+line 2d is physical line 2
+line 5d is physical line 5
+
+Slot configurations:
+
+slot 1 has 40 K-bytes of core, from 36800 to 407FF
+1 logical unit
+L.U. 0 is sync line 4						<p>
+
+slot 2 has 50 K-bytes of core, from 40800 to 97FFF
+4 logical unit
+L.U. 0 is async group 0
+L.U. 1 is async group 1
+L.U. 2 is async group 2
+L.U. 3 is async group 3
+
+slot 3 has 300 K-bytes of core, from 4D000 to 97FFF
+no logical units
+
+slot 4 has 55 K-bytes of core, from 98000 to 0A5BFF
+no logical units
+
+*** HIGHEST LOCATION USED IN THIS CONFIGURATION IS 0A5C00	<q>
+.TOPIC(|configuration memory requirements|)
+.TOPIC(|memory requirements, configuration|)
+
+REQUIRES 665d KILOBYTES OF CORE					<r>
+
+
+
+ ............................................
+
+
+
+End of assembly
+%Q								<s>
+EXIT
+
+-
+.END
+.SKIP 3
+.BEGIN OFFSET
+	<a>.  Execute NAD.
+	<b>.  NAD is ready to accept input.
+	<c>.  Tell NAD to use the command file.
+	<d>.  NAD assembles the INIT.NAD, the .TYM, and the GOODGY.LAB files.
+	<e>.  NAD finishes assembling the .LAB file.
+	<f>.  Various modules of the code are assembled, and the start- and
+end-addresses are output.
+	<g>.  A resource note is issued concerning the number of bufferlets assigned
+to the dispatcher.
+	<h>.  The node code is assembled...in this case, TYMNET-II.
+	<i>.  A resource note is issued concerning the start and size of the node code.
+	<j>.  NAD assembles the IGEN source file.  This in turn prints out
+the map of the configuration.
+	<k>.  The ISIS-II version number.
+	<l>.  Indicates that this code will run on a TYMNET ENGINE.
+	<m>.  The node-code type and version number.
+	<n>.  The kernel host number...this is the host one will log into in
+order to access this machine's DDT.
+	<o>.  The node configuration is printed.
+	<p>.  The type of unit is specified for each LU.  NULL LU's are ignored.
+	<q>.  The highest location in hex.
+	<r>.  The core required.
+	<s>.  We enter the command to exit out of NAD.
+.END
+
+.SS(|SHARED DEVICES|)
+	Certain devices, notably disc and tape, must of necessity be shared
+between all users of an ISIS system, and are thus refered to as
+~<global units> or
+~<shared devices>.  These need be configured in a special fashion.
+.SSS(|DECLARING SHARED DEVICES|)
+	The first requirement is that the devices be present...thus the
+parameters NDISC, NTAPE, and/or MSCDSK must be defined non-zero.
+	Then the device partitions must be defined:  this is done by invoking
+the following MACRO for each partition:
+.BEGIN VERBATIM
+
+	SGU.DEF(n,DEV,m,START,SIZE,sys)
+.END
+	where:
+.SKIP 1
+.BEGIN OFFSET
+	n:     Global Unit Number (hex);
+	DEV:   Mnemonic device type (Choose from "DK", "MT", or "MS");
+	m:     Device Unit number (decimal...eg, MT"0", MT"1", etc.);
+	START: Area Start Cylinder (hex, Discs only);
+	SIZE:  Area Size (Cylinders, hex;  Discs only),
+	sys:   the value "1" to denote the system device (type "DK" discs
+only;  only one area on disc may be declared as the system device).
+.END
+.SSS(|REFERENCING SHARED DEVICES|)
+	Once all global units are declared, it is necessary to assign them,
+with the appropriate access licence, to each slot.  This is done by
+declaring the number of ~<shared logical units> for each slot.  This
+symbol is called:
+.SKIP 1
+.ONCE CENTER
+NXLUn
+	where "n" is a one or two digit decimal number, (eg, NXLU0, NXLU11).
+	Next, the global units are assigned to the slot.
+This is done with successive invocations to the MACRO:
+.BEGIN VERBATIM
+
+	SGU.REF(SLOT,XLU,GLU,Access)
+.END
+	where:
+.SKIP 1
+.BEGIN OFFSET
+	SLOT:   The number of the slot to which the assignment is made (decimal);
+	XLU:    The number of the eXtra Logical Unit being assigned (decimal);
+	GLU:    The number of the GLobal Unit being assigned (hex);
+	Access: A list of mnemonics used to specify access allowed to this usage:
+(choose from combinations of):
+.BEGIN VERBATIM
+	RD	ReaD access allowed
+	WR	WRite access allowed
+	AT	ATtach access allowed
+	SS	Save licence
+.END
+.END
+.BEGIN GROUP VERBATIM
+.SSSS(|EXAMPLE:|)
+
+
+
+	SGU.DEF(1,DK,0,0000,1C)		save area
+	SGU.DEF(2,DK,0,001C,4FF)	work area
+	SGU.DEF(3,DK,0,041C,1,1)	system device
+
+NXLU0	EQ	0			no units for slot 0
+NXLU1	EQ	0			no units for slot 1
+NXLU2	EQ	3
+	SGU.REF(2,0,2,RD+WR)		read/write access to area 2
+	SGU.REF(2,2,1,RD)		read access to area 1
+
+.ONCE CENTER
+NOTES:
+
+.END
+.BEGIN OFFSET
+	This example partitions the disk into two areas (global units), one
+for a work area, one for a save area.
+	Slots 0 and 1 do not access shared devices.
+	slot 2 defines local units 0 and 2, but for some reason leaves unit
+1 unassigned...this is not an error condition; unassigned units
+are permitted, and allow of no access!
+	Multiple access licences are generated with expressions of the form:
+.SKIP 1
+.ONCE CENTER
+L1+L2+...   or   L1!L2!...
+.END
