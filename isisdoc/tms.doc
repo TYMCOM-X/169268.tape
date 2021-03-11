@@ -1,0 +1,582 @@
+Romolo Raffo                  TMS Summary               January 16, 1981
+
+
+                           Table of Contents
+
+
+
+               Section  Subject                      Page
+
+
+               1        MAIN COMMANDS                   1
+               1.1         quit                         1
+               1.2         probe                        1
+               1.3         log                          1
+               1.4         message                      2
+               1.5         ignore                       2
+               1.6         restore                      2
+               1.7         list ignore                  2
+               1.8         list profile                 2
+               1.9         list users                   2
+               1.10        set probe                    3
+               1.11        set node                     3
+               1.12        set host                     3
+               1.13        display                      3
+               1.14        date                         4
+               1.15        version                      4
+               1.16        create                       4
+               1.17        modify                       4
+               1.18        delete                       4
+               1.19        who                          5
+               1.20        hang                         5
+               2        MODIFY MODE                     6
+               2.1         list                         6
+               2.2         password                     6
+               2.3         terminal                     6
+               2.4         zone                         7
+               2.5         add                          7
+               2.6         remove                       7
+               2.7         abort                        7
+               2.8         update                       7
+               3        EVENT NUMBERS                   8
+Romolo Raffo                  TMS Summary               January 16, 1981
+
+
+                       SECTION 1 -- MAIN COMMANDS
+
+
+
+
+
+The following are the commands recognized by TMS when it is in main
+command mode.  The prompt for command in this mode is "*".  Most
+commands and keywords can be abreviated.
+
+
+1.1 quit
+
+Format: quit
+
+Logout from TMS.
+
+
+1.2 probe
+
+Format: probe [<supervisor_host>]
+
+Enter PROBE for the specified supervisor. If no supervisor is given,
+PROBE for the active supervisor is entered.  While in PROBE, the command
+prompt is ":" and the commands recognized are all those listed in the
+PROBE User's Guide except lrate, rnode, rlog and help.  The log command
+format is the TMS log command format rather than the probe format.  To
+exit PROBE, use the exit command "exi".
+
+
+1.3 log
+
+Format: log [<number> | <time>]
+
+Start the logger. If no argument is given, start printing messages from
+now. If a time is given, print messages starting from that time.  The
+<time> is of the form month/day/year hour:minute:second.  The /year can
+be omitted and the current year will be assumed. The seconds can also be
+omitted with zero being used.  The <number> argument is any unsigned
+integer and is the number of minutes in the past from where logger
+messages should start printing. Examples,
+
+        log
+        log 60
+        log 1/15/81 12:00:00
+        log 1/15 12:00
+
+
+
+
+
+
+
+
+
+
+                                   1
+Romolo Raffo                  TMS Summary               January 16, 1981
+
+
+1.4 message
+
+Format: message
+
+Print the current operator messages. These are reports of unexpected
+occurances in TMS.
+
+
+1.5 ignore
+
+Format: ignore {nodes | hosts | events} <number_list>
+
+Don't print logger, probe or display command information for the listed
+nodes, hosts or events. The <number_list> is a sequence of unsigned
+integers or ranges separated by spaces. A range is two unsigned
+integers, the first less than or equal to the second, separated by a
+dash. Node numbers are octal; host and events are decimal. Examples,
+
+        ignore nodes 234
+        ignore node 345-567 234 777 560-767
+        ignore host 1089-1234 7-89
+
+
+1.6 restore
+
+Format: restore {nodes | hosts | events} <number_list>
+
+Restore nodes, hosts or events ignored by the ignore command.  See the
+ignore command for a description of <number_list>.
+
+
+1.7 list ignore
+
+Format: list ignore {nodes | hosts | events}
+
+List the nodes, hosts or events currently being ignored.
+
+
+1.8 list profile
+
+Format: list profile [<user_name>]
+
+List your own profile if no argument is given; otherwise list the
+profile for the user name given.
+
+
+1.9 list users
+
+Format: list users
+
+List all profiles.
+
+
+
+
+
+                                   2
+Romolo Raffo                  TMS Summary               January 16, 1981
+
+
+1.10 set probe
+
+Format: set probe <supervisor_host>
+
+Set what probe password TMS should use for the given supervisor.  This
+does not change the password in probe.  It still must be changed with
+the PROBE change command.
+
+
+1.11 set node
+
+Format: set node <node> [<node_name>]
+
+Give a name to a node. If the name is not given, clear the name.
+Examples,
+
+        set node 2032 tmsnode
+        set node 2032
+
+
+1.12 set host
+
+Format: set host <host> [<host_name> [<node> [<position>]]]
+
+Give a name and location to a host. If a name is omitted, the name is
+cleared.  If node or position are omitted, they are set to unknown.
+Examples,
+
+        set host 58 nem 2032 0
+        set host 58 nem 2032
+        set host 58 nem
+        set host 58
+
+
+1.13 display
+
+Format: display [<display_order>]
+
+Start network exceptions display. The <display_order> is one or more of
+the keywords "nodes", "hosts" or "lines" separated by spaces. The order
+in which they are given determines the order they are printed.  If no
+list is given, the order will be nodes, lines and hosts and all three
+exceptions will be displayed. Examples,
+
+        display
+        display hosts
+        display hosts lines
+        display lines nodes hosts
+
+
+
+
+
+
+
+
+                                   3
+Romolo Raffo                  TMS Summary               January 16, 1981
+
+
+1.14 date
+
+Format: date
+
+Print the current date and time.
+
+
+1.15 version
+
+Format: version
+
+Print the current program version.
+
+
+1.16 create
+
+Format: create <user_name> [as <user_name>]
+
+Create a new user name. The first <user_name> will be the name of the
+new user. A password will be requested and the user will then be in
+modify mode, modifying the new user name. Modify mode is described
+below. The new user is given the same profile, except for user name and
+password, as the user who is creating the new user unless the
+"as <user_name>" option is used. In this case, the profile is the same
+as the profile for the user name following the "as" with the restriction
+that the new profile will not contain any nodes, hosts, events or
+license not in the creating user's profile. The new user name is not
+created until modify mode is ended with the update command. Examples,
+
+        create newuser
+        create newuser as olduser
+
+
+1.17 modify
+
+Format: modify [<user_name>]
+
+Enter modify mode for the user name given or for your own profile if no
+name is given. Modify mode is described below. The modifications do not
+take effect until modify mode is ended with the update command.
+
+
+1.18 delete
+
+Format: delete <user_name>
+
+Delete the given user name. If anyone is entered as the user name, they
+are automatically logged out.
+
+
+
+
+
+
+
+
+                                   4
+Romolo Raffo                  TMS Summary               January 16, 1981
+
+
+1.19 who
+
+Format: who
+
+List the current logged in users. Each line will contain a number and a
+user name. The number is used in the hang command to identify which user
+to disconnect.
+
+
+1.20 hang
+
+FORMAT: hang {all | <number>}
+
+Disconnect user. If "all" is specified, all users other than the user
+executing the command are disconnected. If <number> is given, only the
+user with the number in the who command list will be disconnected.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                   5
+Romolo Raffo                  TMS Summary               January 16, 1981
+
+
+                        SECTION 2 -- MODIFY MODE
+
+
+
+
+
+Modify mode is entered with either the create or modify command.  While
+in modify mode, the user can examine and change a profile, including his
+own. A profile contains the following:
+
+        password - the current password which is a string up to 32
+                characters long,
+
+        terminal - the terminal being used, either adm1 or adm3,
+
+        time zone - the number of minutes to add (or subtract) from GMT
+                to get the user's time zone,
+
+        license - current user license,
+
+        nodes - the nodes the user can reference,
+
+        hosts - the hosts the user can reference, and
+
+        events - the events the user can reference.
+
+
+2.1 list
+
+FORMAT: list [terminal | zone | license | nodes | hosts | events]
+
+List profile entry. Either list the entire profile if no argument is
+given or just list the specified entry. The profile referred to is the
+profile being modified including the current modifications.
+
+
+2.2 password
+
+Format: password
+
+Change password. A password will be request and requested again for
+verification. The password will not be echoed.
+
+
+2.3 terminal
+
+Format: terminal {adm1 | adm3}
+
+Change display terminal.
+
+
+
+
+
+
+
+                                   6
+Romolo Raffo                  TMS Summary               January 16, 1981
+
+
+2.4 zone
+
+Format: zone <number>
+
+Change time zone difference from GMT.
+
+
+2.5 add
+
+Format: add {license | nodes | hosts | events} <item_list>
+
+Allow access to item. For license, <item_list> is a list of licenses
+separated by spaces.  For the other items, the list is the same as the
+<number_list> in the ignore command, a list of single items or ranges.
+
+
+2.6 remove
+
+Format: remove {license | nodes | hosts | events} <item_list>
+
+Remove access to item.
+
+
+2.7 abort
+
+Format: abort
+
+Leave modify mode without saving new profile.
+
+
+2.8 update
+
+Format: update
+
+Leave modify mode and save new profile.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                   7
+Romolo Raffo                  TMS Summary               January 16, 1981
+
+
+                       SECTION 3 -- EVENT NUMBERS
+
+
+
+
+
+The following is a list of the event numbers currently recognized by
+TMS.  Events are ERLOG messages and the event numbers are the message
+type.  The message numbers used in the PROBE User's Guide is in hex and
+is four times the event number which is in decimal.  Each event number
+is followed by a brief description of the event.
+
+1....shutting all lines on active supervisor
+2....supervisor crash
+3....unexpected takeover response
+4....operator request
+5....supervisor report on available accounting blocks
+6....lost node
+7....host confusion
+8....illegal record, TYMNET II node error reports
+9....illegal record
+10...non-fatal error
+11...unable to takeover node
+12...node error
+13...IRC rotate problem
+14...TYMNET II message too long
+15...bad subtype in TYMNET II message
+16...rebuild error in TYMNET II
+17...rebuild failure
+18...line out
+19...link status-TYMNET II
+20...bad MUD
+21...network character in supervisor message
+22...input dispatcher inconsistency
+23...invalid port number on supervisor message input
+24...pill count
+25...invalid supervisor message
+26...line overloaded
+27...line error
+28...out of channels
+29...out of passthroughs
+30...spewing characters
+31...sup going to sleep...
+32...host status
+33...line ok
+34...class or group too large...TYMNET II
+35...sup taking over
+36...line reset
+37...got
+38...access error
+39...rotate read failure
+40...node takeover timeout
+41...node error during takeover
+42...neighbor mismatch on circuit zap
+
+
+                                   8
+Romolo Raffo                  TMS Summary               January 16, 1981
+
+
+43...line shut
+44...crash report
+45...supervisor cannot read disc
+46...supervisor fight
+47...line unshut
+48...line overloaded
+49...MUD error TYMNET II
+50...a node is backpreasuring a sup message
+51...login rate
+52...TYMNET II circuit too long
+53...start of takeover
+54...end of take over
+55...login list too long
+56...cannot takeover node
+57...zapper received on command circuit
+58...sync port mesage
+59...link cost
+60...zapper received on unused TYMNET I command circuit
+61...invalid sup message on a TYMNET I port
+62...large time discrepence
+63...unable to read super clock
+64...sup buffer zap
+65...new link claimed out of bounds
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                   9
+  
