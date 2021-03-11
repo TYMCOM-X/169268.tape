@@ -1,0 +1,125 @@
+C         PROGRAM NAME;           UPDGATH.F4
+C         CUSTOMER:               FORD - SIMULTANEOUS USAGE ANALYSIS
+C         AUTHOR:                 PAT COTE
+C         DATE:                   5/25/88
+C         PURPOSE:                TO UPDATE THE DATES IN THE COMMAND FILE
+C                                 PRIOR TO THE SUBMIT RUN OF THE GATHER
+C                                 PROGRAMS EVERY MONDAY NIGHT AT MIDNIGHT.
+C
+C         UPDATED                6/6/88 IN CONJUNCTION WITH GATHFM.F4 UPDATE
+C                                6/7/88 I HAD TO CREATE TWO DIFFERENT SUBMIT
+C                                       FILES DEPENDING IF THE WEEK CROSSES
+C                                       A MONTH BOUNDRY.
+C                                 12/16/88 TO ADD THE PROMPT FOR STATUS PASSWORD
+C                               8/21/92 GATHER NO LONGER WORKS WITH AN ENTIRE
+C                                       WEEKS WORTH OF DATA
+C
+C         INPUT:                  NITEGATH (COMMAND FILE UNDER SUBMIT)
+C                                 START DATE AND END DATE FROM PROMPTS
+C                                 STATUS PASSWORD FROM PROMPTS
+C         OUTPUT:                 NITEGATH - WITH UPDATED DATES FOR SINGLE
+C                                            MONTH WEEKS
+C                                 NITEG2 - WITH UPDATED DATES FOR SPLIT
+C                                          MONTH WEEKS
+C
+C
+090       DOUBLE PRECISION SDATE,EDATE,FSDATE,FEDATE,SSDATE,SEDATE,TSDATE,
+          TEDATE,DSDATE,DEDATE,PSWD
+          TYPE 091
+091       FORMAT (' DOES THIS WEEK SPAN 2 MONTHS? (Y/N): ')
+          TYPE 092
+092       FORMAT (' ')
+          ACCEPT 093, YESNO
+093       FORMAT (A1)
+          IF (YESNO.EQ.'Y') GOTO 400
+100       OPEN(10,'NITEGATH',RANDIO)
+          TYPE 110
+110       FORMAT (' PLEASE ENTER THE STATUS PASSWORD UP TO 8 CHARACTERS: ')
+          TYPE 115
+115       FORMAT ('  ')
+          ACCEPT 120,PSWD
+120       FORMAT (A8)
+          TYPE 140
+140       FORMAT (' PLEASE ENTER BEGINNING DATE AS YYMMDD: ')
+          TYPE 145
+145       FORMAT (' ')
+150       ACCEPT 160,SDATE
+160       FORMAT (I6)
+          TYPE 170
+170       FORMAT(' PLEASE ENTER ENDING DATE AS YYMMDD: ')
+          TYPE 145
+200       ACCEPT 210,EDATE
+210       FORMAT(I6)
+          DO 280 I=1,3
+          READ (10,270)DJUNK
+270       FORMAT (A15)
+280       CONTINUE
+          WRITE (10,120) PSWD
+          DO 290 I=1,4
+          READ (10,270)DJUNK
+290       CONTINUE
+          WRITE (10,210) SDATE
+          WRITE (10,210) EDATE
+          DO 300 I=1,7
+          READ (10,270)DJUNK
+300       CONTINUE
+          WRITE (10,210) SDATE
+          WRITE (10,210) EDATE
+          GOTO 900
+400       OPEN (10,'NITEG2',RANDIO)
+          TYPE 410
+410       FORMAT (' PLEASE ENTER STATUS PASSWORD AS MMM/YYYY: ')
+          TYPE 415
+415       FORMAT ('  ')
+          ACCEPT 420,PSWD
+420       FORMAT (A8)
+          TYPE 440
+440       FORMAT (' PLEASE ENTER BEGINNING DATE FOR WEEK AS YYMMDD: ')
+          TYPE 445
+445       FORMAT (' ')
+450       ACCEPT 460,SDATE
+460       FORMAT (I6)
+          TYPE 470
+470       FORMAT(' PLEASE ENTER ENDING DATE OF THE MONTH AS YYMMDD: ')
+          TYPE 445
+500       ACCEPT 510,MEDATE
+510       FORMAT (I6)
+          TYPE 520
+520       FORMAT (' PLEASE ENTER BEGINNING DATE OF MONTH AS YYMMDD: ')
+          TYPE 445
+          ACCEPT 540, MBDATE
+540       FORMAT (I6)
+          TYPE 560
+560       FORMAT (' PLEASE ENTER ENDING DATE OF THE WEEK AS YYMMDD: ')
+          TYPE 445
+          ACCEPT 570, EDATE
+570       FORMAT (I6)
+          DO 580 I=1,3
+          READ (10,575)DJUNK
+575       FORMAT (A15)
+580       CONTINUE
+          WRITE (10,420) PSWD
+          DO 585 I=1,5
+          READ (10,575)DJUNK
+585       CONTINUE
+          WRITE (10,510) SDATE
+          WRITE (10,510) MEDATE
+          DO 590 I=1,7
+          READ (10,575)DJUNK
+590       CONTINUE
+          WRITE (10,510) SDATE
+          WRITE (10,510) MEDATE
+          DO 600 I=1,4
+          READ (10,575)DJUNK
+600       CONTINUE
+          WRITE (10,510) MBDATE
+          WRITE (10,510) EDATE
+          DO 620 I=1,7
+          READ (10,575)DJUNK
+620       CONTINUE
+          WRITE (10,510) MBDATE
+          WRITE (10,510) EDATE
+900       TYPE 910
+910       FORMAT ('  EXECUTION COMPLETED NORMALLY')
+950       STOP
+          END
