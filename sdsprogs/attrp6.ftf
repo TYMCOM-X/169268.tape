@@ -1,0 +1,388 @@
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                     C
+C          SUBROUTINE: ATTRP6                              PAGE 1.0   C
+C          AUTHOR: JO ANN JOELS                            --------   C
+C          CREATED: SEPTEMBER, 1982                                   C
+C          LAST UPDATED:                                              C
+C          UPDATED BY:                                                C
+C          PROJECT: INVENT                                            C
+C          TABS: 9,12,15,18,60,71                                     C
+C                                                                     C
+C          THIS ROUTINE BACKS-UP THE CURRENT ATT INVENTORY DATA       C
+C          BASE, ADDS ALL OF THE CURRENT DISCONNECTED CIRCUITS        C
+C          TO THE DISCONNECT DATA BASE, AND THEN DELETES THE DIS-     C
+C          CONNECTED CIRCUITS FROM THE CURRENT ATT INVENTORY DATA     C
+C          BASE.                                                      C
+C                                                                     C
+C          FORMAT:                                                    C
+C             CALL ATTRP6(IERR)                                       C
+C                                                                     C
+C             ARGUMENTS:                                              C
+C                IERR - VARIABLE RETURNING STATUS OF ANY ERROR        C
+C                       CONDITIONS.                                   C
+C                         0 = NO ERRORS                               C
+C                                                                     C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+
+        SUBROUTINE ATTRP6(IERR)
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                     C
+C          DECLARATIONS:                                   PAGE 2.0   C
+C                                                          --------   C
+C                                                                     C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+
+        COMMON /CONTRL/PHASE,ACTFLE,ACTDAT,ACTREC,ACTPOS,TYMFLE,
+     -                 REPFLE,TABB,CDEV
+
+        INTEGER PHASE,ACTFLE(5),ACTDAT,ACTREC,ACTPOS,TYMFLE(5),
+     -          REPFLE(5),TABB(2),CDEV
+
+
+      COMMON /CIRC1/ BILNO, NAME(5), CIRNO, INDNO(2), TELCO(2),
+     -              BPHON(3), SDATE, CDATE, DDATE, CIORD(4), CIREQ(4),
+     -       CIUSO(4), CCORD(4), CCREQ(4), CCUSO(4), BDATE, RAMNT,
+     -       RCCOD(2), RCCEN(2),NAMNT, NCCOD(2), NCCEN(2), MICHG,
+     -       MDCHG, TMCHG, CDCHG, ADCHG, FTAX, STAX, CDUE, HDUE,
+     -       MVEND(2), MMODL(2), MASTR(3), CUST(2), CCID, TPHON(3),
+     -       INDAC, INDCC(2)
+      INTEGER BILNO, NAME, CIRNO, INDNO, TELCO, BPHON, SDATE, CDATE,
+     -       DDATE, CIORD, CIREQ, CIUSO, CCORD, CCREQ, CCUSO, BDATE,
+     -       RCCOD, RCCEN, NCCOD, NCCEN, MVEND, MMODL, MASTR,
+     -       CUST, CCID, TPHON, INDAC, INDCC
+      REAL   RAMNT, NAMNT, MICHG, MDCHG, TMCHG, CDCHG, ADCHG, FTAX,
+     -       STAX, CDUE, HDUE
+     
+           
+      COMMON /CIRC2/ BAUD, LTYP, GRPS, NOD1, NAM1(2), NTYP1, N1RID(2),
+     -               N1AC(2), N1COD(2), N1CPH(3), N1OD, N1SID(2),
+     -       N1ADD(6), N1CUN(2), N1CIT(2), N1ST, N1NPA, N1NNX, N1AB,
+     -       LONG1, LAT1, V1, H1, PRT1, N1SER(3), N1MOD, NOD2, NAM2(2),
+     -       NTYP2, N2RID(2), N2AC(2), N2COD(2), N2CPH(3), N2OD, 
+     -       N2SID(2), N2ADD(6), N2CUN(2), N2CIT(2), N2ST, N2NPA, N2NNX,
+     -       N2AB, LONG2, LAT2, V2, H2, PRT2, N2SER(3), N2MOD,
+     -       CCTYP, RPAID, NPAID, CMNT1(6), CMNT2(6), CMNT3(6),
+     -       CMNT4(6)
+      INTEGER BAUD, LTYP, GRPS, NOD1, NAM1, NTYP1, N1RID, N1AC, N1COD,
+     -       N1CPH, N1OD, N1SID, N1ADD, N1CUN, N1CIT, N1ST, N1NPA,
+     -       N1NNX, N1AB, V1, H1, PRT1, N1SER, N1MOD, NOD2, NAM2,
+     -       NTYP2, N2RID, N2AC, N2COD, N2CPH, N2OD, N2SID, N2ADD,
+     -       N2CUN, N2CIT, N2ST, N2NPA, N2NNX, N2AB, V2, H2, PRT2,
+     -       N2SER, N2MOD, CCTYP, CMNT1, CMNT2, CMNT3, CMNT4
+      REAL   LONG1, LAT1, LONG2, LAT2, RPAID, NPAID
+
+
+
+        INTEGER MONTHS(12),BAKFIL(2),ATTDMP(4),DISCNT,IERR,TEMP,
+     -          MON,ABBMON
+
+        IERR=0
+
+        DATA MONTHS/'JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG',
+     -              'SEP','OCT','NOV','DEC'/
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                     C
+C          STARTUP:                                        PAGE 3.0   C
+C                                                          --------   C
+C                                                                     C
+C          1) OUPUT BEGINNING-OF-PHASE MESSAGE                        C
+C          2) INITIALIZE THE ARRAYS AND VARIABLES IN COMMON           C
+C          3) BUILD THE "BACK-UP" FILE NAME                           C
+C                                                                     C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+
+C*****
+C 1) OUTPUT BEGINNING-OF-PHASE MESSAGE
+C*****
+
+100     TYPE 105
+105     FORMAT (///,15X,'*****   PHASE 6   *****',/
+     -             15X,'     BACKUP DATA',/
+     -             15X,'     BASE AND PRO-',/
+     -             15X,'     CESS DISCONNECTS',//)
+
+C*****
+C 2) INITIALIZE THE ARRAYS AND VARIABLES IN COMMON
+C*****
+
+110     CALL INIT3
+
+
+
+C*****
+C 2) BUILD THE "BACK-UP" FILE NAME
+C*****
+
+C       C*****
+C       C EXTRACT THE MONTH NUMBER FROM THE BILL DATE
+C       C*****
+
+120        TEMP=MOD(ACTDAT,1000)
+           MON = TEMP/100
+
+C       C*****
+C       C GET THE MONTH ABBREVIATION
+C       C*****
+
+130        ABBMON=MONTHS(MON)
+
+C       C*****
+C       C PUT THE MONTH ABB. INTO THE BACKUP FILE NAME
+C       C*****
+
+140        ENCODE(10,145,BAKFIL)ABBMON
+145        FORMAT ('INVENT.',A3)
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                     C
+C          BACKUP THE ATT DATA BASE:                       PAGE 4.0   C
+C                                                          --------   C
+C          1) BUILD THE "DUMP" COMMAND                                C
+C          2) DUMP THE DATA BASE                                      C
+C          3) CREATE KEY TABLES FOR BACKUP DATA BASE                  C
+C                                                                     C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+
+C*****
+C 1) BUILD THE "DUMP" COMMAND.
+C    THE ATT INVENTORY DATA BASE IS GOING TO BE "DUMPED" TO
+C    CREATE THE BACKUP DATA BASE, SO PUT THE BACKUP FILE
+C    NAME INTO THE X22 DUMP COMMAND.
+C*****
+
+150     ATTDMP(1)='DUMP '
+        ATTDMP(2)=BAKFIL(1)
+        ATTDMP(3)=BAKFIL(2)
+        ATTDMP(4)=0
+
+
+C*****
+C 2) DUMP THE DATA BASE
+C*****
+
+C       C*****
+C       C OPEN THE ATT INVENTORY DATA BASE
+C       C*****
+
+160        CALL DBOPEN('INVENT')
+
+C       C*****
+C       C SELECT ALL RECORDS IN THE DATA BASE
+C       C*****
+
+165     CALL DBFIND ('ALL')
+
+
+C       C*****
+C       C TELL THE USER WHAT IS HAPPENING
+C       C*****
+
+170        TYPE 172,BAKFIL
+172        FORMAT (5X,'BACKING UP DATA BASE TO: ',2A5,//)
+
+C       C*****
+C       C CREATE THE BACKUP FILE
+C       C*****
+
+175        CALL DBEXEC(ATTDMP)
+
+
+
+C*****
+C 3) CREATE THE KEY TABLES FOR THE BACKUP DATA BASE
+C*****
+
+C       C*****
+C       C OPEN THE BACKUP DATA BASE AND ISSUE THE KEY COMMAND
+C       C*****
+
+180        CALL DBOPEN ('NOCLOSE',BAKFIL)
+           CALL DBEXEC('KEY ALL')
+
+C       C*****
+C       C CLOSE THE BACKUP DATA BASE
+C       C*****
+
+185        CALL DBCLOS
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                     C
+C          PROCESS THE DISCONNECTS:                        PAGE 5.0   C
+C                                                          --------   C
+C                                                                     C
+C          1) FIND ALL OF THE DISCONNECTS IN INVENT                   C
+C          2) OPEN THE DISCONNECT DATA BASE                           C
+C          3) FOR EACH DISCONNETED RECORD DO THE FOLLOWING:           C
+C             -  GET ALL INFO ON THE CIRCUIT FROM THE ATT D.B.        C
+C             -  ADD THE CIRCUIT TO THE DISCONNECT DATA BASE          C
+C             -  DELETE THE CIRCUIT FROM THE ATT DATA BASE            C
+C                                                                     C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+C*****
+C 1) FIND ALL OF THE DISCONNECTS IN INVENT
+C*****
+
+200     CALL DBFIND('DDATE','NE',0)
+        CALL DBNREC(DISCNT)
+
+
+C*****
+C 2) OPEN THE DISCONNECT DATA BASE
+C*****
+
+210     CALL DBOPEN ('NOCLOSE','INVEND')
+
+
+
+C*****
+C 3) PROCESS EACH DISCONNECTED CIRCUIT
+C*****
+
+C       C*****
+C       C GET ALL INFO ON THE CIRCUIT FROM THE INVENT D.B.
+C       C*****
+
+220        CALL DBSET(1)
+225        CALL DBGREC($300)
+           CALL GETIT
+
+C       C*****
+C       C CK TO SEE IF THIS RECORD IS ALREADY IN THE DISCONNECT
+C       C DATA BASE.
+C       C*****
+
+250        CALL DBSET(2)
+           CALL DBFIND('NAME','EQ',NAME)
+           CALL DBNREC(IREC)
+
+C          C*****
+C          C IF IT IS ALREADY IN THE D.B. OUTPUT A MESSAGE
+C          C*****
+
+260           IF (IREC.EQ.0) GO TO 270
+              TYPE 265,NAME
+265           FORMAT (1X,'CIRCUIT: ',5A5,1X,'IS ALREADY IN THE',
+     -               ' DISCONNECT DATA BASE.',/)
+
+C       C*****
+C       C ADD THE RECORD TO THE DISCONNECT DATA BASE
+C       C****
+
+270        CALL DBADD('BILNO',BILNO,'NAME',NAME,'CIRNO',CIRNO,'INDNO',
+     -          INDNO,'TELCO',TELCO,'BPHON',BPHON,'SDATE',SDATE,'CDATE',
+     -          CDATE,'DDATE',DDATE,'CIORD',CIORD,'CIREQ',CIREQ,'CIUSO',
+     -          CIUSO,'CCORD',CCORD,'CCREQ',CCREQ,'CCUSO',CCUSO,'BDATE',
+     -          BDATE,'RAMNT',RAMNT,'RCCOD',RCCOD,'RCCEN',RCCEN,'NAMNT',
+     -          NAMNT,'NCCOD',NCCOD,'NCCEN',NCCEN,'MICHG',MICHG,'MDCHG',
+     -          MDCHG,'TMCHG',TMCHG,'CDCHG',CDCHG,'ADCHG',ADCHG,'FTAX',
+     -          FTAX,'STAX',STAX,'CDUE',CDUE,'HDUE',HDUE,'MVEND',MVEND)
+           CALL DBCHNG('MMODL',MMODL,'MASTR',MASTR,'CUST',CUST,'CCID',  
+     -          CCID,'TPHON',TPHON,'BAUD',BAUD,'LTYP',LTYP,'GRPS',GRPS,
+     -          'NOD1',NOD1,'NTYP1',NTYP1,'N1RID',N1RID,'N1AC',N1AC,
+     -          'N1COD',N1COD,'N1CPH',N1CPH,'N1OD',N1OD,'N1SID',N1SID,
+     -          'N1ADD',N1ADD,'N1CUN',N1CUN,'N1CIT',N1CIT,'N1ST',N1ST,
+     -          'N1NPA',N1NPA,'N1NNX',N1NNX,'N1AB',N1AB,'LONG1',LONG1,
+     -          'LAT1',LAT1,'V1',V1,'H1',H1,'PRT1',PRT1,'N1SER',N1SER,
+     -          'N1MOD',N1MOD, 'INDAC',INDAC, 'INDCC',INDCC)
+           CALL DBCHNG('NOD2',NOD2,'NAM2',NAM2,'NTYP2',NTYP2,'N2RID',
+     -          N2RID,'N2AC',N2AC,'N2COD',N2COD,'N2CPH',N2CPH,'N2OD',
+     -          N2OD,'N2SID',N2SID,'N2ADD',N2ADD,'N2CUN',N2CUN,'N2CIT',
+     -          N2CIT,'N2ST',N2ST,'N2NPA',N2NPA,'N2NNX',N2NNX,'N2AB',
+     -          N2AB,'V2',V2,'H2',H2,'PRT2',PRT2,'N2SER',N2SER,'N2MOD',
+     -          N2MOD,'CCTYP',CCTYP,'RPAID',RPAID,'NPAID',NPAID,'CMNT1',
+     -          CMNT1,'CMNT2',CMNT2,'CMNT3',CMNT3,'CMNT4',CMNT4)
+
+C       C*****
+C       C DELETE THE DISCONNECTED CIRCUIT FROM THE ATT D.B.
+C       C*****
+
+280        CALL DBSET(1)
+           CALL DBDEL
+
+C          C*****
+C          C RESELECT THE REST OF THE DISCONNECTED RECORDS
+C          C FROM THE ATT DATA BASE
+C          C*****
+
+285           CALL DBEXEC ('STARTREC')
+
+
+C       C*****
+C       C GO BACK AND PROCESS NEXT DISCONNECT
+C       C*****
+
+290        GO TO 225
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                     C
+C          FINISH:                                         PAGE 6.0   C
+C                                                          --------   C
+C                                                                     C
+C          1) CLOSE DATA BASES - INVENT AND INVEND                    C
+C          2) TELL USER HOW MANY DISCONNECTS WERE PROCESSED           C
+C          3) UPDATE CONTROL FILE                                     C
+C          4) OUTPUT END-OF-PHASE MESSAGE                             C
+C          5) RETURN TO CALLING PROGRAM                               C
+C                                                                     C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+
+C*****
+C 1) CLOSE DATA BASES
+C*****
+
+300     CALL DBCLOS
+        CALL DBCLOS
+
+
+
+C*****
+C 2) TELL USER HOW MANY DISCONNECTS WERE PROCESSED                    
+C*****
+
+310     TYPE 315,DISCNT
+315     FORMAT (//,1X,'NUMBER OF DISCONNECTS PROCESSED: ',I5,//)
+
+C*****
+C 3) UPDATE CONTROL FILE USING THE VARIABLES IN THE COMMON 
+C    AREA: CONTRL.  THIS PHASE IS THE LAST ONE IN THE
+C    REGULAR SEQUENCE, SO, SET THE PHASE BACK TO 1 TO 
+C    INDICATE THAT THE NEXT TIME THE PROGRAM IS RUN THAT IT
+C    IS TO START OVER FOR A NEW MONTH.
+C*****
+
+320     PHASE=1
+        CALL UCTRL
+
+
+
+C*****
+C 4) OUTPUT END OF PHASE MESSAGE
+C*****
+
+330     TYPE 335
+335     FORMAT (///,15X,'***** PHASE 6 COMPLETED *****',///,
+     -              15X,'*****************************',/,
+     -              15X,'*  FINISHED PROCESSING FOR  *',/
+     -              15X,'*        THIS MONTH         *',/,
+     -              15X,'*****************************',///)
+
+
+
+
+C*****
+C 5) RETURN TO CALLING PROGRAM
+C*****
+
+999     RETURN
+        END
+    
