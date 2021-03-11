@@ -1,0 +1,1393 @@
+                                                               January 23, 1987
+
+
+
+
+
+
+
+                           ATC MAINTENANCE DOCUMENT
+                        MICRODATA R-MODE IMPLEMENTATION
+                                 Version 2.00
+
+                                    TYMNET
+                        NETWORK TECHNOLOGY DEVELOPMENT
+                               January 23, 1987
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+     ====================================================================
+     |   TYMNET's proprietary rights  are included in  the information  |
+     |   disclosed herein.  The recipient, by receiving this document,  |
+     |   agrees  that  neither  this  document  nor   the  information  |
+     |   disclosed herein nor  any part thereof shall be reproduced or  |
+     |   transferred to other documents or used or disclosed to others  |
+     |   for  manufacturing  or  for  any  other   purpose  except  as  |
+     |   specifically authorized in writing by TYMNET.                  |
+     ====================================================================
+
+
+
+
+
+                                                                     ATC200.DOC
+                                                               January 23, 1987
+
+
+
+
+
+
+
+                                   TABLE OF CONTENTS
+
+        Section                                                            Page
+
+
+
+        1.   INTRODUCTION                                                     1
+
+
+        2.   FILES                                                            2
+          2.1   System 39 Directories                                         2
+          2.2   Command Files                                                 3
+          2.3   Preparing Macro Files                                         3
+             2.3.1    ATCCP1.CMD                                              4
+             2.3.2    ATCCP2.CMD                                              4
+
+          2.4   Create Object Files                                           4
+          2.5   Listing Files                                                 6
+          2.6   Modifications                                                 7
+             2.6.1    Configuration File                                      8
+             2.6.2    Version File                                            9
+             2.6.3    Routing File                                            9
+
+          2.7   Linking & Creating Image/map                                 10
+
+
+        3.   Renaming Files                                                  11
+
+
+        4.   MAKING PROMS                                                    12
+          4.1   Text Format on PDP-10                                        13
+          4.2   Prepare for Logfile Checksum                                 14
+          4.3   Checksum Table                                               15
+          4.4   Prom Burner                                                  16
+             4.4.1    Front Panel                                            16
+             4.4.2    Select Format                                          16
+             4.4.3    Different Prom                                         17
+             4.4.4    Load Prom Image to RAM                                 17
+             4.4.5    Compare Contents of Prom Against RAM                   17
+             4.4.6    Copy From RAM to Prom                                  17
+
+
+                                     APPENDICES
+                                     ==========
+
+
+        I.   GED OF ATC MICRODATA R-MODE SUPPORT                             20
+
+
+                                                                     ATC200.DOC
+        INTRODUCTION                                           January 23, 1987
+
+
+
+
+
+
+                                   1 -  INTRODUCTION
+
+
+             This document is written for the Microdata ATC version  2.00.  The
+        ATC version 2.00 is implemented to support Microdata Prism  terminal R-
+        Mode applications (see Appendix).   This document is written  for those
+        who:
+
+           1. Knows nothing about ATC but needs to support it.
+           2. Is working on ATC but has short memory.
+           3. Interested in ATC and want to know how to reproduce the proms.
+           4. Needs specific file information for ATC.
+
+
+             The  necessary  software  modules are  identified.   The  steps to
+        assemble the macro files and link the object codes are also introduced.
+        The ways to  burn the PROMs and  getting checksums from the  image file
+        are also described in a section.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        1                                                            ATC200.DOC
+        FILES                                                  January 23, 1987
+
+
+
+
+
+
+                                      2 -  FILES
+
+
+             It is important to first know the files related to the ATC product
+        since all the  software ATC modules  are on the  PDP -10 system  39 and
+        some  conventions  have  been  developed  for  it.   The  file  nameing
+        convention is as follows:
+
+        Note: besides the .CMD files, there are also 
+            1. CMD files - command files
+            2. MAC files - macro files
+            3. LST files - listing files
+            4. NBJ files - object code binary files
+            5. MAP files - map file
+            6. IMG files - image file
+            7. CG2353.MAC - configuration file
+            8. RU2353.MAC - routing file
+            9. V2353.MAC  - version file
+
+             Some of the  files will be renamed  after the image and  map files
+        are generated.  It is to allow a unique file name for a version of code
+        to  be reported  to the  BASELINE/BETATEST/SOURCE releases.   Each file
+        type will be discussed later.
+
+
+
+
+
+
+                              2.1  System 39 Directories
+
+
+             Basically there are 4 directories plus your own  working directory
+        that contains files  need to be  used on system  39.  System 36  is for
+        backup and may not necessarily have all the files you need.
+              
+           1. NEW11   - files are under development
+           2. CURR11  - files for current release
+           3. TOOLS11 - files contains tools such as linker/assembler etc.
+           4. OLD11   - files of older versions
+           5. your own working directory
+
+
+
+
+
+
+
+
+
+        2                                                            ATC200.DOC
+        FILES                                                  January 23, 1987
+
+
+                                  2.2  Command Files
+
+
+             To make the job simplier, "command" files are organized to
+        1. have batch commands to process the commands faster
+        2. list out the necessary modules.
+
+             The command files created so far are:
+
+        |------------------|---------------------|
+        | copy .MAC files  |      ATCCP1.CMD     |
+        |                  |      ATCCP2.CMD     |
+        | create NBJ files |      ATCNBJ.CMD     |
+        | get listings     |      ATCLST.CMD     |
+        | config/routing   |      MC2353.CMD     |
+        | link files       |      LK2353.CMD     |
+        |------------------|---------------------|
+
+
+
+
+
+
+
+                              2.3  Preparing Macro Files
+
+
+             Macro files are files that contain the assembly code.  There  is a
+        set of files essential to ATC.  Always make sure all of them  exisit on
+        the system  before generating the  object code.  File  ATCRPR.MAC which
+        contains  a  switch  to  have the  code  support  Microdata  Prism type
+        terminals should also exist if the Microdata code is to be assembled.
+
+
+             To avoid  destroying the master  files in any  of the  public used
+        directory  mentioned above,  you should  copy the  files into  your own
+        working directory before  working on them.  Command file ATCCP1.CMD and
+        ATCCP2.CMD provide a simple way  to perform this task. They  copies all
+        the  necessary  macro  files (include  the  ATCRPR.MAC)  from directory
+        CURR11 to the directory where the command file is executed.  To execute
+        these command files, give command:
+
+        -R (UPL)COM;ATCCP1.CMD       and
+        -R (UPL)COM;ATCCP2.CMD  
+
+
+             Contents of these two files will be displayed below.  Note  as the
+        number of columns on each line that the document compiler can take, one
+        line command in the original  file might be displayed in 2  lines here.
+        The format should be
+
+              COPY (CURR11)file1+file2+... TO SAME.
+
+
+        3                                                            ATC200.DOC
+        FILES                                                  January 23, 1987
+
+
+                    2.3.1  ATCCP1.CMD
+
+             Following  include  all  macro  files  which are  necessary  to be
+        assembled for the ATC product.
+
+        |-------------------------------------------------------------|
+        | COPY (CURR11)V2353.MAC+CG2353.MAC+RU2353.MAC+NOEIPR.MAC     |
+        |              +XP.MAC TO SAME                                |    
+        | COPY (CURR11)COMMON.MAC+ROUTE.MAC+SATPR.MAC+CMDSAT.MAC      |
+        |              +CMDS.MAC TO SAME                              |
+        | COPY (CURR11)TRM.MAC+TRMF.MAC+TRMT.MAC+TRMP.MAC             |
+        |              +XLTCRS.MAC TO SAME                            |
+        | COPY (CURR11)XLTEBC.MAC+AUTO11.MAC+LNK1.MAC+LNKIA.MAC       |
+        |              +LKIPK1.MAC TO SAME                            |
+        | COPY (CURR11)LKIPK2.MAC+ZAPBUF.MAC+TYMA.MAC+LING.MAC        |
+        |              +PADMGR.MAC TO SAME                            |
+        | COPY (CURR11)ATCPR.MAC+ONCE.MAC+ONCROM.MAC+END.MAC          |
+        |              +EXEC.MAC TO SAME                              |
+        | COPY (CURR11)ERRROM.MAC+PKT1.MAC+PKT2.MAC+PKT3D.MAC TO SAME |
+        |-------------------------------------------------------------|
+
+
+
+
+
+
+                    2.3.2  ATCCP2.CMD
+
+        |-------------------------------------------|
+        | COPY (NEW11)ATCRPR.MAC TO SAME            |
+        | COPY (NEW11)SCCHPR.MAC+LNKIPR.MAC TO SAME |
+        | COPY (NEW11)ATCPR.MAC TO SAME             |
+        |-------------------------------------------|
+
+           
+
+
+
+
+
+
+                               2.4  Create Object Files
+
+
+             Once the macro files are all copied into the working directory, we
+        can start to assemble the macro files and create object files.  Keep in
+        mind that the object code files generated for ATC should be  named .NBJ
+        instead  of  .OBJ.   The reason  is  that  ATC does  not  have  the EIS
+        (Extended Instruction  Set) like  the other subsets  of the  u-Node.  A
+        switch in file NOEIPR.MAC set  this switch to 0 (..EIS=!0).   Since the
+        subsets of the u-Node are all sharing the same modules, we use .NBJ for
+        ATC object  code to distinguish  it from other  products.  That  is why
+
+
+        4                                                            ATC200.DOC
+        FILES                                                  January 23, 1987
+
+
+        file NOEIPR.MAC is  assembled with other macro  files to make  the .NBJ
+        file.  In addition, ATC is simulating the CONSAT (not equivalent), so a
+        switch SAT is set in  file SATPR.MAC.  This file needs to  be assembled
+        with several macro files too.
+
+
+             Command files are created to help on assembling all  the necessary
+        object  files to  be linked.   To assemble  the macro  files  which are
+        included in a command file with equate statement, give command:
+
+           -R (TOOLS11)MACN11
+           *commandfilename@
+
+
+             Most of the  NBJ file of the  version 1.26 (the U.S.  version) and
+        2.00  are the same.  Execption is that there are two object  files that
+        need to have ATCRPR.MAC assembled in addition to the other  macro files
+        in version 2.00.  For this reason, this two version has  different file
+        names when their  object files are to  be assembled and called  at link
+        time.  These two object files are:
+                      
+           1.26            2.00
+           ====            ====
+
+           AUTO11.NBJ      AUTR11.NBJ
+           TRMST.NBJ       TRMSTR.NBJ
+
+         
+           command: -R (TOOLS11)MACN11
+                    *MC2353@
+
+           command: -R (TOOLS11)MACN11
+                    *ATCNBJ@
+
+        MC2353.CMD
+        ==========
+
+        |------------------------------------------|
+        | cg2353.nbj=noeipr,xp,v2353,cg2353,common |
+        | ru2353.nbj=noeipr,xp,cg2353,ru2353,route |
+        |------------------------------------------|
+
+
+
+
+
+
+
+
+
+
+
+
+
+        5                                                            ATC200.DOC
+        FILES                                                  January 23, 1987
+
+
+
+        ATCNBJ.CMD
+        ==========
+
+        |------------------------------------------|
+        | CMDSAT.NBJ=NOEIPR,XP,CMDSAT              |
+        | CMDSST.NBJ=NOEIPR,SATPR,XP,CMDS          |
+        | TRMSTR.NBJ=NOEIPR,SATPR,ATCRPR,XP,TRM    |  *
+        | TRMFST.NBJ=NOEIPR,SATPR,XP,TRMF          |
+        | TRMTST.NBJ=NOEIPR,SATPR,XP,TRMT          |
+        | TRMPST.NBJ=NOEIPR,SATPR,XP,TRMP          |
+        | XLTCRS.NBJ=NOEIPR,XP,XLTCRS              |
+        | XLTEBC.NBJ=NOEIPR,XP,XLTEBC              |
+        | AUTR11.NBJ=NOEIPR,XP,ATCRPR,AUTO11       |  *
+        | LNK1.NBJ=NOEIPR,XP,LNK1                  |  
+        | LNKISH.NBJ=NOEIPR,SCCHPR,XP,LNKIPR,LNKIA |
+        | LKIST1.NBJ=NOEIPR,SATPR,XP,LNKIPR,LKIPK1 |
+        | LKIST2.NBJ=NOEIPR,SATPR,XP,LNKIPR,LKIPK2 |
+        | ZAPBUF.NBJ=NOEIPR,XP,ZAPBUF              |  
+        | TYMA.NBJ=NOEIPR,XP,TYMA                  | 
+        | LINGST.NBJ=NOEIPR,SATPR,XP,LING          |
+        | ATCMGR.NBJ=NOEIPR,ATCPR,XP,PADMGR        |
+        | ONCE.NBJ=NOEIPR,XP,ONCE                  |
+        | ONCROM.NBJ=NOEIPR,XP,ONCROM              |
+        | END.NBJ=NOEIPR,XP,END                    |      
+        | EXEC.NBJ=NOEIPR,XP,EXEC                  |
+        | ERRROM.NBJ=NOEIPR,XP,ERRROM              |
+        | PKT1.NBJ=NOEIPR,XP,PKT1                  | 
+        | PKT2.NBJ=NOEIPR,XP,PKT2                  |
+        | PKT3D.NBJ=NOEIPR,XP,PKT3D                |
+        |------------------------------------------|
+
+
+
+
+
+
+
+                                  2.5  Listing Files
+
+
+             How to make  a listing file?  A  listing file can be  generated by
+        simply inserting  another argument in  the assembly command  before the
+        equate sign.  Following is  an example to assemble FILE1,  FILE2, FILE3
+        into TOTALF.NBJ and get a listing file called TOTALF.LST.
+
+          create file: EXAMPLE.CMD
+        |-----------------------------------------|
+        | TOTALF.NBJ,TOTALF.LST=FILE1,FILE2,FILE3 |
+        |-----------------------------------------|
+
+           -R (TOOLS11)MACN11
+           *EXAMPLE@
+
+        6                                                            ATC200.DOC
+        FILES                                                  January 23, 1987
+
+
+
+
+           command: -R (TOOLS11)MACN11
+                    *ATCLST@
+
+        ATCLST.CMD
+        ==========
+
+        |-----------------------------------------------------|
+        | cg2353.nbj,cg2353.lst=noeipr,xp,v2353,cg2353,common |
+        | ru2353.nbj,ru2353.lst=noeipr,xp,cg2353,ru2353,route |
+        | CMDSAT.NBJ,cmdsat.lst=NOEIPR,XP,CMDSAT              |
+        | CMDSST.NBJ,cmdsst.lst=NOEIPR,SATPR,XP,CMDS          |
+        | TRMSTR.NBJ,trmstr.lst=NOEIPR,SATPR,ATCRPR,XP,TRM    |
+        | TRMFST.NBJ,trmfst.lst=NOEIPR,SATPR,XP,TRMF          |
+        | TRMTST.NBJ,trmtst.lst=NOEIPR,SATPR,XP,TRMT          |
+        | TRMPST.NBJ,trmpst.lst=NOEIPR,SATPR,XP,TRMP          |   
+        | XLTCRS.NBJ,xltcrs.lst=NOEIPR,XP,XLTCRS              |
+        | XLTEBC.NBJ,xltebc.lst=NOEIPR,XP,XLTEBC              |
+        | AUTR11.NBJ,autr11.lst=NOEIPR,XP,ATCRPR,AUTO11       |
+        | LNK1.NBJ,lnk1.lst=NOEIPR,XP,LNK1                    |
+        | LNKISH.NBJ,lnkish.lst=NOEIPR,SCCHPR,XP,LNKIPR,LNKIA |
+        | LKIST1.NBJ,lkist1.lst=NOEIPR,SATPR,XP,LNKIPR,LKIPK1 |
+        | LKIST2.NBJ,lkist2.lst=NOEIPR,SATPR,XP,LNKIPR,LKIPK2 |
+        | ZAPBUF.NBJ,zapbuf.lst=NOEIPR,XP,ZAPBUF              |
+        | TYMA.NBJ,tyma.lst=NOEIPR,XP,TYMA                    |
+        | LINGST.NBJ,lingst.lst=NOEIPR,SATPR,XP,LING          |
+        | ATCMGR.NBJ,padmgr.lst=NOEIPR,ATCPR,XP,PADMGR        |
+        | ONCE.NBJ,once.lst=NOEIPR,XP,ONCE                    |
+        | ONCROM.NBJ,oncrom.lst=NOEIPR,XP,ONCROM              |   
+        | END.NBJ,end.lst=NOEIPR,XP,END                       |
+        | EXEC.NBJ,exec.lst=NOEIPR,XP,EXEC                    |       
+        | ERRROM.NBJ,errrom.lst=NOEIPR,XP,ERRROM              |
+        | PKT1.NBJ,pkt1.lst=NOEIPR,XP,PKT1                    |
+        | PKT2.NBJ,pkt2.lst=NOEIPR,XP,PKT2                    |
+        | PKT3D.NBJ,pkt3d.lst=NOEIPR,XP,PKT3D                 |
+        |-----------------------------------------------------|
+
+
+
+
+
+
+
+                                  2.6  Modifications
+
+
+             There are several things need  to keep in mind of  the differences
+        between the US (1.26) and UK (2.00) version.
+
+        1. configuration file needs to declare 
+           terminal type from CRT to CRTO to 
+           indicate it is the Prism terminal which
+
+        7                                                            ATC200.DOC
+        FILES                                                  January 23, 1987
+
+
+      takes O-TID.
+
+        2. version file needs to have the VERNO
+           updated to 200.
+
+        3. In tymcom tymfile, option SOPT should 
+           have argument E8ETM set for the R-mode
+           implementation to work corretly.
+
+
+
+
+
+
+                    2.6.1  Configuration File
+
+             The configuration file CG2353.MAC needs to be modified.  The sixth
+        argument of LINE macro has to be changed form CRT to CRTO.
+
+        =======================================================
+        ; Configuration file for node 2353
+        ; Test node for rom based TYMsquirt configuration
+          .sbttl        cg2353.mac      - Tymshare BLDG-D lab
+          .macro        config
+        name    2353
+        rom     140000  ;MAKE ROMABLE (WITH RAM STARTING AT 140K)
+        tymsat
+
+        khost   353,XRAY
+        thost   20353
+        link    TYMNET,0.,TF,11.,S,I,<2353>
+         lnkl    128.,XLINK,4,S,A,<171010,300,5>
+         lnkl    128.,XLINK,4,S,A,<171000,310,5>
+                DEV     ST,240,<300,300>
+         SOC    1.
+         SOC    2.
+
+        DHOST   <TYMNET>
+        hcl     A,<TYMNET>
+
+        define  JIFSEC,60.
+        DEFINE  TRPWRN,4        ;SET LOWER VALUE OF WARNING LEVEL
+        DEFINE  FSCCSR,177000
+        DEFINE  FSCVEC,240
+        DEFINE  CLKREG,0        ;DO THIS TO KEEP CIO AT 177006 FROM
+                                ;HAVING A 100 WRITTEN INTO IT
+
+        linx    G,<174000,210>
+        ; LINE   1,F,300,,SAT,CRTO,ASC,TYMSHR,Y,N,Y,N,N,HW,A,377
+         LINE    1,A,11,,SAT,CRTO,ASC,TYMSHR,Y,N,Y,N,N,ty,A,377
+
+        linx    G,<174010,200>
+        ; LINE   2,A,11,,SAT,CRTO,ASC,TYMSHR,Y,N,Y,N,N,HW,A,200
+
+        8                                                            ATC200.DOC
+        FILES                                                  January 23, 1987
+
+
+         LINE    2,A,11,,SAT,CRTO,ASC,TYMSHR,Y,N,Y,N,N,ty,A,200
+
+        LINX    G,<175000,230>
+        ; LINE   3.,A,11,,SAT,CRTO,ASC,TYMSHR,Y,N,Y,N,N,HW,A,200
+         LINE    3.,A,11,,SAT,CRTO,ASC,TYMSHR,Y,N,Y,N,N,ty,A,200
+        LINX    G,<175010,220>
+         LINE    4.,A,11,,SAT,CRTO,ASC,TYMSHR,Y,N,Y,N,N,ty,A,200
+        LINX    G,<176000,250>
+         LINE    5.,A,11,,SAT,CRTO,ASC,TYMSHR,Y,N,Y,N,N,ty,A,200
+        LINX    G,<176010,240>
+        ; LINE   6.,A,11,,SAT,CRTO,ASC,TYMSHR,Y,N,Y,N,N,HW,A,200
+         LINE    6.,A,11,,SAT,CRTO,ASC,TYMSHR,Y,N,Y,N,N,ty,A,200
+
+        LINX    G,<170000,270>
+        ; LINE   7.,F,9600,,SAT,CRTO,ASC,TYMSHR,Y,N,Y,N,N,HW,A,200
+        ; LINE   7.,A,11,,SAT,CRTO,ASC,TYMSHR,Y,N,Y,N,N,HW,A,200
+         LINE    7.,A,11,,SAT,CRTO,ASC,TYMSHR,Y,N,Y,N,N,ty,A,200
+        LINX    G,<170010,260>
+        ; LINE   8.,F,19200,,SAT,CRTO,ASC,TYMSHR,N,N,Y,N,N,HW,A,200
+         LINE    8.,A,11,,SAT,CRTO,ASC,TYMSHR,Y,N,Y,N,N,ty,A,200
+
+          .ENDM
+        ==========================================================
+
+
+
+
+
+                    2.6.2  Version File
+
+             Version  file V2353.MAC  also has  the version  number  updated to
+        2.00.
+
+        |----------------------------------------------------------|
+        | verno==200            ; FOR STANDARD ATC CONFIGURATION   |
+        | edtno==0              ; the edition no. will always be 0 |
+        |----------------------------------------------------------|
+
+
+
+
+
+
+                    2.6.3  Routing File
+
+             The routing macro file is the same for all the versions.
+
+        |-----------------------------------|
+        | ; Network map file for node 2353  |
+        | .macro route                      |     
+        |       node    2353                |
+        |       hpath   TYMNET,*            |
+        | .endm                             |
+
+        9                                                            ATC200.DOC
+        FILES                                                  January 23, 1987
+
+
+        |-----------------------------------|
+
+
+
+
+
+
+
+                           2.7  Linking & Creating Image/map
+
+
+             When all the object files are created, they are ready to be linked
+        to create the IMAGE and MAP files. That is:
+
+               LK2353.CMD   ----> SV2353.IMG  & MP2353.MAP
+
+
+             To execute a link command file, use the following command:
+
+        -R (TOOLS11)LINK11  
+        *linkcommandfile@/E 
+
+
+        LK2353.CMD             -R (TOOLS11)LINK11
+        ==========             *LK2353@/E
+
+        |---------------------------------------------------------|
+        | sv2353/img                                              |    
+        | /b:1000:lowmem:sx:inidat:inibyt:main:second:            |
+        |     tenths:init:.xdt.:once:vectbl                       |
+        | /b:10000:falcbt/b:10040                                 |
+        | /T:167400:pdata:ddb:ldb:adb:sdb:impure,                 |
+        | MP2353=cg2353.nbj,ru2353.nbj,                           |
+        | exec.nbj,errrom.nbj,pkt1.nbj,pkt2.nbj,pkt3d.nbj,        |
+        | cmdsat.nbj,cmdsst.nbj,TRMSTR.nbj,trmfst.nbj,trmpst.nbj, |
+        | trmtst.nbj,xltcrs.nbj,xltebc.nbj,zapbuf.nbj,            |
+        | lnk1.nbj,lnkiSH.nbj,lkist1.nbj,lkist2.nbj,              |
+        | tyma.nbj,lingst.nbj,ATCMGR.nbj,                         |
+        | AUTR11.nbj,oncrom.nbj,end.nbj                           |
+        |---------------------------------------------------------|
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        10                                                           ATC200.DOC
+        Renaming Files                                         January 23, 1987
+
+
+
+
+
+
+                                  3 -  Renaming Files
+
+
+             After the image file and  map file are created, we need  to rename
+        (or copy) the files for this particular version to save them  for later
+        reference  or even  recreation purpose.   There are  two sets  of these
+        files:
+
+        |===============|============|
+        |  Orginal name | Renamed to |
+        |===============|============|
+        | SV2353.IMG    | ATC02.I00  | 
+        | MP2353.MAP    | ATC02.M00  | 
+        | *.MAC         | *.200      |
+        |===============|============|
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        11                                                           ATC200.DOC
+        MAKING PROMS                                           January 23, 1987
+
+
+
+
+
+
+                                   4 -  MAKING PROMS
+
+
+             Now we have got  the image file (.IMG  file), we can burn  it into
+        the PROM using the  PROM BURNER program resides on  (TOOLS11:39).  This
+        program can also  generate binary image in  text format and  return the
+        checksum.  Example  of either  ways will be  provided in  the following
+        sections.
+
+
+             Before giving the example, it is important to know how the begging
+        and ending address and the  odd, even bytes relate to  different proms.
+        ATC has 48  K bytes memory, as  8 K bytes proms  are used, 6  proms are
+        needed totally.  When a 16-bit memory  bus is used, 2 bytes need  to be
+        accessed  for  each  memory  access  which  means  2  proms  serve this
+        function.  These requirements leads into the following structure:
+
+           Even bytes        Odd bytes
+        |--------------|---------------|
+        |              |               |
+        |  prom U18    |  prom U3      |   address 0 - 37777
+        |              |               |     
+        |--------------|---------------|
+        |              |               |
+        |  prom U17    |  prom U2      |   address 40000 - 77777
+        |              |               |     
+        |--------------|---------------|
+        |              |               |
+        |  prom U16    |  prom U1      |   address 100000 - 137777
+        |              |               |     
+        |--------------|---------------|
+
+             The physical  location of each  prom on the  hardware board  is as
+        follows:
+
+           |---------|   |---------|   |---------|
+           |  U1     |   |  U2     |   |  U3     |
+           | 100K    |   | 40 K    |   |  0K     |   odd byte
+           |---------|   |---------|   |---------|
+
+           |---------|   |---------|   |---------|
+           |  U16    |   |  U17    |   |  U18    |
+           | 100K    |   | 40 K    |   |  0K     |   even byte
+           |---------|   |---------|   |---------|
+
+
+
+
+
+
+        12                                                           ATC200.DOC
+        MAKING PROMS                                           January 23, 1987
+
+
+                              4.1  Text Format on PDP-10
+
+
+             The following  steps are used  when preparing a  text file  of the
+        binary image  to be restored  on the floppy  diskette for  some reason.
+        The example uses image file SV2353.IMG to run the BURN program  and get
+        the image and checksum of prom U1.  Note after each [Confirm] prompt, a
+        carriage return should  be entered to confirm  the input.  A  control Q
+        should be  entered when  receiving the  prompt "Start  the DATA  I/O by
+        keying  'SELECT' ,  'D2', <xxxx>,  'ENTER' and  'START'." <xxxx>  is an
+        integer value which  can be nothing, or  4000 or 8000 depending  on the
+        address you entered.   Since this prompt command  is for the  real prom
+        burning process, we can ignore  it and simply enter control  Q.  Binary
+        images  in  hex format  will  be displayed  until  you hear  a  bell to
+        indicate the end.  Checksum is  provided at the end in single  quote in
+        this case it is 128D.
+
+        -r (tools11)burn
+
+        Burn - Tymshare V1.1
+        Specify file to load: SV2353.IMG
+        Specify starting address: 100000 [Confirm]
+        Specify stoping address: 137777 [Confirm]
+        Even, Odd, or Both bytes? Odd bytes [Confirm] 
+
+        Start the DATA I/O by keying 'SELECT', 'D2', 8000, 'ENTER',
+           and  'START'.
+        ;1080000A001D009D0010000909AA9C000C002102E9
+        ;108010893A15008B8F03650009AB8790000A0004CF
+        ;1080200A00150009AA87150009AA8B8F0315100413
+        ;1080300015800000A000020A008B00020008000296
+        ;1080400810158809A3158809A3150A0000B30A0456
+        ;1080500009A900B30B00028B00079C00A500030428
+            .................
+        ;109FC000000000000000000000000000000000016F
+        ;109FD000000000000000000000000000000000017F
+        ;109FE000000000000000000000000000000000018F
+        ;109FF000000000000000000000000000000000019F
+        ;0002000002
+        The DATA I/O display should read '128D'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        13                                                           ATC200.DOC
+        MAKING PROMS                                           January 23, 1987
+
+
+                           4.2  Prepare for Logfile Checksum
+
+
+             In order to get the log file checksums, the image has to be stored
+        in a record file. Following are steps to get this information.
+
+        1. Set license
+        2. enter the following command 
+           (example is used to show how to get 
+           checksum of U18.
+
+           -R (MPL)RECORD
+           logfile name: ATCU18.200
+           passthrough established ....
+           -R (TOOLS11)BURN
+           filename: ATC02.I00
+           then the commands to perform this as described 
+           above
+
+           -LOG        ;to get out of the log program
+
+        3. use text editor to delete the lines in
+           ATCU18.200 which are not image data
+
+        4. Enter following command:
+
+             -R CKSUM
+             INPUT: ATCU18.200
+             VAVXAP ATCU18.200
+             INPUT: <CR>
+             -
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        14                                                           ATC200.DOC
+        MAKING PROMS                                           January 23, 1987
+
+
+                                  4.3  Checksum Table
+
+
+             Practically if the image  file and map file are  created following
+        the steps  provided above,  they should have  the same  checksums every
+        time the  same procedures  are applied to  the same  set of  files.  Of
+        course re-rename of the files need to be done to set the N files  and M
+        files back to the way they were before.  Only the prom image  files and
+        checksums  of the  prom and  these image  files will  be listed  in the
+        BATETEST release.
+
+        |===============|============|========|
+        |               | File Name  | Cksum  |
+        |===============|============|========|
+        | Image   File  | ATC02.I00  | DUDVOD |
+        | Map     File  | ATC02.M00  | ROVLIJ |
+        |---------------|------------|--------|
+        | U1  (o 100K)  |            |   37A7 |
+        | U2  (o  40K)  |            |   B58E | 
+        | U3  (o   0K)  |            |   1317 | 
+        | U16 (e 100K)  |            |   B96D | 
+        | U17 (e  40K)  |            |   FB3C | 
+        | U18 (e   0K)  |            |   DA1B | 
+        |---------------|------------|--------|
+        | log U1        | ATCU01.200 | KEQPAJ |
+        | log U2        | ATCU02.200 | VAXLIV |
+        | log U3        | ATCU03.200 | RALJUY |
+        | log U16       | ATCU16.200 | QUMQUT |
+        | log U17       | ATCU17.200 | JINMUC |
+        | log U18       | ATCU18.200 | VAVXAP |
+        |===============|============|========|
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        15                                                           ATC200.DOC
+        MAKING PROMS                                           January 23, 1987
+
+
+                                   4.4  Prom Burner
+
+
+             The  Prom  Burner  we  used  is  the  "Data  I/O  System  19".  An
+        Intruction Manual  of this SYSTEM  19 UNIVERSAL PROGRAMMER  990-1901 is
+        available  for  detailed  information  of  each  function  it provides.
+        Following section will only describe simple steps we need to use relate
+        to the ATC product.
+
+
+
+
+
+                    4.4.1  Front Panel
+
+        |------------------------------------------------------|
+        |     DATA I/O                     System 19           |
+        |                              o      o      o         |
+        |    |-----------|------|    TEST   PROG    VER        |
+        |    |           |      |             o                |
+        |    |-----------|------|         COMPLETE             |
+        |      address     data                                |
+        |                                                      |
+        | |=====| |====| |======| |======| |=====|   |=====|   |
+        | |=====| |====| |======| |======| |=====|   |=====|   |
+        |  BLOCK   EDIT   SELECT   DEVICE   KEYBD     START    |
+        |  LIMITS                  DATA                        |
+        |                     |------|                         |
+        |   7   8   9   A     |DELETE|     DEVICE              |
+        |   4   5   6   B     |REVIEW|    |======| PROG        |
+        |   1   2   3   C     |------|    |======|             |
+        |   0   F   E   D                                      |   
+        |                                 |======| VER         |
+        |                     |------|    |======|             |
+        |                     |INSERT|                         |
+        |                     |ENTER |    |======| LOAD        |
+        |                     |------|    |======|             |
+        |                                                      |
+        |------------------------------------------------------|
+
+
+
+
+
+                    4.4.2  Select Format
+
+             As we are using the  MOS TECH format, the first thing  after power
+        on the System 19 is :
+
+         1. depress SELECT key
+         2. type 81
+         3. depress ENTER key
+
+
+        16                                                           ATC200.DOC
+        MAKING PROMS                                           January 23, 1987
+
+
+                    4.4.3  Different Prom
+
+             There are two types of proms that we use for ATC:
+
+        1.  2764  20 v.     -- F7933
+        2.  2764  12.5 v.   -- F9333
+
+             Whenever a prom is to  be programed, the correct format  should be
+        entered.
+
+
+
+
+
+                    4.4.4  Load Prom Image to RAM
+
+        1. insert prom to the left set on MOS PAK.
+        2. push down the handle to hold the prom in place
+        3. depress LOAD key
+        4. type 9333 if is 2764 12.5v prom
+           type 7933 if is 2764 20 v prom
+        5. depress START KEY
+        6. checksum numbers will be displayed in the ADDRESS window
+        7. when COMPLETE light is on, loading is finished
+
+
+
+
+
+                    4.4.5  Compare Contents of Prom Against RAM
+
+        1. depress VER key
+        2. check the ADDRESS window see if the prom format is correct
+        3. enter the correct format if not
+        4. depress START key
+        5. If value 000009  is flashing in the ADDRESS window, then the
+           content in prom and RAM are not the same.
+
+
+
+
+
+                    4.4.6  Copy From RAM to Prom
+
+        1. Make sure the prom is a blank prom.
+           Use VER START to see if the checksum
+           comes out to be E000.
+           If so, then it is a blank prom, proceed;
+           otherwise, erase it.
+        2. depress PROGRAM
+        3. check the ADDRESS window see if the prom format is correct
+        3. enter the correct format if not
+        4. depress START key
+
+        17                                                           ATC200.DOC
+        MAKING PROMS                                           January 23, 1987
+
+
+        5. the checksum will come out in the ADDRESS window, if get
+           value 00009, then the prom is not blank for copying,
+           replace it with a blank prom.
+           If ERR # came out flashing at the window, check
+           manual to see the error code;
+           IF copied successfully, the checksum of the prom
+           will appear at the window.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        18                                                           ATC200.DOC
+                                                               January 23, 1987
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      *   ****  ****  ***** *   * ****  ***** *   *
+                     * *  *   * *   * *     **  * *   *   *    * * 
+                    ***** ****  ****  ****  * * * *   *   *     *  
+                    *   * *     *     *     *  ** *   *   *    * * 
+                    *   * *     *     ***** *   * ****  ***** *   *
+
+             The following section is copied from the "General  External Design
+        of ATC Microdata R-mode  Support" written by Kuolai Shu,  dated January
+        21, 1986.  Be alert there is a discriptency between  the implementation
+        and this document.   It was resulted from  the request of UK  to remove
+        the "please type your terminal identifier" message.  Since this message
+        is  not sent  to the  terminal, any  discussion in  the GED  about this
+        message should be ignored.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        19                                                           ATC200.DOC
+        GED OF ATC MICRODATA R-MODE SUPPORT                    January 23, 1987
+
+
+
+
+
+
+                   APPENDIX I.   GED OF ATC MICRODATA R-MODE SUPPORT
+
+
+
+        1. INTRODUCTION
+
+
+             The purpose of ATC Microdata R-mode Support (ATCMDR) is to furnish
+        the interconnection for Microdata terminals and hosts using  the Tymnet
+        technology network.
+
+
+             From the CONSAT'S  viewpoint, the differences between  a Microdata
+        Prism  type  terminal and  an  ASCII terminal  (which  is  supported by
+        CONSAT) are: 1) The treatment of the parity bit, i.e. the 8th bit, in a
+        byte. 2) The switch between R-mode and S-mode.
+
+           The Prism type terminals are:
+
+           PRISM-4
+
+           PRISM-5
+
+           M1000-PRISM 4/5 emulator
+
+           PRISM-6 Multi-language terminal and
+
+           PRISM-14.
+
+
+             R-mode, sometimes  referred to as  R-mode connection, is  the term
+        used to  describe a connection  from a Prism  terminal logging  in from
+        ATCMDR through Tymnet to Tymcom and finally to a Reality host.
+
+        2. DESIGN OBJECTIVES
+
+        o Make minimal changes to applications currently supported by ATC.
+        o Support all Microdata Prism type terminals.
+        o Support R-mode connection to Microdata Reality host.
+
+        3. SYSTEM REQUIREMENTS
+
+
+             In order  to support R-mode  connection, two things  are required:
+        First.  instead of "A", a Prism terminal user must type "O" as terminal
+        identifier (TID). Second, it  is TYMCOM's responsibility to  use "Enter
+        Transparency  Mode"  and  "Leave Transparency  Mode"  messages  to tell
+        ATCMDR  whether  to accept  data  as  7-bit or  8-bit  from  Prism type
+        terminals.
+
+        20                                                           ATC200.DOC
+        GED OF ATC MICRODATA R-MODE SUPPORT                    January 23, 1987
+
+
+
+        4. PROCEDURE FLOW
+
+
+             The steps involved in  the establishment of an R-mode  circuit are
+        as follows:
+
+        (1) The user powers up the terminal.
+        (2) the ATCMDR detects the change in signalling,
+            forces space parity and sends the "please
+            type your terminal identifier" message.
+        (3) User enters TID of "O" or "o".
+        (4) ATCMDR sets up port, with no transparency and 
+            space parity, making all data output to 7-bit 
+            with space parity.
+        (5) ATCMDR sends to terminal the Node/Port number 
+            and "please log in:" prompt.
+        (6) User logs in as usual.
+        (7) TYMCOM proceeses the rest of circuit building.
+        (8) Terminal to Host communication established.
+        (9) Disconnect starts by either disconnect character 
+            from user or host, or loss of network circuit.
+        (10) TYMCOM does circuit zap of host part.
+        (11) ATCMDR does circuit zap of terminal part, i.e. 
+             return to space parity. no transparency and 
+             another login begins.
+
+        5. TESTING REQUIREMENTS
+
+            Microdata devices
+            Tymcom
+
+        6. APPLICATIONS
+
+
+             In  addition to  all applications  supported by  ATC,  ATCMDR will
+        support  all Prism  type terminals  with "O"  TID logging  into Reality
+        hosts.  The terminal speeds can  be 9600, 4800, 2400, 1200 or  300 bps;
+        where with 1200 bps and after power up, the terminal user will  be able
+        to read "please type your terminal identifier" message.
+
+
+             The only change from ATC's original application is the parity bits
+        of "please type your terminal identifier" message. The message is space
+        parity now instead of even parity before.  This change will affect only
+        those terminals with 1200 baud speed and even parity.  The message will
+        be unreadable but  the terminal user  will still be  able to log  in as
+        usual and  everything will  remain the same  after the  circuithas been
+        established.
+
+        7. RELIABILITY, SERVICABILITY, AND AVAILABILITY
+
+            reliability and serviceability will be the same as ATC.
+
+        21                                                           ATC200.DOC
+        GED OF ATC MICRODATA R-MODE SUPPORT                    January 23, 1987
+
+
+
+        8. DOCUMENTATION
+
+            ATC installation in (PNETS:28)ATCOMP.DOC.
+            ATC operation in (PNETS:28)ATC.DOC.
+            Microdata Async Support by Dan Upthegrove.
+            PIR 1821: Microdata Asynchronous Host Connection.
+            PIR 1823: R-mode Connection.
+            PIR 1824: S-mode Connection.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        22                                                           ATC200.DOC
+ @ Rç
