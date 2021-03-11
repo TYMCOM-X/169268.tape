@@ -1,0 +1,223 @@
+!            PROGRAM:       (SYSDAT)HOME.DMC
+!            AUTHOR         Rob Nielsen
+!            DATE:          October 10, 1986
+! 
+!            PURPOSE:       To home customer sites and Tymnet sites without
+!                 public access to a Tymnet Class 1 to 4 site in order to
+!                 reassign customer traffic for a Configurator run.
+! 
+!            DESCRIPTION:   The program will pass through the data base until
+!                 we are holding these records:
+! 
+!                      Active or pending circuits
+!                      Only customer (or Class 9) sites as site 1
+!                      Only tymnet Class 1 to 4 sites as site 2
+!                      No circuits with site number 0 an either end
+! 
+!                 At this point the program will also find the sites
+!                 without direct tymnet class 1-4 connections (and the same
+!                 restrictions on circuit status and site id) and hold them
+!                 for future use in data set 2, a copy of CKTS
+
+!                 These first set of circuits will then be sorted by, in order,
+! 
+!                      Site 1 (customer site)
+!                      Class2 (the class of the Tymnet site)
+!                      Distance ((V1-V2)**2 + (H1-H2)**2))
+! 
+!                 Finally the matching algorithm takes place as follows
+
+!                      Take each customer site
+!                      Find the Tymnet 1-4 site of lowest class number
+!                      If more than 1 site,
+!                           Break ties with the circuit of least distance
+! 
+!                      The sort above guarantees that the first record
+!                 for each customer site (Site1) will be the lowest class and
+!                 least distance. The program then checks that a tie was not
+!                 broken with a V and H of 0--which indicates that V and H are
+!                 not known. If the found site is not a tymnet site of Classes
+!                 1-4, the program then looks one step up the network for a
+!                 proper Tymnet site.
+! 
+!                       At this point we go to the sites without direct
+!                 connection being held in data set 2. For each site the
+!                 program will map to data set 1 via site 2 to site 1. Site 2
+!                 for the records now held are the sites that are two hops
+!                 from the site we want to home. The program finds the site2's
+!                 as before, for Tymnet for class 1-4 and uses a sort to pick
+!                 the lowest class, least distance connection.
+
+!            NOTATION:
+!                 ALL CAPS: File names, attribute names, & DPL reserved words
+!                 Mixed:    Variables, labels, and subroutines.
+
+
+!            **************  BEGINNING OF MAIN PROGRAM ******************
+
+!                 The first copy of CKTS is the master; the second copy
+!            is used for a map that finds all sites with no direct Tymnet
+!            connection
+
+             OPEN (NETSTAT)CKTS (NETSTAT)CKTS (NETSTAT)CKTS.
+             INIT 1 (SYSDAT)HOME.OUT.
+
+             DPL START.
+
+             DEFINE INTEGER Sight1 Sight2 Klass PrevRecord FirstRcd Vert &
+                            Horiz .
+
+             DEFINE TEXT 15 Plaise1.
+
+             DBSET 1.
+
+!                 Find all customer sites with direct Tymnet connections
+!                 and hold them in data base 1
+             FIND STATUS CT "A" OR STATUS CT "P".
+             FIND LAST AND (SITE1 NE 0 AND SITE2 NE 0).
+             SEARCH (CLASS1 GT 5 OR CLASS1 EQ 0) AND CLASS2 BETWEEN 1 AND 4.
+
+
+!                 Find the customer sites without direct Tymnet connections
+!                 and hold them for later use in data base 2
+             MAP TO 2 VIA SITE1 TO SITE1.
+             FIND NOT LAST AND (STATUS CT "A" OR STATUS CT "P") AND &
+                  (SITE1 NE 0 AND SITE2 NE 0).
+             SEARCH CLASS1 GT 5 OR CLASS1 EQ 0.
+
+
+!                 Home the customer traffic for direct connections
+             DBSET 1.
+             SORT BY SITE1 CLASS2 (SQ(V2-V1) + SQ(H2-H1)).
+
+!                 Match to lowest class Tymnet connection and report out the
+!                 the match
+             CALL MatchSite.
+
+!                 Home the customer traffic for indirect connections
+             DBSET 2.
+             CALL Indirect.
+!            *************** SUBROUTINE MATCHSITE *******************
+
+!                 This subroutine homes the sites with direct Class 1-4
+!            connections. It goes through the sorted list of such circuits
+!            and picks out the first circuit for each site to home (Site 1)
+!            The subroutine then checks that a tie was not broken merely
+!            because a V and H of 0 (which indicates unknown V and H) was
+!            the closest site
+
+MatchSite:   DBSET 1.
+
+             LET Sight1 EQ 0.
+             LET PrevRecord EQ 0.
+
+!                 Find the first record for each site
+NextLink1:   GETREC LastLink1.
+!                      If a new site, then check for V and H of 0, then print
+                  IF SITE1 NE Sight1 GOTO NewSite.
+             GOTO NextLink1.
+
+NewSite:          LET Sight1 EQ SITE1.
+                  LET Plaise1 EQ PLACE1.
+                  CALL CheckVH.
+                  CALL Printout.
+             GOTO NextLink1.
+
+
+!                 End of data base. Return to main program.
+LastLink1:   RETURN.
+
+!            *************** SUBROUTINE CHECKVH *******************
+
+!                 This subroutine will check for a situation in which
+!            a tie was broken with a least distance tie-breaker and the
+!            least distance algorithm used a V and H of 0 (unknown location)
+
+!                 The subroutine will return holding the record to be printed
+!            for a given site
+
+CheckVH:     IF (V2 + H2) GT 0 GOTO EndCheckVH.
+                  LET PrevRecord EQ SYSRECNO.
+                  LET Klass EQ CLASS2.
+!                      Check if record was tie breaker by looking at next
+!                      record for same customer site and tymnet class
+             GETREC VHok.
+                  IF CLASS2 GT Klass GOTO VHok.
+                  IF SITE1 NE Sight1 GOTO VHok.
+!                      Tie breaker record had 0 V2 and H2; check next record+
+             GOTO CheckVH.
+
+!                 VH ok (or no good VH found for this site; restore previous
+!                 record, then return
+VHok:        GETREC EndCheckVH PrevRecord.
+
+EndCheckVH:  RETURN.
+
+
+
+
+
+!            *************** SUBROUTINE INDIRECT ********************
+
+!                 This subroutine finds the best connection two hops away
+!            for those sites without a direct connection to a class 1-4. The
+!            subroutine first sorts the set of all connections by site1 in
+!            data set 2--the site we want to home. The first record for
+!            each site1 is then mapped to data set 3 to pick up all connections
+!            for this site. These are then mapped by Site2 to Site1 to data set
+!            1 so that we now hold the connections 1 step removed from the
+!            site we want to home. Site2 is now searched for the status, class
+!            and siteID restrictions and then sorted according to the lowest
+!            class least distance criterion. The V and H from the original
+!            site 1 are carried along as variables Vert and Horiz to allow
+!            this sort.
+
+
+Indirect:    DBSET 2.
+             SORT KEY SITE1.
+
+NextLink2:   DBSET 2.
+             GETREC LastLink2.
+                  IF SITE1 EQ Sight1 GOTO NextLink2.
+!                      New site found; find best connection in DBSET 1
+
+!                      First get pertinent site1 data before map to new set
+                  LET Sight1 EQ SITE1.
+                  LET Plaise1 EQ PLACE1.
+                  LET Vert1 EQ V1.
+                  LET Horiz1 EQ H1.
+
+!                      Select the sites two hops away as site2 in dbset 1
+                  MAP TO 3 VIA SITE1 TO SITE1.
+                  MAP TO 1 VIA SITE2 TO SITE1.
+                  FIND LAST AND (STATUS CT "A" OR STATUS CT "P") &
+                       AND SITE2 NE 0.
+                  SEARCH CLASS2 BETWEEN 1 AND 4.
+
+
+!                      Pick the lowest class, least distance site
+                  SORT BY CLASS2 (SQ(V2-Vert) + SQ(H2-Horiz)).
+                  GETREC NextLink2.
+!                           Check that V and H of 0 do not break a tie
+                       CALL CheckVH.
+                       CALL Printout.
+             GOTO NextLink2.
+
+LastLink2:   RETURN.
+
+!            *************** SUBROUTINE PRINTOUT ********************
+
+Printout:    PRINT ON 1 Plaise1 Sight1 PLACE2 SITE2 &
+             FORMAT A15 1X I5 1X A15 1X I5 1X END.
+
+             RETURN.
+
+
+!            *****************  END OF PROGRAM  ************************
+
+TheEnd:      RELEASE 1.
+             RELEASE 2.
+             DPL STOP.
+             DPL END.
+
+ 
