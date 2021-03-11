@@ -1,0 +1,561 @@
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                     C
+C          PROGRAM: ATTRP5                                 PAGE 1.0   C
+C          AUTHOR: GERARD PUOPLO                                      C
+C          CREATED:                                                   C
+C          LAST UPDATED: SEPTEMBER, 1982                              C
+C          UPDATED BY: JO ANN JOELS                                   C
+C          PROJECT: INVENT                                            C
+C                                                                     C
+C          THIS ROUTINE CREATES THE MONTHLY INVENT REPORT.  THIS      C
+C          REPORT HAS FILE NAME: ATT###.REP, WHERE ### = 3 CHARACTER  C
+C          MONTH ABBREVIATION.                                        C
+C                                                                     C
+C          FORMAT:                                                    C
+C             CALL ATTRP5(IERR)                                       C
+C                                                                     C
+C             ARGUMENTS:                                              C
+C                IERR = VARIABLE RETURNING STATUS OF ANY ERROR        C
+C                       CONDITIONS.                                   C
+C                         0 = NO ERRORS                               C
+C                                                                     C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        SUBROUTINE ATTRP5(IERR)
+
+     
+C                                                         PAGE 2.0
+C                                                         ________
+        COMMON /CONTRL/PHASE,ACTFLE,ACTDAT,ACTREC,ACTPOS,TYMFLE,
+     -                 REPFLE,TABB,CDEV
+
+        INTEGER PHASE,ACTFLE(5),ACTDAT,ACTREC,ACTPOS,TYMFLE(5),
+     -          REPFLE(5),TABB(2),CDEV
+
+
+      INTEGER TNCIR(3),IERR,TEMP,TRECS
+
+        IERR=0
+
+
+      REAL    TRPAID(3), TNPAID(3), TMICHG(3), TMDCHG(3), TTMCHG(3),
+     -        TCDCHG(3), TADCHG(3), TCDUE(3), TRAMNT(3), TNAMNT(3),
+     -        THDUE(3)
+     
+      INTEGER IDBN(4), NTELCO, ITELCO(100,2), TELCO(2)
+     
+      
+      INTEGER REPDAT, CURDAT, BEGDAT, GENDAT(2),MM,DD,YY
+      LOGICAL FLAG
+     
+      
+      DATA    FLAG/.FALSE./
+      DATA    (IDBN(I),I=1,4)/4*' '/
+      DATA    (TNCIR(I),I=1,3)/3*0/, (TRPAID(I),I=1,3)/3*0.0/,
+     -        (TNPAID(I),I=1,3)/3*0.0/, (TMICHG(I),I=1,3)/3*0.0/,
+     -        (TMDCHG(I),I=1,3)/3*0.0/, (TTMCHG(I),I=1,3)/3*0.0/,
+     -        (TCDCHG(I),I=1,3)/3*0.0/, (TADCHG(I),I=1,3)/3*0.0/,
+     -        (TCDUE(I),I=1,3)/3*0.0/, (TRAMNT(I),I=1,3)/3*0.0/,
+     -        (TNAMNT(I),I=1,3)/3*0.0/, (THDUE(I),I=1,3)/3*0.0/
+      
+
+      
+C                                                         PAGE 3.0
+C                                                         ________
+                
+C     OUTPUT THE BEGINNING OF PHASE MESSAGE
+70      TYPE 75
+75      FORMAT (///,15X,'*****    PHASE 5    *****',/
+     -             15X,'        CREATE THE  ',/
+     -             15X,'          REPORT    ',///)
+
+
+C     OPEN THE ATT INVENTORY DATA BASE
+80      CALL DBOPEN ('INVENT')
+
+
+C     CK TO SEE IF THERE ARE ANY RECORDS TO BE REPORTED WITH
+C     THE SPECIFIED TELCO ABBREVIATION
+        CALL DBFIND('ALL')
+        CALL DBSRCH('TELCO','EQ',TABB)
+        CALL DBNREC(TRECS)
+
+C     IF THERE ARE ANY RECORDS , CONTINUE
+        IF (TRECS.NE.0) GO TO 90
+
+
+C     OUTPUT MESSAGE
+        TYPE 85,TABB
+85      FORMAT (1X,'THERE ARE NO CIRCUITS TO BE REPORTED FOR: ',
+     -          2A5,/)
+
+        IERR=1
+        CALL DBCLOS
+        GO TO 900
+
+C     BREAK BILLING DATE INTO YY,MM,DD
+
+90      YY=ACTDAT/10000
+        TEMP=MOD(ACTDAT,10000)
+        MM=TEMP/100
+        DD=MOD(TEMP,100)
+
+C     SET CURRENT DATE TO BILLING DATE
+        CURDAT = ACTDAT
+        IF (MM.GT.1) BEGDAT = CURDAT - 100
+        IF (MM.EQ.1) BEGDAT = ((YY-1)*10000) + 1200 + DD
+        CALL DATE(GENDAT)
+
+C     OPEN THE OUTPUT FILE
+100     OPEN (21,REPFLE,OUTPUT)
+
+
+C     START THE REPORT
+        WRITE(21,1135)
+        WRITE(21,1140) (GENDAT(I),I=1,2)
+        WRITE(21,1150) MM,DD,YY
+        WRITE(21,1160) (TABB(I),I=1,2)
+
+   
+C                                                         PAGE 6.0
+C                                                         ________
+        
+C                         *** FX CIRCUITS ***
+            
+      CALL DBFIND('LTYP','EQ',8)
+        CALL DBNREC(IREC)
+      CALL DBSRCH('TELCO','EQ',TABB)
+        CALL DBNREC(IREC)
+      CALL DBSRCH('BILNO','EQ','011','OR','BILNO','EQ','012','OR',
+     -            'BILNO','EQ','021','OR','BILNO','EQ','022','OR',
+     -            'BILNO','EQ','056','OR','BILNO','EQ','004')
+        CALL DBNREC(IREC)
+               
+      WRITE(21,1135)
+      WRITE(21,1170)
+         
+      CALL OUTREC(FLAG,TNCIR,TRPAID,TNPAID,TRAMNT,TNAMNT,TMICHG,TMDCHG,
+     -             TTMCHG,TCDCHG,TADCHG,TCDUE,THDUE,CURDAT,BEGDAT)
+
+    
+C                                                         PAGE 7.0
+C                                                         ________
+       
+C                         *** ANALOG CIRCUITS ***
+C                         *** WITH NODE PAIRS ***
+C                         *** NOT INCLUDING   ***
+C                         *** 202T CIRCUITS   ***
+      
+      CALL DBFIND('LTYP','EQ',1,'AND','NOD1','GT',0)
+      CALL DBSRCH('TELCO','EQ',TABB)
+      CALL DBSRCH('MMODL','NE','202T')
+      CALL DBSRCH('BILNO','EQ','011','OR','BILNO','EQ','012','OR',
+     -            'BILNO','EQ','021','OR','BILNO','EQ','022','OR',
+     -            'BILNO','EQ','056','OR','BILNO','EQ','004')
+      WRITE(21,1135)
+      WRITE(21,1180)
+      CALL OUTREC(FLAG,TNCIR,TRPAID,TNPAID,TRAMNT,TNAMNT,TMICHG,TMDCHG,
+     -            TTMCHG,TCDCHG,TADCHG,TCDUE,THDUE,CURDAT,BEGDAT)
+
+    
+C                                                         PAGE 8.0
+C                                                         ________
+    
+C                         *** ANALOG CIRCUITS ***
+C                         *** WITHOUT NODES   ***
+C                         *** AND NOT 202T    ***
+                                                   
+   
+      CALL DBFIND('LTYP','EQ',1,'AND','NOD1','EQ',0)
+      CALL DBSRCH('TELCO','EQ',TABB)
+      CALL DBSRCH('MMODL','NE','202T')
+      CALL DBSRCH('BILNO','EQ','011','OR','BILNO','EQ','012','OR',
+     -            'BILNO','EQ','021','OR','BILNO','EQ','022','OR',
+     -            'BILNO','EQ','056','OR','BILNO','EQ','004')
+      WRITE(21,1135)
+      WRITE(21,1190)
+      CALL OUTREC(FLAG,TNCIR,TRPAID,TNPAID,TRAMNT,TNAMNT,TMICHG,TMDCHG,
+     -            TTMCHG,TCDCHG,TADCHG,TCDUE,THDUE,CURDAT,BEGDAT)
+
+      
+C                                                         PAGE 9.0
+C                                                         ________
+      
+C                         *** ANALOG CIRCUITS ***
+C                         ***    202T         ***
+                                                      
+     
+     
+      CALL DBFIND('LTYP','EQ',1)
+      CALL DBSRCH('TELCO','EQ',TABB)
+      CALL DBSRCH('MMODL','EQ','202T')
+      CALL DBSRCH('BILNO','EQ','011','OR','BILNO','EQ','012','OR',
+     -            'BILNO','EQ','021','OR','BILNO','EQ','022','OR',
+     -            'BILNO','EQ','056','OR','BILNO','EQ','004')
+      WRITE(21,1135)
+      WRITE(21,1200)
+      CALL OUTREC(FLAG,TNCIR,TRPAID,TNPAID,TRAMNT,TNAMNT,TMICHG,TMDCHG,
+     -            TTMCHG,TCDCHG,TADCHG,TCDUE,THDUE,CURDAT,BEGDAT)
+
+    
+C                                                         PAGE 10.0
+C                                                         _________
+     
+C                         *** DIGITAL CIRCUITS ***
+C                         *** AND NOT 56KB     ***
+C                         *** WITH NODE PAIRS  ***
+      
+     
+      CALL DBFIND('LTYP','EQ',3,'AND','NOD1','GT',0)
+      CALL DBSRCH('TELCO','EQ',TABB)
+      CALL DBSRCH('BAUD','NE','56KB')
+      CALL DBSRCH('BILNO','EQ','011','OR','BILNO','EQ','012','OR',
+     -            'BILNO','EQ','021','OR','BILNO','EQ','022','OR',
+     -            'BILNO','EQ','056','OR','BILNO','EQ','004')
+      WRITE(21,1135)
+      WRITE(21,1210)
+      CALL OUTREC(FLAG,TNCIR,TRPAID,TNPAID,TRAMNT,TNAMNT,TMICHG,TMDCHG,
+     -            TTMCHG,TCDCHG,TADCHG,TCDUE,THDUE,CURDAT,BEGDAT)    
+
+     
+C                                                          PAGE 11.0
+C                                                          _________
+      
+C                       *** DIGITAL CIRCUITS ***
+C                       *** WITHOUT NODES    ***
+C                       *** AND NOT 56KB     ***
+         
+      CALL DBFIND('LTYP','EQ',3,'AND','NOD1','EQ',0)
+      CALL DBSRCH('TELCO','EQ',TABB)
+      CALL DBSRCH('BILNO','EQ','011','OR','BILNO','EQ','012','OR',
+     -            'BILNO','EQ','021','OR','BILNO','EQ','022','OR',
+     -            'BILNO','EQ','056','OR','BILNO','EQ','004')
+      WRITE(21,1135)
+      WRITE(21,1220)
+      CALL OUTREC(FLAG,TNCIR,TRPAID,TNPAID,TRAMNT,TNAMNT,TMICHG,TMDCHG,
+     -            TTMCHG,TCDCHG,TADCHG,TCDUE,THDUE,CURDAT,BEGDAT)
+
+    
+C                                                          PAGE 12.0
+C                                                          _________
+    
+C                       *** 56KB WITH NODES *** 
+                                                      
+      CALL DBFIND('LTYP','EQ',7,'AND','NOD1','GT',0)
+      CALL DBSRCH('TELCO','EQ',TABB)
+      CALL DBSRCH('BILNO','EQ','011','OR','BILNO','EQ','012','OR',
+     -            'BILNO','EQ','021','OR','BILNO','EQ','022','OR',
+     -            'BILNO','EQ','056','OR','BILNO','EQ','004')
+      WRITE(21,1135)
+      WRITE(21,1230)
+      CALL OUTREC(FLAG,TNCIR,TRPAID,TNPAID,TRAMNT,TNAMNT,TMICHG,TMDCHG,
+     -            TTMCHG,TCDCHG,TADCHG,TCDUE,THDUE,CURDAT,BEGDAT)
+
+    
+C                                                          PAGE 13.0
+C                                                          _________
+     
+C                       *** 56KB WITHOUT NODES ***
+        
+      CALL DBFIND('LTYP','EQ',7,'AND','NOD1','EQ',0)
+      CALL DBSRCH('TELCO','EQ',TABB)
+      CALL DBSRCH('TELCO','EQ',TABB)
+      CALL DBSRCH('BILNO','EQ','011','OR','BILNO','EQ','012','OR',
+     -            'BILNO','EQ','021','OR','BILNO','EQ','022','OR',
+     -            'BILNO','EQ','056','OR','BILNO','EQ','004')
+      WRITE(21,1135)
+      WRITE(21,1240)
+      CALL OUTREC(FLAG,TNCIR,TRPAID,TNPAID,TRAMNT,TNAMNT,TMICHG,TMDCHG,
+     -            TTMCHG,TCDCHG,TADCHG,TCDUE,THDUE,CURDAT,BEGDAT)
+
+     
+C                                                          PAGE 14.0
+C                                                          _________
+       
+C                           ***    GUESS    ***        
+     
+      CALL DBFIND('LTYP','NE',1,'AND','LTYP','NE',3,'AND',
+     -             'LTYP','NE',7,'AND','LTYP','NE',8)
+      CALL DBSRCH('TELCO','EQ',TABB)
+      CALL DBSRCH('BILNO','EQ','011','OR','BILNO','EQ','012','OR',
+     -            'BILNO','EQ','021','OR','BILNO','EQ','022','OR',
+     -            'BILNO','EQ','056','OR','BILNO','EQ','004')
+      WRITE(21,1135)
+      WRITE(21,1250)
+      CALL OUTREC(FLAG,TNCIR,TRPAID,TNPAID,TRAMNT,TNAMNT,TMICHG,TMDCHG,
+     -            TTMCHG,TCDCHG,TADCHG,TCDUE,THDUE,CURDAT,BEGDAT)
+
+       
+C                                                          PAGE 15.0
+C                                                          _________
+   
+C                           ***    TOTALS   ***
+      WRITE(21,1135)
+      WRITE(21,1260)
+      FLAG = .TRUE.
+      CALL OUTREC(FLAG,TNCIR,TRPAID,TNPAID,TRAMNT,TNAMNT,TMICHG,TMDCHG,
+     -            TTMCHG,TCDCHG,TADCHG,TCDUE,THDUE,CURDAT,BEGDAT)
+
+    
+C                                                         PAGE ?.0
+C                                                         ________
+        
+900   WRITE(21,1135)
+      CLOSE(21)
+      CALL DBCLOS
+C     UPDATE CONTROL FILE
+        PHASE=6
+        CALL UCTRL
+
+C     OUTPUT END-OF-PHASE MESSAGE
+
+        TYPE 910
+910     FORMAT (///,15X,'***** PHASE 5 COMPLETED *****',///)
+
+
+C RETURN TO CALLING PROGRAM
+999     RETURN
+
+     
+C                                *** FORMATS ***
+                                                    
+ 1135 FORMAT('1  ',///)
+ 1140 FORMAT(49X,'DATE GENERATED: ',2A5)
+ 1150 FORMAT(49X,'DATE REPORTED : ',I2,'/',I2,'/',I2)
+ 1160 FORMAT(49X,'TELEPHONE CO. : ',2A5)
+ 1170 FORMAT(27X,'*** FX CIRCUITS ***',///)
+ 1180 FORMAT(27X,'*** ANALOG CIRCUITS ***',/,
+     -       27X,'*** IN THE NET ANDS ***',/,
+     -       27X,'***     NOT 202T    ***',///)
+ 1190 FORMAT(27X,'*** ANALOG CIRCUITS ***',/,
+     -       27X,'*** NOT IN THE NET  ***',/,
+     -       27X,'*** AND NOT 202T    ***',///)
+ 1200 FORMAT(27X,'*** ANALOG 202T     ***',///)
+ 1210 FORMAT(27X,'*** DIGITAL CIRCUITS ***',/,
+     -       27X,'*** IN THE NET ANDS  ***',/,
+     -       27X,'***     NOT 56KB     ***',///)
+ 1220 FORMAT(27X,'*** DIGITAL CIRCUITS ***',/,
+     -       27X,'*** NOT IN THE NET   ***',/,
+     -       27X,'*** AND NOT 56KB     ***',///)
+ 1230 FORMAT(27X,'*** 56KB CIRCUITS ***',/,
+     -       27X,'*** IN THE NET    ***',///)
+ 1240 FORMAT(27X,'*** 56KB CIRCUITS ***',/,
+     -       27X,'*** NOT IN THE NET ***',///)
+ 1250 FORMAT(27X,'***    GUESS      ***',///)
+ 1260 FORMAT(27X,'***    TOTAL      ***',///)
+      
+      END
+
+
+C                                                         PAGE 2.0
+C                                                         ________
+           
+      SUBROUTINE OUTREC(FLAG,TNCIR,TRPAID,TNPAID,TRAMNT,TNAMNT,TMICHG,
+     -           TMDCHG,TTMCHG,TCDCHG, TADCHG, TCDUE, THDUE, CURDAT,
+     -           BEGDAT)
+          
+      INTEGER TNCIR(3), CURDAT, BEGDAT
+      REAL    TRPAID(3), TNPAID(3), TMICHG(3), TMDCHG(3), TTMCHG(3),
+     -        TCDCHG(3), TADCHG(3), TCDUE(3), TRAMNT(3), TNAMNT(3),
+     -        THDUE(3)
+          
+      INTEGER NCIR(3)
+      REAL    RPAID(3), NPAID(3), MICHG(3), MDCHG(3), TMCHG(3),
+     -        CDCHG(3), ADCHG(3), CDUE(3), RAMNT(3), NAMNT(3), HDUE(3)
+         
+      INTEGER SDATE, DDATE
+      REAL    RBUF(11)
+      INTEGER BDATE
+       
+      LOGICAL SFLAG, DFLAG, FLAG
+
+    
+C                                                         PAGE 3.0
+C                                                         ________
+        
+      IF (FLAG) GOTO 55
+      DO 10 I=1,3
+         NCIR(I)   = 0
+         RPAID(I)  = 0.0
+         NPAID(I)  = 0.0
+         RAMNT(I)  = 0.0
+         NAMNT(I)  = 0.0
+         MICHG(I)  = 0.0
+         MDCHG(I)  = 0.0
+         TMCHG(I)  = 0.0
+         CDCHG(I)  = 0.0
+         ADCHG(I)  = 0.0
+         CDUE(I)   = 0.0
+         HDUE(I) = 0.0
+   10    CONTINUE
+           
+   20 CALL DBGREC($40)
+        CALL DBVAL('SDATE',SDATE, 'DDATE',DDATE, 'BDATE',BDATE)
+        SFLAG = .FALSE.
+        DFLAG = .FALSE.
+        IF (SDATE.GT.CURDAT) GOTO 20
+        IF (SDATE.GT.BEGDAT) SFLAG = .TRUE.
+        IF (DDATE.GT.0 .AND. DDATE.LT.BEGDAT) GOTO 20
+        IF (DDATE.GT.0 .AND. DDATE.LE.CURDAT) DFLAG = .TRUE.
+        CALL DBVAL('RPAID',RBUF(1),'NPAID',RBUF(2),'MICHG',RBUF(3),
+     -            'MDCHG',RBUF(4),'TMCHG',RBUF(5),'CDCHG',RBUF(6),
+     -            'ADCHG',RBUF(7),'CDUE',RBUF(8),'RAMNT',RBUF(9),
+     -            'NAMNT',RBUF(10), 'HDUE',RBUF(11))
+               
+        IF (DFLAG) GOTO 30
+           NCIR(1) = NCIR(1) + 1
+           IF(BDATE.GT.BEGDAT) RPAID(1) = RPAID(1) + RBUF(1)
+           IF(BDATE.GT.BEGDAT) NPAID(1) = NPAID(1) + RBUF(2)
+           MICHG(1) = MICHG(1) + RBUF(3)
+           MDCHG(1) = MDCHG(1) + RBUF(4)
+           TMCHG(1) = TMCHG(1) + RBUF(5)
+           CDCHG(1) = CDCHG(1) + RBUF(6)
+           ADCHG(1) = ADCHG(1) + RBUF(7)
+           CDUE(1)  = CDUE(1)  + RBUF(8)
+           RAMNT(1) = RAMNT(1) + RBUF(9)
+           NAMNT(1) = NAMNT(1) + RBUF(10)
+           HDUE(1)  = HDUE(1) + RBUF(11)
+           IF (.NOT.SFLAG) GOTO 20    
+              NCIR(3)  = NCIR(3) + 1
+              IF(BDATE.GT.BEGDAT) RPAID(3) = RPAID(3) + RBUF(1)
+              IF(BDATE.GT.BEGDAT) NPAID(3) = NPAID(3) + RBUF(2)
+              MICHG(3) = MICHG(3) + RBUF(3)
+              MDCHG(3) = MDCHG(3) + RBUF(4)
+              TMCHG(3) = TMCHG(3) + RBUF(5)
+              CDCHG(3) = CDCHG(3) + RBUF(6)
+              ADCHG(3) = ADCHG(3) + RBUF(7)
+              CDUE(3)  = CDUE(3)  + RBUF(8)
+              RAMNT(3) = RAMNT(3) + RBUF(9)
+              NAMNT(3) = NAMNT(3) + RBUF(10)
+              HDUE(3) = HDUE(3) + RBUF(11)
+              GOTO 20
+
+      
+C                                                         PAGE 4.0
+C                                                         _________
+   
+         
+   30    NCIR(2)  = NCIR(2) + 1
+         IF(BDATE.GT.BEGDAT) RPAID(2) = RPAID(2) + RBUF(1)
+         IF(BDATE.GT.BEGDAT) NPAID(2) = NPAID(2) + RBUF(2)
+         MICHG(2) = MICHG(2) + RBUF(3)
+         MDCHG(2) = MDCHG(2) + RBUF(4)
+         TMCHG(2) = TMCHG(2) + RBUF(5)
+         CDCHG(2) = CDCHG(2) + RBUF(6)
+         ADCHG(2) = ADCHG(2) + RBUF(7)
+         CDUE(2)  = CDUE(2)  + RBUF(8)
+         RAMNT(2) = RAMNT(2) + RBUF(9)
+         NAMNT(2) = NAMNT(2) + RBUF(10)
+         HDUE(2) = HDUE(2) + RBUF(11)
+         GOTO 20
+        
+   40 CONTINUE
+        
+      DO 50 I=1,3         
+         TNCIR(I) = TNCIR(I) + NCIR(I)
+         TRPAID(I) = TRPAID(I) + RPAID(I)
+         TNPAID(I) = TNPAID(I) + NPAID(I)
+         TMICHG(I) = TMICHG(I) + MICHG(I)
+         TMDCHG(I) = TMDCHG(I) + MDCHG(I)
+         TTMCHG(I) = TTMCHG(I) + TMCHG(I)
+         TCDCHG(I) = TCDCHG(I) + CDCHG(I)
+         TCDUE(I)  = TCDUE(I)  + CDUE(I)
+         THDUE(I) = THDUE(I)   + HDUE(I)
+         TRAMNT(I) = TRAMNT(I) + RAMNT(I)
+         TNAMNT(I) = TNAMNT(I) + NAMNT(I)
+   50    CONTINUE
+     
+   55 IF (.NOT.FLAG) GOTO 100
+      DO 60 I=1,3
+         NCIR(I) = TNCIR(I)
+         RPAID(I) = TRPAID(I)
+         NPAID(I) = TNPAID(I)
+         MICHG(I) = TMICHG(I)
+         MDCHG(I) = TMDCHG(I)
+         TMCHG TTMCHG(I)
+         CDCHG(I) = TCDCHG(I)
+         ADCHG(I) = TADCHG(I)
+         CDUE(I)  = TCDUE(I)
+         HDUE(I)  = THDUE(I)
+         RAMNT(I) = TRAMNT(I)
+         NAMNT(I) = TNAMNT(I)
+   60    CONTINUE
+  100 CONTINUE
+        
+
+       
+C                                                         PAGE 5.0
+C                                                         ________
+       
+        WRITE(21,1000)
+        WRITE(21,1010) NCIR(1)
+        WRITE(21,1020) RPAID(1)
+        WRITE(21,1030) NPAID(1)
+        WRITE(21,1090) CDUE(1)
+        WRITE(21,1095) HDUE(1)
+        WRITE(21,1032) RAMNT(1)
+C       WRITE(21,1034) NAMNT(1)
+        WRITE(21,1040) MICHG(1)
+        WRITE(21,1050) MDCHG(1)
+        WRITE(21,1060) TMCHG(1)
+        WRITE(21,1070) CDCHG(1)
+        WRITE(21,1080) ADCHG(1)
+         
+        WRITE(21,1100) BEGDAT, CURDAT
+        WRITE(21,1010) NCIR(2)
+        WRITE(21,1020) RPAID(2)
+        WRITE(21,1030) NPAID(2)
+        WRITE(21,1090) CDUE(2)
+        WRITE(21,1095) HDUE(2)
+        WRITE(21,1032) RAMNT(2)
+C       WRITE(21,1034) NAMNT(2)
+        WRITE(21,1040) MICHG(2)
+        WRITE(21,1050) MDCHG(2)
+        WRITE(21,1060) TMCHG(2) 
+        WRITE(21,1070) CDCHG(2)
+        WRITE(21,1080) ADCHG(2)
+         
+        WRITE(21,1110) BEGDAT, CURDAT
+        WRITE(21,1010) NCIR(3)
+        WRITE(21,1020) RPAID(3)
+        WRITE(21,1030) NPAID(3)
+        WRITE(21,1090) CDUE(3)
+        WRITE(21,1095) HDUE(3)
+        WRITE(21,1032) RAMNT(3)
+C       WRITE(21,1034) NAMNT(3)
+        WRITE(21,1040) MICHG(3)
+        WRITE(21,1050) MDCHG(3)
+        WRITE(21,1060) TMCHG(3)
+        WRITE(21,1070) CDCHG(3)
+        WRITE(21,1080) ADCHG(3)
+           
+        WRITE(21,1120) BEGDAT, CURDAT
+     
+      RETURN
+
+      
+C                                                         PAGE 6.0
+C                                                         ________
+    
+          
+ 1000 FORMAT(' CURRENT STATUS:',/)
+ 1010 FORMAT('    NUMBER OF CIRCUITS:',37X,I9)
+ 1020 FORMAT('    ACTUAL RECURRING MONTHLY COST:',22X,'$',F12.2)
+ 1030 FORMAT('    ACTUAL NON-RECURRING COST:',26X,'$',F12.2)
+ 1032 FORMAT('    EST.   RECURRING MONTHLY COST:',22X,'$',F12.2)
+ 1034 FORMAT('    EST.   NON-RECURRING COST:',26X,'$',F12.2)
+ 1040 FORMAT('    EST. MILEAGE CHARGES:',31X,'$',F12.2)
+ 1050 FORMAT('    EST. MODEM/DSU CHARGES:',29X,'$',F12.2)
+ 1060 FORMAT('    EST. TERMINATION CHARGES:',27X,'$',F12.2)
+ 1070 FORMAT('    EST. CONDITIONING CHARGES:',26X,'$',F12.2)
+ 1080 FORMAT('    EST. ADDED EQUIPMENT CHARGES:',23X,'$',F12.2,/)
+ 1090 FORMAT('    CURRENT CREDIT DUE:',33X,'$',F12.2)
+ 1095 FORMAT('    CURRENT HELD AMOUNT DUE:',28X,'$',F12.2,/)
+ 1100 FORMAT(' DISCONNECTS BETW. ',I6,' AND ',I6,' :',/)
+ 1110 FORMAT(' NEW CIRCUITS BETW. ',I6,' AND ',I6,' :',/)
+ 1120 FORMAT(' NOTE: CURRENT STATUS INC. THE NEW CIRCUITS FOR THE',/,
+     -       '       PERIOD BETW. ',I6,' AND ',I6,' .... BUT',/,
+     -       '       NOT THE CIRCUITS THAT WERE DISCONNECTED DURING',/,
+     -       '       THAT PERIOD.',/)
+      END
+(of
