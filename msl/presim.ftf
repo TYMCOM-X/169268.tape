@@ -1,0 +1,310 @@
+***********************************************************************
+*                       PRESIM.FTF  J.JOELS  FEB. 1981                *
+*                                                                     *
+*                                                                     *
+*       THIS PROGRAM IS A PREPROCESSOR FOR THE NEW TYMNET-II SIMU-    *
+*       LATOR.  IT PRODUCES TWO SYMBOLIC OUTPUT FILES TO BE USED      *
+*       AS TOPOLOGY FILES BY THE SIMULATOR.  THE FILES ARE:           *
+*       YYMMDD.NOD AND YYMMDD.LIN, WHERE YY=YEAR, MM=MONTH, AND       *
+*       DD=DAY.  THE '.NOD' FILE CONTAINS NODE INFORMATION IN THE     *
+*       FOLLOWING FORMAT:                                             *
+*                                                                     *
+*       NODE NUMBER     I4                                            *
+*       SPACER          1X                                            *
+*       NODE NAME       2A5                                           *
+*       SPACER          1X                                            *
+*       NODE TYPE       I2                                            *
+*                                                                     *
+*       IF THE NODE IS A TYMCOM OR TYMNET-II NODE A SECOND LINE IS    *
+*       OUTPUT FOR EACH NODE CONTAINING THE HOST NUMBERS.  THIS LINE  *
+*       HAS A FORMAT OF:                                              *
+*                                                                     *
+*       SPACER          5X                                            *
+*       HOST NUMBER     I4                                            *
+*       SPACER          1X                                            *
+*       HOST NUMBER     I5                                            *
+*       SPACER          1X                                            *
+*       HOST NUMBER     I4                                            *
+*       SPACER          1X                                            *
+*       HOST NUMBER     I4                                            *
+*       SPACER          1X                                            *
+*       HOST NUMBER     I4                                            *
+*                                                                     *
+*       THE '.LIN' FILE CONTAINIS LINE INFORMATION IN THE FOLLOWING   *
+*       FORMAT.                                                       *
+*                                                                     *
+*       NODE 1 NUMBER   I4                                            *
+*       SPACER          1X                                            *
+*       PORT 1 NUMBER   I2                                            *
+*       SPACER          1X                                            *
+*       NODE 2 NUMBER   I4                                            *
+*       SPACER          I4                                            *
+*       PORT 2 NUMBER   I2                                            *
+*       SPACER          1X                                            *
+*       LINE NAME       4A5                                           *
+*       SPACER          1X                                            *
+*       BAND WIDTH      A4                                            *
+*       SPACER          1X                                            *
+*       GROUPS          I2                                            *
+*                                                                     *
+***********************************************************************
+
+        IMPLICIT INTEGER (A-Z)
+
+        CALL DBSTRT(1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0)
+
+        DIMENSION LNAM(4),NNAM(2),IDATE(2),LINFLE(2),NODFLE(2),SCR(6),
+     X  ARR(5),L(2),LFILE(5),NFILE(5),INFILE(5)
+
+        REAL BWIDTH
+
+        DATA ARR/'INIT ','1    ',' ',' ',0/
+
+*               GET CURRENT DATE AND TIME
+
+100     CALL DATE(IDATE)
+        CALL TIME(ITIME)
+
+**              CONVERT DATE TO YYMMDD  FORMAT
+
+110     CALL DATCON(IDATE,NEWDAT,IERR)
+
+*               BUILD OUTPUT FILE NAME
+
+120     ENCODE(6,121,L)NEWDAT
+121     FORMAT (I6)
+        DECODE (6,125,L)(SCR(I),I=1,6)
+125     FORMAT(6I1)
+        ENCODE (10,130,LINFLE)(SCR(I),I=1,6)
+130     FORMAT (6I1,'.LIN')
+        ENCODE (10,135,NODFLE)(SCR(I),I=1,6)
+135     FORMAT(6I1,'.NOD')
+
+*               OUTPUT STARTUP MESSAGE
+
+        TYPE 136,IDATE,ITIME,LINFLE
+136     FORMAT (//,10X,'SIMULATOR PREPROCESSOR',5X,'VERSION 1.0',/
+     X  15X,2A5,15X,A5,//,10X,'***** CREATING ',2A5,1X,'*****',//)
+
+*               PRIMPT FOR INPUT FILES
+
+        TYPE 137
+137     FORMAT (1X,'* TOPOLOGY DATA BASE NAME (NO EXT): ',$)
+        ACCEPT 138,INFILE
+138     FORMAT (5A5)
+
+*               PUT EXTENSION ON FILE NAME FOR LINE DATA BASE
+
+        CALL PUTEXT(INFILE,'LIN',LFILE,IERR)
+        IF (IERR.NE.0) GOTO 999
+
+*               PUT EXTENSION ON FILE NAME FOR NODE DATA BASE
+
+        CALL PUTEXT(INFILE,'NOD',NFILE,IERR)
+        IF (IERR.NE.0) GO TO 999
+
+*               INITIALIZE THE NEW LINE DATA BASE
+
+140     CALL DBEXEC('LOAD PRESIM.DMD')
+
+*               OPEN LINE DATA BASE
+
+145     CALL DBOPEN(LFILE,'PRESIM')
+
+*               GET A RECORD
+
+150     CALL DBFIND ('ALL')
+155     CALL DBGREC($190)
+
+*               GET INFORMATION NEEDED
+
+160     CALL DBVAL('NOD1',NODE1,'PRT1',PORT1,'NOD2',NODE2,'PRT2',
+     X  PORT2,'NAME',LNAM,'BAUD',BAUD,'GRPS',GROUPS)
+
+*               CONVERT BAUD OF 2400,4800 OR 9600. ELSE, LEAVE AS IS
+
+165     BWIDTH=BAUD
+        IF (BAUD.EQ.'2400') BWIDTH='2.4'
+        IF (BAUD.EQ.'4800') BWIDTH='4.8'
+        IF (BAUD.EQ.'9600') BWIDTH='9.6'
+
+*               CONVERT PORTS TO NUMBERIC VALUE
+
+        CALL PRTVRT(PORT1,PORT2,PRT1,PRT2)
+
+*               SET UP VARIABLES FOR ADD SO THAT NODE1 IS ALWAYS LESS 
+*               THAN NODE2
+
+170     IF (NODE1.GT.NODE2) GO TO 175
+        N1=NODE1
+        P1=PRT1
+        N2=NODE2
+        P2=PRT2
+        GO TO 180
+
+*               MAKE NODE2 = 1ST NODE SINCE IT IS SAMALLER THAN NODE1
+
+175     N1=NODE2
+        P1=PRT2
+        N2=NODE1
+        P2=PRT1
+
+*               ADD RECORD TO DATA BASE
+
+180     CALL DBSET(2)
+        CALL DBADD('NODE1',N1,'PORT1',P1,'NODE2',N2,'PORT2',P2,
+     X  'NAME',LNAM,'BAUD',BWIDTH,'GROUPS',GROUPS)
+        CALL DBSET (1)
+
+*               GO GET NEXT RECORD
+
+        GO TO 155
+
+*               FINISHED ADDING ALL LINES TO NEW DATA BASE. CLOSE 
+*               PLOT.LIN
+
+190     CALL DBCLOS
+
+*               GET ALL RECORDS FROM NEW DATA BASE AND SORT THEM
+
+        CALL DBFIND('ALL') 
+        CALL DBSORT('NODE1','PORT1')
+
+*               SET UP OUTPUT FILE NAME
+
+200     ARR(3)=LINFLE(1)
+        ARR(4)=LINFLE(2)
+
+*               OPEN OUTPUT FILE
+
+205     CALL DBEXEC(ARR)
+
+*               OUTPUT ALL RECORDS TO THE FILE
+
+210     CALL DBEXEC('PRINT NODE1 PORT1 NODE2 PORT2 NAME BAUD GROUPS
+     X FORMAT  I4 1X G2 1X I4 1X G2 1X A20 1X A4 1X I3 END.')
+
+*               FINISHED. CLOSE DATA BASE
+
+215     CALL DBEXEC ('RELEASE')
+        CALL DBCLOS
+
+*               TELL USER WE'RE STARTING TO CREATE THE NODE FILE
+
+        TYPE 217,NODFLE
+217     FORMAT (//,10X,'***** CREATING',1X,2A5,1X,'*****',//)
+
+*               OPEN PLOT.NOD AND NODE OUTPUT FILE
+
+        CALL DBOPEN (NFILE)
+        OPEN (3,NODFLE,OUTPUT)
+
+*               SELECT ALL RECORDS. SORT BY NODE NUMBER
+
+220     CALL DBFIND('ALL')
+        CALL DBSORT('NODE')
+
+*               GET A RECORD
+
+225     CALL DBGREC($280)
+
+*               GET INFOMATION NEEDED
+
+230     CALL DBVAL('NODE',NODE,'NAME',NNAM,'NTYP',TYPE,'H0',H0,'H1',
+     X  H1,'H2',H2,'H3',H3,'H4',H4)
+
+*               OUTPUT NODE, NAME, AND TYPE TO OUTPUT FILE
+
+235     WRITE (3,240)NODE,NNAM,TYPE
+240     FORMAT (I4,1X,2A5,1X,I2)
+
+
+*               BRANCH ON TYPE. SINCE TYPE 0 IS VALID INCREMENT TYPE BY
+*               1 BEFORE BRANCHING
+
+245     ITYPE=TYPE+1
+        GO TO (270,270,270,270,260,260,260,270,270,270),ITYPE
+
+*               IF FELL THROUGH TO HERE THEN WE HAVE AN UNRECOGNIZABLE 
+*               TYPE. THEREFORE, DON'T OUTPUT HOSTS
+
+        GO TO 270
+
+*               OUTPUT HOSTS
+
+260     WRITE (3,265)H0,H1,H2,H3,H4
+265     FORMAT (5X,4(I4,1X),I4)
+
+*               GO GET NEXT RECORD
+
+270     GO TO 225
+
+*               FINISHED. CLOSE DATA BASE AND OUTPUT FILE
+
+280     CALL DBCLOS
+        CLOSE(3)
+
+999     END
+
+***********************************************************************
+*                                                                     *
+*                       SUBROUTINE: PRTVRT                            *
+*                                                                     *
+*       THIS SUBROUTINE CONVERTS PORT NUMBERS FROM ALPHA-NUMBERIC     *
+*       FORMAT TO INTEGER FORMAT.                                     *
+*                                                                     *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL PRTVRT(IPRT1,IPRT2,IP1,IP2)                             *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                IPRT1 = PORT 1 (ALPHA)                               *
+*                IPRT2 = PORT 2 (ALPHA)                               *
+*       WHERE THE RETURNED VALUES ARE:                                *
+*                IP1 = PORT 1 (INTEGER)                               *
+*                IP2 = PORT 2 (INTEGER)                               *
+*                                                                     *
+***********************************************************************
+
+
+        SUBROUTINE PRTVRT(IPRT1,IPRT2,IP1,IP2)
+
+        INTEGER IPRT(2),IP(2),SCR(3)
+
+        IPRT(1)=IPRT1
+        IPRT(2)=IPRT2
+
+        DO 200 II=1,2
+
+*               LOOK AT FIRST CHARACTER OF PORT. IF IT 'S' THIS MEANS
+*               THE PORT IS SIO (MEMORY SHUFFLER PORT) THEREFORE SET 
+*               PORT TO -1
+
+        CALL RTC(ICHAR,IPRT(II),1)
+        IF (ICHAR.NE.'S') GO TO 95
+        IP(II)=-1
+        GO TO 200
+
+95      DECODE (3,100,IPRT(II))(SCR(I),I=1,3)
+100     FORMAT (3A1)
+
+        IF (SCR(3).EQ.' ') GO TO 150
+
+        ENCODE (2,110,IT1)(SCR(I),I=2,3)
+110     FORMAT (2A1)
+        DECODE (2,115,IT1)IP(II)
+115     FORMAT (I2)
+        GO TO 200
+
+150     ENCODE (1,155,IT2)SCR(2)
+155     FORMAT (A1)
+        DECODE (1,160,IT2)IP(II)
+160     FORMAT (I1)
+
+
+200     CONTINUE
+
+        IP1=IP(1)
+        IP2=IP(2)
+
+        RETURN
+        END
+  
