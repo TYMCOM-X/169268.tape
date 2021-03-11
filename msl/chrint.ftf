@@ -1,0 +1,54 @@
+        SUBROUTINE CHRINT (STRING, IFIRST, IWIDTH, INUMBR, IERR)
+
+* Converts a substring of an ASCII string of numerical characters to 
+* an integer variable.
+* Arguements:
+*    STRING = integer array containing character string;
+*    IFIRST = location, in the string, of first character (in character
+*             count) of the substring to convert;
+*    IWIDTH = width (in characters) of substring to convert;
+*    INUMBR = integer number extracted from character string & returned;
+*    IERR = error code returned to caller: '0' if no error.
+***********************************************************************
+
+        INTEGER INUMBR, STRING(5), IFIRST, IWIDTH, ICHAR
+        INUMBR = 0
+	IERR = 0
+
+*  Examine each character in the field to be converted, in decreasing
+*  order of magnitude.  Load the integer value of each character onto
+*  the "right end" of the variable containing the integer value of
+*  the field.  Blanks delimit the field.  Other non-numeric characters
+*  cause an error return.
+******************************************
+
+        DO 100 I=1,IWIDTH
+
+*  Extract a character from the specified field of the string.
+
+            J = (IFIRST - 1) + I
+            CALL GETC (J, STRING, ICHAR)
+
+*  Skip any preceding blanks; return to caller if end of numeric field
+*  (a blank following the digits); do error return if non-numeric
+*  character in substring.
+
+            IF ((INUMBR .EQ. 0) .AND. (ICHAR .EQ. "040)) GOTO 100
+            IF ((INUMBR .GT. 0) .AND. (ICHAR .EQ. "040)) GOTO 150
+            IF ((ICHAR .LT. "060) .OR. (ICHAR .GT. "071)) GOTO 200
+
+*  Increase, by an order of magnitude, the total value already loaded
+*  into the output variable, and add the integer value of the character
+*  just extracted.
+
+            INUMBR = (INUMBR * 10) + (ICHAR - "060)
+  100   CONTINUE
+
+  150   RETURN
+
+*  Do error return, signifying non-numeric character.
+
+200     CHRINT = 0
+        IERR = 1
+        RETURN
+        END
