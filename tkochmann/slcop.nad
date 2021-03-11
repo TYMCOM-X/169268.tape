@@ -1,0 +1,66 @@
+:
+:	ISIS EXERCISER FOR THE COPY INSTRUCTION
+
+:
+:	This slot is designed to check for a potential bug in the COPY memory
+:	instruction.  Its operation is quite simple.  It sets up 2 32K
+:	segments with distinctive data patterns, and then copies a segment,
+:	in its entirety, into a third segment, compares the source and
+:	destination segment, does the same thing with the other source
+:	segment, and repeats the process continuously.  If ever the source
+:	and destination are unequal, the slot is halted.
+:
+:	ETM--25-Oct-85
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+	SEG	A.DATA
+FPANEL	HS	1
+BMPCNT	HC	10			:HOW MANY ITERATIONS BEFORE BUMP FPANEL
+
+	SEG	A.CODE
+START	LIS	R0,0
+	STH	R0,FPANEL		:FRONT PANEL DISPLAY
+SHOW	LH	R12,BMPCNT
+CHKLOP	LI	R15,SEG8		:FIRST SOURCE AREA
+	JAL	R14,COPCHK		:COPY IT AND CHECK
+	LI	R15,SEG9		:SECOND SOURCE AREA
+	JAL	R14,COPCHK		:COPY THIS ONE AND CHECK IT
+	SIS	R12,1			:DECREMENT COUNTER
+	JGBS	CHKLOP			:UNTIL WE GET THE INCREMENT
+	LIS	R12,1
+	AHM	R12,FPANEL		:INCREMENT FRONT CONSOLE
+	J	SHOW			:KEEP DOING IT
+
+COPCHK	LI	R2,8000,R15		:LAST SOURCE H/W
+	LI	R3,SEGA+7FFE		:LAST DEST H/W
+	LI	R4,3FFF0		:COPY 4000 H/W'S
+	COPY	R2,R4
+	LHI	R1,7FFC			:MAKE AN INDEX
+CHK1	L	R0,2,R15,R1		:GET SOURCE DATA
+	C	R0,SEGA,R1,		:COMPARE WITH DESTINATION
+	JEFS	CHK2			:SKIP IF EQUAL
+	SVC	SYS,HALT.		:OTHERWISE, DROP DEAD
+CHK2	SIS	R1,4			:DECREMENT INDEX
+	JGEBS	CHK1			:REPEAT UNTIL GET TO BEGINNING
+	JR	R14			:AND RETURN
+
+	SEG	8	:FIRST SOURCE SEGMENT
+	HC	0	:NEEDED BECAUSE OF COPY INSTRUCTION
+Q	EQ	1
+	RE	4000	:A 32K COPY
+	HC	Q
+Q	EQ	Q+1
+	ER
+
+	SEG	9	:SECOND SOURCE SEGMENT
+	HC	0	:AGAIN, COPY'S IDIOSYNCRACIES
+Q	EQ	0BBBB
+	RE	4000
+	HC	Q
+Q	EQ	Q+1
+	ER
+
+	SEG	0A	:DESTINATION SEGMENT
+	HS	4000
+
+	END
