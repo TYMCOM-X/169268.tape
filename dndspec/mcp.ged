@@ -1,0 +1,3017 @@
+                                                                   May 3, 1987
+
+
+
+
+
+
+
+                      *   * *   * ***** *   *   *   *
+                      ** ** *   *   *   *   *  * *  *
+                      ** ** *   *   *   *   * *   * *
+                      * * * *   *   *   *   * *   * *
+                      * * * *   *   *   *   * ***** *
+                      *   * *   *   *   *   * *   * *
+                      *   *  ***    *    ***  *   * *****
+
+            ***   ***  **  * *   * ***** ****   ***  ***  ***  **  *
+           *   * *   * **  * *   * *     *   * *   *  *  *   * **  *
+           *     *   * * * * *   * *     *   * *      *  *   * * * *
+           *     *   * * * *  * *  ***   ****   ***   *  *   * * * *
+           *     *   * * * *  * *  *     * *       *  *  *   * * * *
+           *   * *   * *  **   *   *     *  *  *   *  *  *   * *  **
+            ***   ***  *  **   *   ***** *   *  ***  ***  ***  *  **
+
+    ****    *    ***   ***        ***** *   * ****   ***  *   *  ***  *   *
+    *   *  * *  *   * *   *         *   *   * *   * *   * *   * *   * *   *
+    *   * *   * *     *             *   *   * *   * *   * *   * *     *   *
+    ****  *   *  ***   ***  *****   *   ***** ****  *   * *   * *  ** *****
+    *     *****     *     *         *   *   * * *   *   * *   * *   * *   *
+    *     *   * *   * *   *         *   *   * *  *  *   * *   * *   * *   *
+    *     *   *  ***   ***          *   *   * *   *  ***   ***   **** *   *
+
+                            General External Design
+
+                                    TYMNET
+                        NETWORK TECHNOLOGY DEVELOPMENT
+                                  May 3, 1987
+
+
+
+                                     DRAFT
+
+
+      ******************************************************************
+      **                  PROPRIETARY INFORMATION                     **
+      **                                                              **
+      **  MDC-TYMNET's  proprietary  rights  are  included  in  the   **
+      **  information disclosed herein.  The recipient, by receiving  **
+      **  this document,  agrees that neither this document nor  the  **
+      **  information disclosed herein nor any part thereof shall be  **
+      **  reproduced  or  transferred to other documents or used  or  **
+      **  disclosed  to  others for manufacturing or for  any  other  **
+      **  purpose  except as specifically authorized in  writing  by  **
+      **  MDC-TYMNET.                                                 **
+      ******************************************************************
+
+
+                                                                       MCP.GED
+                                                                   May 3, 1987
+
+
+
+
+
+
+
+                                  TABLE OF CONTENTS
+
+        Section                                                           Page
+
+
+
+        1.   Introduction                                                    1
+
+
+        2.   Functions                                                       2
+          2.1   Overview                                                     2
+          2.2   Features                                                     3
+             2.2.1    Target Devices                                         3
+             2.2.2    Transparency                                           3
+             2.2.3    Compatibility                                          3
+             2.2.4    Destination mapping                                    3
+
+          2.3   Call Establishment                                           4
+             2.3.1    Called DTE Address Format                              5
+             2.3.2    Protocol ID                                            6
+             2.3.3    Call User Data                                         6
+
+          2.4   Data Transfer                                                7
+             2.4.1    Conversion Process                                     7
+             2.4.2    Forward Abort                                          7
+             2.4.3    Level-2 Kanji                                          8
+             2.4.4    Autoskip for Hitachi                                   8
+             2.4.5    Data Re-Blocking                                       8
+             2.4.6    Printers                                               8
+             2.4.7    Repeat to Address                                      8
+
+          2.5   Call Clearing                                                9
+             2.5.1    Conversion Failure                                     9
+             2.5.2    Incorrectly formatted Called DTE Address               9
+             2.5.3    Zappers                                                9
+
+          2.6   MCP Generated Messages                                      10
+          2.7   Write Structured Field                                      10
+          2.8   Hitachi Print Control Characters                            10
+          2.9   Re-blocking for Hitachi                                     10
+
+
+        3.   Monitoring                                                     12
+          3.1   Port Display                                                12
+          3.2   Log Display                                                 12
+
+
+        4.   Limitations                                                    13
+
+                                                                       MCP.GED
+                                                                   May 3, 1987
+
+
+          4.1   81st column on IBM terminals                                13
+          4.2   Kanji Shift Character                                       13
+          4.3   Break Key                                                   14
+          4.4   Unsupported Commands                                        14
+          4.5   Terminal and Host Timeouts                                  14
+          4.6   Screen Sizes                                                15
+          4.7   Gateway Access                                              15
+          4.8   Write Structured Field Command                              15
+          4.9   Test Request                                                15
+          4.10  Multiple User DSP Circuits                                  16
+          4.11  Command Chaining                                            16
+          4.12  Connection Request Mode                                     16
+          4.13  DSP Protocol Violations                                     16
+
+
+        5.   HSC Characteristics                                            18
+          5.1   Data Link Control                                           18
+             5.1.1    Cross Reference of Device Address Assignments         19
+
+          5.2   WRITE Group Commands                                        22
+          5.3   READ Group Commands                                         23
+          5.4   Syntax of WRITE Group Commands                              23
+          5.5   Orders                                                      26
+          5.6   Attribute Bytes                                             27
+          5.7   Print Control Characters                                    27
+          5.8   Program Function Keys                                       27
+          5.9   Sense and Status Messages                                   27
+
+
+        6.   Bit Mappings                                                   30
+
+
+        7.   Sysgen                                                         41
+          7.1   Statements                                                  41
+             7.1.1    BEGINTYM                                              41
+             7.1.2    OPTION                                                41
+             7.1.3    MESSAGE                                               42
+             7.1.4    HOST                                                  44
+             7.1.5    SESSIONS                                              45
+             7.1.6    ENDTYM                                                45
+
+          7.2   Defaults                                                    45
+
+
+        8.   Reliability Availability and Serviceability                    48
+
+
+        9.   Documentation                                                  49
+
+
+
+
+
+
+                                                                       MCP.GED
+        Introduction                                               May 3, 1987
+
+
+
+
+
+
+                                  1 -  Introduction
+
+
+             Tymnet has  been requested by  Network Services Company  (NSC) to
+        develop a product to  provide mutual conversion between  IBM, Fujitsu,
+        and Hitachi 327X terminals  and hosts.  A joint Tymnet/NSC  task force
+        evaluated  the  options  to  implement  this  capability  and selected
+        development of  a new network  server, called Mutual  Conversion Pass-
+        Through (or MCP), as the best choice.
+
+             This document provides  an overview of MCP  functions, identifies
+        system  limitations, addresses  issues relating  to MCP  usage through
+        gateways,  and  summarizes  additional  documentation  to  be produced
+        during development.
+
+             References:
+
+            o   NSC Project Report, Version 1.0, October 16, 1985
+            o   PIR 2031, Project 1515
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        1                                                              MCP.GED
+        Functions                                                  May 3, 1987
+
+
+
+
+
+
+                                    2 -  Functions
+
+
+
+
+
+
+
+                                    2.1  Overview
+
+
+                                       **********                       
+                             **********          *                      
+                            *                     ****                  
+                           *                          *                 
+             |------|   |-----|       |-----|       |-----|   |----------|
+             |      |   |     |       |     |       |     |   |          |
+             | Host |===| HIF |<------| MCP |<------| TIF |===| Terminal |
+             |      |   |     |       |     |       |     |   |          |
+             |------|   |-----|       |-----|       |-----|   |----------|
+                           *                           *                 
+                            *                         *                  
+                             *                       *                   
+                              ********              *                    
+                                      *            *                     
+                                       ************                     
+
+                                       Figure 1
+
+
+
+             In  a  typical  application,  as  illustrated  in  figure  1, the
+        terminal user selects a destination  host from a menu provided  by the
+        TIF.   The  TIF  establishes  a  virtual  circuit  to  MCP  and passes
+        information in the call  request packet which allows MCP  to determine
+        the  type of  conversion needed  and the  network host  number  of the
+        target HIF.
+
+             MCP then builds  a virtual circuit to  the HIF and passes  on the
+        call request packet, which is slightly modified, to the HIF.   The HIF
+        sends a call accept packet  back to MCP, which passes the  call accept
+        on to the TIF.  At this  point data traffic flows between TIF  and HIF
+        with all necessary data stream conversion being performed by MCP.
+
+
+
+
+
+
+
+        2                                                              MCP.GED
+        Functions                                                  May 3, 1987
+
+
+                                    2.2  Features
+
+
+
+
+
+
+                    2.2.1  Target Devices
+
+             MCP is  intended to  provide data  stream conversion  between IBM
+        3277/8/9, Fujitsu F-9525/6  F-6650 and Hitachi T-560-20  terminals and
+        hosts.  The  conversions will make  it possible to  access any  of the
+        three types of  hosts from any of  the three types of  terminals, with
+        certain restrictions as noted in the section on limitations.
+
+
+
+
+
+                    2.2.2  Transparency
+
+             As far as possible, MCP will be transparent to the TIF, HIF, host
+        application, and terminal user.
+
+
+
+
+
+                    2.2.3  Compatibility
+
+             MCP will support 3270 Data Stream Protocol with no modifications.
+        MCP will interpret the called DTE address to determine the destination
+        host  number  and the  destination  host type.   The  following Tymnet
+        interfaces will be supported:
+
+          3270 Polled Bisync Terminal Interface
+          3270 Polled Bisync Host Interface
+          X.25/X.75 Interface
+          SNA Virtual Terminal Interface
+          SNA Virtual Host Interface
+
+
+
+
+
+
+                    2.2.4  Destination mapping
+
+             MCP will be designed so that alternate schemes of determining the
+        destination and it's type  will be possible with  minimal development.
+        This is  to allow  service extension via  X.25/X.75 gateways  to other
+        public and private data networks.
+
+
+        3                                                              MCP.GED
+        Functions                                                  May 3, 1987
+
+
+                               2.3  Call Establishment
+
+             TIF                     MCP                     HIF 
+             ---                     ---                     --- 
+              |    virtual circuit    |                       | 
+              |---------------------->|                       |
+              |                       |                       | 
+              |      IIX              |                       | 
+              |<--------------------->|                       |
+              |                       |                       | 
+              |  call request         |                       | 
+              |---------------------->|    virtual circuit    |
+              |                       |---------------------->|
+              |                       |                       | 
+              |                       |      IIX              | 
+              |                       |<--------------------->| 
+              |                       |                       | 
+              |                       |   call request        | 
+              |                       |---------------------->| 
+              |                       |                       | 
+              |                       |   call accept         | 
+              |   call accept         |<----------------------| 
+              |<----------------------|                       | 
+              |                       |                       |
+
+
+                                       Figure 2
+
+
+
+             Figure 2 illustrates a typical exchange between TIF, MCP, and HIF
+        in the process  of establishing virtual  calls.  TIF builds  a virtual
+        circuit to MCP and then  enters into IIX protocol exchange.   TIF then
+        sends  a  call request  packet,  which MCP  examines  to  identify the
+        protocol  ID,  character set  (in  call user  data),  destination host
+        number (in  called DTE  address), and destination  host type  (also in
+        called DTE address).
+
+             Assuming  all  the elements  are  correct, MCP  builds  a virtual
+        circuit to the HIF  using a pre-defined username,  configurable within
+        MCP  at system  generation,  and the  host number  extracted  from the
+        called DTE address.   After IIX protocol  exchange, MCP passes  on the
+        call request  packet after extracting  the destination host  type from
+        the called DTE address.  The  HIF returns a call accept  packet, which
+        MCP forwards unmodified to the TIF.
+
+
+
+
+
+
+
+
+
+        4                                                              MCP.GED
+        Functions                                                  May 3, 1987
+
+
+                    2.3.1  Called DTE Address Format
+
+             The  called DTE  address must  be in  one of  the  four following
+        formats:
+
+                DNIC + 0 + HOST + DTYPE + SPID
+                DNIC + 9 + HOST + DTYPE + SPID
+                0 + HOST + DTYPE + SPID
+                9 + HOST + DTYPE + SPID
+
+
+             The  HOST number  must always  be five  (5)  digits.  Sub-process
+        identifier digits (SPID) are optional.  Host destination  type (DTYPE)
+        must be one of the following values:
+
+                0  IBM
+                1  Fujitsu
+                2  Hitachi
+
+
+             Note  that MCP  will  delete DTYPE  from the  called  DTE address
+        before passing the call request packet on to the HIF.
+
+             When  the  NTN  is prefixed  with  a  0, a  logon  string  of the
+        following format will be used to place the call to the host interface:
+
+                MCP.xxxxx:yyyyy;password
+
+                where:
+
+                    MCP. is the user name prefix and is sysgen redefinable.
+                    xxxxx is the MCP originating host number (as specified
+                        in the HOST statement in the Tymfile).
+                    yyyyy is the first five digits of the NTN following the
+                        the 0 prefix.
+                    password is the password provided in the Call User Data
+                        of the Call Request packet.
+                        Note:  At this time it is not possible to supply
+                            the password in the Cser Data and
+                            therefore makes this form of the Called
+                            Address unusable for MCP circuit building.
+
+
+             When  the  NTN  is prefixed  with  a  9, a  logon  string  of the
+        following format will be used to place the call to the host interface:
+
+                9yyyyy
+
+                where:
+
+                    yyyyy are all the digits of the NTN following the
+                        9 prefix.
+                        Note:  This numeric user name must be homed to
+
+        5                                                              MCP.GED
+        Functions                                                  May 3, 1987
+
+
+                            the destination host and must not require
+                            a password.  It should also have a Class
+                            that indicates that it may only originate
+                            from the MCP host number specified in the
+                            HOST statement of the Tymfile.  Note also,
+                            that if multiple customers are to use the
+                            same MCP server, there should be a separate
+                            HOST statement for each, in order to preserve
+                            security, since this host number is the only
+                            way to control access when using this form
+                            of called NTN.
+
+
+
+
+
+                    2.3.2  Protocol ID
+
+             The originator of the circuit must identify it's own  device type
+        by means of the  protocol ID in the call  user data field of  the call
+        request packet.  The protocol IDs defined are:
+
+                56  IBM host initiated call
+                57  IBM terminal initiated call
+                66  Fujitsu host initiated call
+                67  Fujitsu terminal initiated call
+                76  Hitachi host initiated call
+                77  Hitachi terminal initiated call
+
+
+
+
+
+                    2.3.3  Call User Data
+
+             The  call user  data field  of the  call request  packet  will be
+        modified in the "Character Set" bits to have two additional values:
+
+                4  Katakana
+                5  Kanji
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        6                                                              MCP.GED
+        Functions                                                  May 3, 1987
+
+
+                                  2.4  Data Transfer
+
+
+             Once the call has  been accepted MCP performs conversion  on data
+        messages   as  needed.    ISIS   messages,  with   the   exception  of
+        backpressure, and non-data packets are forwarded unmodified by MCP.
+
+
+
+
+
+                    2.4.1  Conversion Process
+
+             MCP will convert attribute characters, control characters, buffer
+        addresses,   and  Kanji   code  set.    All  other   data   is  passed
+        transparently.  Details  concerning the conversion  process are  to be
+        provided by  Network Service Company.   Most of these  conversions are
+        described in the Bit Mappings chapter.
+
+             Untranslatable or unknown data characters will be converted  to a
+        Tymfile specifiable character.
+
+
+
+
+
+                    2.4.2  Forward Abort
+
+             If  a forward  abort  (data frame  ending with  ENQ)  is detected
+        during  conversion,  conversion  will  cease  and  the  block  will be
+        forwarded.  The contents of this block should be of no  importance due
+        to the abort being signalled at the frame level.
+
+             Forward  abort  can cause  problems  with respect  to  Early Data
+        Forwarding (EDF).  This is due to the fact the the forward  abort only
+        applies to the  block in which it  occurs.  If for example,  the setup
+        being used is Fujitsu terminal to  IBM host and the host sends  a 3000
+        byte block  to the terminal  and the block  is terminated with  an ENQ
+        (Forward Abort), MCP  must hold onto all  data in the block  until the
+        terminator is seen.  This  is necessary even though it  is re-blocking
+        into 256 byte blocks.  This is because when the Forward Abort is seen,
+        all the "re-blocked" blocks must be discarded.  It is not necessary to
+        inform the terminal or terminal interface that the forward  abort took
+        place because the host should resend the block.
+
+             Since it is necessary for MCP to hold onto all data in  the block
+        from the host, MCP must  have buffering capacity for the  whole block.
+        This  will  cause  EDF  from  the  host  to  be  defeated,  causing an
+        additional serialization  delay in  MCP greater than  or equal  to the
+        size  of the  frame divided  by the  throughput class  of  the circuit
+        (typically 2400 cps).  case more that one second.
+
+
+
+        7                                                              MCP.GED
+        Functions                                                  May 3, 1987
+
+
+                    2.4.3  Level-2 Kanji
+
+             The level-2 definition of Kanji is to be supported, this  will be
+        included as a  sysgen option.  This  is due to  the large size  of the
+        conversion  table  and the  fact  that  it will  only  be  needed when
+        accessing IBM equipment.
+
+
+
+
+
+                    2.4.4  Autoskip for Hitachi
+
+             If a protected numeric autoskip attribute is detected  flowing to
+        a Hitachi device, it will  be converted to a protected  alpha autoskip
+        attribute.   A protected  numeric  autoskip attribute  from  a Hitachi
+        device  will be  converted to  a protected  alpha attribute  if  it is
+        destined for a non-Hitachi device.
+
+
+
+
+
+                    2.4.5  Data Re-Blocking
+
+             If during the conversion process the data message  expands beyond
+        the maximum block  size MCP will forward  the current contents  of the
+        conversion block and start a new block.  Orders will not be split when
+        re-blocking is  performed.  This  is a more  restrictive rule  than is
+        required but will allow an easy implementation.
+
+
+
+
+
+                    2.4.6  Printers
+
+             Support for printers will be included.
+
+
+
+
+
+                    2.4.7  Repeat to Address
+
+             This order normally consists  of the order byte (3C)  followed by
+        two bytes of  screen address and the  character to be  repeated.  When
+        this order is found in  Kanji fields it is handled differently  by IBM
+        and Hitachi.  IBM assumes that  the character to be repeated  is KANJI
+        and therefore  includes a  2-byte character  to be  repeated.  Hitachi
+        treats the order the same as it does in non-Kanji fields and expects a
+        1-byte repetition character.  It  is assumed that Fujitsu  treats this
+        order in the same manner as IBM.
+
+        8                                                              MCP.GED
+        Functions                                                  May 3, 1987
+
+
+             When MCP  recieves this order  in an IBM  or Fujitsu  Kanji field
+        going to a Hitachi device, it will check to see if the character  is a
+        space or asterisk.  If it is, it will convert the character to it's 1-
+        byte representation.  Otherwise, MCP will replace the character with a
+        user defined (sygenable) 1-byte character to represent  the conversion
+        failure.  For Repeat to  Address orders flowing from a  Hitachi device
+        the reverse conversion will be applied.
+
+
+
+
+
+
+                                  2.5  Call Clearing
+
+
+
+
+
+
+                    2.5.1  Conversion Failure
+
+             In the event of a conversion failure MCP will send a text message
+        (sysgen redefinable)  indicating the  nature of  the problem  and then
+        clear the call.
+
+
+
+
+
+                    2.5.2  Incorrectly formatted Called DTE Address
+
+             MCP will clear calls back to the TIF if the called DTE address is
+        not  formatted  according to  the  formats listed  in  the  Called DTE
+        Address section.
+
+
+
+
+
+                    2.5.3  Zappers
+
+             On receipt  of a zapper  MCP will zap  the associated TIF  or HIF
+        circuit.
+
+
+
+
+
+
+
+
+
+
+        9                                                              MCP.GED
+        Functions                                                  May 3, 1987
+
+
+                             2.6  MCP Generated Messages
+
+
+             All  text  messages generated  by  MCP will  be  redefinable with
+        Tymfile statements.   The default  messages will  identity MCP  as the
+        originator.
+
+
+
+
+
+
+                             2.7  Write Structured Field
+
+
+             There is one IBM Structured field that will have to  be supported
+        by MCP  when talking  to an IBM  host.  It  is Read  Partition (Query)
+        which is used to identify the capabilities of the terminal.  This will
+        have  to  be  implemented  as  canned  message  that  will  be  sysgen
+        definable.   The default  response to  this structured  field  will be
+        supplied by Network service Company.
+
+
+
+
+
+
+                        2.8  Hitachi Print Control Characters
+
+
+             Hitachi supports four  print control characters that  Fujitsu and
+        IBM don't.  They  are Shift Out (0E),  Cancel (18), Vertical  Tab (0B)
+        and  Bell (2F).   These characters  will be  ignored  (discarded) when
+        found.
+
+
+
+
+
+
+                             2.9  Re-blocking for Hitachi
+
+
+             Both IBM and  Fujitsu support block  sizes of 3000  bytes maximum
+        for frames  traveling to the  terminal.  Hitachi has  a limit  of 1024
+        bytes for these frames and they are terminated with an ETB  except for
+        the  last frame  in a  command.  IBM  and Fujitsu  treat ETBs  in this
+        direction as ETX.
+
+             Therefore, ETB frames from a Hitachi host will be  reblocked into
+        a single ETX frame before  being sent to a non-Hitachi  terminal.  The
+        3000 byte limit will not be checked because it is not anticipated that
+        this limit will be exceeded for a 1920 byte screen.
+
+        10                                                             MCP.GED
+        Functions                                                  May 3, 1987
+
+
+             ETX frames flowing to a Hitachi terminal from a  non-Hitachi host
+        will  have to  be split  into  ETB frames  if they  exceed  256 bytes.
+        Orders including KANJI shift will not be split.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        11                                                             MCP.GED
+        Monitoring                                                 May 3, 1987
+
+
+
+
+
+
+                                   3 -  Monitoring
+
+
+             There will be a  number of displays available with  this product.
+        Included will be a dispatcher ring trace capable of  displaying EBCDIC
+        translated data.
+
+
+
+
+
+
+                                  3.1  Port Display
+
+
+             The Extended DDT command  "PORT" will produce a display  with the
+        following information for currently active sessions:
+
+               o Port number
+               o Associated Port number
+               o DCB pointer
+               o Associated DCB pointer
+               o Host number
+               o Circuit Sate
+               o Calling address from the Call Request packet
+               o Called address from the Call Request packet
+
+
+
+
+
+
+                                   3.2  Log Display
+
+
+             The Extended DDT command "LOG" will produce a  historical display
+        of  past  MCP  sessions.   The  display  will  include  the  following
+        information:
+
+               o Host number
+               o Text of the call clearing message (displayed in English)
+               o GMT time of the call clearing
+               o DCB pointer
+               o Input port number
+               o Associated DCB pointer
+               o Output (associated) port number
+               o Circuit state at the time of clearing
+               o Calling address from the Call Request packet
+               o Called address from the Call Request packet
+
+        12                                                             MCP.GED
+        Limitations                                                May 3, 1987
+
+
+
+
+
+
+                                   4 -  Limitations
+
+
+
+
+
+
+
+                          4.1  81st column on IBM terminals
+
+
+             Support for 81st column is not included.  MCP will not attempt to
+        detect any use of this  feature and will pass data  without attempting
+        to correct for this.  The  formatting of the screen is  not guaranteed
+        when  communicating between  terminals and  applications that  are not
+        compatible with respect to this.
+
+
+
+
+
+
+                              4.2  Kanji Shift Character
+
+
+             Kanji  shift characters  flowing from  an IBM  host to  a non-IBM
+        terminal will be preceded or  followed by a null character  which will
+        cause the display on the non-IBM terminal to appear as it would  on an
+        IBM terminal.  This  is due to the  fact that IBM terminals  display a
+        shift in  or out  as a  space, whereas  Fujitsu and  Hitachi terminals
+        don't display  the character at  all.  If the  display is read  with a
+        Read Buffer  command these  nulls will  not be  removed from  the data
+        stream and will  most likely cause  problems for the  IBM application.
+        Kanji shift  characters flowing  from or to  Hitachi or  Fujitsu hosts
+        will  not be  modified.  Therefore,  when using  an IBM  terminal with
+        these hosts,  the screen may  not be displayed  correctly if  Kanji is
+        being used.
+
+
+
+
+
+
+
+
+
+
+
+
+
+        13                                                             MCP.GED
+        Limitations                                                May 3, 1987
+
+
+                                    4.3  Break Key
+
+
+             Hitachi hosts support the break key for various applications, but
+        IBM and Fujitsu do not.  The break key, when received from  an Hitachi
+        terminal logged into an IBM or Fujitsu host, will be discarded and the
+        keyboard unlocked by MCP.
+
+
+
+
+
+
+                              4.4  Unsupported Commands
+
+
+             Receipt of unsupported orders  or commands will result in  a text
+        message to the TIF and the call being cleared.
+
+        This is a partial list of the unsupported commands:
+
+                                Fujitsu       Hitachi
+                                -------       -------
+        Commands:
+        ---------
+        Erase/Write Alternate                    X
+        Read Modified All                        X
+
+
+
+
+
+
+                           4.5  Terminal and Host Timeouts
+
+
+             It  may be  necessary to  adjust timeout  values in  the  host or
+        terminal when using  MCP to compensate  for any additional  network or
+        processing delays.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        14                                                             MCP.GED
+        Limitations                                                May 3, 1987
+
+
+                                  4.6  Screen Sizes
+
+
+             MCP will  not be capable  of converting from  one screen  size to
+        another.  The only supported screen size will be 1920.
+
+
+
+
+
+
+                                 4.7  Gateway Access
+
+
+             MCP  will  support access  from  remote TIF's  on  another Tymnet
+        network through a  Tymnet gateway.  However, MCP  must be in  the same
+        network as the HIF.
+
+
+
+
+
+
+                         4.8  Write Structured Field Command
+
+
+             The IBM Write Structured Field command is not supported by either
+        Fujitsu or Hitachi.  Except for the Read Partition  (Query) structured
+        field, this command will be ignored.
+
+
+
+
+
+
+                                  4.9  Test Request
+
+
+             The Test Request (TRQ) bit of a DSP Response message will  not be
+        supported.  When found it will be ignored.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        15                                                             MCP.GED
+        Limitations                                                May 3, 1987
+
+
+                           4.10  Multiple User DSP Circuits
+
+
+             Multiple User DSP Circuits, that is, ones requiring a DSP Circuit
+        Request message will not be supported.  When found, it will  cause the
+        circuit to be cleared.
+
+
+
+
+
+
+                                4.11  Command Chaining
+
+
+             Due to the implementation of DSP within PBT and PBH, MCP will not
+        support  Command  Chaining as  defined  in the  DSP  Reference Manual.
+        Instead, ETB blocks  flowing from a host  will be treated the  same as
+        ETB blocks flowing from a terminal.  That is, it will be considered to
+        represent segmenting (text blocking).
+
+
+
+
+
+
+                            4.12  Connection Request Mode
+
+
+             DSP Connection Request  Mode 4 (CRM =  4) will not  be supported.
+        When found it will cause the circuit to be cleared.
+
+
+
+
+
+
+                            4.13  DSP Protocol Violations
+
+
+             There are two known violations of the DSP protocol that  MCP will
+        have to  conform to. This  is due to  the implementations used  in the
+        Polled BiSync Terminal (PBT),  Polled BiSync Host (PBH)  and Character
+        Mode Terminal Interface (CMTI) products.
+
+             The first is that the Sense/Status (S/S) bytes that  are supposed
+        to be appended to the end of Response Undelivered and Response Aborted
+        messages will not be expected or provided by MCP.
+
+             The second is due to the fact that Hitachi performs text blocking
+        in non-transparent mode  from host to  terminal.  In order  to support
+        this, it was  decided to use the  DSP ETB terminator to  indicate text
+
+
+        16                                                             MCP.GED
+        Limitations                                                May 3, 1987
+
+
+        blocking  under  this  condition instead  of  the  ETB's  standard DSP
+        definition of representing command chaining.
+
+             Because  of these  violations, MCP  is implemented  such  that it
+        assumes  that command  chaining will  never be  used (by  an  IBM host
+        interface) and that ETBs in DSP frames will always indicate  that Text
+        Blocking (DSP segmenting) is being performed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        17                                                             MCP.GED
+        HSC Characteristics                                        May 3, 1987
+
+
+
+
+
+
+                               5 -  HSC Characteristics
+
+
+             There are various differences between HITACHI's HSC and IBM's BSC
+        environments.  These differences are broken down as follows:
+
+
+
+
+
+
+                                5.1  Data Link Control
+
+
+             The  Data  Link  Control  characters are  the  same  for  IBM and
+        HITACHI, however, HITACHI does not use ITB for large block of data, it
+        uses ETB instead.
+
+             With HITACHI, the addresses for Control Unit and device  refer to
+        the same table for Select Poll and General Poll, whereas  for Specific
+        Poll, the device address assignment uses another table.
+
+             With  IBM, the  control unit  and device  addresses use  the same
+        table for General Poll and Specific Poll as well as the  response from
+        the terminal  with fixed return  addresses.  However, for  SELECT Poll
+        and test request messages, the control unit addresses use  a different
+        table.
+
+             Also, the format of  the response from the terminal  is different
+        from that  of the  IBM/FUJITSU mode.  Only  unit addresses  (or device
+        address  as  in  IBM/FUJITSU)   is  indicated  and  not   the  Control
+        Unit/Device address pair to identify the responding device.
+
+             The above also applies to the COPY command, Test  Request Message
+        and the Sense and Status messages.
+
+             The unit address in the returned response, ie. S/S  message, uses
+        the same table as the Specific Poll does.
+
+
+
+
+
+
+
+
+
+
+
+
+        18                                                             MCP.GED
+        HSC Characteristics                                        May 3, 1987
+
+
+                    5.1.1  Cross Reference of Device Address Assignments
+
+
+        IBM
+
+        ------------------------------------------------
+               |                   |
+        CU or  | Device Selection  | 3274 CU
+        DEVICE | CU and Device     | Selection Address
+        Number | Addresses for     |
+               | General/Specific  |
+               | Polls             |
+        -------|----------------------------------------
+           0   |       40          |      60
+        -------|----------------------------------------
+           1   |       C1          |      61
+        -------|----------------------------------------
+           2   |       C2          |      E2
+        -------|----------------------------------------
+           3   |       C3          |      E3
+        -------|----------------------------------------
+           4   |       C4          |      E4
+        -------|----------------------------------------
+           5   |       C5          |      E5
+        -------|----------------------------------------
+           6   |       C6          |      E6
+        -------|----------------------------------------
+           7   |       C7          |      E7
+        -------|----------------------------------------
+           8   |       C8          |      E8
+        -------|----------------------------------------
+           9   |       C9          |      E9
+        -------|----------------------------------------
+          10   |       4A          |      6A
+        -------|----------------------------------------
+          11   |       4B          |      6B
+        -------|----------------------------------------
+          12   |       4C          |      6C
+        -------|----------------------------------------
+          13   |       4D          |      6D
+        -------|----------------------------------------
+          14   |       4E          |      6E
+        -------|----------------------------------------
+          15   |       4F          |      6F
+        -------|----------------------------------------
+          16   |       50          |      F0
+        -------|----------------------------------------
+          17   |       D1          |      F1
+        -------|----------------------------------------
+          18   |       D2          |      F2
+        -------|----------------------------------------
+          19   |       D3          |      F3
+        -------|----------------------------------------
+
+        19                                                             MCP.GED
+        HSC Characteristics                                        May 3, 1987
+
+
+          20   |       D4          |      F4
+        -------|----------------------------------------
+          21   |       D5          |      F5
+        -------|----------------------------------------
+          22   |       D6          |      F6
+        -------|----------------------------------------
+          23   |       D7          |      F7
+        -------|----------------------------------------
+          24   |       D8          |      F8
+        -------|----------------------------------------
+          25   |       D9          |      F9
+        -------|----------------------------------------
+          26   |       5A          |      7A
+        -------|----------------------------------------
+          27   |       5B          |      7B
+        -------|----------------------------------------
+          28   |       5C          |      7C
+        -------|----------------------------------------
+          29   |       5D          |      7D
+        -------|----------------------------------------
+          30   |       5E          |      7E
+        -------|----------------------------------------
+          31   |       5F          |      7F
+        -------|----------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        20                                                             MCP.GED
+        HSC Characteristics                                        May 3, 1987
+
+
+        Hitachi
+
+               | Station Address   | Unit Address
+               | Specific/General  | in Return Response
+               | Polls             |
+               |                   | Unit Address
+          NO.  | Station & Unit    | for
+               | Address for       | Specific Poll
+               | Select Poll       |
+        -------|----------------------------------------
+           0   |       C0          |      A0
+        -------|----------------------------------------
+           1   |       C1          |      A1
+        -------|----------------------------------------
+           2   |       C2          |      A2
+        -------|----------------------------------------
+           3   |       C3          |      A3
+        -------|----------------------------------------
+           4   |       C4          |      A4
+        -------|----------------------------------------
+           5   |       C5          |      A5
+        -------|----------------------------------------
+           6   |       C6          |      A6
+        -------|----------------------------------------
+           7   |       C7          |      A7
+        -------|----------------------------------------
+           8   |       C8          |      A8
+        -------|----------------------------------------
+           9   |       C9          |      A9
+        -------|----------------------------------------
+          10   |       CA          |      AA
+        -------|----------------------------------------
+          11   |       CB          |      AB
+        -------|----------------------------------------
+          12   |       CC          |      AC
+        -------|----------------------------------------
+          13   |       CD          |      AD
+        -------|----------------------------------------
+          14   |       CE          |      AE
+        -------|----------------------------------------
+          15   |       CF          |      AF
+        -------|----------------------------------------
+          16   |       D0          |      B0
+        -------|----------------------------------------
+          17   |       D1          |      B1
+        -------|----------------------------------------
+          18   |       D2          |      B2
+        -------|----------------------------------------
+          19   |       D3          |      B3
+        -------|----------------------------------------
+          20   |       D4          |      B4
+        -------|----------------------------------------
+          21   |       D5          |      B5
+
+        21                                                             MCP.GED
+        HSC Characteristics                                        May 3, 1987
+
+
+        -------|----------------------------------------
+          22   |       D6          |      B6
+        -------|----------------------------------------
+          23   |       D7          |      B7
+        -------|----------------------------------------
+          24   |       D8          |      B8
+        -------|----------------------------------------
+          25   |       D9          |      B9
+        -------|----------------------------------------
+          26   |       DA          |      BA
+        -------|----------------------------------------
+          27   |       DB          |      BB
+        -------|----------------------------------------
+          28   |       DC          |      BC
+        -------|----------------------------------------
+          29   |       DD          |      BD
+        -------|----------------------------------------
+          30   |       DE          |      BE
+        -------|----------------------------------------
+          31   |       DF          |      BF
+        -------|----------------------------------------
+
+
+
+
+
+
+                              5.2  WRITE Group Commands
+
+
+             The WRITE  group commands include  WRITE, Erase  All Unprotected,
+        Erase Write, Erase Write Alternate, and Write Structured Field.
+
+             The command codes  for WRITE group  are the same  for IBM/FUJITSU
+        and  for  HITACHI,  except  that  Erase  Write  Alternate,  and  Write
+        Structured  Field  are   not  supported  by  HITACHI.    For  FUJITSU,
+        Structured Field is not supported either.
+
+             The  COPY  command  is  supported  by  HITACHI  and  the  code is
+        compatible with IBM/FUJITSU.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        22                                                             MCP.GED
+        HSC Characteristics                                        May 3, 1987
+
+
+                               5.3  READ Group Commands
+
+
+             The READ group commands  include Read Modified, Read  Buffer, and
+        Read Modified All.  The command  codes in READ group are the  same for
+        IBM, FUJITSU, and HITACHI.
+
+             HITACHI, however,  does not support  Read Modified All,  nor will
+        MCP.  This command if found destined for a Hitachi terminal will cause
+        the call to be cleared.
+
+
+
+
+
+
+                         5.4  Syntax of WRITE Group Commands
+
+
+             The  current  IBM  and  Fujitsu  implementation  of  WRITE  Group
+        commands have only one  Write Control Character following  the command
+        itself.  HITACHI's implementation  uses either one Control  Byte (CB0)
+        for the ERASE/WRITE command, or 2 Control Bytes (CB2 byte 0,  CB2 byte
+        1).  MCP will support both formats for the Hitachi ERASE/WRITE.
+
+             In  the  case  of  COPY command,  instead  of  CCC  (Copy Control
+        Character), HITACHI calls it Control Byte 1 (CB1).
+
+             The Start Print  bit position is the  same for all  the different
+        type of hosts, and terminals,  so it's not necessary to know  if there
+        is a second byte for the control as in CB2, byte 1 for HITACHI.
+
+             Following is the definition of the WCC and CCC.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        23                                                             MCP.GED
+        HSC Characteristics                                        May 3, 1987
+
+
+        Formats associating WCC with WRITE or ERASE WRITE command :
+
+              IBM          FUJITSU            HITACHI
+                                           H-9415   T-560/20
+
+        WRITE Command ( F1 )
+
+             E W W          E W W          E W C    E W C
+             S R C          S R C          S R B    S R B
+             C T C          C T C          C T 0    C T 0
+
+        Erase Write Command ( F5 )
+
+             E E W          E E W          E E C    E E C C
+             S / C          S / C          S / B    S / B B
+             C W C          C W C          C W 0    C W 2 2
+                                                        0 1
+        Erase Write Alternate Command ( 7E )
+
+             E E W          E E W          Not Supported
+             S W C          S W C
+             C A C          C A C
+
+        COPY Command ( F7 )
+
+             E C C          E C C          E C C
+             S O C          S O C          S O B
+             C P C          C P C          C P 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        24                                                             MCP.GED
+        HSC Characteristics                                        May 3, 1987
+
+
+        Differences of WCC (Write Control Characters) among hosts.
+
+
+        H \ B   |     |      |   |       |       |       |          |       |
+         O \ I  |     |      |   |       |       |       |          |       |
+          S \ T |  0  |  1   | 2 |   3   |   4   |   5   |    6     |   7   |
+           T \ #|     |      |   |       |       |       |          |       |
+        --------|-----------------------------------------------------------|
+                |Based| WCC  |  Width    |       |       |          |       |
+        I   W   | on  |      | 00 : 132  | Start | Sound | Unlock   |  MDT  |
+        B   C   | bit |Reset | 01 : 40   |       |       |          |       |
+        M   C   | 1-7 |      | 10 : 64   | Print | Alarm | Keyboard | Reset |
+                |     |      | 11 : 80   |       |       |          |       |
+        --------------------------------------------------------------------|
+        F       |     |      |           |       |       |          |       |
+        U       |Based|      |           |       |       |          |       |
+        J   W   | on  |      |  Same     | Same  | Same  |   Same   | Same  |
+        I   C   | bit |  1   |   as      |  as   |  as   |    as    |  as   |
+        T   C   | 1-7 |      |  Above    | Above | Above |   Above  | Above |
+        S       |     |      |           |       |       |          |       |
+        U       |     |      |           |       |       |          |       |
+        --------------------------------------------------------------------|
+            C   |     |      |   | Use   | Same  | Same  |   Same   | Same  |
+            B   |  1  |  1   | 0 | Print |  as   |  as   |    as    |  as   |
+            0   |     |  *   |   |Control| Above | Above |   Above  | Above |
+        H       |     |      |   |  Char |       |       |          |       |
+        I-------------------------------------------------------------------|
+        T   C   |     |      |   | Use   | Same  | Same  |   Same   | Same  |
+        A   B 0 |  1  |  0   | 0 | Print |  as   |  as   |    as    |  as   |
+        C   2   |     |  *   |   |Control| Above | Above |   Above  | Above |
+        H       |     |      |   |  Char |       |       |          |       |
+        I  -----------------------------------------------------------------|
+                |     |      |   | Screen Size   | Modulo|          |       |
+            C   |     |      |   | 00 : 1920     |0 : 10 |          |       |
+            B 1 |  1  |  0   | 0 | 01 : 960      |1 : 11 |    0     |   1   |
+            2   |     |      |   | 10 : 2560     | Check |          |       |
+                |     |      |   | 11 : Reserved |       |          |       |
+        ---------------------------------------------------------------------
+        (* : CB0 bit #1 indicates single CB0 byte or CB2 byte pair)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        25                                                             MCP.GED
+        HSC Characteristics                                        May 3, 1987
+
+
+        Differences of CCC (Copy Control Character) among hosts :
+
+
+        H \ B   |     |     |   |       |       |       |        |         |
+         O \ I  |     |     |   |       |       |       |        |         |
+          S \ T |  0  |  1  | 2 |   3   |   4   |   5   |    6   |    7    |
+           T \ #|     |     |   |       |       |       |        |         |
+        --------|----------------------------------------------------------|
+                |     |     |   Print   |       |       | Data Type Copied |
+        I  C    |Based|     |  Format   |       |       |  00 : Attribute  |
+        B  C    | on  |  1  | 00 : 132  | Start | Sound |  01 : Att & Unp  |
+        M  C    | 1-7 |     | 01 : 40   | Print | Alarm |  10 : Att & Pro  |
+                |     |     | 10 : 64   |       |       |  11 : Entire Buf |
+                |     |     | 11 : 80   |       |       |                  |
+        -------------------------------------------------------------------|
+        F       |     |     |           |       |       |                  |
+        U       |     |     |           |       |       |                  |
+        J  C    |Based|     |    Same   |  Same |  Same |      Same        |
+        I  C    |  on |  1  |     as    |   as  |   as  |       as         |
+        T  C    | 1-7 |     |    Above  |  Above|  Above|      Above       |
+        S       |     |     |           |       |       |                  |
+        U       |     |     |           |       |       |                  |
+        -------------------------------------------------------------------|
+        H       |     |     |   |       |       |       |                  |
+        I       |     |     |   |Use    |  Same |  Same |      Same        |
+        T  C    |  1  |  1  | 0 |Print  |   as  |   as  |       as         |
+        A  B    |     |     |   |Control|  Above|  Above|      Above       |
+        C  1    |     |     |   |Char   |       |       |                  |
+        H       |     |     |   |       |       |       |                  |
+        I       |     |     |   |       |       |       |                  |
+        -------------------------------------------------------------------|
+
+          Note :
+
+           Hitachi's bit numbering is reversed as opposed to IBM and Fujitsu.
+
+
+
+
+
+
+                                     5.5  Orders
+
+
+             The codes for Orders are the same for HITACHI as in IBM.
+
+             For orders  that use 2-byte  buffer address, the  assignments for
+        buffer locations, ie. row and column numbers, are quite different.
+
+             All  the  messages  will   have  to  be  rewritten  to   use  the
+        corresponding buffer addressing scheme for HITACHI terminals.
+
+
+
+        26                                                             MCP.GED
+        HSC Characteristics                                        May 3, 1987
+
+
+                                 5.6  Attribute Bytes
+
+
+             The attribute bytes  used by HITACHI can  either be 2 or  3 bytes
+        depending on whether the basic or extended field is used.
+
+
+
+
+
+
+                            5.7  Print Control Characters
+
+
+             There are 4  print control characters  that are not  supported by
+        IBM nor by FUJITSU and will be supported by HITACHI.
+
+             These characters  are Shift Out  (0E), Cancel (18),  Vertical Tab
+        (0B) and BELL (2F).
+
+
+
+
+
+
+                              5.8  Program Function Keys
+
+
+             The Magnetic Slot  Reader AID (E7)  is not supported  by HITACHI,
+        but BREAK (7F) key is.
+
+
+
+
+
+
+                            5.9  Sense and Status Messages
+
+
+             The  bit  definitions of  2-byte  Sense and  Status  messages are
+        totally different from IBM and must be converted within MCP.
+
+
+
+
+
+
+
+
+
+
+
+
+
+        27                                                             MCP.GED
+        HSC Characteristics                                        May 3, 1987
+
+
+        Structure of Sense and Status Information for HITACHI host :
+
+        S/S 0
+
+        --------------------------------------------------------------
+        BIT # |       DESCRIPTION
+        --------------------------------------------------------------
+          0   | Always 1
+        --------------------------------------------------------------
+          1   | Always 1
+        --------------------------------------------------------------
+          2   | Indicates Printer error has been recovered
+        --------------------------------------------------------------
+              | Printer has an error due to the following:
+              |  1. Paper out.
+              |  2. Printer cover is opened.
+          3   |  3. SELECT lamp is off.
+              |  4. Printer power is off.
+              |  5. Printer is not connected.
+              |  6. Other mechanical/electrical problem.
+        --------------------------------------------------------------
+              | Hardware Error due to the following :
+          4   |  1. Parity error occurred during buffer read.
+              |  2. Transmission error occurred between
+              |     Terminal and Control Unit.
+        --------------------------------------------------------------
+              | Not Ready becomes Ready
+          5   |  1. Terminal becomes ready, ie. power is on.
+              |  2. Power is turned on on Stand Alone type
+              |     terminals.
+        --------------------------------------------------------------
+              | Not Ready (For Multi-VDT type only)
+          6   |  1. Indicating terminal (VDT or PRC) is not ready
+              |     because of the power is off or other reasons.
+        --------------------------------------------------------------
+              | From device is not ready (For Multi-VDT type only)
+              |  1. The FROM device in the COPY command is in one
+          7   |     of the following modes:
+              |       Writing     Sending
+              |       Printing    Not Ready
+        --------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+        28                                                             MCP.GED
+        HSC Characteristics                                        May 3, 1987
+
+
+        S/S 1
+        --------------------------------------------------------------
+        BIT # |       DESCRIPTION
+        --------------------------------------------------------------
+          0   | Always 1
+        --------------------------------------------------------------
+          1   | Always 1
+        --------------------------------------------------------------
+          2   | Always 0
+        --------------------------------------------------------------
+          3   | Always 0
+        --------------------------------------------------------------
+          4   | Device Busy
+        --------------------------------------------------------------
+              | Illegal Command due to the following :
+              |  1. Undefined command.
+              |  2. A command chaining was sent to the device
+          5   |     that was executing a WRITE or COPY command
+              |     with Start Print bit set.
+              |  3. From device is the same as the To device.
+        --------------------------------------------------------------
+              | Operation Check caused by the following :
+              |  1. Buffer capacity is overflowed or
+              |     receipt of an invalid buffer address.
+          6   |  2. No CB0 or CB2 in WRITE or ERASE WRITE command.
+              |  3. CB1 is missing in the COPY command.
+              |  4. Use of special character.
+              |  5. ESC character is missing in the command sequence.
+        --------------------------------------------------------------
+              | Completion of printing operation after the following :
+              |  1. A command that started the print operation.
+          7   |  2. When the print key (local copy) is pressed and
+              |     the host sends a SELECT poll, which caused the
+              |     terminal to send a WACK while it is printing.
+        --------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        29                                                             MCP.GED
+        Bit Mappings                                               May 3, 1987
+
+
+
+
+
+
+                                  6 -  Bit Mappings
+
+                       Hitachi to IBM Copy Control Character
+
+              Hitachi CB1                               IBM CCC
+
+         Bit  Usage                                     Usage           Bit
+        ---------------------                          ---------------------
+        | 0 | Fixed (1)     |                          | *             | 0 |
+        ---------------------                          ---------------------
+        | 1 | Fixed (1)     |                          | Fixed (1)     | 1 |
+        ---------------------                          ---------------------
+        | 2 | Not Used      |                          | Printout      | 2 |
+        ---------------------     -------------------> -          (00) -----
+        | 3 | Print Control | ---/                     | Format        | 3 |
+        ---------------------                          ---------------------
+        | 4 | Start Print   | -----------------------> | Start Print   | 4 |
+        ---------------------                          ---------------------
+        | 5 | Sound Alarm   | -----------------------> | Sound Alarm   | 5 |
+        ---------------------                          ---------------------
+        | 6 | Type of Data  |                          | Type of Data  | 6 |
+        -----               - -----------------------> -               -----
+        | 7 | to be Copied  |                          | to be Copied  | 7 |
+        ---------------------                          ---------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        30                                                             MCP.GED
+        Bit Mappings                                               May 3, 1987
+
+
+                       IBM to Hitachi Copy Control Character
+
+              IBM CCC                                Hitachi CB1
+
+         Bit  Usage                                  Usage               Bit
+        ---------------------                       -------------------------
+        | 0 | *             |                       | Fixed (1)         | 0 |
+        ---------------------                       -------------------------
+        | 1 | Fixed (1)     |                       | Fixed (1)         | 1 |
+        ---------------------                       -------------------------
+        | 2 | Printout      |                       | Not Used (0)      | 2 |
+        -----               - -----\                -------------------------
+        | 3 | Format        |       --------------> | Print Control (1) | 3 |
+        ---------------------                       -------------------------
+        | 4 | Start Print   | --------------------> | Start Print       | 4 |
+        ---------------------                       -------------------------
+        | 5 | Sound Alarm   | --------------------> | Sound Alarm       | 5 |
+        ---------------------                       -------------------------
+        | 6 | Type of Data  |                       | Type of Data      | 6 |
+        -----               - --------------------> -                   -----
+        | 7 | to be Copied  |                       | to be Copied      | 7 |
+        ---------------------                       -------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        31                                                             MCP.GED
+        Bit Mappings                                               May 3, 1987
+
+
+                                Hitachi CB2 to IBM WCC
+
+              Hitachi CB2 (0)                         IBM WCC
+
+         Bit  Usage                                   Usage              Bit
+        -------------------------                    ------------------------
+        | 0 | Fixed (1)         |                    | *                | 0 |
+        -------------------------                    ------------------------
+        | 1 | Fixed (0)         |                    | Reset Bit (0)    | 1 |
+        -------------------------                    ------------------------
+        | 2 | Fixed (0)         |                    | Printout         | 2 |
+        -------------------------     -------------> -          (00)    -----
+        | 3 | Print Control     | ---/               | Format           | 3 |
+        -------------------------                    ------------------------
+        | 4 | Start Print       | -----------------> | Start Print      | 4 |
+        -------------------------                    ------------------------
+        | 5 | Sound Alarm       | -----------------> | Sound Alarm      | 5 |
+        -------------------------                    ------------------------
+        | 6 | Keyboard Restore  | -----------------> | Keyboard Restore | 6 |
+        -------------------------                    ------------------------
+        | 7 | Reset TF Bits     | -----------------> | Reset MDT Bits   | 7 |
+        -------------------------                    ------------------------
+
+             Hitachi CB2 (1)
+
+        -------------------------
+        | 0 | Fixed (1)         |
+        -------------------------
+        | 1 | Fixed (0)         |
+        -------------------------
+        | 2 | Fixed (0)         |
+        -------------------------
+        | 3 | Screen            |
+        -----                   -
+        | 4 | Size              |
+        -------------------------
+        | 5 | Modulas           |
+        -------------------------
+        | 6 | Fixed (0)         |
+        -------------------------
+        | 7 | Fixed (1)         |
+        -------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+        32                                                             MCP.GED
+        Bit Mappings                                               May 3, 1987
+
+
+                                IBM WCC to Hitachi CB2
+
+             IBM WCC                                 Hitachi CB2 (0)
+
+         Bit  Usage                                  Usage               Bit
+        ------------------------                    -------------------------
+        | 0 | *                |                    | Fixed (1)         | 0 |
+        ------------------------                    -------------------------
+        | 1 | Reset Bit        |                    | Fixed (0)         | 1 |
+        ------------------------                    -------------------------
+        | 2 | Printout         |                    | Fixed (0)         | 2 |
+        -----                  -                    -------------------------
+        | 3 | Format           |                    | Print Control (1) | 3 |
+        ------------------------                    -------------------------
+        | 4 | Start Print      | -----------------> | Start Print       | 4 |
+        ------------------------                    -------------------------
+        | 5 | Sound Alarm      | -----------------> | Sound Alarm       | 5 |
+        ------------------------                    -------------------------
+        | 6 | Keyboard Restore | -----------------> | Keyboard Restore  | 6 |
+        ------------------------                    -------------------------
+        | 7 | Reset MDT Bits   | -----------------> | Reset TF Bits     | 7 |
+        ------------------------                    -------------------------
+
+                                                          Hitachi CB2 (1)
+
+                                                    -------------------------
+                                                    | 0 | Fixed (1)         |
+                                                    -------------------------
+                                                    | 1 | Fixed (0)         |
+                                                    -------------------------
+                                                    | 2 | Fixed (0)         |
+                                                    -------------------------
+                                                    | 3 | Screen            |
+                                                    -----        (00)       -
+                                                    | 4 | Size              |
+                                                    -------------------------
+                                                    | 5 | Modulas (0)       |
+                                                    -------------------------
+                                                    | 6 | Fixed (0)         |
+                                                    -------------------------
+                                                    | 7 | Fixed (1)         |
+                                                    -------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+        33                                                             MCP.GED
+        Bit Mappings                                               May 3, 1987
+
+
+                                 Hitachi CB0 to IBM WCC
+
+             Hitachi CB0                              IBM WCC
+
+         Bit  Usage                                   Usage              Bit
+        -------------------------                    ------------------------
+        | 0 | Fixed (1)         |                    | *                | 0 |
+        -------------------------                    ------------------------
+        | 1 | Fixed (1)         |                    | Reset Bit (0)    | 1 |
+        -------------------------                    ------------------------
+        | 2 | Reserve           |                    | Printout         | 2 |
+        -------------------------     -------------> -          (00)    -----
+        | 3 | Print Control     | ---/               | Format           | 3 |
+        -------------------------                    ------------------------
+        | 4 | Start Print       | -----------------> | Start Print      | 4 |
+        -------------------------                    ------------------------
+        | 5 | Sound Alarm       | -----------------> | Sound Alarm      | 5 |
+        -------------------------                    ------------------------
+        | 6 | Keyboard Restore  | -----------------> | Keyboard Restore | 6 |
+        -------------------------                    ------------------------
+        | 7 | Reset TF Bit      | -----------------> | Reset MDT Bit    | 7 |
+        -------------------------                    ------------------------
+
+
+
+                                IBM WCC to Hitachi CB0
+
+             IBM WCC                                 Hitachi CB0
+
+         Bit Usage                                   Usage               Bit
+        ------------------------                    -------------------------
+        | 0 | *                |                    | Fixed (1)         | 0 |
+        ------------------------                    -------------------------
+        | 1 | Reset Bit        |                    | Fixed (1)         | 1 |
+        ------------------------                    -------------------------
+        | 2 | Printout         |                    | Reserved (0)      | 2 |
+        -----                  -                    -------------------------
+        | 3 | Format           |                    | Print Control (1) | 3 |
+        ------------------------                    -------------------------
+        | 4 | Start Print      | -----------------> | Start Print       | 4 |
+        ------------------------                    -------------------------
+        | 5 | Sound Alarm      | -----------------> | Sound Alarm       | 5 |
+        ------------------------                    -------------------------
+        | 6 | Keyboard Restore | -----------------> | Keyboard Restore  | 6 |
+        ------------------------                    -------------------------
+        | 7 | Reset MDT Bit    | -----------------> | Reset TF Bit      | 7 |
+        ------------------------                    -------------------------
+
+
+
+
+
+
+
+        34                                                             MCP.GED
+        Bit Mappings                                               May 3, 1987
+
+
+                            Hitachi DFC to IBM Field Attribute
+
+              Hitachi DFC I
+        --------------------------
+        | 7 | Intensity          |
+        -----                    - ---------\
+        | 6 |                    |          |
+        --------------------------          |
+        | 5 | Blink              |          |
+        --------------------------          |
+        | 4 | Score Line         |          |
+        --------------------------          |
+        | 3 | Color              | -------->|        IBM Field Attribute
+        --------------------------          |      --------------------------
+        | 2 | Reserved           |    /---- | ---> | MDT                | 7 |
+        --------------------------    |     |      --------------------------
+        | 1 | Fixed (1)          |    |     |      | Reserved           | 6 |
+        --------------------------    |     |      --------------------------
+        | 0 | Fixed (1)          |    |     |      | D/SPD              | 5 |
+        --------------------------    |     \----> -       (A)          -----
+                                      |            |                    | 4 |
+                                      |            --------------------------
+              Hitachi DFC II          |            | Alpha/Numeric      | 3 |
+        --------------------------    |     /----> - - - - - - - - (B) ------
+        | 7 | TF                 | -- /     |      | Protection         | 2 |
+        --------------------------          |      --------------------------
+        | 6 | Print              |          |      | *                  | 1 |
+        --------------------------          |      --------------------------
+        | 5 | Alpha              |          |      | *                  | 0 |
+        -----                    - ---------/      --------------------------
+        | 4 | Numeric            |
+        --------------------------
+        | 3 | Fixed (0)          |                     (A)
+        --------------------------                     --------------------
+        | 2 | DFC III Identify   |                     |  DFC I   | ATTR. |
+        --------------------------                     | b3 b6 b7 | b4 b5 |
+        | 1 | Fixed (1)          |                     |----------|-------|
+        --------------------------                     |  x  0  0 |  0  0 |
+        | 0 | Fixed (1)          |                     |  x  0  1 |  0  1 |
+        --------------------------                     |  x  1  0 |  1  0 |
+                                                       |  0  1  1 |  1  1 |
+                                                       |  1  1  1 |  1  0 |
+        Hitachi DFC III                                --------------------
+        --------------------------
+        | 7 | Auto               |
+        -----                    -               (B)
+        | 6 | Skip               |               ----------------------------
+        --------------------------               | DFC II| DFC III || ATTR. |
+        | 5 | Ignore             |               | b4 b5 |  b6 b7  || b2 b3 |
+        --------------------------               |-------|---------||-------|
+        | 4 | Ignore             |               |  0  0 |   x  x  ||  0  0 |
+        --------------------------               |  0  1 |   x  x  ||  0  0 |
+        | 3 | Ignore             |               |  1  0 |   0  0  ||  1  1 |
+
+        35                                                             MCP.GED
+        Bit Mappings                                               May 3, 1987
+
+
+        --------------------------               |  1  0 |   x  x  ||  1  0 |
+        | 2 | Fixed (0)          |               |  1  1 |   x  x  ||  0  1 |
+        --------------------------               ----------------------------
+        | 1 | Fixed (0)          |
+        --------------------------
+        | 0 | Fixed (1)          |
+        --------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        36                                                             MCP.GED
+        Bit Mappings                                               May 3, 1987
+
+
+                            IBM Field Attribute to Hitachi DFC
+
+                                                         Hitachi DFC I
+                                                   --------------------------
+                                                   | Intensity          | 7 |
+                                      /----------> -           (A)      -----
+                                      |            |                    | 6 |
+                                      |            --------------------------
+                                      |            | Blink (0)          | 5 |
+                                      |            --------------------------
+                                      |            | Score Line (0)     | 4 |
+                                      |            --------------------------
+              IBM Field Attribute     |            | Color (0)          | 3 |
+        --------------------------    |            --------------------------
+        | 7 | MDT                | -- | ------\    | Reserved (0)       | 2 |
+        --------------------------    |       |    --------------------------
+        | 6 | Reserved           |    |       |    | Fixed (1)          | 1 |
+        --------------------------    |       |    --------------------------
+        | 5 | D/SPD              |    |       |    | Fixed (1)          | 0 |
+        -----                    - ---/---\   |    --------------------------
+        | 4 |                    |        |   |
+        --------------------------        |   |
+        | 3 | Alpha/Numeric      |        |   |          Hitachi DFC II
+        -------------------------- ---\   |   |    --------------------------
+        | 2 | Protection         |    |   |   \--> | TF                 | 7 |
+        --------------------------    |   |        --------------------------
+        | 1 | *                  |    |   \------> | Print              | 6 |
+        --------------------------    |            --------------------------
+        | 0 | *                  |    |            | Alpha              | 5 |
+        --------------------------    \----------> -         (B)        -----
+                                                   | Numeric            | 4 |
+                                                   --------------------------
+        (A)                                        | Fixed (0)          | 3 |
+        ---------------------------                --------------------------
+        | ATTR. || DFC I | DFC II |                | DFC III Identify   | 2 |
+        | b4 b5 || b6 b7 |   b6   |                --------------------------
+        |-------||-------|--------|                | Fixed (1)          | 1 |
+        |  0  0 ||  0  0 |    0   |                --------------------------
+        |  0  1 ||  0  1 |    0   |                | Fixed (1)          | 0 |
+        |  1  0 ||  1  0 |    0   |                --------------------------
+        |  1  1 ||  1  1 |    1   |
+        ---------------------------
+                                                   Hitachi DFC III
+                                                   --------------------------
+        (B)                                        | Auto               | 7 |
+        -----------------------------              -      (B)           -----
+        | ATTR. || DFC II | DFC III |              | Skip               | 6 |
+        | b2 b3 || b4 b5  |  b6 b7  |              --------------------------
+        |-------||--------|---------|              | Ignore (0)         | 5 |
+        |  0  0 ||  0  0  |   0  1  |              --------------------------
+        |  0  1 ||  1  1  |   0  1  |              | Ignore (0)         | 4 |
+        |  1  0 ||  1  0  |   0  1  |              --------------------------
+        |  1  1 ||  1  0  |   0  0  |              | Ignore (0)         | 3 |
+
+        37                                                             MCP.GED
+        Bit Mappings                                               May 3, 1987
+
+
+        -----------------------------              --------------------------
+                                                   | Fixed (0)          | 2 |
+                                                   --------------------------
+                                                   | Fixed (0)          | 1 |
+                                                   --------------------------
+                                                   | Fixed (1)          | 0 |
+                                                   --------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        38                                                             MCP.GED
+        Bit Mappings                                               May 3, 1987
+
+
+                          Hitachi Sense/Status to IBM Sense/Status
+
+        ---------------------------------------           -----------
+        | S/S 0 BITS ARRAY | S/S 1 BITS ARRAY |           | IBM S/S |
+        | 0 1 2 3 4 5 6 7  | 0 1 2 3 4 5 6 7  |           |         |
+        |------------------|------------------|           |---------|
+        | 0 0 0 0 0 0 0 0  | 0 0 0 0 0 0 0 0  | -- (A) -> |  ----   |
+        | 1 1 X X 1 X X X  | 1 1 X X X X X X  | --------> |  C4C4   |
+        | 1 1 X X 0 1 X X  | 1 1 X X X X X X  | --------> |  C240   |
+        | 1 1 X X 0 0 1 X  | 1 1 X X X X X X  | --------> |  4050   |
+        | 1 1 1 X 0 0 0 X  | 1 1 X X X X X X  | --------> |  C240   |
+        | 1 1 0 1 0 0 0 X  | 1 1 X X X X X X  | --------> |  C250   |
+        | 1 1 0 0 0 0 0 X  | 1 1 X X X X X 1  | --------> |  C240   |
+        | 1 1 0 0 0 0 0 1  | 1 1 X X X X X 0  | --------> |  C8C1   |
+        | 1 1 0 0 0 0 0 0  | 1 1 X X X X 1 0  | --------> |  40C1   |
+        | 1 1 0 0 0 0 0 0  | 1 1 X X X 1 0 0  | --------> |  4060   |
+        | 1 1 0 0 0 0 0 0  | 1 1 X X 1 0 0 0  | --------> |  C840   |
+        | 1 1 0 0 0 0 0 0  | 1 1 X 1 0 0 0 0  | -- (B) -> |  ----   |
+        | 1 1 0 0 0 0 0 0  | 1 1 0 0 0 0 0 0  | -- (C) -> |  ----   |
+        ---------------------------------------           -----------
+
+        (A)  Circuit ZAP with "Sense/Status lost" message.
+
+        (B)  Circuit ZAP with "GAIJI Found" message.
+
+        (C)  Circuit ZAP with "Invalid Sense/Status" message.
+
+             Note:  The Hitachi S/S should be checked in the order specified.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        39                                                             MCP.GED
+        Bit Mappings                                               May 3, 1987
+
+
+                           IBM Sense/Status to Hitachi Sense/Status
+
+         IBM S/S                        HITACHI S/S
+        ----------                      ----------
+        |  4060  | -------------------> |  C0C4  |
+        ----------                      ----------
+        |  40C1  | -------------------> |  C0C2  |
+        ----------                      ----------
+        |  C4C1  | -------------------> |  C1C0  |
+        ----------                      ----------
+        |  4050  | -- Set Bit Flag A -> |  C2C0  |
+        ----------                      ----------
+        |  40D1  | -------------------> |  C1C0  |
+        ----------                      ----------
+        |  40C4  | -------------------> |  C0C2  |
+        ----------                      ----------
+        |  C4C4  | -------------------> |  C8C0  |
+        ----------                      ----------
+        |  C4C5  | -------------------> |  C0C2  |
+        ----------                      ----------
+        |  C6C4  | -------------------> |  C8C0  |
+        ----------                      ----------
+        |  C250  | -- Set Bit Flag B -> |  D0C0  |
+        ----------                      ----------
+        |  C6C8  | -------------------> |  C8C0  |
+        ----------                      ----------
+        |  C6D8  | -------------------> |  C8C0  |
+        ----------                      ----------
+        |  C840  | -------------------> |  C0C8  |
+        ----------                      ----------
+        |  4C40  | -------------------> |  C0C8  |
+        ----------                      ----------
+        |  C8C1  | -------------------> |  C1C0  |
+        ----------                      ----------
+        |  C240  | -------------------> |  C4C0  |  (A)
+        ----------                      ----------
+
+        (A)
+        If C240 is received on a printer circuit, the following
+        table is used for the conversion.  Bit flags A and B
+        are reset following this conversion.  Their initial
+        setting will be A = 1, B = 0.
+
+            ----------------
+            | FLAG || S/S  |
+            | A B  ||      |
+            |------||------|
+            | 0 0  || C0C1 |
+            | 0 1  || E0C0 |
+            | 1 X  || C4C0 |
+            | 1 X  || C4C0 |
+            ----------------
+
+
+        40                                                             MCP.GED
+        Sysgen                                                     May 3, 1987
+
+
+
+
+
+
+                                     7 -  Sysgen
+
+
+
+
+
+
+
+                                   7.1  Statements
+
+
+
+
+
+
+                    7.1.1  BEGINTYM
+
+             The BEGINTYM statement must be  the first in the Tymfile.   It is
+        used to  delineate the beginning  of the configuration  statements and
+        perform necessary initializations in addition to printing a banner.
+
+
+
+
+
+                    7.1.2  OPTION
+
+             This  is a  general  utility statement  that is  used  whenever a
+        single paramenter is to be set.  This is equivalent to an assembler GL
+        and EQ statement.  It's format is as follows:
+
+                OPTION(parameter,value)
+
+                where:
+
+                    parameter is the name of the parameter to the defined
+
+                    value is the value to which the parameter is to be set.
+                        value may be 1, ON, or YES for a true setting
+                                     2, OFF or NO for a false setting
+                                     or it may be a hex value (preceded
+                                     with a 0)
+
+             See the section on Defaults for it's specific usage.
+
+
+
+
+
+
+        41                                                             MCP.GED
+        Sysgen                                                     May 3, 1987
+
+
+                    7.1.3  MESSAGE
+
+             This statement is used to redefine the default text of the server
+        generated error messages.  It's format is as follows:
+
+                MESSAGE(name,text)
+
+                where:
+
+                    name is the name of the text string to be replaced.
+                        See below for the list and text of all the
+                        default messages.
+
+                    text is the text to be substituted for the default.
+                        Slashes must be entered as "AF and semi-colons must
+                        be entered as "BB
+
+        Name   Text
+        ----   ----
+        8X8X   /UNDEFINED GLOBAL IIX MESSAGE FOUND/
+        8085   /UNSUPPORTED IIX MESSAGE = RESYNCRONIZE/
+        C0XX   /UNDEFINED LOCAL IIX MESSAGE FOUND/
+        C0891  /UNSUPPORTED PROTOCOL ID - NON-DSP INDICATED/
+        C0892  /UNSUPPORTED DSP CALL USER DATA CONTROL BYTE/
+        C0893  /THE CALLED DNIC DOES NOT MATCH THE LOCAL NET/
+        C0894  /NOT ENOUGH DIGITS IN THE CALLED NTN - NEED 6 OR MORE/
+        C0895  /UNSUPPORTED CONVERSION COMBINATION/
+        C0896  /UNSUPPORTED DESTINATION TYPE/
+        C089A  /CRM VALUE OUT OF RANGE IN CALL USER DATA/
+        C089B  /CRM=4 NOT SUPPORTED/
+        C0931  /UNSUPPORTED TURKEY LEVEL - MUST BE LEVEL 1/
+        C0941  /RECEIVED FORWARD ABORT/
+        C0942  /BAD HITACHI START"AFSTOP KANJI SEQUENCE/
+        C0943  /UNTRANSLATABLE SENSE"AFSTATUS/
+        C0944  /NEW DSP MESSAGE STARTED BEFORE THE PREVIOUS COMPLETED/
+        C094A  /UNTRANSLATABLE AID/
+        C094B  /ERASE"AFWRITE ALTERNATE ORDER NOT TRANSLATABLE/
+        C094C  /READ MODIFIED ALL ORDER NOT TRANSLATABLE/
+        C094D  /UNDEFINED DSP MESSAGE ID/
+        C094E  /ETX FOUND, STRUCTURED FIELD NOT TERMINATED PROPERLY/
+        C094H  /GRAPHIC ESCAPE NOT TRANSLATABLE/
+        C094J  /UNDEFINED ORDER FOUND/
+        C094K  /ILLEGAL BLOCK TERMINATOR FOUND/
+        C094L  /ETX FOUND, ORDER NOT TERMINATED PROPERLY/
+        C094M  /UNDEFINED ATTRIBUTE TYPE IN SET ATTRIBUTE ORDER/
+        C094N  /UNDEFINED ATTRIBUTE TYPE IN START FIELD EXTENDED ORDER/
+        C094P  /UNDEFINED FIELD ATTRIBUTE IN START FIELD EXTENDED ORDER/
+        C094Q  /UNDEFINED ATTRIBUTE TYPE IN MODIFY FIELD ORDER/
+        C094R  /ESCAPED GRAPHIC NOT TRANSLATABLE IN REPEAT TO ADDRESS ORDER/
+        C094S  /INVALID CHARACTER IN REPEAT TO ADDRESS ORDER/
+        C094T  /TRIGGER ACTION OR CLEAR PARTITION AID NOT SUPPORTED/
+        C094U  /SYSTEM REQUEST AID NOT SUPPORTED/
+        C094Y  /INVALID ADDRESS BYTE (VALUE OUT OF RANGE)/
+
+        42                                                             MCP.GED
+        Sysgen                                                     May 3, 1987
+
+
+        C094Z  /INVALID HITACHI DFC BYTE (VALUE OUT OF RANGE)/
+        00001  /MCP HOST OUT OF PORTS/
+        00002  /CALLED BY A NON-IIX INTERFACE - UNSUPPORTED/
+        0900   /SLOT 0 WILL HONOR REQUEST AT THIS TIME...TRY LATER/
+        0901   /FORMAT ERROR/
+        0902   /BAD USER NAME/
+        0903   /BAD MUD/
+        0904   /SYSTEM UNAVAILABLE/
+        0905   /DOWN-LINE LOAD OR DIAL-OUT REQUEST FAILURE/
+        0906   /TIMEOUT/
+        0907   /ACCESS NOT PERMITTED/
+        0908   /OUT OF ORIGINATION PORTS/
+        0909   /SUP WILL NOT HONOR REQUEST AT THIS TIME...TRY LATER/
+        9D00   /RECEIVED NON-3270 FORMATTED DATA/
+        9E00   /RECEIVED DETACH/
+        9F00   /RECEIVED ZAP/
+        A400   /RECEIVED BLACK BALL/
+        A500   /RECEIVED GREY BALL/
+        AF00   /RECEIVED HANG/
+        B800   /RECEIVED SUPER-HANG/
+        XX00   /NON-PORT 0 ISIS MESSAGE RECEIVED/
+        LTMO   /TIMEOUT DURING LOGON/
+        B600   /MCP REACHED IIX HOST - NOT SUPPORTED/
+        BNTN   /BAD CALLED NTN - IT MUST BEGIN WITH A 0 OR 9/
+        SSLST  /SENSE"AFSTATUS LOST/
+        GAIJI  /GAIJI FOUND/
+        INVSS  /INVALID SENSE"AFSTATUS/
+        B400   /CONTINUE/
+        B401   /PLEASE LOG IN/
+        B402   /ERROR, TYPE USERNAME/
+        B403   /ERROR, TYPE PASSWORD/
+        B404   /USERNAME/
+        B405   /PASSWORD/
+        B406   //
+        B407   //
+        B408   /PLEASE SEE YOUR REPRESENTATIVE/
+        B409   /BAD MUD/
+        B40A   /CIRCUITS BUSY/
+        B40B   /HOST NOT AVAILABLE THROUGH NET/
+        B40C   /HOST OUT OF PORTS/
+        B40D   /HOST DOWN/
+        B40E   /HOST SHUT/
+        B40F   /TRY AGAIN IN 2 MINUTES/
+        B410   /ACCESS NOT PERMITTED/
+        B411   /NO HOST SPECIFIED/
+        B412   /BAD HOST NUMBER/
+        B413   /MUD ERROR/
+        B414   //
+        B415   //
+        B416   //
+        B417   //
+        B418   //
+        B419   //
+
+        43                                                             MCP.GED
+        Sysgen                                                     May 3, 1987
+
+
+        B41A   //
+        B41B   //
+        B41C   //
+        B41D   //
+        B41E   //
+        B41F   //
+        B500   /ISIS UNABLE OT COMPLETE REQUEST/
+        B501   /FORMAT ERROR/
+        B502   /BAD USER NAME/
+        B503   /BAD MUD/
+        B504   /SYSTEM UNAVAILABLE/
+        B505   /DOWN-LINE LOAD OR DIAL-OUT FAILURE/
+        B506   /TIMEOUT/
+        B507   /ACCESS NOT PERMITTED/
+        B508   /OUT OF ORIGINATION PORTS/
+        B509   /TRY AGAIN LATER/
+        B50A   /BAD REQUESTING-HOST NUMBER/
+        B50B   /REQUESTING-HOST NOT UP ON REQUESTING NODE/
+        B50C   //
+        B50D   //
+        B50E   //
+        B50F   //
+
+
+
+
+
+
+                    7.1.4  HOST
+
+             This statement  is used to  define a host  number and to  begin a
+        host  group.   A  host  group consists  of  two  statements,  HOST and
+        SESSIONS.  There must be at least one pair of these statements  in the
+        Tymfile.  There may be multiple groups that will allow security  to be
+        provided between groups of users.   The format of this statement  is a
+        follows:
+
+                HOST(host number)
+
+                where:
+
+                    host number is the Tymnet technology host number assigned
+                        by the network administrator.
+
+
+
+
+
+
+
+
+
+
+
+        44                                                             MCP.GED
+        Sysgen                                                     May 3, 1987
+
+
+                    7.1.5  SESSIONS
+
+             This is  a required  statement and  must immediately  follow each
+        HOST statement in the Tymfile.  It defines the number  of simultaneous
+        sessions the specified host is  to allow.  That is, it  represents the
+        number  of users  that can  use  the MCP  host specified  in  the HOST
+        statement.  Each additional  session specified causes extra  memory to
+        be required, so this parameter sould be set to a reasonably low value.
+        It's format is as follows:
+
+                SESSIONS(number of simultaneous sessions for this host)
+
+                where:
+
+                    the number of simultaneous sessions defines he maximum
+                        number of users that can access this host at once.
+                        The maximum number of sessions that can be specified
+                        is approximately 24.
+
+
+
+
+
+                    7.1.6  ENDTYM
+
+             This statment  delineates the end  of the Tymfile  statements and
+        performs enables consistancy checking of the specified statements.
+
+
+
+
+
+
+                                    7.2  Defaults
+
+
+             There  are a  number  of parameters  in this  interface  that are
+        defaulted to general and reasonable values.  These paramenters  may be
+        redefined if  a need is  found via the  OPTION statement  (see above).
+        The following is a brief list of these paramenters, their defaults and
+        their range of redefinable values.
+
+                CRSTOP - Default = OFF
+                    ON causes the interface to halt on a software or hardware
+                        detected fault.  This is invaluable for debugging
+                        from a dump.
+                    OFF causes the crash cause and location to be recorded
+                        in the crash table (CRAT) and then a warm restart
+                        of the slot is preformed.
+
+                DEBUG - Default = OFF
+                    ON enables consistancy checking code within the
+                        interface that will cause it to crash on an internal
+
+        45                                                             MCP.GED
+        Sysgen                                                     May 3, 1987
+
+
+                        fault.
+                    OFF causes many internal consistancy checks to be
+                        ignored.
+
+                BBF.Dx - Default = OFF (x = 1 to 4)
+                    ON enables consistancy checks within the buffering
+                        package.  This is recommended for BETATEST code.
+                    OFF disables the buffering consistancy checks
+
+                LNDNIC - Default = 0000 (no DNIC for the local net)
+                    It may specify any valid DNIC assigned by the CCITT.
+                    It is used as a check against the Called Address in
+                    in a Call Request packet.  MCP must reside in the
+                    same net as the destination host.  If no DNIC is
+                    specified in the Called Address (address begins with
+                    0 or 9) the host is assumed to reside in the local
+                    net.  An LNDNIC value of 0000 indicates that the
+                    local net has no DNIC (it is not operated by an
+                    Recognized Public Operating Agency (RPOA)) and a
+                    DNIC should not be supplied in the Called Address.
+                    Example: OPTION(LNDNIC,3106).  This specifies that
+                    TYMNET is the local net.
+
+                KANJI - Default = ON
+                    ON enables translation between IBM KANJI and JEF
+                        KANJI.
+                    OFF disables this translation and saves about 30k of
+                        slot memory.  It should only be set to this
+                        value if IBM equipment is not to be supported.
+
+                HERRCH - Default = 04040x
+                    This parameter is used to replace a KANJI character
+                        that fails the standard translation to JEF KANJI.
+                        It may be set to the ordinal for any valid
+                        Hitachi JEF KANJI character.
+
+                IERRCH - Default = 04040x
+                    This parameter is used to replace a KANJI character
+                        that fails the standard translation to IBM KANJI.
+                        It may be set to the ordinal for any valid
+                        IBM KANJI character.
+
+                FERRCH - Default = 0A1A1x
+                    This parameter is used to replace a KANJI character
+                        that fails the standard translation to JEF KANJI.
+                        It may be set to the ordinal for any valid
+                        Fujitsu JEF KANJI character.
+
+                IHRAKC - Default = 60x (EBCDIC dash)
+                    This parameter is used to replace a Kanji character
+                        in a Repeat to Address order for conversions
+                        from IBM to Hitachi, if the character to be
+                        repeated is not a space or asterisk.  It may be
+
+        46                                                             MCP.GED
+        Sysgen                                                     May 3, 1987
+
+
+                        set to any valid EBCDIC graphic character.
+
+                HIRAKC - Default = IERRCH (See above)
+                    This parameter is used to replace an EBCDIC character
+                        in a Repeat to Address order for conversions
+                        from Hitachi to IBM, if the character to be
+                        repeated is not a space or asterisk.  It may be
+                        set to any valid Hitachi JEF Kanji character.
+
+                FHRAKC - Default = 60x (EBCDIC dash)
+                    This parameter is used to replace a Kanji character
+                        in a Repeat to Address order for conversions
+                        from Fujitsu to Hitachi, if the character to be
+                        repeated is not a space or asterisk.  It may be
+                        set to any valid EBCDIC graphic character.
+
+                HFRAKC - Default = FERRCH (See above)
+                    This parameter is used to replace an EBCDIC character
+                        in a Repeat to Address order for conversions
+                        from Hitachi to Fujitsu, if the character to be
+                        repeated is not a space or asterisk.  It may be
+                        set to any valid Hitachi JEF Kanji character.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        47                                                             MCP.GED
+        Reliability Availability and Serviceability                May 3, 1987
+
+
+
+
+
+
+                   8 -  Reliability Availability and Serviceability
+
+
+             High  reliability  is gained  through  the use  of  proven TYMNET
+        technology to  support the  operation of MCP,  e.g., ISIS,  Node Code,
+        etc.
+
+             Availability  is  enhanced  by  automatic   circuit  re-direction
+        provided  by  the  Tymnet  Network  Supervisor  based   upon  username
+        validation.
+
+             Serviceability  will  be  high  due to  the  use  of  an extended
+        debugger  incorporated into  the interface  to assist  in  analysis of
+        problems.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        48                                                             MCP.GED
+        Documentation                                              May 3, 1987
+
+
+
+
+
+
+                                  9 -  Documentation
+
+
+             The following  documents will be  produced during  development of
+        this interface:
+
+        o External Reference Specification (ERS) describes the detail
+           specifications and system generation parameters for MCP.
+
+        o General Internal Design (GID) document describes the major
+           internal data structures and functional modules in
+           block diagram.
+
+        o Alphatest Plan describes the criteria which must be met before
+           the interface can be released to Betatest.  Defines the
+           test scenarios and lists equipment needed to perform 
+           those tests.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        49                                                             MCP.GED
+    z1C¯
