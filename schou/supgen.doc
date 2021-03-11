@@ -1,0 +1,3634 @@
+                                                                  July 22, 1985
+
+
+
+
+
+
+
+
+           **** *   * ****   ***  ***** *   *       ****   ***   ****
+          *     *   * *   * *     *     **  *       *   * *   * *    
+           ***  *   * ****  * **  ****  * * *       *   * *   * *    
+              * *   * *     *   * *     *  **  ***  *   * *   * *    
+          ****   ***  *      ***  ***** *   *  ***  ****   ***   ****
+
+              SUPERVISOR GENERATION USING STANDARD TYMFILE MACROS
+
+
+
+
+                                    TYMNET
+                        NETWORK TECHNOLOGY DEVELOPMENT
+                                 July 22, 1985
+
+
+
+
+
+
+
+
+
+
+     ====================================================================
+     |       THIS DOCUMENT IS THE SOLE PROPERTY AND CONFIDENTIAL        |
+     |       INFORMATION  OF  TYMNET,   AND MAY NOT BE COPIED IN        |
+     |       WHOLE OR IN PART OR DISCLOSED  TO  ANY  THIRD PARTY        |
+     |       WITHOUT THE PRIOR WRITTEN CONSENT OF TYMNET.               |
+     ====================================================================
+
+
+
+   Copyright 1985 by Tymnet -- The McDonnell Douglas Network Systems Company
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               SUPERVISOR GENERATION                 SUPGEN.DOC
+                                                                  July 22, 1985
+
+
+
+
+
+
+
+                                   TABLE OF CONTENTS
+
+        Section                                                            Page
+
+
+
+        1.   INTRODUCTION                                                     1
+          1.1   PURPOSE                                                       1
+          1.2   RADIX                                                         2
+          1.3   MACRO NOTATION                                                3
+          1.4   TERMS DEFINED                                                 3
+
+
+        2.   THE SYSGEN PROCESS                                               6
+          2.1   BEGINNING THE PARAMETER FILE                                  6
+             2.1.1    TYMSTR MACRO                                            7
+
+          2.2   CHOOSE YOUR OPTIONS                                           7
+             2.2.1    OPTION MACRO                                            7
+                2.2.1.1     ISIS/NOISIS  ISIS or Stand-alone Supervisor       8
+                2.2.1.2     MSC      Enable MSC-1400 disk controller support  8
+                2.2.1.3     NORATE       Disable login rate reports           8
+                2.2.1.4     NOSPAS       No user circuit Sup. passthroughs    8
+                2.2.1.5     OPCIPH       Entering emergency ciphers           9
+                2.2.1.6     PERF/NOPERF  Performance reporting                9
+                2.2.1.7     TIGOUG       Enable highest T-I throughput class  9
+
+             2.2.2    NOTAKE MACRO      Exclude node(s) from network          9
+
+          2.3   DEFINE SYSTEM CONSTANTS                                      10
+             2.3.1    DEFTIM MACRO      Define system time limits            11
+                2.3.1.1     THE SLEEP TIMER                                  13
+
+             2.3.2    DEFHST MACRO      Define valid host numbers            14
+             2.3.3    MBHOST MACRO   Extra entries for Multi-based hosts     15
+             2.3.4    DEFNOD MACRO      Define valid node numbers            16
+                2.3.4.1     NODE ADDRESSING                                  18
+
+             2.3.5    NDASIZ MACRO      Node descriptor area size            18
+             2.3.6    BUFLET MACRO      Allocate list work space             19
+
+          2.4   DISK AND STORAGE MACROS                                      21
+             2.4.1    DISK STATUS       Critical/Non-critical                21
+             2.4.2    DEFMUD MACRO      Master user directory                22
+             2.4.3    DEFACT MACRO      Define accounting file               23
+             2.4.4    DEFERR MACRO      Define error log file                24
+             2.4.5    DEFSAV MACRO      Define crash save area               25
+             2.4.6    HISTRY MACRO      Set size of history file             28
+
+                               SUPERVISOR GENERATION                 SUPGEN.DOC
+                                                                  July 22, 1985
+
+
+          2.5   LOGIN AND TARGETING RELATED MACROS                           29
+             2.5.1    CACHE MACRO       Define MUD Cache storage             29
+             2.5.2    FENCE MACRO       Class and Group table                30
+             2.5.3    TARGET MACRO      Define maximum multi-targets         32
+
+          2.6   ASSEMBLED IN ACCESS                                          32
+             2.6.1    ADC MACRO         Emergency usernames                  33
+             2.6.2    PRBNAM MACRO      Permanent Probe usernames            34
+
+          2.7   START SECOND SECTION                                         35
+             2.7.1    TYMSUP MACRO                                           35
+             2.7.2    DEFNSP MACRO      Supervisor port allocation           35
+             2.7.3    SUPDAT MACRO      Supervisor data storage              37
+             2.7.4    SUPCOM MACRO      SUP/NODE communication interface     38
+             2.7.5    SUPCOD MACRO      Supervisor code area                 39
+             2.7.6    PRBPRM MACRO      Define PROBE slave parameters        40
+             2.7.7    ERRPRM MACRO      Define ERRLOG slave parameters       43
+             2.7.8    ACCPRM MACRO      Define ACCOUNT slave parameters      43
+             2.7.9    SYSPRM MACRO      Define SYSMSG1 slave parameters      44
+             2.7.10   UN2PRM MACRO      Define UN2 slave parameters          45
+             2.7.11   UTLPRM MACRO      Define UTILITY slot parameters       47
+
+          2.8   ENDING THE PARAMETER FILE                                    47
+             2.8.1    TYMEND MACRO      Completing the SUPGEN process        47
+
+
+        3.   SAMPLE SUPERVISOR PARAMETER FILES                               48
+          3.1   PARAMETER FILE CONVERSION EXAMPLE                            48
+             3.1.1    OLD FORMAT SUPERVISOR PARAMETER FILE                   48
+             3.1.2    NEW FORMAT SUPERVISOR PARAMETER FILE                   51
+
+          3.2   A SIMPLIFIED SUP PARAMETER FILE                              54
+             3.2.1    SIMPLE PARAMETER FILE EXAMPLE                          54
+
+          3.3   A SAMPLE SUP ASSEMBLY                                        55
+
+
+                                      INDEX
+                                      =====                                  60
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               SUPERVISOR GENERATION                 SUPGEN.DOC
+        INTRODUCTION                                              July 22, 1985
+
+
+
+
+
+
+                                   1 -  INTRODUCTION
+
+
+
+
+
+
+
+                                     1.1  PURPOSE
+
+
+             Version  41  of  the  Supervisor  introduces  a  new,   all  macro
+        Supervisor  PARAMETER  FILE.    This  new  Supervisor   PARAMETER  FILE
+        simplifies  the  configuration   of  a  Supervisor  system.    It  also
+        introduces  substantial  error  checking  capabilities   at  Supervisor
+        assembly time.
+
+             The purpose of this document is threefold:
+
+                1)  Document the Supervisor Macro PARAMETER FILE
+                2)  Clarify the meaning of Supervisor PARAMETER FILE Parameters
+                3)  Demonstrate how to create a Supervisor PARAMETER FILE
+
+             The all macro Supervisor PARAMETER FILE was introduced to decrease
+        the  complexity  and the  potential  for error  during  the  process of
+        configuring a Supervisor.  The new macro PARAMETER FILE is  intended to
+        be  simpler  and more  consistent  than the  PARAMETER  FILE  system it
+        replaces.    There   are   more   error   checks,   additional  default
+        possibilities and substantial parameter cross checking.  In  many cases
+        parameters  can be  defaulted to  assembly time  computation.   In some
+        cases, new parameters are required to permit a more meaningful assembly
+        time evaluation of the configuration.  For instance, an estimate of the
+        actual number of nodes and links in the network are required so  that a
+        default  assignment  or   evaluation  of  the  node   descriptor  space
+        allocation is possible.
+
+             The  objective  of  this  presentation  is  to  explain   the  new
+        Supervisor macro PARAMETER FILE as well as the meaning and implications
+        of the configuration parameters.  The document is not intended to  be a
+        comprehensive  treatment  of  the  Supervisor  system  from  either  an
+        external  or internal  point of  view.  Rather,  the aim  is  to assist
+        comprehension at the  level of system  generation - especially  for the
+        ISIS Supervisor system.
+
+             The Supervisor  PARAMETER FILE  is employed in  the assembly  of a
+        number of different  code modules that  make up the  Supervisor system.
+        It  is necessary  to use  the same  Supervisor PARAMETER  FILE  since a
+        number of these code modules use common parameters.  In an ISIS system,
+
+
+        1                      SUPERVISOR GENERATION                 SUPGEN.DOC
+        INTRODUCTION                                              July 22, 1985
+
+
+        the Supervisor PARAMETER FILE is used in the assembly of the node code,
+        the  ISIS  kernel,  the  Supervisor  and  the  Supervisor  SLAVES.  The
+        Supervisor system  is unique  under ISIS in  that a  number of  the SUP
+        processes communicate with each other via shared  memory.  Furthermore,
+        the SUP and  SLAVE systems must  have a common  understanding regarding
+        the structure of critical disk files.  This is the reason that a common
+        PARAMETER FILE is used and  it is also why the Supervisor  assembly and
+        load  process  must   be  regarded  as  involving   intimately  related
+        subsystems.   A number  of  configuration problems  have  resulted from
+        changes made to only a few of the components.
+
+             Where it is possible for  a parameter to increase over  time, such
+        as  the  number  of nodes  in  the  network, we  suggest  that  an over
+        statement which  includes short  term growth be  used as  the parameter
+        value.   This  will minimize  the  need to  regenerate  and  reload the
+        supervisor.   This  is   especially  important  for  disk   and  memory
+        allocations.  A shoe-horned system with minimum growth  capability will
+        quickly reach capacity.
+
+             This document explains the SUPGEN macros essentially in  the order
+        one would  expect them in  a Supervisor PARAMETER  FILE.  Thus  one can
+        view  this  document  as   providing  a  procedure  and  a   means  for
+        understanding the Supervisor PARAMETER FILE.
+
+             The  person experienced  in  PARAMETER FILE  generation  using the
+        SUPGEN macros will find the alphabetical index a ready reference to the
+        macro formats and parameter  definitions.  At the end of  this document
+        is a sample old style  SUP PARAMETER FILE along with  the corresponding
+        new PARAMETER FILE.
+
+
+
+
+
+
+                                      1.2  RADIX
+
+
+             This  document  and  the  Supgen  macros  use  decimal,  octal and
+        hexidecimal numbers.  We have  attempted to use hexadecimal  in dealing
+        with  internal addresses  and storages  quanties.  Octal  is  used when
+        referring to node  numbers.  Decimal is used  in all other  cases.  The
+        default radix  is indicated except  in cases where  there should  be no
+        ambiguity.
+
+             If desired, one can assert a desired radix by utilizing  the radix
+        notation as part of the parameter.  For instance, suppose you desire to
+        use decimal  integers for a  hex field.  Then  preceed your  value with
+        "$a" in order to assert base 10.
+
+
+
+
+
+        2                      SUPERVISOR GENERATION                 SUPGEN.DOC
+        INTRODUCTION                                              July 22, 1985
+
+
+                                  1.3  MACRO NOTATION
+
+
+             Many macros define supervisor parameters that do not  require user
+        input.  These macros are  required even though there are  no parameters
+        or all user parameters are optional.
+
+             Whenever macro  parameters may be  optional, these  parameters are
+        enclosed in square brackets ("[" and "]"):
+
+                MACRO(r1,r2 [,o1,o2] )
+
+                        where r is a required value and
+                              o is an optional value
+
+
+
+
+
+
+                                  1.4  TERMS DEFINED
+
+
+             The following definition of terms may prove useful in reading this
+        document:
+
+                SUPERVISOR
+
+                        The network Supervisor is the heart of a TYMNET
+                    network.  It processes logins, collects accounting and
+                    error information from the various nodes, and monitors
+                    the state of all nodes in the network.
+
+                        The Supervisor proper is a code module which is run
+                    under the kernel operating system.  The Supervisor
+                    interfaces with the node code through a shared memory
+                    communication area.  The Supervisor also communicates
+                    with Slave code via shared memory.  Thus the kernel is
+                    not involved with these kinds of inter-process data
+                    movement.
+
+                        The Supervisor code is but one of several code
+                    modules which make up the Supervisor System.
+
+
+
+
+
+
+
+
+
+
+
+        3                      SUPERVISOR GENERATION                 SUPGEN.DOC
+        INTRODUCTION                                              July 22, 1985
+
+
+
+                SUPERVISOR SYSTEM
+
+                        The Supervisor code module is one component of the
+                    entire Supervisor System.  The System also includes
+                    Slave code modules (probe,errlog,account,sysmsg1,un2,
+                    utility), a node code assembled to interact with the 
+                    Supervisor and a kernel which also is assembled to support
+                    the Supervisor.  The functioning of all these components
+                    can affect the functioning of the entire system.  In an
+                    ISIS enviroment it is possible to have non-Supervisor
+                    tasks running in the same machine.  The load imposed on
+                    the machine by these other tasks can also affect the 
+                    performance of the Supervisor System.
+
+
+                SLAVE
+
+                        There are several software programs which execute
+                    on the same machine as the Supervisor and are related
+                    to Supervisor functions.  These programs are called
+                    Supervisor Slaves.  These programs provide interfaces
+                    for network operators and database maintence programs.
+                    The Slaves are distinguished from the Supervisor in that
+                    they are activated by a circuit termination.
+
+                MEMORY PAGE
+
+                        Decimal 256 (100 hex) bytes of virtual storage
+                    begining on a 256 byte boundry.  The page is the 
+                    smallest unit of memory addressable by the memory 
+                    access control and is used as the basic unit for 
+                    sizing memory requirements. The low order byte of a 
+                    memory address is not used for access control.
+
+
+                MEMORY SEGMENT
+
+                        The virtual memory address space is divided into
+                    64 K byte segments (10000 hex) depending on the high
+                    order address bits (dropping the lower order 2 bytes).
+                    There are 16 available segments for a virtual address
+                    range of 1 megabyte. The memory access control functions
+                    apply to whole segments. The actual memory allocation
+                    for a segment is given in pages. To implement separate
+                    access control functions in the virtual address space,
+                    one must use different segments for different control
+                    functions.
+
+
+
+
+
+
+        4                      SUPERVISOR GENERATION                 SUPGEN.DOC
+        INTRODUCTION                                              July 22, 1985
+
+
+
+
+                DISK SECTOR
+
+                        Decimal 256 (100 hex) bytes of disk storage begining
+                    on a 256 byte boundry.  A sector is the basic disk unit
+                    that can be accessed and is used for sizing disk files.
+                    The MSC-1400 controller can only access data from the
+                    beginning of a sector boundry and can transfer an even
+                    specified number of bytes (not a multiple of sectors) to
+                    memory. Never less than a whole sector can be read into 
+                    the controller. A disk write which is not a multiple of 
+                    sectors will result in garbage data filling out the
+                    remainder of the last sector.
+
+
+                MSC
+
+                        It is necessary to use the SHARE disk SVC format
+                    with the MSC-1400 disk drive controller. This is
+                    declareh the MSC parameter which forces the use
+                    of the SHARE disk SVC format. Since the ISIS SHARE disk
+                    SVC format can also be used with the DC-10 controller
+                    the MSC option is forced under ISIS. The MSC parameter
+                    does not imply that the MSC-1400 controller is required.
+
+
+                DSC PARAMETER FILE
+
+                        The DSC PARAMETER FILE is a description of tape
+                    and disk file allocations which is assembled with ISIS. The
+                    file defines the physical size of disk files and associates
+                    these files with the various ISIS job slots by use
+                    of extended logical unit numbers.  Several Supgen macros
+                    require the logical size (in sectors) of various disk files
+                    Care must be taken that the sizes given are consistent
+                    with the DSC PARAMETER FILE.  The DSC parameter file is NOT
+                    cross checked with the SUP SUPGEN file at assembly time.
+                    For a discussion on the parameter file please refer to 
+                    sample ISIS disk and tape tymfile under ISIS-II reference
+                    manual.
+
+                        The ISIS DSC parameter file allocates files
+                    using CYLINDER units.  The number of sectors per
+                    cylinder depends on the disk drive.  For the 300 Mb disks,
+                    there are 1007 decimal sectors per cylinder.  For the
+                    10 megabyte disks, there are 48 sectors per cylinder and
+                    for the 160 Mb disks, there are 530 decimal sectors per
+                    cylinder.
+
+
+
+
+
+        5                      SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+
+
+
+
+                                2 -  THE SYSGEN PROCESS
+
+
+             The process  of defining unique  system characteristics  is called
+        the Sysgen Process.  A set of macros, some required and  some optional,
+        has  been  provided to  standardize  and simplify  this  procedure.  By
+        selecting  macro parameters  the user  directs the  definition  of many
+        needed system flags.  The  macros are designed to provide  a consistent
+        definition  and  therefore  if errors  or  conflicts  are  detected the
+        assembly process will be halted at an appropriate point.  Assembly time
+        comments  will often  identify the  erroneous parameters  and  may even
+        suggest what parameter values to use.  The intention is to prevent run-
+        time anomalies by detecting inconsistency at assembly time.
+
+
+
+
+
+
+                           2.1  BEGINNING THE PARAMETER FILE
+
+
+             The  PARAMETER  FILE  is divided  into  two  sections.   The first
+        section contains  parameters needed only  by the Supervisor  or slaves.
+        The second  section contains  parameters which  are related  to machine
+        resource allocation, such  as pages (256 bytes  each) of memory  or the
+        number of Supervisor control  ports.  This is why the  SUPGEN PARAMETER
+        FILE is used for the ISIS  kernel and the node code assemblies.   It is
+        also the case that these parameters are double checked for  validity at
+        the time the Supervisor and Slaves are assembled.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        6                      SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+                        FIRST SECTION MACROS
+
+
+
+
+
+                    2.1.1  TYMSTR MACRO
+
+             The TYMSTR macro is required and must be the first  macro defined.
+        This macro defines the Supervisor number associated with this PARAMETER
+        FILE, where the Supervisor number must range from 1 to 7.
+
+             The TYMSTR  macro also invokes  an initalization process  which is
+        required before other macros are issued.
+
+                TYMSTR(SUP)     Required
+
+                        SUP = Supervisor number 1-7
+                              Mandatory.
+
+
+
+
+
+
+                               2.2  CHOOSE YOUR OPTIONS
+
+
+
+
+
+
+                    2.2.1  OPTION MACRO
+
+             The OPTION macro is used to specify up to eight system options for
+        each invocation.   The options  are defined by  keywords which  must be
+        selected from those allowed.   Unless otherwise stated, if  the keyword
+        does not appear in an OPTION macro, the related option will be off.
+
+                OPTION(n1 [,n2,n3,n4,n5,n6,n7,n8] )
+
+                        n = Any valid keyword
+
+
+
+
+
+
+
+
+
+
+
+
+        7                      SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+
+                example:
+
+                        OPTION(ISIS,MSC,NORATE)         Mandatory
+
+                        this means:
+                        1)      the Supervisor will run under ISIS.
+                        2)      MSC disk operations are supported.
+                        3)      once a minute login rate reporting
+                                is not done.
+                        4)      other keyword options are to be given
+                                default values.
+
+
+
+        2.2.1.1  ISIS/NOISIS  ISIS or Stand-alone Supervisor
+
+             ISIS/NOISIS are mutually  exclusive and specify if  the Supervisor
+        is to run on an ISIS or a stand alone machine. The default is ISIS.
+
+
+
+        2.2.1.2  MSC      Enable MSC-1400 disk controller support
+
+             The MSC option specifies that the Supervisor will use share format
+        disk SVC's.  The ISIS system requires the use of this macro  to support
+        the  MSC-1400 disk  drive  controllor and  the Ampex  10  megabyte disk
+        controller.  The  default for ISIS  is to always  use the  share format
+        SVC's. Therefore if ISIS is specified this option defaults to MSC.
+
+
+
+        2.2.1.3  NORATE       Disable login rate reports
+
+             The Supervisor  maintains a count  of logins processed  along with
+        several relavent statistics. This information is reported to  the error
+        log once every minute. By selecting the NORATE option the  reports will
+        not  be written  to  the log.  The  last minute  information  is always
+        available by using the 'LSTMIN'  command from Probe even though  no log
+        entry  is made  to the  disk. Please  refer to  PERF/NOPERF  option for
+        defaults.
+
+
+
+        2.2.1.4  NOSPAS       No user circuit Sup. passthroughs
+
+             The NOSPAS option  is used to  prevent user circuits  from passing
+        through a Supervisor's base node.  This is useful in  lowering resource
+        contention in the Supervisor machine.  The option is generally not used
+        in small private network configurations. If NOSPAS option is  used then
+        the  active  Supervisor  disables  user  passthroughs  through  all the
+        Supervisor nodes at the time of takeover.
+
+
+        8                      SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+        2.2.1.5  OPCIPH       Entering emergency ciphers
+
+             The OPCIPH option permits  a privileged PROBE user,such as  the DP
+        manager,  to  enter  an emergency  username  host  access  CIPHER.  The
+        emergency CIPHER allows logins without a MUD entry as long as one knows
+        the proper password and is familiar with the emergency login procedure.
+        Please refer to section 2.6.
+
+
+
+        2.2.1.6  PERF/NOPERF  Performance reporting
+
+             The Supervisor monitors its own operating condition by maintaining
+        several  performance measures  such as  number of  executive  loops per
+        second and  number of times  input characters were  found. If  the PERF
+        option is selected  this information will be  written to the  error log
+        once every  minute. If  the NOPERF  option is  selected no  report will
+        appear in the log.  Because the report is made at the same time  as the
+        login rate report, the default for this option is taken from the NORATE
+        option (i.e. no rate = true, then default of perf/noperf = noperf). The
+        last minute  performance statistics are  always available by  using the
+        PERDAT command in Probe, even though no log entry is made to the disk.
+
+
+
+        2.2.1.7  TIGOUG       Enable highest T-I throughput class
+
+             TIGOUG  permits high  speed (^D  level) throughput  with  Tymnet I
+        nodes.   Throughput  is  one method  of  controlling  character traffic
+        through the network.  There are four levels of throughput: ^A,^B,^C,^D.
+        Without this option T-I circuits are limited to ^A through ^C levels of
+        throughput. TIGOUG also affects the default speeds set by the login TID
+        character.  Note that  T-II nodes  are always  permitted ^A  through ^D
+        levels of throughput.
+
+
+
+
+
+                    2.2.2  NOTAKE MACRO      Exclude node(s) from network
+
+             The NOTAKE  macro is optional  and is used  to define from  one to
+        eight  nodes  in the  system  that are  not  to be  taken  over  by the
+        Supervisor.  These node  numbers are NOT to  be used for nodes  in this
+        network, but  are intended to  be node numbers  of FOREIGN  nodes whose
+        physical  location makes  it possible  to accidently  interrconnect two
+        TYMNET technology networks.  Should such an accidental inter-connection
+        of  two  TYMNET  networks take  place,  both  networks  will experience
+        serious  and  often  confusing  problems,  including  apparent  loss of
+        service although the Supervisor appears to be active.
+
+             The  NOTAKE   option  provides   some  protection   to  accidental
+
+
+        9                      SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+        interconnection,  but  it  is  most  effective  if  BOTH  networks  use
+        appropriate  notake  definitions.   This option  does  not  prevent the
+        cross-connection  of  two  networks,  but  it  can  help  alleviate the
+        problem.
+
+             ONE  SHOULD  NOT  RELY  ON  THE  NOTAKE  MACRO  ALONE  to  provide
+        protection against the accidental inter-connection of  networks.  Other
+        measures are  necesary.  These  measures include  a)  The  avoidance of
+        XLINKS  in  succeptable  nodes (such  as  gateway  nodes),  b)  Correct
+        labeling of nodes and link resources to indicate the  network involved,
+        c)  The physical separation  and the isolation of nodes  from different
+        networks  to  make  obvious  that more  than  one  network  resource is
+        involved, and d)  proper training and maintenance followup.
+
+                NOTAKE(n1 [,n2,n3,n4,n5,n6,n7,n8] )     Optional
+
+                        n = Any valid octal node number
+                                No check is performed
+                                to determine if the node
+                                is really a part of any
+                                network.
+
+                example:
+
+                        NOTAKE(1212,1213)
+
+                        this means:
+                        1)      the Supervisor being defined
+                                is not to control nodes 1212
+                                and 1213.
+
+
+
+
+
+
+                             2.3  DEFINE SYSTEM CONSTANTS
+
+
+             There are several System  constants which must be defined  at this
+        time.  They include: time values, number of hosts, number of nodes, and
+        the size of storage areas.
+
+
+
+
+
+
+
+
+
+
+
+
+        10                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+                    2.3.1  DEFTIM MACRO      Define system time limits
+
+             The DEFTIM  macro is  required to  define system  time parameters.
+        These  parameters  regulate  SLEEP, i.e.  the  time  which  will elapse
+        between the failure of one Supervisor and network takeover  by another.
+        They also specify the valid length of time a login should take, and the
+        amount of extra time the Supervisor should sleep if major system faults
+        are  detected (refer  to following  page).  This  macro also  tells the
+        system  if the  SUPER CLOCK  PC board  is installed.   If the  Clock is
+        installed and this  option is not selected  the clock will  be ignored.
+        If the Clock is not installed  and the option is selected the  the time
+        will remain undefined and an error will be issued to the error log.
+
+             Note  that  all  the  parameters  have  defaults.   The  macro  is
+        required, but it can be issued without parameters.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        11                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+
+                DEFTIM([sf,ns,as,ll,sc])        Mandatory
+
+                        sleep time = (ns) + (sf*sup#)  secs.
+
+                  In case of a crash, restart, failure to initialize
+                        or undefined system time
+
+                        sleep time = (ns) + (sf*sup#) + (as)  secs.
+
+                        sf = Supervisor factor
+                                Required to establish staggered Supervisor
+                                wakeup times. This sets the time spread
+                                between supervisor sleep times.
+                                -Decimal seconds.                       
+                                -Optional.
+                                -Default = 40 secs.
+                                If specified then sf must exceed 14 secs.
+                                sf = 15 secs is low and could result in
+                                unwarranted SUP fights.  See The Sleep Timer.
+                        ns = Normal sleep time
+                                Establishes the minimum time the SUP must
+                                sleep prior to considering entry into wakeup.
+                                Normal Sleep time is included in total sleep
+                                time for all Supervisors,regardless of priority
+                                -Decimal seconds.
+                                -Optional.
+                                -Default = 40 secs.
+                                If specified then ns must exceed 14 secs.
+                        as = Additional sleep time
+                                This time is added to the standard
+                                sleep in the event of SUP crashes,
+                                thus preventing the same
+                                SUP from crashing,restarting and
+                                re-controlling the network repetatively.
+                                -Decimal seconds.
+                                -Optional.
+                                -Default = 90 secs.
+                        ll = Login limit
+                                Used to set the timeout value by which
+                                time a login must be completed.
+                                -Decimal seconds.
+                                -Optional.
+                                -Default = 90 secs.
+                                If specified then ll must exceed 59 secs.
+                        sc = Used to define the presence/absence of the
+                                superclock hardware.
+                                sc = CLOCK or NOCLOCK.
+                                -Optional.
+                                -Default is CLOCK.
+
+
+
+
+        12                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+
+                example:
+
+                        DEFTIM(60,120,120,144,CLOCK)
+
+                        this means:
+                                assuming this is Supervisor #3,
+                        1)      the Supervisor will wait 120 seconds (ns)
+                                plus 180 seconds (sf * sup#) before
+                                awakening because no pill has arrived.
+                        2)      if an error has occured an additional
+                                120 seconds are added.
+                        3)      users are allowed 144d seconds to
+                                complete logins.
+                        4)      the SUPER CLOCK is present.
+                                
+
+
+
+
+        2.3.1.1  THE SLEEP TIMER
+
+             When  a  Supervisor  is  actively  controlling  the   network,  it
+        periodically  transmits to  the  other Supervisors  a  "sleeping pill".
+        Sleeping Supervisors check once a second to see if a sleeping  pill has
+        arrived in their input buffer.   If a pill is detected,  the Supervisor
+        resets  its  sleep  timer.   If no  sleeping  pill  arrives  within the
+        prescribed time limit the Supervisor wakes up and takes control  of the
+        network.
+
+             To prevent all sleeping  Supervisors from waking at the  same time
+        each uses a  different "sleep time" which  is computed from  the DEFTIM
+        macro parameters as follows:
+
+                  The  Supervisor factor  (sf) is  multiplied  by the
+             Supervisor number as defined by the TYMSTR  macro.  This
+             yields a Supervisor  specific priority which  when added
+             to  the normal  sleep  time (ns)  gives  the approximate
+             number  of seconds  this  Supervisor will  go  without a
+             sleeping pill before awakening.
+
+                  The Probe operator command "DF" may be used  to add
+             time,  in seconds,  to the  Supervisor sleep  time.  For
+             example,  if DF  was set  to 300  (5 minutes),  then the
+             actual  sleep  time in  the  above example  would  be 10
+             minutes.  "DF" stands for "Drousiness Factor".
+
+             The difference between  sleep factors should allow  one Supervisor
+        to awake, take over, and  begin sending sleeping pills before  a second
+        Supervisor attempts to wake up.  For this reason, one must  be cautious
+        about  using  a small  sleep  factor.  For  instance,  given  poor link
+        quality  in  combination  with circuit  rebuild,  it  is  possible that
+
+
+        13                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+        sleeping pills  could be  delayed by  30 seconds  or more.   While this
+        would  be  highly  unlikely,  if  this  type  of  delay  did  occur and
+        persisted, the  resulting SUP fights  could be quite  disruptive.  This
+        possibility should be considered for small, sparcely connected networks
+        with  highly distributed  Supervisors which  communicate to  each other
+        over  links  (such as  international  links) which  may  be  subject to
+        unexplained disruptions.
+
+
+
+
+
+                    2.3.2  DEFHST MACRO      Define valid host numbers
+
+             The DEFHST macro is used to specify the maximum valid  host number
+        in the  network.  Note  that internal  resources will  be set  aside to
+        support as many hosts as the maximum valid host number.   Therefore, it
+        is wasteful to set this number very high (to accomodate a large variety
+        of host numbers) if only a small number of hosts will actually exist in
+        the  network.   An attempt  should  be made  to  allocate  network host
+        numbers in an  orderly fashion starting from  host 1.  Note  that hosts
+        121 through 127 are reserved  for Supervisors.  Host 128 (80 hex.  - an
+        escape character)  is not  used.  Hosts  197 and  199 are  special host
+        numbers used  for auxiliary circuit  dial out request  and must  not be
+        assigned.
+
+             A  disk area  can  be provided  by  the Supervisor  for  host down
+        messages.  These messages, called 1DOWN messages are displayed (if they
+        exist) to a user in login  mode if their requested host is down,  or if
+        it is  shut and  the user does  not have  shut override.   This display
+        requires a disk read, and can result in up to 250 data characters being
+        sent to the user in login mode.  A message might be: "HOST 176 DOWN FOR
+        MAINTAINENCE".  Host down messages are loaded from an external facility
+        onto the Supervisor disk via the SYSMSG slave.
+
+             The 'hds'  parameter specifies the  maximum host number  for which
+        host down messages are maintained.  Disk space (1 sector per host) must
+        be provided.  The  'hds' parameter defaults to  zero. It can be  set to
+        the keyword "ALL" to indicate  that all valid hosts could have  a 1DOWN
+        message.  Note that 'hds' should be less than or equal to 'hmx'.
+
+             NOTE - If host  messages are used, then  the area on disk  (new or
+        reconfigured) corresponding to the host messages must be  initalized to
+        zeroes.  Otherwise, the  Supervisor may send  whatever it finds  on the
+        disk as 1DOWN messages.
+
+             The Supervisor  currently uses  SUP logical unit  (LU) 6  for host
+        messages. The SHUT LINES table  is also saved at the beginning  of this
+        LU,  followed by  the  IRC rotation  table, if  used.   Following these
+        tables is the host down table.  One must be sure to allocate sufficient
+        space to LU 6 to handle all three requirements if used.  One  must also
+        be sure to correctly set the start offsets of the desired files if they
+
+
+        14                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+        are used. The  offset specifies to the  Supervisor the location  of the
+        file with respect to the beginning of logical unit 6.
+
+                                        SUP LU 6
+                             A  ------------------------
+                             |  |   SHUT LINE TABLE    |  Mandatory
+                            hdo |----------------------|
+                             |  |  IRC ROTATION TABLE  |  Optional
+                             V  |----------------------|
+                                |   HOST DOWN TABLE    |  Optional
+                                ------------------------
+
+
+                DEFHST(hmx[,hds,hdo])   Mandatory
+                
+                        hmx = Maximum valid network host number.
+                                -Mandatory.
+                                -Decimal.
+                        hds = Max host number to use disk messages.
+                                -Decimal or keyword "ALL"(hds=hmx).
+                                -Optional.
+                                -Default = 0 (turns off disk access).
+                                If specified hds <= hmx.
+                        hdo = The sector offset into LU 6 for
+                                the 1DOWN message file.
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = 3.
+                                Ignored if hds = 0.
+
+                example:
+
+                        DEFHST(2048)
+
+                        this means:
+                        1)      Maximum valid host number is 2048.
+                        2)      The 1DOWN facility is not active.
+
+
+
+
+
+                    2.3.3  MBHOST MACRO   Extra entries for Multi-based hosts
+
+             The MBHOST macro is optional.   It is possible to assign  a single
+        host number to more than  one base node.  This is called  a MULTI-BASED
+        HOST.  By default the description of each host includes one  base node.
+        This macro defines the number of extra host table entries  allocated to
+        handle all multiple based  hosts.  The default value  (without issuance
+        of this macro) is 32 spare entries to cover multiple based hosts.  This
+        is normally sufficient,  so this macro  can frequently be  omitted.  If
+        one has a  network in which  there are up  to 60 multiple  based hosts,
+
+
+        15                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+        each on 3 bases,  one  would then need 120 spare entries  (one instance
+        of the 3 is handled by  the normal table allocation).  To be  safe, one
+        should increase the number of spare entries and then install  them with
+        the MBHOST macro.   THE SUP WILL  CRASH IF IT  RUNS OUT OF  ENTRIES FOR
+        MULTIPLE BASED HOSTS!
+
+             Multiple based hosts  may be used  as gateways to  other networks.
+        They allow the use of the colon option to specify a multi-target during
+        login. Multiple based hosts are also used for load  balancing. Multiple
+        nodes reporting the  same host number can  be used as  multiple targets
+        where all the nodes are  treated as potential targets and the  best one
+        (according to the supervisor's criteria of best) will be utilized.
+
+                MBHOST([n])     Optional
+
+                        n = Maximum number of extra entries needed
+                                to support all multi-based hosts.
+                                -Decimal.
+                                -Optional.
+                                -Default = 32.
+                                If macro is omitted then n=32.
+
+
+                example:
+
+                        MBHOST(64)
+
+                        this means:
+                        1)      For ALL multi-based hosts in
+                                the network, a total of 64 decimal
+                                extra base descriptions will
+                                be allocated.
+
+
+
+
+
+                    2.3.4  DEFNOD MACRO      Define valid node numbers
+
+             The DEFNOD macro is required  to define the address ranges  of the
+        three types of nodes in the system.  (Tymnet-I Bases, Tymnet-I Remotes,
+        and Tymnet-II Nodes).  The expected count of each type is also defined.
+        The  expected count  is useful  in optimizing  the storage  required to
+        describe each node.
+
+
+
+
+
+
+
+
+
+
+        16                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+
+                DEFNOD(typ1 [,typ2,typ3] )      Mandatory
+
+                        typ = Node type definition in the 
+                              form (ntyp,adr,num)
+
+                                ntyp = Type of node.
+                                        keywords 'BASE', 'REMOTE', or 'TII'.
+                                adr = Max node number for given node type.
+                                        -Octal.
+                                        -Optional.
+                                        -Default = highest valid address.
+                                        See the paragraph "NODE ADDRESSING".
+                                num = Actual or expected node count.
+                                        -Decimal.
+                                        -Optional.
+                                        -Default = maximum count defined by
+                                                   the given address range.
+
+        NOTE -  The num parameter is used by the NODSIZ macro to calculate
+                the minimum and recommended node descriptor area size.
+                We recommend giving a value for num in each typ field which
+                is equal to the current number plus any expected short
+                term growth to prevent an under estimate of storage required.
+
+                example:
+
+                        DEFNOD((BASE,,50),(REMOTE,,20),(TII,2535,100))
+
+                        this means:
+                        1)      TI BASE nodes may be numbered in 
+                                the range 1-777octal.
+                        2)      there may be 50d BASE nodes in the network.
+                        3)      TI REMOTE nodes may be numbered in
+                                the range 1000-1777octal.
+                        4)      there may be 20d REMOTE nodes.
+                        5)      TII nodes may be numbered up to
+                                2535 octal.
+                        6)      there may be 100d TII nodes
+
+        NOTE -  If address range is specified and number of nodes is defaulted
+                then the fixed memory (refer to NOTE under NODE ADDRESSING) is
+                calculated from the address range. But if the address range is
+                defaulted, then the fixed memory is calculated using the
+                maximum address range  which increases the memory size. For
+                instance in the above example, even though there are 100 TII
+                nodes, the fixed memory is calculated for 2535-2000+1=536 octal
+                or 350 decimal nodes.
+
+
+
+
+
+
+        17                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+        2.3.4.1  NODE ADDRESSING
+
+             The adr parameter  of each typ field  in the DEFNOD  macro defines
+        the maximum octal address for the node type being defined.  This  is an
+        optional parameter, but if given, it must fall within an  allowed range
+        as defined  by type.   The default value  in each  case is  the maximum
+        allowed address.
+
+                TYPE            MIN     MAX
+
+                BASE               1      777   octal
+                REMOTE          1000     1777
+                TII             2000    17777
+
+        NOTE -  There are a number of tables containing one entry per valid
+                node number.  The larger the valid node number for each node
+                type, the greater will be the fixed data space required by
+                the Supervisor.  At this time, the fixed memory allocation is
+                about 50d bytes per node or nearly 1K of memory for 20 nodes.
+
+
+
+
+
+                    2.3.5  NDASIZ MACRO      Node descriptor area size
+
+             The NDASIZ macro is  required to define the node  descriptor area.
+        It  must  follow  the  DEFNOD macro.   This  storage  area  is  used to
+        dynamically maintain a description of all active nodes.  There  must be
+        enough space  to describe all  nodes.  We recommend  an area  twice the
+        required size in order  to optimize the free memory  compaction process
+        and to allow for short  term growth without the need to  reassemble and
+        reload the Supervisor.
+
+             THE SUPERVISOR WILL CRASH IF INSUFFICIENT AREA IS ALLOCATED!
+
+             The NDASIZ  macro will calculate  a minimum and  recommended value
+        based on the DEFNOD macro.  To accurately estimate storage requirements
+        we need  to know the  total number  of system links  and the  number of
+        groups associated with TI nodes.  If TI is on both ends of a  link, the
+        groups must be counted twice.
+
+             Given  this  information  the  required  storage  is  estimated as
+        follows:
+
+
+
+
+
+
+
+
+
+
+        18                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+
+                    minimum = (28*N)+(72*B)+(6*L)+(32*G)+512
+                recommended = ((28*N)+(72*B)+(6*L)+(32*G))*2
+
+                where
+                        L = number of links
+                        G = number of groups (0 if no TI nodes)
+                        B = number of TI BASES (as given in DEFNOD)
+                        N = total nodes (as defined by DEFNOD)
+
+
+        NOTE -  The recommended size will not be less than 2,048d for an
+                all TII network, nor less than 4,096d for a network with
+                both TII and TI nodes. A sample generation will provide
+                the size of the node descriptor area.
+
+                NDASIZ(lnks,grps,[size])        Mandatory
+
+                        lnks = Total number of system links.
+                                -Mandatory.
+                                -Decimal > 0.
+                        grps = Total number of groups associated
+                                with TI.  If no TI nodes this must
+                                be zero.  If TI is on both ends of
+                                a link the group is counted twice.
+                                -Mandatory.
+                                -Decimal >= 0.
+                        size = Size of node descriptor area in bytes.
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = Recommended area size obtained
+                                from system generation.
+
+
+
+
+
+                    2.3.6  BUFLET MACRO      Allocate list work space
+
+             The BUFLET macro is required to define the total number of  8 byte
+        bufferlets  available  for dynamic  list  processing.   An insufficient
+        number can cause the  Supervisor to run out  of free list space  and to
+        crash.   The minimum  allowed value  is decimal  1024.  There  are many
+        dynamic factors that influence the number of bufferlets required at any
+        one instant.  These include number of logins, average time  required to
+        process  logins, amount  of network  back pressure,  and the  number of
+        Tymnet I nodes.  Because of the variability of these and  other factors
+        the  exact number  of required  bufferlets cannot  be  calculated.  For
+        reference, 6144d bufferlets  has been found  adequate for a  network of
+        over 1000d nodes processing 6 logins per second.
+
+             The  parameter in  the macro  may be  omitted, in  which  case the
+        default of 1024 bufferlets is used.
+
+        19                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+
+                BUFLET([num])   Mandatory
+
+                        num = Total number of bufferlets to allocate.
+                                -Decimal.
+                                -Optional.
+                                -Default = 1024.
+                                If specified then num must equal or 
+                                exceed 1024.
+
+                example:
+
+                        BUFLET(2048)
+
+                        this means:
+                        1)      Allocate  2048d eight byte
+                                bufferlets for dynamic list
+                                processing.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        20                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+                             2.4  DISK AND STORAGE MACROS
+
+
+             This  section introduces  those macros  primarily  associated with
+        disk files and their sizes.   It is extremely important that  the sizes
+        allocated to the  files in the ISIS  DSC file are sufficient  to handle
+        the sizes declared in the SUP PARAMETER FILE.  The ISIS definitions may
+        provide more space than is actually used by the SUP, and  this provides
+        room for future growth.  However if the space is too small, disk errors
+        will occur - and the Supervisor may not run properly.
+
+             Another  section  which  relates to  login  and  targeting options
+        includes  some  additional  macros that  can  affect  disk allocations.
+        These macros are defined in  a separate section because of  their close
+        association with the choice of login related features.
+
+
+
+
+
+                    2.4.1  DISK STATUS       Critical/Non-critical
+
+             The following  macros define disk  files used  by  the Supervisor.
+        Different installations  view errors  on the  files in  different ways.
+        Accounting, for example, may not  be used by one group yet  is critical
+        to another.  If the Supervisor detects an error it must be  prepared to
+        take appropriate action.  Some of the disk file definition macros which
+        follow use the 'stat' parameter to define this action as follows:
+
+                stat = -1 = NON-CRITICAL FILE
+                  Report errors and continue.  Do not monitor status when
+                  sleeping.
+
+                stat = 0 = CRITICAL FILE
+                  Report errors and monitor file availability every
+                  10 seconds.  Also monitor status when sleeping and
+                  require special awake procedure.
+
+                stat = 1 = CRITICAL FILE          
+                  If error occurs while active return to the sleep state.
+                  A special awake procedure may awake the Supervisor but if
+                  the file is still unavailable it will not remain awake
+                  long.  WHILE THIS OPTION IS AVAILABLE IT'S USE IS NOT
+                  RECOMMENDED DUE TO POTENTIAL SENSITIVITY TO TRANSIENT
+                  DISK ERRORS.
+
+
+
+
+
+
+
+
+
+        21                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+                    2.4.2  DEFMUD MACRO      Master user directory
+
+             The  DEFMUD macro  is required  to define  characteristics  of the
+        Master User Directory.  This file maintains a catalog of all valid user
+        names.  Because the MUD is accessed by other system programs,  the user
+        should be  aware of  any installation standards  pertaining to  the MUD
+        before completing this macro.
+
+             In most cases, the standard number of MUD blocks and block size is
+        defaulted.
+
+                DEFMUD(stat[,bksz,fmt,nbks])    Mandatory
+
+                        stat = Mandatory. See DISK STATUS.
+
+                        bksz = The number of 256 byte sectors in
+                                a MUD block. bksz = 2,4 or 8.
+                                -Optional.
+                                -Default = 8.
+
+                        fmt = mud format switch. Unused.
+
+                        nbks = number of normal MUD blocks.
+                                -Decimal <= 65520.
+                                -Optional.
+                                -Default = 2039.
+                                If a non-standard MUD size is used, be sure
+                                this is set correctly within the validations
+                                program!.
+
+                NOTE: See discussion on DSC FILE.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        22                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+
+                example:
+
+                        DEFMUD(0,4)
+
+                        this means:
+                        1)      MUD is considered a critical file,
+                                but don't automatically go to sleep
+                                if it has disk errors.  See DISK STATUS.
+                        2)      define standard MUD file with four
+                                sectors per block.
+
+                NOTE - A four sector block appears optimal for networks
+                        with less than 10,000d user names.  The MUD
+                        typically consists of 2039d blocks, and a hash
+                        algorithm is used to assign a username to a block.
+                        User profiles are often less than 64d bytes.
+
+                        The total sector allocation requirement for the
+                        MUD must include additional "overflow" blocks.
+                        A trial assembly will display the total requirement.
+                        A trial assembly should also display the number of
+                        of cylinders to be allocated in the DSC file.
+                                
+
+
+
+
+
+                    2.4.3  DEFACT MACRO      Define accounting file
+
+             The  DEFACT macro  is  required to  define the  number  of sectors
+        allocated to  the accounting file  on disk. The  last four  sectors are
+        used for file control purposes. The accounting file is blocked by units
+        of four sectors ("blocks"), so the value provided in the macro  will be
+        rounded down to a multiple of four.  For reasons of interface protocol,
+        the maximum size of the accounting file is limited.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        23                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+
+                DEFACT(stat,size)       Mandatory
+
+                        stat = Mandatory. See DISK STATUS
+
+                        size = The total number of 256 byte
+                                sectors defined for this file.
+                                -Hexadecimal <= 3FFFF.
+                                -Mandatory.
+                                Size will be rounded down to a
+                                multiple of four.
+
+                NOTE:   A trial assembly displays the number of sectors to
+                        be allocated to the accounting file. A trial
+                        assembly should also display number of cylinders to
+                        be allocated in the DSC file.
+                        See discussion on DSC PARAMETER FILE.
+
+                example:
+
+                        DEFACT(0,800)
+
+                        this means:
+                        1)      Status 0 file (see DISK STATUS).
+                        2)      The total size of the accounting
+                                file is 2,048d sectors.
+
+
+
+
+
+                    2.4.4  DEFERR MACRO      Define error log file
+
+             The  DEFERR macro  is  required to  define the  number  of sectors
+        allocated to the error log file  on disk. Note that the error  log file
+        is blocked in units of 4  sectors, and the last 4 sectors are  used for
+        file  control  purposes.  Since  the  file  is blocked  in  units  of 4
+        sectors, the  value provided  in the macro  will be  rounded down  to a
+        multiple of four.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        24                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+
+                DEFERR(stat,size)       Mandatory
+
+                        stat = Mandatory. See DISK STATUS
+
+                        size =  The total number of 256 byte
+                                sectors defined for this file.
+                                -Hexadecimal > 0.
+                                -Mandatory.
+                                Size will be rounded down to a
+                                multiple of four.
+
+                NOTE:   A trial assembly displays the number of sectors to
+                        be allocated to this file. A trial assembly should 
+                        also display the number of cylinders to be allocated
+                        in the DSC file. See discussion on DSC FILE.
+                        The rate at which the error log file is written 
+                        depends on the number of nodes and the activity in 
+                        the network. For example, in the public network with
+                        2000 nodes and an error log file of size 1000 hex 
+                        sectors, it is observed during peak operation that
+                        approximately five hours elapse before the file is
+                        overwritten.
+                        
+
+                example:
+
+                        DEFERR(0,600)
+
+                        this means:
+                        1)      define the error log file to use
+                                1,536d sectors.
+
+
+
+
+
+                    2.4.5  DEFSAV MACRO      Define crash save area
+
+             The DEFSAV macro  is required to setup  the SUP crash  save areas.
+        The Supervisor crash/recovery procedure  involves making a copy  of the
+        data area of the Supervisor to a disk crash save area.   The Supervisor
+        then  initializes.   This  procedure  makes  it  possible  for  support
+        personnel to analyze a crash,  even after a machine has  been reloaded.
+        It also  makes it possible  for a  Supervisor to take  a crash,  yet be
+        available to run the network.   The crash save areas are  maintained on
+        Supervisor LU 2  (see figure on the  following page), beyond  space set
+        aside for the Supervisor code.  This may provide space for up  to three
+        copies of the Supervisor data area.  It is recommended that at  least 2
+        data save areas be allocated.
+
+             To permit a check that the space allocated to LU 2 for the  SUP is
+
+
+        25                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+        sufficient  to handle  the  crash saves,  the DEFSAV  macro  includes a
+        parameter which defines the total allocation for this unit, in sectors.
+
+             Note  that  all the  parameters  can be  defaulted.   However, the
+        defaults may not be sufficient  for your code.  It is  recommended that
+        you do not default the size parameter so that a realistic check on file
+        size requirements is  possible.  You may want  to default when  you are
+        involved  in initial  configuration checks  - since  the  assembly will
+        provide data even though it may abort due to errors.
+
+             Note also the importance of allocating sufficient space on  SUP LU
+        2 to accomodate  future growth.  Both the  SUP code area and  data area
+        requirements can grow.  If the space is insufficient for future growth,
+        one will need to lay out the disk again at some future time.   The data
+        areas are the biggest variable since their size can vary from less than
+        100 to 700 sectors  in an ISIS enviroment.  Code save  requirements are
+        from 100 to  140 sectors for  one copy of code  (all units in  hex).  A
+        liberal allocation would be 1600=400+3*600 (hex) sectors.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        26                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+
+                DEFSAV([off,cnt,size])          Mandatory
+
+                        off = Sector offset to the first data
+                                crash save area on LU 2.
+                                -Hexadecimal >= 200 hex.
+                                -Optional.
+                                -Default = 200 hex sectors.
+                                The offset should be sufficient to
+                                backup two saves of the SUP code.
+                                Suggested:  300 hex sectors.
+
+                        cnt = Number of data save areas. 1 <= cnt <= 3.
+                                -Optional.
+                                -Default = 2 save areas.
+                                Recommended minimum is 2.  
+                                A value of 2 permits the first
+                                and last crash to be saved.
+
+                        size = Size of the SUP LU 2 area in sectors.
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = 600 sectors.
+                                The default should only be
+                                used to obtain initial configuration
+                                information.  The default will likely
+                                understate your requirements.  See
+                                discussion above.
+
+                NOTE:   Size can be calculated as follows:
+
+                        size >= off + (cnt * size of data area)
+                        off  >= 2 * (SUP code area)
+
+                                        SUP LU 2
+                                A  ------------------
+                                |  |  CODE AREA 1   |
+                               off |----------------|
+                                |  |  CODE AREA 2   |
+                                v  |----------------|
+                                   |  SAVE AREA 1   |
+                                   |----------------|
+                                   |  SAVE AREA 2   |
+                                   |----------------|
+                                   |  SAVE AREA 3   |
+                                   ------------------
+
+                NOTE: Macro is required: although the parameters are optional.
+                      See the discussion on DSC FILE.
+
+
+
+
+
+        27                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+
+                example:
+
+                        DEFSAV(,,0C00)
+
+
+                        this means:
+                        1)      Use the default offset of 200 hex.
+                        2)      Use the default of 2 crash saves.
+                        3)      A total of 0C00 hex sectors has
+                                been allocated to SUP LU 2.
+
+
+
+
+
+                    2.4.6  HISTRY MACRO      Set size of history file
+
+             The HISTRY macro is optionally used to define the total  number of
+        sectors in the Supervisor history file on SUP LU 7.
+
+             The  Supervisor maintains  a  circular disk  buffer  of Supervisor
+        traffic to assist in debugging.   The HISTRY macro defines the  size of
+        the disk area used  for this purpose.  The Supervisor  currently blocks
+        the history file in units of 12 (decimal) sectors, therefore  the given
+        size will be rounded down to a multiple of 12 decimal.
+
+             It is not necessary to use  a history file, but it is  helpful for
+        debugging.  One may leave the HISTRY macro out to eliminate the history
+        file or one may set the size of the file to 0 for the same effect.
+
+                HISTRY([num])           Optional
+
+                        num = Number of sectors in the history file.
+                                -Hexadecimal. num = 0 or num >= 0C.
+                                -Optional.
+                                -Default = 0 (no history file).
+                                Will be rounded to a multiple of 0C.
+
+
+
+                example:
+
+                        HISTRY(29CC)
+
+                        this means:
+                        1)      the Supervisor will maintain
+                                29C4 (largest multiple of 0C)
+                                sectors of traffic information
+                                to be used for debugging.
+
+
+
+
+        28                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+                        2.5  LOGIN AND TARGETING RELATED MACROS
+
+
+             This  section introduces  macros  whose primary  functions  are to
+        define parameters related to login processing and user  path selection.
+        These  macros will  impact all  forms of  resource  requirements.  Disk
+        allocation requirements will be affected by some of the  macros because
+        disk  support  files  are  involved.   Supervisor  code  and  data area
+        allocations can be affected by  the inclusion of options or  the sizing
+        of those options.
+
+             As with the disk macros introduced in the previous section,  it is
+        essential  that  disk  file  attributes  defined  in  this  section  be
+        consistent with the  ISIS DSC file.   If  the ISIS DSC  allocations are
+        insufficient to handle  the files defined  in this section,  either the
+        SUP will crash or it will not perform properly.
+
+
+
+
+
+                    2.5.1  CACHE MACRO       Define MUD Cache storage
+
+             The CACHE macro is optional  and is used to define a  memory cache
+        area for most recently accessed user profiles. Our experience is that a
+        small subset  of the entire  user population can  make the  majority of
+        login requests.  If this is  the case, then one can greatly  reduce the
+        number of  disk accesses required  to process logins  by having  a most
+        recently used  user profile  cache.  The  reduction in  disk operations
+        speeds  up login  processing by  reducing queuing  delays, and  it also
+        decreases the DMA load on the machine.  In some cases, it can mean that
+        logins can be processed faster than the maximum disk access rate.
+
+             It should be emphasized that the benefit obtained by using  a user
+        profile cache depends  on statistics related  to username usage  in the
+        network.   Cache hit  rates up  to 70%  have been  obtained in  a large
+        network  with over  60,000  user names  (this involved  over  750 cache
+        elements).  Note, however, that cache  hit rate will be limited  by the
+        invalid username rate - every invalid username will force a  disk read.
+        Invalid username rates can be as high as 10%.
+
+             The  CACHE macro  requires  two parameters.   The  first parameter
+        indicates  the number  of cache  list elements  (of 64  bytes  each) to
+        allocate.  Typically  one and  sometimes two  elements are  required to
+        store a user profile.  Profiles of 128 or more bytes are not maintained
+        in the cache.
+
+             Entries in the cache are accessed by computing a hashed index into
+        a cache segment followed by a sequential search.  The  second parameter
+        defines the number  of cache segments.   Because of the  technique used
+        the number must be a power of two.  This parameter may be defaulted, in
+        which  case the  number of  segments will  be chosen  to yield  about 8
+        entries per segment.
+
+        29                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+
+                CACHE([num,nsg])        Optional
+
+                        num = Number of 64 byte cache
+                                list elements to allocate.
+                                -Decimal.
+                                -Optional.
+                                -Default = 64 elements.
+                        nsg = Number of cache segments, a power of 2.
+                                -Decimal.
+                                -Optional.
+                                -Default = 2**N  such that
+                                2**N < (num*3/16)-1 < 2**(N+1)
+                                This equation ensures that for num>=32
+                                if nsg is defaulted, num/nsg is
+                                nearly equal to 8. But if num is a
+                                power of 2 then, num/nsg is exactly
+                                equal to 8.
+
+                example:
+
+                        CACHE(128,16)
+
+                        this means:
+                        1)      A maximum of 128d user profiles
+                                will be kept in storage.  These
+                                will be the most recently used
+                                valid user names.
+                        2)      The profile cache will consist
+                                of 16d segments.
+
+
+
+
+
+                    2.5.2  FENCE MACRO       Class and Group table
+
+             The FENCE macro is used to define the size characteristics  of the
+        Class  table and  the Group  table.  The  Class table  is  an auxillary
+        access control table which is used to define "classes"  of originations
+        (by class number).  The Group table similarly permits the definition of
+        "groups" of destinations by group number.  Both of these tables  can be
+        used to enhance the access control function and to decrease MUD storage
+        requirements.  The Class and Group tables, if used, must be  defined to
+        the network validation program as having the same basic structure.
+
+             The FENCE macro is optional.   If used, it must follow  the DEFMUD
+        macro.   This macro  is used  to enable  the use  of login  classes and
+        groups, and to reserve storage for control tables on SUP LU 3.  Classes
+        and groups are not  required to provide access controls  because access
+        controls can be defined within the access profile section of the user's
+        MUD profile.  However, the class and group tables can extend  the range
+
+
+        30                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+        and complexity of the access  controls and can also reduce  MUD storage
+        requirements since  it permits  the references of  sets of  entities by
+        number.  Classes and Groups provide a convenient "short hand" method of
+        controlling and changing  origination and destination  access controls.
+        See NETVAL user's quide.
+
+             NOTE - If a class and  group table is used, it must  be externally
+        supported by the network validations program.  This table is  loaded to
+        the Supervisor's disk file via the SYSMSG slave.
+
+             Note  also  that  the   class  table  and  the  group   table  are
+        INDEPENDENTLY allocated space in units of sectors.
+
+                FENCE([mcls,clsz,mgrp,grsz])    Optional
+
+                        mcls = Maximum valid class number.
+                                -Decimal.
+                                -Optional.
+                                -Default = 70.
+                        clsz = Number of sectors reserved for
+                                the entire class table.
+                                -Decimal >= (mcls*8)+4 bytes.
+                                -Optional.
+                                -Default = 6 sectors.
+                        mgrp = Maximum valid group number.
+                                -Decimal.
+                                -Optional.
+                                -Default = 25.
+                        grsz = Number of sectors reserved for
+                                the entire group table.
+                                -Decimal >= (mgrp*8)+4 bytes.
+                                -Optional.
+                                -Default = 6 sectors.
+
+                example:
+
+                        FENCE(40,,25,3)
+
+                        this means:
+                        1)      There are a maximum of 40d classes
+                                of source nodes.
+                        2)      The default storage size of 6 sectors is
+                                used. (40d*8+4=324 or 2 sectors required)
+                        3)      There are a maximum of 25d destination
+                                groups.
+                        4)      The storage area for group tables is
+                                3 sectors or 768d bytes.
+
+
+
+
+
+
+
+        31                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+                    2.5.3  TARGET MACRO      Define maximum multi-targets
+
+             The TARGET macro is optional.   If used it must follow  the DEFMUD
+        macro.  The  node originating a  circuit is referred  to as  the source
+        node and the node terminating a circuit is the destination  node.  When
+        a  circuit is  requested  it may  be  desirable to  connect  a specific
+        destination  or to  choose  the "closest"  destination from  a  list of
+        alternatives.   These tentative  destination  nodes are  refered  to as
+        targets.  The default system will choose an optimum destination from up
+        to  six  (6) simultaneous  targets.   This is  referred  to  as "Multi-
+        targeting".  The TARGET  macro allows the  user to increase  the Multi-
+        targeting limit.
+
+             Note  that  multi-targeting  is  a  consequence  of   either  home
+        targeting (where the targeting alternatives are defaulted by  the login
+        to those defined in the user's access profile in the MUD)  or targeting
+        with multiple-based hosts.  Multiple-based hosts are hosts  which occur
+        on more  than one  node.  The  collection of  nodes for  a host  can be
+        multi-targeted although default targeting was not requested.
+
+                TARGET(n)       Optional
+
+                        n = Maximum targets for multi-targeting.
+                                Decimal number >= 6.
+                                -Optional.
+                                -Default = 6.  If specified
+                                the number must be an integer of
+                                the form 2+4i (e.g. 6,10,14...).
+                                The number given will be rounded
+                                up to such a number.
+
+                example:
+
+                        TARGET(19)
+
+                        this means:
+                        1)      the maximum multi-targeting level
+                                will be decimal 22.
+
+
+
+
+
+
+                               2.6  ASSEMBLED IN ACCESS
+
+
+             Two  kinds  of  access  privileges  can  be  assembled   into  the
+        Supervisor.   The  desirability of  enabling  either or  both  of these
+        privileges depends on the Adminstration's judgement of desirability.
+
+             One access privilege  permits one to issue  a login without  a MUD
+
+
+        32                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+        entry.  This privilege is assembled  into the code with the  ADC macro.
+        The ADC  macro need not  be used, but  it can be  very useful  in cases
+        where a system has lost  disk capabilities and there are no  methods to
+        login to the active SUP.  If one elects not to use the ADC macro, it is
+        still  possible to  use  this special  login capability  if  the OPCIPH
+        option has been invoked.   The OPCIPH option allows a  privileged Probe
+        user to setup one ADC type entry (the actual parameters to use would be
+        conveyed at the time such an entry was required).  The  disadvantage of
+        reliance  on  the  OPCIPH  option  is  that  one  must  already  have a
+        privileged Probe circuit available.
+
+             One can also have  Probe usernames assembled into the  Probe code.
+        This capability does not carry the power of the ADC capability.   It is
+        often useful to have a  small number of assembled in Probe  users.  For
+        instance, one cannot  build the Probe user  list on disk  easily unless
+        one  has at  least one  assembled in  Probe user  name.  One  could, if
+        desired, build  the disk list  and then reload  Probe to  eliminate the
+        assembled in  usernames.  Note that  if the disk  is not  available and
+        there are no assembled in  Probe names, then one cannot login  to Probe
+        even from the  front panel!  Again,  the ultimate desirability  of this
+        capability depends on the Administration's requirements.
+
+             We  see with  the assembled  in access  capability a  balancing of
+        security and emergency access and maintenance needs.  It is recommended
+        that a few assembled in names be used for Probe.  The ADC name usage is
+        meant to be restricted to specially designated personnel, and  usage is
+        meant to apply strictly to specialized maintenance needs.
+
+
+
+
+
+                    2.6.1  ADC MACRO         Emergency usernames
+
+             The ADC macro is used to define to the system any  individual that
+        can login without a MUD  entry.  This person or group of  persons would
+        need access  only in  an emergency situation.   The macro  only defines
+        CIPHER information so that the responsible person must know  the proper
+        password and must be familiar with the emergency login  procedure. This
+        macro should be  inserted in the SUP  PARAMETER FILE before  the SYSMSG
+        parameters. This macro is optional.
+
+                ADC(n1,n2,n3)           Optional
+
+                n1,n2,n3 all relate to the same cipher.
+                Explicit recommendations are given in specific
+                Supervisor release documentation.
+
+
+
+
+
+
+
+        33                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+                    2.6.2  PRBNAM MACRO      Permanent Probe usernames
+
+             The PRBNAM macro is used  to define one or more PROBE  users whose
+        name(s), password  cipher(s), and status(es)  are assembled  into PROBE
+        rather than being stored on disk.  This insures permanent  PROBE access
+        at initalization time and in the event of disk problems.  At  least one
+        user should have unlimited status.
+
+                PRBNAM(usr1 [,usr2...,usr16])           recommended
+
+                        usr = Probe user definition of
+                              the form (nam,cip,sta)
+
+                                nam = User's Probe name (8 chars. max.).
+                                cip = Password cipher. This can
+                                        be calculated by Probe.
+                                        See PSWD command in
+                                        in PROBE users guide.
+                                sta = User status specified as an octal
+                                        number. Valid statuses are
+                                        01,02,04,10,20. A combined
+                                        status is specified by an addition
+                                        of two or more of the above 
+                                        statuses. For example, status $831
+                                        includes 01,10 and 20 statuses.
+                                        Note that no other combination will
+                                        result in status 31.
+
+                NOTE - This macro may be continued on multiple lines
+                inserting <cr><lf> between any user field and the
+                following comma.
+
+                example:
+
+                        PRBNAM((NAM1,9F15BEF2,$837)
+                        ,(NAM2,7B6C49E3,$837))
+
+                        this means:
+                        1)      There will be two user names
+                                assembled into the PROBE.
+                        2)      These will be NAM1 and NAM2.
+                        3)      Both have supplied a password
+                                cipher.
+                        4)      Both users have unlimited PROBE
+                                authority.
+
+
+
+
+
+
+
+
+
+        34                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+                               2.7  START SECOND SECTION
+
+
+             The second section of  the Supervisor PARAMETER FILE  is indicated
+        by the TYMSUP macro.  The second section contains definitions which are
+        used in the ISIS and the node code assemblies.  For this reason, if any
+        of  these  parameters  change  in  the  process  of  reconfiguring  the
+        Supervisor then  ISIS and the  Node code will  need reassembly  and the
+        machine will need  to be reloaded.  Since  it may be desirable  to make
+        moderate upgrades to an existing Supervisor without reloading the whole
+        machine, it  is recommended  that allocations  specified in  the second
+        section of the Supervisor PARAMETER FILE be large enough  to accomodate
+        moderate growth.
+
+             Note that the macros which occur in the second section of  the SUP
+        PARAMETER FILE frequently define the size of memory allocations for the
+        SUP and the  slaves.  In addition,  save size information  is conveyed.
+        This information is  used by the ISIS  assembly, and is  checked during
+        the assembly of  the SUP and Slave  code modules.  Assembly of  the SUP
+        and Slave systems will indicate if the allocations are insufficient and
+        will provide the required parameter values.
+
+             Note  also  that  the  Supervisor  and  slaves  use  shared memory
+        techniques to pass data to  each other.  It is imperative that  the SUP
+        and slaves for a system are assembled using the same SUP PARAMETER FILE
+        so that there is a consistent knowledge of these common areas.
+
+
+
+
+
+                    2.7.1  TYMSUP MACRO
+
+             The TYMSUP macro is required to finalize the first section  of the
+        Supervisor PARAMETER FILE and to invoke an initalization  process which
+        is required for the second section macros.  No parameters are used with
+        this macro.
+
+                TYMSUP          Mandatory
+
+
+
+
+
+                    2.7.2  DEFNSP MACRO      Supervisor port allocation
+
+             The DEFNSP  macro is  required to define  the number  of available
+        Supervisor  control ports.   This affects  the layout  and size  of the
+        Supervisor  to node  interface  area.  One  port is  required  for each
+        possible TII command circuit.  Ports  0 and 1 are reserved  for special
+        use.  The  control port number  for a TII  command circuit is  given by
+        (NODE# - 2000 +2) octal.
+
+
+        35                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+             In  addition,  a   pool  of  ports   is  required  to   handle  TI
+        communication.  One  control port  is required for  each TI  node taken
+        over through  a TII neighbor.   The required size  of this pool  is not
+        only dependent  on the number  of TI command  circuits but also  on the
+        need for a reserve to prevent early port reuse.
+           The recommended number of ports is calculated as follows:
+
+           Recommended number of ports = Recommended number of ports for TII
+                                       + Recommended number of ports for TI
+
+           Recommended number of ports for TII = (number of TII ports +2)
+                                                 rounded to a multiple of 32
+
+           Recommended number of ports for TI  = (number of TI ports +16)
+                                                 rounded to a multiple of 32
+
+             Note that a port  allocation less than the recommended  safe level
+        in a network including TI nodes might result in the  Supervisor running
+        out of available TI control ports.  This is a crash condition.
+
+             Note also that the DEFNSP macro will check a given port allocation
+        or it can calculuate and  assign the number of SUP control  ports based
+        on prior configuration information.   In situations where one  may want
+        to modify and reload the Supervisor without reloading ISIS and the node
+        code, the DEFNSP macro should specify the number of ports.   This value
+        should  be  sufficient  to  handle the  growth  needs  of  the modified
+        Supervisors.
+
+                DEFNSP([nsp])           Mandatory
+
+                        nsp = Total number of Supervisor ports.
+                                -Decimal.                       
+                                -Optional.
+                                -Default = recommended allocation.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        36                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+
+                example:
+
+                        DEFNSP
+
+                        this means:
+                        1)      Compute and use the safe default
+                                number of control ports.  Suppose
+                                that the prior DEFNOD macro
+                                has indicated 100d expected TI nodes
+                                and a max valid TII node number
+                                of 2534 octal.  Then the DEFNSP macro
+                                would compute a default number of
+                                Supervisor control ports as follows:
+
+                                Required TII ports  = 349d + 2   = 351d
+                                Required TI  ports  = 100d + 16d = 116d
+
+                                351d TII ports rounded up  =  352d
+                                116d TI  ports rounded up  =  128d
+
+                                                      TOTAL   480d ports
+
+
+
+
+
+                    2.7.3  SUPDAT MACRO      Supervisor data storage
+
+             The SUPDAT macro is required to define the size of  the Supervisor
+        data area memory allocation to ISIS.  It also defines the offset within
+        the  data   area  to   the  Read/Write   area  which   provides  common
+        communications  between  the   Supervisor  and  various   slaves.   The
+        Supervisor Read Only  area, which is used  by some slaves to  read some
+        Supervisor cells, is one memory page beyond the start of the Read/Write
+        area.
+
+             It may be necessary to  perform a trial assembly to  determine the
+        appropriate values for  this macro.  The  values can be  defaulted, but
+        the default values  will probably not be  suitable or large  enough for
+        most configurations.  Values  are given as  the number of  memory pages
+        (256 bytes each) in hex.
+
+             Note that this macro  defines the Supervisor data  area allocation
+        for ISIS, and this allocation may exceed that required by  an assembly.
+        Consider a mild over-allocation to provide for growth room.
+
+
+
+
+
+
+
+
+        37                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+
+                SUPDAT([siz,off])       Mandatory
+                
+                        siz = Number of memory pages in the SUP data area.
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = 600 hex memory pages.
+                        off = Offset to Read/Write area in memory pages.
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = 140 hex memory pages.
+
+                                SUP DATA AREA
+                           A  -----------------  A
+                           |  |               |  |
+                          off |   DATA AREA   |  |  SUP TABLE AND WORKING
+                           |  |               |  |  AREA
+                           V  |---------------|  |
+                              |   R/W AREA    |  |  SUP,PROBE,UN2,SYSMSG
+                              |   256 BYTES   |  |
+                              |---------------| siz
+                              |               |  |  SUP,PROBE
+                              |    R/O AREA   |  |  HOST TABLE, NODE DESC.
+                              |               |  |  ERROR LOG
+                              |---------------|  |
+                              |  ADDITIONAL   |  |
+                              |    MEMORY     |  |
+                4 PAGE  ----> -----------------  V
+                BOUNDARY
+
+
+                NOTE:   Consider allocating extra space to both the siz and off
+                        parameters in order to allow for future growth.
+
+
+
+
+
+                    2.7.4  SUPCOM MACRO      SUP/NODE communication interface
+
+             The Supervisor and node code communicate with each other through a
+        special shared memory communication interface.  ISIS is not involved in
+        this interaction.  The interface uses a number of ring buffers, and the
+        size  of this  interface depends  on the  number of  Supervisor control
+        ports.  Therefore the  SUPCOM macro, which is  used to define  the size
+        and  segment associated  with the  communication interface,  must occur
+        after the DEFNSP macro.
+
+             The SUPCOM macro is required although both macro parameters can be
+        defaulted.  It is recommended  that the default procedure be  used.  If
+        the values are explicitly given, they are given in hex.
+
+
+
+        38                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+
+                SUPCOM([siz,seg])       Mandatory
+
+                        siz = Number of memory pages in the communication
+                                area >= ((nsp*8)+10C0h)/100h
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = ((nsp*8)+10C0h)/100h memory pages,
+                                where nsp is the number of supervisor ports.
+                        seg = Segment number associated with
+                                the SUP/NODE communication area.
+                                -Optional.
+                                -Default = 7 for ISIS.
+                                For ISIS must be 7.
+
+
+                example:
+
+                        SUPCOM
+
+                        this means:
+                        1)      Calculate the size of the SUP/NODE
+                                communication area.
+                        2)      Use the default segment.
+
+
+
+
+
+
+                    2.7.5  SUPCOD MACRO      Supervisor code area
+
+             The SUPCOD macro is required to define the number of  memory pages
+        and the  start segment  number for the  Supervisor code  segment.  Both
+        values can be defaulted, but if given are provided as hex values.
+
+             Note that a  trial assembly of the  Supervisor may be  required to
+        determine the  actual page size  of the code.   This macro  defines the
+        memory allocation ISIS should provide  to the code segment, and  it can
+        be larger than the minimum required.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        39                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+
+                SUPCOD([siz,seg])       Mandatory
+
+                        siz = Number of memory pages allocated to the
+                                Supervisor code area >= 100 hex.
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = 140 hex memory pages.
+                        seg = Supervisor code start segment.
+                                -Optional.
+                                -Default = 8.
+                                Must be 8 for ISIS.
+
+                NOTE:   A test assembly may be required to determine these
+                        parameters.
+
+                example:
+
+                        SUPCOD(100)
+
+                        this means:
+                        1)      Allocate 100 hex memory pages for the
+                                Supervisor code area.
+                        2)      Use the default code segment.
+
+
+
+
+
+
+                    2.7.6  PRBPRM MACRO      Define PROBE slave parameters
+
+             The PRBPRM macro is  required to define Probe  related parameters,
+        some of which are of interest to ISIS.  Many of these parameters can be
+        defaulted, if appropriate.
+
+             PROBE  is  a  Supervisor Slave  which  serves  as  the interactive
+        network operator's  interface to  the Supervisor.   The Probe  code can
+        handle multiple simultaneous users and each user is assigned a separate
+        ISIS user  control block.   Therefore, the number  of Probe  users will
+        affect the size of the ISIS assembly.  It also affects the size  of the
+        Probe code module since Probe itself must maintain it's own set of user
+        control blocks in order to permit the use of shared resources  (such as
+        the disk).   The number  of Probe users  is a  parameter in  the PRBPRM
+        macro.
+
+             One  particular shared  resource  relates to  disk  operations.  A
+        small number of disk buffers (in core) are allocated within  Probe, and
+        these  buffers are  shared among  the multiple  users who  require disk
+        access.  These disk  buffers are used for  the purpose of  scanning the
+        error log on disk.  The number of buffers to allocate need not be large
+        for three reasons.  First, if there are requirements for many  users to
+
+
+        40                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+        simultaneously scan the SUP error log, then the primary tool  should be
+        TMCS.  Secondly, under normal operational circumstances only a few disk
+        buffers  are simultaneously  active.  A  third reason  is to  limit the
+        level of activity of Probe users as a collective whole.  Note  that the
+        number of disk buffers affects the size of the Probe module.  Each disk
+        buffer adds  over 1024  bytes.  The recommended  and default  number of
+        buffers is 4.
+
+             When a  new username is  added to the  Probe local  user directory
+        (LUD)  on  disk,  it  is  automatically  assigned  the  system  default
+        password.  The cipher for this password is assembled into Probe  and is
+        hence a PRBPRM parameter.  If  one doesn't wish to leave  newly entered
+        names with the default password, then change the password after the LUD
+        entry has been made.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        41                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+
+                PRBPRM(cip[,usr,lmt,buf,siz,off,ssz])   Mandatory
+
+                        cip = Default password cipher for Probe LUD.
+                                -Hexadecimal not equal to 0.
+                                -Mandatory. See 'PSWD' command.
+                        usr = Maximum number of simultaneous probe users.
+                                -Decimal. 1 < usr < 64.
+                                -Optional.
+                                -Default = 10 users.
+                        lmt = Time limit in minutes for restricted Probe
+                                users. lmt = 0 => no timeout.
+                                -Decimal.
+                                -Optional.
+                                -Default = 10 minutes.
+                        buf = Number of shared disk buffers.
+                                -Decimal. 1 < buf < 17.
+                                -Optional.
+                                -Default = 4 buffers.
+                                Typical values are from 3 to 6.
+                        siz = Memory allocation in pages for Probe
+                                obtained from Probe generation.
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = 0A0 memory pages.
+                        off = Sector offset for Probe code disk save
+                                from the start of SUP LU 4. Refer to
+                                figure under UN2PRM macro.
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = 0C sectors from start of LU 4.
+                        ssz = Number of sectors in Probe save size.
+                                The save size can be less than the core
+                                allocation but must encompass the
+                                code area (check a trial assembly).
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = 0A0 sectors.
+
+                NOTE:   Refer to figure under UN2PRM Macro.
+
+                example:
+
+                        PRBPRM(0F5768BA2,20)
+
+                        this means:
+                        1)      The default password cipher is 0F5768BA2
+                        2)      A default of 10 max simultaneous users
+                        3)              A 20 minute timeout
+                        3)      Code size and save parameters are
+                                the default values
+
+
+
+        42                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+                    2.7.7  ERRPRM MACRO      Define ERRLOG slave parameters
+
+             The ERRPRM macro  is required to  define size and  save parameters
+        for ERLOG.  The ERLOG slave  runs on the Supervisor machine  and allows
+        certain system  supplied software to  read the Supervisors  error file.
+        The ERLOG program must be assembled using the same set of macros as the
+        Supervisor to allow this communication.
+
+             Like the other slave  and SUP macros, some parameter  settings may
+        require a trial assembly.  Typically the default values will work.
+
+                ERRPRM([siz,off,ssz])           Mandatory
+
+                        siz = Erlog memory allocation in pages.
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = 14 hex memory pages.
+                        off = Sector offset for disk save area from
+                                the beginning of Slave LU 4.
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = 0CC hex sectors.
+                        ssz = Number of sectors in the save size.
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = 10 hex sectors.
+
+                NOTE: Refer to figure under UN2PRM Macro.
+
+                example:
+
+                        ERRPRM
+
+                        this means:
+                        1)      Use default size and save parameters.
+
+
+
+
+
+
+
+                    2.7.8  ACCPRM MACRO      Define ACCOUNT slave parameters
+
+             The ACCPRM macro  is required to  define size and  save parameters
+        for  ACCOUNT.  The  ACCOUNT slave  runs on  the Supervisor  machine and
+        allows certain system supplied software to collect accounting data from
+        the accounting disk buffer on the Supervisor.  The ACCOUNT program must
+        be assembled using the same  set of supgen macros as the  Supervisor to
+        allow this communication.
+
+
+
+
+        43                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+
+                ACCPRM([siz,off,ssz])           Mandatory
+
+                        siz = Account memory allocation in pages.
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = 8 memory pages.
+                        off = Sector offset of save area into SUP LU 4
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = 0AC  sectors.
+                        ssz = Number of sectors in the save area.
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = 8 sectors.
+                
+                NOTE:  Refer to figure under UN2PRM Macro.
+
+                example:
+
+                        ACCPRM
+
+                        this means:
+                        1)      Use default memory and save
+                                allocations for the Account Slave.
+
+
+
+
+
+
+                    2.7.9  SYSPRM MACRO      Define SYSMSG1 slave parameters
+
+             The SYSPRM macro  is required to  define size and  save parameters
+        for SYSMSG1.  The SYSMSG1 program runs on the Supervisor machine and is
+        used  by  certain  system  supplied  software  to  update   disk  based
+        Supervisory information (e.g.  class/group tables, host  messages, shut
+        lines for inactive  SUPs).  This allows  changes to be  communicated to
+        all Supervisors in the network.  The SYSMSG1 program must  be assembled
+        using the  same set of  supgen macros as  the Supervisor to  allow this
+        communication.
+
+
+
+
+
+
+
+
+
+
+
+
+
+        44                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+
+                SYSPRM([siz,off,ssz])           Mandatory
+
+                        siz = Sysprm memory allocation in pages.
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = 10 hex memory pages.
+                        off = Sector offset for save area on SUP LU 4.
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = 0B4 sectors.
+                        ssz = Number of sectors in the Save area.
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = 8 sectors.
+
+                NOTE:  Refer to figure under UN2PRM Macro.
+
+                example:
+
+                        SYSPRM
+
+                        this means:
+                        1)      Use default size and save
+                                parameters for SYSMSG1.
+
+
+
+
+
+
+
+                    2.7.10  UN2PRM MACRO      Define UN2 slave parameters
+
+             The UN2PRM macro  is required to  define size and  save parameters
+        for UN2.  The UN2 program runs on the Supervisor machine and allows the
+        network  validations  program  to  read  and  modify  the  Master  User
+        Directory on  the Supervisor.   This allows all  Supervisors to  have a
+        consistent view of  the CUD.  The UN2  program must be  assembled using
+        the  same  set  of  supgen  macros  as  the  Supervisor  to  allow this
+        communication.
+
+
+
+
+
+
+
+
+
+
+
+
+
+        45                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+
+                UN2PRM([siz,off,ssz])           Mandatory
+
+                        siz = UN2 memory allocation in pages.
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = 0C memory pages.
+                        off = Sector offset to save area on SUP LU 4.
+                                -Hexadecimal.
+                                -Optional.
+                                -default = 0BC sectors.
+                        ssz = Number of sectors in the save size.
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = 0C sectors.
+
+                                DEFAULT SUP LU 4
+                                +--------------+
+                             0C |--------------|
+                                |    PROBE     |
+                                |     A0       |
+                            0AC |--------------|
+                                |  ACCOUNT 08  |
+                            0B4 |--------------|
+                                |   SYSMSG 08  |
+                            0BC |--------------|
+                                |    UN2  0C   |
+                            0C8 |--------------|
+                            0CC |--------------|
+                                |   ERRLOG 10  |
+                            0DC |--------------|
+                                +--------------+
+
+
+                example:
+
+                        UN2PRM
+
+                        this means:
+                        1)      Use the default UN2 size and
+                                save parameters.
+
+
+
+
+
+
+
+
+
+
+
+
+
+        46                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        THE SYSGEN PROCESS                                        July 22, 1985
+
+
+                    2.7.11  UTLPRM MACRO      Define UTILITY slot parameters
+
+             The  UTLPRM is  required to  define size  parameters for  the ISIS
+        Supervisor utility slot.  The UTILITY slot is used for service routines
+        such as  disk and tape  copy utilities  which can be  run under  DDT to
+        perform a variety  of functions.  The UTILITY  slot is also  useful for
+        debugging and loading purposes.
+
+                UTLPRM([sg0,sg1])       Mandatory
+
+                        sg0 = Segment 0 memory allocation in pages.
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = 36 hex memory pages.
+                        sg1 = Segment 1 memory allocation in pages.
+                                -Hexadecimal.
+                                -Optional.
+                                -Default = 13 hex memory pages.
+
+
+                example:
+
+                        UTLPRM
+
+                        this means:
+                        1)      Use default memory allocations
+                                for the SUP Utility slot.
+
+
+
+
+
+
+
+                            2.8  ENDING THE PARAMETER FILE
+
+
+
+
+
+
+                    2.8.1  TYMEND MACRO      Completing the SUPGEN process
+
+             The TYMEND is required to be the last macro issued.  There  are no
+        parameters.  This macro performs clean up operations and tests  for the
+        existence of required macros and flags.
+
+                TYMEND          Mandatory
+
+
+
+
+
+
+        47                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        SAMPLE SUPERVISOR PARAMETER FILES                         July 22, 1985
+
+
+
+
+
+
+                        3 -  SAMPLE SUPERVISOR PARAMETER FILES
+
+
+             This section provides some sample Supervisor PARAMETER  FILES.  We
+        first have a comparison of an old style PARAMETER FILE and a comparable
+        new style macro SUP PARAMETER FILE.  We also provide some  examples for
+        differently sized configurations.   All the sample macro  SUP PARAMETER
+        FILES assemble properly.
+
+
+
+
+
+
+                        3.1  PARAMETER FILE CONVERSION EXAMPLE
+
+
+             Below are given an old  style SUP PARAMETER FILE and  a comparable
+        new style macro PARAMETER FILE.  Note that the new style PARAMETER FILE
+        is smaller, and is organized into conceptual units.  The  new PARAMETER
+        FILE has some differences, both  to simplify the PARAMETER FILE  and to
+        accomodate the new versions of code.  In particular, the save areas for
+        the Slaves, and  sizes are defaulted -  these new defaults  will differ
+        from the old defaults.
+
+
+
+
+
+                    3.1.1  OLD FORMAT SUPERVISOR PARAMETER FILE
+
+             The old style SUP PARAMETER FILE, like the new macro file  has two
+        parts.  The second part, which essentially defines parameters for ISIS,
+        is to a large extent not subject to user modification.
+
+
+                IF      1-\SUP
+        ISIT    EQ      1       :SWITCH TO NOT ASSEMBLE (IF 0)
+                ELSE
+        ISIT    EQ      SUP     :DON'T ASSEMBLE IF 'SUP' DEFINED & FALSE
+                EI
+                :
+                IF      ISIT
+                IF      1-\SUP
+                :CONFIGURATION CONSTANTS
+                MO      .,SUPER
+        SUPERN  EQ      .               :OPENED AT ASSEMBLY TIME TO SUP #
+        PUB     EQ      0
+        TIGOUG  EQ      1               :FULL T-I GOUGING
+
+        48                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        SAMPLE SUPERVISOR PARAMETER FILES                         July 22, 1985
+
+
+        :
+                :TIME CONSTANTS
+        NSLEEP  EQ      78+3C*SUPERN    :NORMAL SLEEP TIME FOR SUPERVISOR
+        ADTIME  EQ      78              :ADD'L SLEEP TIME FOR EXCEPTIONS
+        LOGTIM  EQ      90              :2.4 LOGIN TIMEOUT
+        SCLOCK  EQ      1               :SUPERCLOCK
+                :
+                :ASSEMBLY CONSTANTS
+        MXNODE  EQ      55E             :$A1374 MAXIMUM NUMBER OF NODES
+        MXBASE  EQ      1FF             :$A511 MAXIMUM NUMBER OF BASES
+        MXREM   EQ      3FF             :MAX TYMNET I REMOTE #
+        MXHOST  EQ      800             :$A2047 MAXIMUM NUMBER OF HOSTS
+        ERRSIZ  EQ      180             :SIZE OF ERROR LOG IN BLOCKS
+        MUDBSZ  EQ      4               :NUMBER OF SECTORS IN MUD BLOCK
+        CNINDX  EQ      8               :CNTL CHAINS FOR CACHE
+        CNCBLK  EQ      40              :CACHE BLOCKS
+        MSC     EQ      1               :MSC DISK DRIVE
+        ACTEND  EQ      2B3F            :LOCAL UNIT^0D!BLOCK COUNT -1
+        ACTSIZ  EQ      2CFC            :NUMBER OF $A256 BYTE SECTORS -4
+        SAVSIZ  EQ      167             :# OF BLOCKS TO SAVE CORE IMAGE
+        DSAV1   EQ      4100            :ADDR TO SAVE FIRST CORE IMAGE
+        DSAV2   EQ      4267            :ADDR TO SAVE SECOND CORE IMAGE
+        DSAV3   EQ      43CE            :ADDR TO SAVE THIRD CORE IMAGE
+        RBDEND  EQ      0E3E4           :END OF SUP HISTORY FILE ON DISK
+        BLETSIZ EQ      1800            :# OF B'LETS IN B'LET SPACE
+        NORATE  EQ      0               :0 TO REPORT LOGIN RATE TO ERRFIL
+                                        :1 FOR NO LOGIN RATE REPORT
+        NOSPAS  EQ      0               :0-->ALLOW USER SUPPASSTHROUGHS
+        DESCSZ  EQ      1C000           :SIZE OF NODE DESCRIPTOR SPACE
+        MXCLASS EQ      $A70            :MAX # OF CLASSES
+        MXGROUP EQ      $A25            :MAX # OF GROUPS
+        CLSSIZ  EQ      600
+        GRPSIZ  EQ      600
+                ADC(1,7515436,74166643)
+                ADC(2,56673256,64767740)
+                ADC(6,74533657,46432736)
+                :PROBE
+        TIMLIM  EQ      $A60            :TIME LIMIT FOR RESTRICTED USERS
+        NDBUF   EQ      $A4
+        DFLPSW  EQ      0E67CE43
+        Q       MACRO   (A1,A2,A3) [
+        P       AC      'A1'
+                ORG     P+8
+                HC      A2^-10,A2&0FFFF,(A3^$09)+8000 ]
+        ANAME   MACRO [
+                Q(ALPHA,0E956727E,$837)
+                Q(BETA,830FE1AC,$837)
+                Q(GAMMA,3E79BD95,$837)
+                Q(DELTA,0DF98C6AC,$835)
+        ]
+                :ERLOG
+        DERLOG  EQ      8033            :UTILITY SAVE AREA FOR ERLOG
+                EM
+
+        49                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        SAMPLE SUPERVISOR PARAMETER FILES                         July 22, 1985
+
+
+                EI
+                IF      \SUP
+                GL      NCSS,SCSIZ,NSP,SRING
+                MO      .,SUPDEF        :ISIS ASSEMBLY MODULE
+                ELSE
+                MO      .,SUPER         :SUPERVISOR OR SLAVE MODULE
+                EI
+                :DEFINE SHARED SUPERVISOR PARAMETERS
+        RWAREA  EQ      13000           :START OF READ/WRITE AREA
+        SUPDSZ  EQ      600             :PAGES IN SUP DATA AREA
+        SCBASE  EQ      70000           :START OF NODE-SUP COMM AREA
+        SUPCSZ  EQ      2100            :SIZE OF NODE-SUP COMM AREA
+        SUPEST  EQ      800             :START OF CODE AREA
+        SUPESZ  EQ      130             :PAGES FOR SUP CODE AREA
+        SRING   EQ      1               :NEW STYLE RING FORMAT
+        NSP     EQ      200             :# OF SUP PORTS
+                :SHARED PROBE PARAMETERS
+        NUMUSE  EQ      $A25
+        :       CONFIGURATION CONSTRAINTS
+        NCSS    EQ      7               :NO. OF SUP CONTROLLING DDT BLOCKS
+                GL      SUPNKU          :PARAMETER FOR TII NODE CODE
+        :       SUP PARAMETERS
+        SUPA0B  EQ      0               :SUP CORE ALLOCATION AREA 0 BASE
+        SUPA0   EQ      SUPDSZ          :SUP CORE ALLOCATION AREA 0 LENGTH
+        SCA1O   EQ      RWAREA^-8       :SUPERVISOR COMMON AREA 1 OFFSET
+        SCA1S   EQ      1               :SUPERVISOR COMMON AREA 1 SIZE
+        SCA2O   EQ      SCA1O+1         :SUPERVISOR COMMON AREA 2 OFFSET
+        SCA2S   EQ      SUPA0-SCA2O     :SUPERVISOR COMMON AREA 2 SIZE
+        SUPA1B  EQ      SCBASE^-8       :SUP CORE ALLOCATION AREA 1 BASE
+        SCSIZ   EQ      SUPCSZ          :SUP CORE ALLOCATION AREA 1 SIZE
+        SUPA2B  EQ      SUPEST          :SUPERVISOR AREA 2 (CODE) BASE
+        SUPST   EQ      SUPEST^8        :STARTING ADDRESS FOR SUP
+        SUPA2   EQ      SUPESZ          :SUP CORE ALLOCATION AREA 2 BASE
+
+        :       PROBE PARAMETERS
+        SUPNP   EQ      NUMUSE-1        :NUMBER OF SIMULTANEOUS PROBE PORTS
+        PROSA   EQ      10+SUPNP*2      :PROBE START ADDRESS
+        PROSAI  EQ      -2              :PROBE START ADDRESS INCREMENT
+        PROA0   EQ      0A0             :CORE ALLOCATION (PAGES)
+        DPROBE  EQ      8003            :SAVE AREA FOR PROBE
+
+        :       ERRLOG PARAMETERS
+        SUPNER  EQ      2               :NUMBER OF SIMULTANEOUS ERRLOG PORTS
+        ERRSA   EQ      14              :ERRLOG START ADDRESS
+        ERRSAI  EQ      -2              :ERRLOG START ADDRESS INCREMENT
+        ERRA0   EQ      12              :CORE ALLOCATION (PAGES)
+
+        :       ACCOUNT PARAMETERS
+        SUPNAC  EQ      1               :NUMBER OF SIMULTANEOUS ACCOUNT PORTS
+        ACCSA   EQ      12              :ACCOUNT START ADDRESS
+        ACCSAI  EQ      -2              :ACCOUNT START ADDRESS INCREMENT
+        ACCA0   EQ      8               :CORE ALLOCATION (PAGES)
+        DACCOUNT EQ     8027            :SAVE AREA FOR ACCOUNTING SLAVE
+
+        50                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        SAMPLE SUPERVISOR PARAMETER FILES                         July 22, 1985
+
+
+
+        :       SYSMSG1 PARAMETERS
+        SUPNSY  EQ      1               :NUMBER OF SIMULTANEOUS SYSMSG1 PORTS
+        SYSSA   EQ      12              :SYSMSG1 START ADDRESS
+        SYSSAI  EQ      -2              :SYSMSG1 START ADDRESS INCREMENT
+        SYSA0   EQ      10              :CORE ALLOCATION (PAGES)
+        DSYSMSG1 EQ     802A            :SAVE AREA FOR SYSMSG1 SLAVE
+
+        :       UN2 PARAMETERS
+        SUPNUN  EQ      1               :NUMBER OF SIMULTANEOUS UN2 PORTS
+        UN2SA   EQ      12              :UN2 START ADDRESS
+        UN2SAI  EQ      -2              :UN2 START ADDRESS INCREMENT
+        UN2A0   EQ      0C              :CORE ALLOCATION (PAGES)
+        DUN2    EQ      802F            :SAVE AREA FOR UN2 SLAVE
+
+        :       UTILITY PARAMETERS
+        UTILA0  EQ      36              :UTILITY SEG 0 ALLOCATION (PAGES)
+        UTILA1  EQ      13              :UTILITY SEG 1 ALLOCATION (PAGES)
+
+        :       DEFINE "SUPNKU" AS NUMBER OF SIMULTANEOUS PORTS
+        SUPNKU  EQ      SUPNP+SUPNER+SUPNAC+SUPNSY+SUPNUN+NCSS
+                EM
+                EI
+
+
+
+
+
+                    3.1.2  NEW FORMAT SUPERVISOR PARAMETER FILE
+
+             The PARAMETER FILE below is comparable to the above old  style SUP
+        PARAMETER FILE.  Some of the conversion considerations are given below.
+
+             Notice that we had to create reasonable new network parameters for
+        the DEFNOD  and the NDASIZ  macros to indicate  the expected  number of
+        nodes, links and TI groups.
+
+             The maximum T-II node number was selected to be 2535 from  the old
+        PARAMETER FILE  parameters for MXNODE,  MXBASE and MXREM.   The defined
+        maximum number of  TI nodes is 3FF  (1 to 1777 octal).   MXNODE-3FF-1 =
+        536 octal is the max number of TII nodes remaining (we act as if node 0
+        is occupied).  Node 2000  is NOT to be used  in the network, but  it is
+        counted, so the max TII node number is 2535.
+
+             The  conversion  for the  DEFACT  macro is  as  follows.   The old
+        parameter,  ACTEND,  indicates  that  the  last  BLOCK  address  in the
+        accounting file is 2B3F.  A  block address of 2B3F corresponds to  LU 1
+        (2000), offset by  0B3F blocks.  There  is a BLOCK  0, thus a  total of
+        0B40 = 0B3f+1  blocks in the  file.  But 1 block  is 4 sectors,  so the
+        total number of sectors  in the file is  4*0B40 = 2D00.  Note  that the
+        new parameter uses as sizing  parameter the total number of  sectors in
+        the file - not  a strange quantity like  the BLOCK address of  the last
+
+
+        51                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        SAMPLE SUPERVISOR PARAMETER FILES                         July 22, 1985
+
+
+        block!  Notice that the old parameter, ACTSIZ is equally  strange since
+        it  is  the total  number  of sectors  in  the file  less  4.   This is
+        consistent with the other values.
+
+             The crash save size definitions are different in the new SUP macro
+        PARAMETER FILE since the crash save size is not defined.  This  will be
+        defined by the  SUP assembly.  Rather,  the DEFSAV macro  indicates the
+        total  available space  for SUP  LU  2, and  this is  cross  checked at
+        assembly time to assure that it is sufficient.  The old  PARAMETER FILE
+        indicates that the first crash save BLOCK address is 4100 (LU 2, offset
+        by  100   hex  blocks).   100   BLOCKS  corresponds  to   400  sectors.
+        Furthermore the old  file indicates there  are 3 separate  saves (since
+        DSAV1  through  DSAV3  are  defined).   Thus  the  new  PARAMETER  FILE
+        parameter is  DEFSAV(400,3,1600).  The allocation  of 1600  hex sectors
+        was  based on  the  the start  save offset   of  400 plus  3  times the
+        declared  data area  allocation in  the SUPDAT  macro (600  pages).  In
+        reality, this value would be determined by the allocation given  in the
+        DSC file for an existing  system.  Otherwise the value would  have been
+        chosen from trial assemblies.
+
+             The history file size in  the old PARAMETER FILE was  indicated by
+        the BLOCK address 0E3E4 - which is one block past the end of  the file.
+        This corresponds  to 0F90 =  3E4*4 sectors for  LU 7 (0E000).   Thus we
+        have HISTRY(0F90).  Notice again the  use of a sector size as  a common
+        method of file size measurement.
+
+             Most of the remaining parameter conversions are  self explanatory.
+        Advantage  has  been  taken  of  default  values  where  possible.   In
+        particular,  default slave  save  definitions have  been  allowed.  One
+        would need to do  a test SUP assembly  to determine and check  the disk
+        allocation requirements for the Slaves.
+
+
+                TYMSTR(3)               :START SUPERVISOR 3
+
+
+                :OPTIONS
+                OPTION(TIGOUG)
+
+
+                :TIME CONSTANTS
+                DEFTIM(60,120,120,144,CLOCK)
+
+
+                :BASIC CODE CONFIGURATION PARAMETERS
+
+                        :NODES
+                DEFNOD((BASE,,50),(REMOTE,,20),(TII,2535,100))
+                NDASIZ(300,1400,1C000)
+
+
+                        :HOSTS
+                DEFHST(2048)
+
+        52                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        SAMPLE SUPERVISOR PARAMETER FILES                         July 22, 1985
+
+
+
+
+                        :OTHER
+                BUFLET(6144)            :NUMBER OF B'LETS
+
+
+                :BASIC FILE RELATED DEFINTIONS
+                DEFMUD(0,4)             :STANDARD MUD WITH 4 SECTOR BLOCKS
+                DEFACT(0,2D00)          :STANDARD ACCOUNTING FILE
+                DEFERR(0,600)           :STANDARD ERROR FILE
+                DEFSAV(400,3,1600)      :SAVE OFFSET 400, CNT & ALLOCATION
+                HISTRY(0F90)            :HISTORY SECTORS
+
+
+                :LOGIN/TARGETING RELATED DEFINITIONS
+                CACHE                   :DEFAULT 64 DECIMAL BLOCKS CACHE
+                FENCE(70,,25)           :DEFINE CLASS AND GROUP
+
+                :EMERGENCY ACCESS DEFINITIONS
+                ADC(1,7515436,74166643)
+                ADC(2,56673256,64767740)
+                ADC(6,74533657,46432736)
+
+                :ASSEMBLED IN PROBE NAMES
+                PRBNAM((ALPHA,0E956727E,$837)
+                ,(BETA,830FE1AC,$837)
+                ,(GAMMA,3E79BD95,$837)
+                ,(DELTA,0DF98C6AC,$835))
+
+
+                TYMSUP                  :START SECOND SECTION OF TYM FILE
+
+                :DEFINE SHARED SUPERVISOR PARAMETERS
+                DEFNSP(512)             :512 DECIMAL SUP PORTS
+
+
+                :SUPERVISOR SIZE PARAMETERS
+                SUPDAT(600,130)         :DATA AREA (SIZE,RWAREA OFFSET) PAGES
+                SUPCOM(21)              :SUP/NODE COM AREA (SIZE) PAGES
+                SUPCOD(130)             :SUP CODE AREA (SIZE) PAGES
+
+
+                :SLAVE PARAMETERS
+                PRBPRM(0E67CE43,25,60) :25 DECIMAL PROBE USERS
+                                        :60 MINUTE TIME LIMIT
+                                        :4 USER BUFFERS
+                                        :PROBE 0A0 HEX PAGES
+
+                ERRPRM                  :ERLOG 18 DECIMAL PAGES
+
+                ACCPRM                  :ACCOUNTING 8 DECIMAL PAGES
+
+                SYSPRM                  :SYSMSG1 16 DECIMAL PAGES
+
+        53                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        SAMPLE SUPERVISOR PARAMETER FILES                         July 22, 1985
+
+
+
+                UN2PRM                  :UN2 12 DECIMAL PAGES
+
+                UTLPRM                  :DEFAULT UTILITY SLOT ALLOCATION
+
+                TYMEND                  :END THE PARAMETER FILE
+
+
+
+
+
+
+                         3.2  A SIMPLIFIED SUP PARAMETER FILE
+
+
+             Below is an example of a plausable simplified PARAMETER FILE for a
+        Supervisor in a  moderately sized system  (less than 100  nodes).  This
+        example PARAMETER FILE shows how one can use defaults and  omissions to
+        obtain a simplified and comprehensible PARAMETER FILE.   Following this
+        sample PARAMETER FILE is  a sample assembly output for  Supervisor V41.
+        Note that by default this is an ISIS system.
+
+
+
+
+
+                    3.2.1  SIMPLE PARAMETER FILE EXAMPLE
+
+
+
+                REMARK %SAMPLE MID SIZE SIMPLE PARAMETER FILE%
+
+
+                TYMSTR(1)               :SUP 1
+
+                OPTION(TIGOUG,OPCIPH)   :ENABLE ALL THROUGHPUT CLASS LEVELS
+                                        :OPERATOR CONTROLLED EMERGENCY ACCESS
+
+                DEFTIM                  :USE DEFAULT TIMES, ALSO SUPERCLOCK
+
+                :BASIC CONFIGURATION
+
+                        :HOSTS
+                DEFHST(999)             :MAX VALID HOST NUMBER, NO 1DOWN
+
+                        :NODES -PERMIT A FEW TI NODES, EST ABOUT 100 TII NODES
+                        :LEAVE SOME SLACK FOR TII NUMBERING
+                DEFNOD((BASE,7,7),(REMOTE,1007,8),(TII,2375,100))
+                NDASIZ(300,50)          :EST MAX 6 LINKS/NODE, A FEW TI GROUPS
+
+
+                        :OTHER
+                BUFLET(2048)            :BE SOMEWHAT LIBERAL
+
+        54                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        SAMPLE SUPERVISOR PARAMETER FILES                         July 22, 1985
+
+
+
+
+                :DISK FILE SIZES.  LEAVE OUT HISTORY.
+                DEFMUD(0,4)             :1/2 SIZED MUD
+                DEFACT(0,3000)          :ACCOUNTING
+                DEFSAV(280,2,1800)      :SAVE AREA
+                DEFERR(0,1800)          :ERROR LOG
+
+
+
+                :TARGETING/LOGIN DEFINITIONS - NO CLASS & GROUP TABLE
+                CACHE                   :KEEP A MINOR CACHE
+
+
+                :ASSEMBLED IN NAMES FOR PROBE
+                PRBNAM((BIGSHOT,752AB9EF,$837)
+                ,(BIRDSHOT,0E96B28C4,$820))
+
+
+                TYMSUP                  :START 2ND SECTION
+
+                DEFNSP                  :CALCULATE NSP
+
+                SUPDAT(180,74)          :SUP DATA
+                SUPCOM                  :CALCULATE COMM AREA SIZE
+                SUPCOD                  :SUP CODE
+
+                :SLAVES  - USE DEFAULT ALLOCATIONS
+                PRBPRM(0E9BD3265)
+                ERRPRM
+                SYSPRM
+                ACCPRM
+                UN2PRM
+                UTLPRM
+
+                TYMEND
+
+
+
+
+
+
+
+                              3.3  A SAMPLE SUP ASSEMBLY
+
+
+             Below  is  a  sample Supervisor  V41.0  assembly  using  the above
+        simplified PARAMETER FILE.
+
+             Note that the assembly remarks indicate values associated with the
+        Supervisor  that can  relate to  the PARAMETER  FILE.  For  instance, a
+        sample assembly can be used  to calculate the minimum valid  offset for
+
+
+        55                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        SAMPLE SUPERVISOR PARAMETER FILES                         July 22, 1985
+
+
+        the R/W  area.  Since the  unused space  prior to the  R/W area  is 3BC
+        bytes, one can decrease the R/W area offset by 3 pages from page offset
+        74  to page  offset 71.   Similarly, we  see that  the total  data area
+        allocation is 180 pages, but only 158 is required.  Thus the allocation
+        could be reduced.  If the R/W offset were dropped, then the same number
+        of  pages would  be  subtracted from  the total  data  area allocation.
+        Actually, in this case one would probably be satisfied - and leave some
+        room for growth.
+
+             Note  also  how  the  assembly  will  indicate  the  required disk
+        allocations in sectors.   These values can  be checked against  the DSC
+        file  for  consistency -  the  DSC  file should  provide  at  least the
+        required space (more is OK and probably desirable).
+
+             Assemblies of the Slaves will produce other formatted output which
+        will  indicate core  requirements.   The default  requirements  for the
+        Slaves are  close to those  one would obtain  (they provide  some minor
+        room for  growth also),  so unless  an assembly  indicates insufficient
+        allocation - one can probably ride on the default values.   The default
+        values will  be upgraded  in new  releases to  indicate the  usual core
+        requirements.
+
+             The sample Supervisor assembly follows:
+
+
+        -R nad
+        062382
+        ;@   sup410.i00
+
+        End of assembly
+        ;@   sup410.t01
+
+        SAMPLE MID SIZE SIMPLE PARAMETER FILE
+
+        SUPER 1 1
+        SUPER 1 1
+        End of assembly
+        ;@   sup410.r00
+         ISIS SUPERVISOR, VERSION  410 FOR HOST 121 AND NODE 2001
+
+         ASSEMBLY TIME IN GMT SECONDS SINCE 1974 IS 12B952C1
+
+
+
+                            ********************
+                            *NODE CONFIGURATION*
+                            ********************
+
+        MAXIMUM NODES (DECIMAL)..........................270
+
+        BASE NODE NUMBERS OCTAL......................1 - 7
+        REMOTE NODE NUMBERS OCTAL.................1000 - 1007
+        TII NODE NUMBERS OCTAL....................2001 - 2375
+
+        56                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        SAMPLE SUPERVISOR PARAMETER FILES                         July 22, 1985
+
+
+
+        NODE DESCRIPTOR SPACE (HEX BYTES)................37A8
+        RECOMMENDED ALLOCATION (HEX BYTES)...............37A8
+
+        TOTAL SUP CONTROL PORTS (DECIMAL)................320
+        SUP CONTROL PORTS ALLOCATED TO T-I (DECIMAL).....64
+
+
+                            ********************
+                            *HOST CONFIGURATION*
+                            ********************
+
+        MAX HOST NUMBER (DECIMAL)........................999
+        TOTAL EXTRA BASES FOR MULTI-BASED HOSTS..........32
+        HOST DOWN MESSAGE FACILITY.......................DISABLED
+
+
+           *******************************************************
+           *ACCESS CONTROL, TARGETING AND CIRCUIT CHARACTERISTICS*
+           *******************************************************
+
+        MAX MULTIPLE TARGETS (DECIMAL)...................6
+        USER SUPERVISOR PASSTHROUGHS.....................ENABLED
+        4 LEVELS OF GOUGING..............................ENABLED
+
+        MUD PROFILE CACHE (DECIMAL)......................64
+        CACHE PARTITIONS (DECIMAL).......................8
+        DECIMAL NUMBER OF NORMAL MUD BLOCKS..............2039
+        DECIMAL NUMBER OF OVERFLOW BLOCKS................13
+        HEX BYTES IN A MUD BLOCK.........................400
+
+
+
+                           ***********************
+                           *SUP DATA AREA PROFILE*
+                           ***********************
+
+
+        SUP DATA AREA STARTS AT LOCATION..................0
+
+        SPARE BYTES PRIOR TO READ/WRITE AREA (HEX)........3BC
+        SHARED READ/WRITE AREA STARTS AT (HEX)............7400
+        SIZE OF SHARED READ/WRITE AREA (HEX)..............100
+
+        SHARED READ/ONLY AREA STARTS AT (HEX).............7500
+        SIZE OF SHARED READ/ONLY AREA (HEX)...............8500
+
+        SIZE OF SUP DATA AREA (HEX).......................15800
+        ALLOCATION FOR SUP DATA AREA (HEX BYTES)..........18000
+
+
+                      *************************************
+                      *SUP/NODE COMMUNICATION AREA PROFILE*
+
+        57                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        SAMPLE SUPERVISOR PARAMETER FILES                         July 22, 1985
+
+
+                      *************************************
+
+
+
+        SUP-NODE COMMUNICATION AREA STARTS AT (HEX).......700                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                g off.
+Done-End <0>
+15:00:13 S 30-May-87
+15:10:03 S -S- run #2 job 3 Req #4573  Running DSK:(MAIL)MAILER.SAV
+15:10:07 S -R- run #2 job 3 Done-End <0>
+16:03:14 S -R- run #1 job 56 Done-End <0>
+16:10:03 S -S- run #1 job 3 Req #4575  Running DSK:(MAIL)MAILER.SAV
+16:10:07 S -R- run #1 job 3 Done-End <0>
+17:10:03 S -S- run #1 job 3 Req #4577  Running DSK:(MAIL)MAILER.SAV
+17:10:07 S -R- run #1 job 3 Done-End <0>
+18:00:13 S 30-May-87
+18:10:03 S -S- run #1 job 3 Req #4578  Running DSK:(MAIL)MAILER.SAV
+18:10:07 S -R- run #1 job 3 Done-End <0>
+19:00:03 S -S- stream #1 Req #4552 DSK:(PGRADE)PORTS.SOU=DSK:(PGRADE)PORTS.SUB
+19:00:11 P Waiting for interlock
+19:00:11 S Given interlock
+19:00:12 P Got interlock
+19:00:12 S Starting job processor in frame 3
+19:00:13 P EXECX Job Processor %1(201) starting in frame 3
+19:00:13 P Stream #1 Req #4552 DSK:(PGRADE)PORTS.SOU=DSK:(PGRADE)PORTS.SUB
+19:01:03 P Stream #1 Req #4552 * completed *
+19:01:05 S -R- stream #1 Done-End <0>
+19:10:02 S -S- run #1 job 5 Req #4579  Running DSK:(MAIL)MAILER.SAV
+19:10:06 S -R- run #1 job 5 Done-End <0>
+19:16:12 P Signing off.
+20:10:02 S -S- run #1 job 3 Req #4581  Running DSK:(MAIL)MAILER.SAV
+20:10:06 S -R- run #1 job 3 Done-End <0>
+21:00:12 S 30-May-87
+21:10:02 S -S- run #1 job 3 Req #4582  Running DSK:(MAIL)MAILER.SAV
+21:10:06 S -R- run #1 job 3 Done-End <0>
+22:10:02 S -S- run #1 job 3 Req #4583  Running DSK:(MAIL)MAILER.SAV
+22:10:06 S -R- run #1 job 3 Done-End <0>
+23:10:02 S -S- run #1 job 3 Req #4584  Running DSK:(MAIL)MAILER.SAV
+23:10:06 S -R- run #1 job 3 Done-End <0>
+00:00:12 S 31-May-87
+                                                                                                                                                                                                                                                                                                                    WN FACILITY  14                    FENCE MACRO  30
+        1DOWN MESSAGES  44
+
+                                              GOUGING LEVEL  9
+        ACCESS CONTROL  30                    GROUP  30
+        ACCESS CONTROL TABLES  44
+        ACCOUNT PARAMETERS  43
+        ACCOUNT SLAVE  3                      HISTRY MACRO  28
+        ACCOUNTING FILE  23                   HOST DOWN MESSAGES  14
+        ACCPRM MACRO  43                      HOST NUMBERS  14
+        ADC MACRO  33
+        ASSEMBLED IN ACCESS  32
+                                              ISIS SUPERVISOR PARAMETERS  35
+                                              ISIS/NOISIS  8
+        BUFLET MACRO  19                      ISIS/STAND-ALONE  8
+
+
+        CACHE MACRO  29                       LOGIN LIMIT  11
+        CLASS  30                             LOGIN MACROS  29
+        CORE ALLOCATION  29                   LOGIN RATE REPORTING  8
+        CRASH SAVE AREA  25
+
+                                              MACRO NOTATION  3
+        DEFACT MACRO  23                      MASTER USER DIRECTORY  22
+        DEFERR MACRO  24                      MBHOST MACRO  15
+        DEFHST MACRO  14                      MEMORY PAGE  3
+        DEFMUD MACRO  22                      MEMORY SEGMENT  3
+        DEFNOD MACRO  16                      MSC  3, 8
+        DEFNSP MACRO  35                      MSC-1400 SUPPORT  8
+        DEFSAV MACRO  25                      MUD CACHE  29
+        DEFTIM MACRO  11                      MULTI-BASED HOST  15
+        DF  13                                MULTI-TARGETS  32
+        DISK ALLOCATION  21, 29
+        DISK ERRORS  21
+        DISK MACROS  21                       NDASIZ MACRO  18
+        DISK PAGE  3                          NODE ADDRESSING  18
+        DISK STATUS  21                       NODE DESCRIPTOR AREA  18
+        DROUSINESS FACTOR  13                 NODE NUMBERS  16
+        DSC FILE  3, 21, 29                   NODE SUPERVISOR PARAMETERS  35
+                                              NORATE  8
+                                              NOSPAS  8
+        EMERGENCY ACCESS  32                  NOTAKE MACRO  9
+        EMERGENCY CIPHERS  9
+        EMERGENCY USERNAMES  33
+        ERLOG SLAVE  3                        OPCIPH  9
+        ERROR LOG  24                         OPTION MACRO  7
+        ERRPRM MACRO  43
+        EXAMPLE PARAMETER FILES  48
+        EXCLUDE NODE  9                       PAGE  3
+                                              PARAMETER FILE  1, 6, 35, 47
+                                              PARAMETER FILE CONVERSION  48
+
+        60                     SUPERVISOR GENERATION                 SUPGEN.DOC
+        INDEX                                                     July 22, 1985
+
+
+
+
+        PERF/NOPERF  9                        UN2 PARAMETERS  45
+        PERFORMANCE REPORTING  9              UN2 SLAVE  3
+        PRBNAM MACRO  34                      UN2PRM MACRO  45
+        PRBPRM MACRO  40                      USER PROFILES  29
+        PROBE PARAMETERS  40                  UTILITY SLOT PARAMETERS  47
+        PROBE SLAVE  3                        UTLPRM MACRO  47
+        PROBE USERNAMES  34
+
+
+        RADIX  2
+        READ ONLY SUP AREA  37
+        READ/WRITE SUP AREA  37
+
+
+        SECOND SECTION  35
+        SECTOR  3
+        SECURITY  32
+        SHUT LINES TABLES  44
+        SLAVE  3, 6
+        SLEEP  11
+        STORAGE MACROS  21
+        SUBNET  7
+        SUP CODE SAVE AREA  25
+        SUP NUMBER  7
+        SUP/NODE INTERFACE  38
+        SUPCOD MACRO  39
+        SUPCOM MACRO  38
+        SUPDAT MACRO  37
+        SUPER CLOCK  11
+        SUPERVISOR  3
+        SUPERVISOR CONTROL PORTS  35
+        SUPERVISOR PASSTHROUGHS  8
+        SUPERVISOR SYSTEM  3
+        SYSGEN MACROS  1
+        SYSGEN PROCESS  6
+        SYSMSG1 PARAMETERS  44
+        SYSMSG1 SLAVE  3
+        SYSPRM MACRO  44
+        SYSTEM CONSTANTS  10
+
+
+        TARGET MACRO  32
+        TARGET SELECTION  30
+        TARGETING MACROS  29
+        TERMS DEFINED  3
+        THROUGHPUT CLASS  9
+        TIGOUG  9
+        TYMEND MACRO  47
+        TYMSTR MACRO  7
+
+
+
+        61                     SUPERVISOR GENERATION                 SUPGEN.DOC
+    a f7
