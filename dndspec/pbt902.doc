@@ -1,0 +1,4119 @@
+                                                                   May 29, 1987
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      SYSTEM GENERATION REFERENCE MANUAL
+
+                                      FOR
+
+                     3270 POLLED BISYNC TERMINAL INTERFACE
+
+
+                                    VERSION
+
+                                   PBT 9.02
+
+
+
+
+
+                                    TYMNET
+                        NETWORK TECHNOLOGY DEVELOPMENT
+                                 May 29, 1987
+
+
+
+
+
+
+
+
+     ====================================================================
+     |   TYMNET's proprietary rights  are included in  the information  |
+     |   disclosed herein.  The recipient, by receiving this document,  |
+     |   agrees  that  neither  this  document  nor   the  information  |
+     |   disclosed herein nor  any part thereof shall be reproduced or  |
+     |   transferred to other documents or used or disclosed to others  |
+     |   for  manufacturing  or  for  any  other   purpose  except  as  |
+     |   specifically authorized in writing by TYMNET.                  |
+     ====================================================================
+
+
+
+
+
+                                                                     PBT902.DOC
+                                                                   May 29, 1987
+
+
+
+
+
+
+
+                                   TABLE OF CONTENTS
+
+        Section                                                            Page
+
+
+
+        1.   INTRODUCTION                                                     1
+          1.1   DEFINITIONS OF SYNTAX AND FORMAT                              2
+
+
+        2.   MACROS TO DEFINE PARAMETERS FOR LINE                             3
+          2.1   HSTPRT - Originating Host Number                              3
+          2.2   LINTYP - Change Host Line Type                                3
+          2.3   LINE   - Line Address                                         4
+          2.4   LNID   - Line Identification Number                           4
+          2.5   CUNIT  - Control Unit Address                                 5
+          2.6   CUID   - Control Unit Identification Number                   5
+          2.7   DEVICE - Device Address                                       6
+
+
+        3.   SIGNAL CONTROL FOR NON-PRIMATIVE LINE                            7
+          3.1   SWITCH - SWITCH/LEASE line                                    7
+          3.2   HANG   - Hang Logic                                           8
+          3.3   RTSCTS - Request-To-Send/Clear-To-Send Handshake Signal       8
+          3.4   DTRDSR - DTR/DSR handshake signals                            9
+
+
+        4.   DEFIND PARAMETERS FOR DEVICE                                    10
+          4.1   TYPE   - Device Type                                         11
+          4.2   COLOR  - Color Capability                                    11
+          4.3   XPRNT  - Transparency                                        12
+          4.4   PRTTXT - Printer Label In Network Service Screen             12
+          4.5   MENU   - Logon Menu                                          13
+          4.6   PVC    - Permanent Virtual Circuit                           13
+          4.7   DEVID  - Device Identification Number                        14
+          4.8   NETKEY - Network Services Key                                15
+          4.9   KKORKJ - Change Character Set                                16
+          4.10  ERRMSG - DEFINE THE ERROR MESSAGE LANGUAGE FOR THE DEVICE    16
+          4.11  LNGMSG -  MACRO DEFINES LANGUAGE TYPE FOR THE DEVICE         17
+
+
+        5.   LOGON ELEMENTS                                                  18
+          5.1   NETSCR - Network Logon Screen                                19
+             5.1.1    ELEUNA - Network Username                              19
+             5.1.2    ELEHST - Host Number                                   19
+             5.1.3    ELEPWD - Password                                      20
+             5.1.4    ELENPC - Project Code                                  20
+
+
+                                                                     PBT902.DOC
+                                                                   May 29, 1987
+
+
+          5.2   ASCDSP - DSP Screen In ASCII Mode                            20
+             5.2.1    ELEAPC - Project Code                                  21
+
+          5.3   NATDSP - DSP Screen In Native Mode                           21
+             5.3.1    ELEARS - Destination Interface Address                 22
+             5.3.2    ELECRM - CRM Number                                    22
+             5.3.3    ELEAPP - Application Identification                    23
+             5.3.4    ELECUA - Destination Control Unit Address              23
+             5.3.5    ELEDVA - Destination Device Address                    24
+             5.3.6    ELEXPR - Request For Transparency                      24
+             5.3.7    ELECOL - Request For Color                             25
+             5.3.8    ELECHR - Element for Character Set                     25
+
+          5.4   LOGSTR - Logon String                                        26
+          5.5   LOGMEN - Logon Menu                                          27
+
+
+        6.   CHANGING DEFAULT LINE HOST TYPE FOR THE SLOT                    28
+          6.1   DEFLIN - Define Default Host Line Type                       28
+
+
+        7.   CHANGING LINE DEFAULT PARAMETERS FOR SLOT                       29
+          7.1   DEFSWT - default SWITCH/LEASE line                           29
+          7.2   DEFHAN - Default Hang Logic                                  30
+          7.3   DEFRTS - Default RTS/CTS Handshake Signals                   30
+          7.4   DEFDTR - default DTR/DSR handshake signals                   31
+
+
+        8.   CHANGING DEFAULT LANGUAGE PARAMETERS FOR SLOT                   32
+          8.1   DEFLNG -  DEFAULT FOR SCREEN LANGUAGE TYPE FOR THE SLOT      32
+          8.2   DEFERR - DEFAULT ERROR MESSAGE LANGUAGE FOR SLOT             32
+
+
+        9.   CHANGING DEFAULT DEVICE PARAMETERS FOR SLOT                     34
+          9.1   DEFTYP - Default Device Type                                 34
+          9.2   DEFCOL - Default Color Capability                            35
+          9.3   DEFXPR - Default Transparency Capability                     35
+          9.4   DEFMEN - Default Logon Menu                                  36
+          9.5   DEFPVC - Default PVC Capability                              36
+          9.6   DEFNET - Default Network Services Key                        37
+          9.7   DEFCHR - Define Default Character Set                        37
+
+
+        10.  MACROS TO CHANGE TERMINAL INTERFACE PARAMETERS                  39
+          10.1  HNGDTR - Interval To Hold DTR Down                           39
+          10.2  MONDSR - time interval to monitor the DSR signal             39
+          10.3  NLOGIN - time interval for no log in                         40
+          10.4  TMIACT - Time Interval To Check Line Inactivity              41
+          10.5  SLWPOL - Activate Slow Poll Logic                            41
+          10.6  SPOLTM - Time Interval For Slow Poll                         42
+          10.7  NOPOLL - Timeout Interval For No Response To Polling         42
+          10.8  PRESTM - timeout limit for response to the polling           43
+          10.9  SRESTM - timeout limit for response to the select            43
+
+                                                                     PBT902.DOC
+                                                                   May 29, 1987
+
+
+          10.10 DRESTM - timout limit for response to the text               44
+          10.11 ARESTM - timeout limit for response to the ACK               44
+          10.12 PVCTME - PVC timer                                           45
+          10.13 PVCOPN - Permanent Virtual Circuit                           45
+          10.14 DSPSRN - Display DSP screen                                  47
+          10.15 TWOPFK - Two PF Keys                                         47
+          10.16 PFMEU  - PF Key To Logoff And Obtain MENU                    48
+          10.17 PFMEU1 - PF Key To Logoff And Logon First Menu               49
+          10.18 PFMEU2 - PF key to logoff and logon 2nd menu                 49
+          10.19 PLTSUP - Interval For Average Polling Ccycle Log             50
+          10.20 MINXMT - Minimum threshold to release for transmit           50
+          10.21 MAXXMT - Maximum Threshold To Release For Transmit           51
+
+
+        11.  DEFINE TERMINAL INTERFACE DEBUGGING PARAMETERS                  52
+          11.1  NETCON - Network Console                                     52
+          11.2  STPCRSH - Halt After Crash                                   54
+          11.3  IRINGSZ - IRING Size                                         54
+          11.4  ORINGSZ - RING Size                                          54
+          11.5  BUFLET  - Bufferlet Number                                   55
+          11.6  CMDLNK  - Number Of Command Link                             56
+          11.7  PTRACE  - Protocol Trace                                     56
+          11.8  RETCODE - Record Of Return Codes                             57
+          11.9  RTRACE  - Receive Trace                                      57
+          11.10 PRTCON  - Print Tymfile Configuration                        58
+          11.11 GENNIB -- generate the nib file                              59
+
+
+                                     APPENDICES
+                                     ==========
+
+
+        I.   CRASH CODES FOR THE 3270 PBT                                    61
+
+
+        II.  SAMPLE 3270 TERMINAL INTERFACE TYMFILE                          63
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                     PBT902.DOC
+        INTRODUCTION                                               May 29, 1987
+
+
+
+
+
+
+                                   1 -  INTRODUCTION
+
+
+             When the terminal  interface  PBT version 9.02 is   generated, its
+        configuration  must  be   specified.   This  requires   the identifying
+        numbers of BSC lines, control units, terminals, and printers.
+         
+               1. The  address  for  each  BSC line  and  the  control  unit
+                  addresses associated with each line must be specified.
+         
+               2. All devices  for each control  unit must be  defined.  The
+                  device address, type, buffer size, and assigned login menu
+                  must be given.
+         
+
+
+             Control Unit and device  addresses are in the EBCDIC  poll format.
+        If  the  configuration  is  changed,  the  terminal  interface  must be
+        regenerated  with  revised  configuration  information.   The  detailed
+        configuration of the  terminal interface is specified in the Tymfile.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        1                                                            PBT902.DOC
+        INTRODUCTION                                               May 29, 1987
+
+
+                         1.1  DEFINITIONS OF SYNTAX AND FORMAT
+
+
+             The following  statements specify parameters  for the  TYMNET 3270
+        Terminal Interface Tymfile:  macro,  ranging macro, equate, and message
+        text.
+         
+        The following represent macro characteristics:
+         
+            o  A macro body cannot exceed 7665 characters.
+         
+            o  All macros may begin in column  one; indentation is recom-
+               mended for clarity. More than one macro can be put
+               in one line and separated by a semicolon.
+         
+            o  Macros to define line, control unit and device parameters can 
+               be omitted; a default value is assigned at this moment.
+         
+            o  Open parenthesis "(" immediately follows a name.
+         
+            o  Closed parenthesis ")" must follow  the last value without
+               spaces.
+         
+            o  All characters for a message text must be specified.
+         
+            o  A colon (:)  on a line indicates a  comment (this comment,
+               which is not read by the assembler, is optional).
+               Semicolon (;) terminates the comment.
+
+            o  Spaces within the parentheses are  not entered unless part
+               of the value (as in message text).
+         
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        2                                                            PBT902.DOC
+        MACROS TO DEFINE PARAMETERS FOR LINE                       May 29, 1987
+
+
+
+
+
+
+                       2 -  MACROS TO DEFINE PARAMETERS FOR LINE
+
+
+             This section  describes macros required  to define  the parameters
+        necessary for the generation of the Terminal Interface slot.
+
+
+
+
+
+
+                         2.1  HSTPRT - Originating Host Number
+
+
+             Syntax : HSTPRT(host#)
+
+             Description :
+
+             This macro specifies the host number, in decimal,  associated with
+        the terminal interface for  accounting purpose.  Also, this is  used as
+        host number for the slot which will come up as SHUT.
+
+             Example : HSTPRT(500)
+
+             The originating host number for this terminal interface is 500.
+
+
+
+
+
+
+                          2.2  LINTYP - Change Host Line Type
+
+
+             Syntax : LINTYP(IBM/FUJITSU/HITACHI)
+
+             Default : Defined by the previous DEFLIN macro.
+
+             Description :
+
+             This macro defines the line type indicated in the arguement field.
+        This macro must be used before configuration of the line starts.
+
+             This macro can be used to configure the line type to be any one of
+        the  above vendors  to allow  for multi-protocol  support in  the slot.
+        This macro does not,  however, change the default line  type.  This can
+        be done only by using the macro DEFLIN(line-type).
+
+
+
+        3                                                            PBT902.DOC
+        MACROS TO DEFINE PARAMETERS FOR LINE                       May 29, 1987
+
+
+             Example: LINTYP(FUJITSU)           The current  line host  type is
+        FUJITSU.
+
+
+
+
+
+
+                              2.3  LINE   - Line Address
+
+
+             Syntax : LINE(addr)
+
+             Default  :  Automatically  assigned by  the  code  for IBM/FUJITSU
+        lines.
+
+             Description :
+
+             This macro  specifies the current  line address and  indicates the
+        start of  a line configuration.  This address is  arbitrarily assigned,
+        but must be unique. The addresses are defined according to the relative
+        number of  the line being configured for the entire  slot, and  not the
+        relative  number for the host type.
+
+             Example : LINE(40)
+
+             The address of current line is 40.
+
+
+
+
+
+
+                       2.4  LNID   - Line Identification Number
+
+
+             Syntax : LNID(line id)
+
+             Default : Relative line number.
+
+             Description :
+
+             This macro defines the line identification number for  the current
+        line.  The line ID is used in TBOM to identify the line  for monitoring
+        purpose while in USR mode.
+
+             Example : LNID(60)
+
+             The line identification number for the current line is 60.
+
+
+
+
+
+        4                                                            PBT902.DOC
+        MACROS TO DEFINE PARAMETERS FOR LINE                       May 29, 1987
+
+
+                          2.5  CUNIT  - Control Unit Address
+
+
+             Syntax : CUNIT(addr)
+
+             Default : Automatically assigned by the code for IBM/FUJITSU.
+
+             Description :
+
+             This macro specifies the address of control unit which is attached
+        to the line specified in the preceding LINE macro.
+
+             The  addresses  for  IBM  and  Fujitsu  are  the  specific polling
+        addresses, ie. 40, 0C1, 0C2 etc.
+
+             There is  only one set  of addresses for  control unit  in Hitachi
+        format which starts from 0C0, 0C1, etc.
+
+             Example : CUNIT(0C1)
+
+             The address of current control unit is 0C1.
+
+
+
+
+
+
+                   2.6  CUID   - Control Unit Identification Number
+
+
+             Syntax : CUID(CU ID Number)
+
+             Default : Control unit id assigned by program.
+
+             Description :
+
+             This  macro  defines  the identification  number  for  the current
+        control  unit. Like  the line  ID,  CUID  is used  to specify  an user-
+        defined ID for use in TBOM.
+
+             Example : CUID(20)
+
+             The identification number for the current control unit is 20.
+
+
+
+
+
+
+
+
+
+
+
+        5                                                            PBT902.DOC
+        MACROS TO DEFINE PARAMETERS FOR LINE                       May 29, 1987
+
+
+                             2.7  DEVICE - Device Address
+
+
+             Syntax : DEVICE(addr)
+
+             Default : Automatically assigned by the code for IBM/FUJITSU.
+
+             Description :
+
+             This macro specifies the address of a device which is  attached to
+        the control unit specified  in the preceding CUADR macro  and indicates
+        the start of a device configuration.
+
+             The  device addresses  for IBM  and Fujitsu  are the  same  as the
+        general poling addresses for the control unit.
+
+             The  device  addresses  for  Hitahci  are  the   specific  polling
+        addresses which starts from 0A0, 0A1, etc.
+
+             Example : DEVICE(40)
+
+        The address of the current line is 40.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        6                                                            PBT902.DOC
+        SIGNAL CONTROL FOR NON-PRIMATIVE LINE                      May 29, 1987
+
+
+
+
+
+
+                      3 -  SIGNAL CONTROL FOR NON-PRIMATIVE LINE
+
+
+             There are  FOUR   macros   HANG, RTSCTS, SWITCH, AND   DTRDSR used
+        to defined the parameters for the current line. These control  the line
+        control signals rts,cts,dtr,and dsr. Use of these macro's is limited to
+        lines which support  those signals. The lines  are 2,3,6,7,10,11,14,and
+        15 for the micro engine.
+
+
+
+
+
+
+                            3.1  SWITCH - SWITCH/LEASE line
+
+
+             Syntax: SWITCH(arg)
+
+             where arg = YES or NO.
+
+             Default: If this line is omitted, the default value is  defined by
+        the DEFSWT macro.
+
+             Description:
+
+             This macro specifies whether the current line is a dial-up line or
+        leased line. If  the line is specified  as a switched line,  the macros
+        RTSCTS(YES) and HANG(YES) must be invoked to specify  the re-quirements
+        of RTS/CTS  handshake signals  and hang  logic for  this line.   If the
+        current  line  is  a  full-duplex  dial-up  switched  line,  the  macro
+        DTRDSR(YES) also  must be  invoked to specify  the requirements  of the
+        DTR/DSR handshake signals for this line.  The value of the argument are
+        the following:
+
+             YES = the current line is a dial-up switched line.
+
+             NO  = the current line is leased line.
+
+             Example: SWITCH(YES)
+
+             The current line is a dial-up switched line.
+
+
+
+
+
+
+
+
+        7                                                            PBT902.DOC
+        SIGNAL CONTROL FOR NON-PRIMATIVE LINE                      May 29, 1987
+
+
+                               3.2  HANG   - Hang Logic
+
+
+             Syntax: HANG(arg)
+
+             where arg = YES or NO.
+
+             Default:
+
+             If this  macro is  omitted, the  default value  is defined  by the
+        previous DEFHAN.
+
+             Description:
+
+             This macro  specifies whether  the hang logic  is applied  to this
+        line.  For the half  duplex lines using modem,  if a user hangs  up the
+        telephone, the engine is not aware of the disconnection; therefore, the
+        line appears busy to other user's dialing-in.  Hang logic is  a feature
+        to tell  whether the line  is connected. With  this feature  enabled, a
+        timer checks for line inactivity,  and clears the line by  lowering the
+        DTR signal for a specific time.  With this feature disabled, the engine
+        will not be aware of the disconnection and the line will appear busy to
+        other user.   The hang  logic can  also be  applied to  the full-duplex
+        lines using modem in order to detect the line inactivity.
+
+             Example: HANG(YES)
+
+             The hang logic is applied to the current line.
+
+
+
+
+
+
+             3.3  RTSCTS - Request-To-Send/Clear-To-Send Handshake Signal
+
+
+             Syntax: RTSCTS(arg)
+
+             where arg = YES or NO.
+
+             Default: If this macro is omitted, the default value is defined by
+        the DEFRTS macro.
+
+             Description:
+
+             This  macro  specifies  whether  RTS/CTS  handshake   signals  are
+        required for the current line.  This macro can be used for  leased line
+        or dial-up lines. If  "YES" is specified, the RTS/CTS  handshaking will
+        be performed whenever a data block is transmitted      to  the external
+        system.  For a line  supporting dial-up, the RTS/CTS  handshake signals
+        are  definitely  required.  Please  refer  to  RS-232-C   document  for
+
+
+        8                                                            PBT902.DOC
+        SIGNAL CONTROL FOR NON-PRIMATIVE LINE                      May 29, 1987
+
+
+        descriptions  of  these  two electrical  signals.   The  values  of the
+        argument are the following:
+
+             YES = RTS/CTS is required.
+
+             NO  = RTS/CTS is not required.
+
+             Example: RTSCTS(YES)
+
+             The current line requires the RTS/CTS handshake signals.
+
+
+
+
+
+
+                        3.4  DTRDSR - DTR/DSR handshake signals
+
+
+             Syntax: DTRDSR(arg)
+
+             arg = YES or NO.
+
+             Default: If the macro is omitted, the default value is  defined by
+        the previous DEFDTR macro.
+
+             Description:
+
+             This  macro  specifies  whether a  DTR/DSR  handshake  signals are
+        required for the current line.  This macro can be used for  leased line
+        or dial-up line. If "YES" is specified, the DTR/DSR handshaking will be
+        performed by  the 3270  Terminal Interface and  the external  system to
+        inform each other whether the  line is really connected or  not.  Also,
+        if  the  line  is  a  full-duplex  line,  the  3270  Terminal Interface
+        periodically  checks  the  DSR  signal  to  see  whether  the  line  is
+        disconnected.  To support  the full-duplex  switched line,  the DTR/DSR
+        handshake signals are definitely required.  Please refer to EIA RS-232-
+        C document for description of these two electrical signals.
+
+             The values of the argument are the following:
+
+             YES = DTR/DSR is required.
+
+             NO  = DTR/DSR is not required.
+
+             Example: DTRDSR(YES)
+
+             The current  line requires the  DTR/DSR handshake signals  and the
+        DTR/DSR handshaking is performed by the 3270 Terminal Interface and the
+        external system.
+
+
+
+
+        9                                                            PBT902.DOC
+        DEFIND PARAMETERS FOR DEVICE                               May 29, 1987
+
+
+
+
+
+
+                           4 -  DEFIND PARAMETERS FOR DEVICE
+
+
+             There  are  TEN macros  (TYPE,  COLOR, XPRNT,  PRTTXT,  MENU, PVC,
+        NETKEY, KKORKJ, LNGMSG, AND ERRMSG) used to defined the  parameters for
+        the current device.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        10                                                           PBT902.DOC
+        DEFIND PARAMETERS FOR DEVICE                               May 29, 1987
+
+
+                               4.1  TYPE   - Device Type
+
+
+             Syntax : TYPE(C####/P####)
+
+             Default : Defined by the previous DEFTYP macro.
+
+             Description :
+
+             This  macro specifies  the  device type  and screen  size  of each
+        device associated with the control unit and line.
+
+             The values of the argument are the following:
+
+                C#### = CRT, where #### indicates the screen size 
+                        in characters per screen, it can be the value
+                        480, 960, 1920, 2560, 3400, or 3564.
+
+                P#### = Printer, where #### indicates the screen size
+                        in characters per screen, it can be the value
+                        480, 690, 1920, 2560, 3400, or 3564.
+
+
+             Example : TYPE(C960)
+
+             The device is a CRT with 960 characters per screen.
+
+
+
+
+
+
+                            4.2  COLOR  - Color Capability
+
+
+             Syntax : COLOR(YES/NO)
+
+             Default : Defined by the previous DEFCOL macro.
+
+             Description :
+
+             This macro specifies whether device can handle color.
+
+             The values of argument are the following:
+
+                YES = can handle color.
+                NO  = can not handle color.
+         
+
+             Example : COLOR(YES)
+
+             Device is capable of color display.
+
+
+        11                                                           PBT902.DOC
+        DEFIND PARAMETERS FOR DEVICE                               May 29, 1987
+
+
+                              4.3  XPRNT  - Transparency
+
+
+             Syntax : XPRNT(YES/NO)
+
+             Default : Defined by the previous DEFXPR macro.
+
+             Description :
+
+             This macro specifies whether devices can handle transparency.
+
+             The values of argument are the following:
+
+                YES = can handle transparency.
+                NO  = can not handle transparency.
+         
+
+             EXAMPLE : XPRNT(YES)
+
+             Device can operate in the transparency mode.
+
+
+
+
+
+
+                 4.4  PRTTXT - Printer Label In Network Service Screen
+
+
+             Syntax : PRTTXT(text)
+
+             Default : No messages will be displayed for the printer device.
+
+             Description :
+
+             This macro specifies  a text describing  a printer on  the network
+        services screen.
+
+             The values of the argument are the following:
+
+                text =  A short description of the printer on the network
+                        services screen. The text can be entered as ascii
+                        characters directly from the keyboard or ebcdic hex
+                        prefixed with double quotes ". If bcd hex is used
+                        the device must be selected for kk with the lngmsg
+                        macro.
+                NONE =  For CRT devices, the description is not
+                        used on the network services screen.
+
+
+             Example : PRTTXT(BLUE PRINTER)
+
+                       ASCII CHARACTERS ENTERED FROM KEYBOARD.
+
+        12                                                           PBT902.DOC
+        DEFIND PARAMETERS FOR DEVICE                               May 29, 1987
+
+
+                       PRTXT("C2"D3"E4"C5)
+
+                       THIS IS TO ALLOW  KATA KANA TO BE ENTERED  AND DISPLAYED
+        ON JAPANESE TERMINALS.
+
+             Current device is a printer.  "BLUE PRINTER" will be  displayed on
+        the Network Service Screen to identifiy this printer device.
+
+
+
+
+
+
+                               4.5  MENU   - Logon Menu
+
+
+             Syntax : MENU(label)
+
+             Default : Defined by the previous DEFMEN macro.
+
+             Description :
+
+             This macro specifies the label which refers to a set of logon menu
+        that will allow this device to select the destination host interface.
+
+             The value of the argument is the following:
+
+                label = label defined in macro LOGMENU which
+                        refers to the logon menu for this device.
+
+
+             Example: MENU(MENU1)
+
+             The logon menu for the current device is MENU1 which  will display
+        predefined  host  selections  when  user  signs  on  TIF  from  an idle
+        terminal.
+
+
+
+
+
+
+                        4.6  PVC    - Permanent Virtual Circuit
+
+
+             Syntax : PVC(YES/NO)
+
+             Default : Defined by the previous DEFPVC macro.
+
+             Description :
+
+             This macro specifies whether the  device will be logged in  with a
+        PVC or not.
+
+        13                                                           PBT902.DOC
+        DEFIND PARAMETERS FOR DEVICE                               May 29, 1987
+
+
+             If defined as YES, then  should the network circuit be  broken for
+        any reason, Termianl Interface  will automatically try to  re-build the
+        circuit via pre-defined stored logon elements.
+
+             There are  some options that  will specify how  to re-built  and a
+        timer to control when to  start logon process, these will  be described
+        later. "MANUAL" logon element is not allowed for PVC configured device.
+
+             The values of the argument are the following:
+
+                YES = device is logged in with a PVC.
+                NO  = device is not logged in with a PVC.
+
+
+             Example: PVC(YES)
+
+             Terminal Interface will keep the Network Circuit up all the time.
+
+
+
+
+
+
+                      4.7  DEVID  - Device Identification Number
+
+
+             Syntax : DEVID(device identification number)
+
+             Default : Relative device number on the current control unit.
+
+             Description :
+
+             This macro  specifies the  user-defined identification  number for
+        the  current  device.  This  device  ID can  be  used  in  the  TBOM to
+        identified certain device for monitoring purpose while in USR mode.
+
+             Example : DEVID(40)
+
+             The identification number for the current device is 40.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        14                                                           PBT902.DOC
+        DEFIND PARAMETERS FOR DEVICE                               May 29, 1987
+
+
+                          4.8  NETKEY - Network Services Key
+
+
+             Syntax : NETKEY(pf#/pa#/PFENT/PFCLR/OFF)
+
+             Default : Defined by the previous DEFNET macro.
+
+             Description :
+
+             This  macro  specifies  the  PF key  used  to  obtain  the Network
+        Services Screen. Depending on the  setting of macro TWOPFK, one  or tow
+        key strokes may be required to invoke the Network Service Screen.
+
+             NSS is used to perform the following operations :
+
+                1. Logon the printer device.
+                2. Logoff the printer circuit.
+                3. Logoff the CRT circuit.
+
+
+             The values of the arguments are the following:
+
+                PF#   = PF1, PF2, PF3, PF4, PF5, PF6, PF7, PF8
+                        PF9, PF10, PF11, PF12, and
+                        the following for IBM/FUJITSU
+                        PF13, PF14, PF15, PF16, PF17, PF18, PF19,
+                        PF20, PF21, PF22, PF23, PF24 or 
+                        the following for HITACHI
+                        HPF13, HPF14, HPF15, HPF16, HPF17, HPF18, HPF19,
+                        HPF20, HPF21, HPF22, HPF23, HPF24.              
+                PA#   = PA1, PA2
+                PFCLR = CLEAR KEY
+                PFENT = ENTER key.
+                OFF   = DISABLE NETWORK SERVICE SCREEN
+
+
+             For  further  information  about  obtaining  the  network services
+        screen, please refer to macros TWOPFK, PFMENU, PFMEU1 and PFMEU2.
+
+        The HEX values for the Hitachi PF keys are as follows:
+
+                HPF13   :       71
+                HPF14   :       72
+                HPF15   :       73
+                HPF16   :       74
+                HPF17   :       75
+                HPF18   :       76
+                HPF19   :       77
+                HPF20   :       78
+                HPF21   :       79
+                HPF22   :       0FA
+                HPF23   :       0FB
+                HPF24   :       0FC
+
+        15                                                           PBT902.DOC
+        DEFIND PARAMETERS FOR DEVICE                               May 29, 1987
+
+
+
+
+             Example : NETKEY(PF9)
+
+             The network services key for the current device is the PF9 key.
+
+
+
+
+
+
+                          4.9  KKORKJ - Change Character Set
+
+
+             Syntax : KKORKJ(ENG/KANA/KANJI)
+
+             Default :  Defined by previous DEFCHR macro.
+
+             Description :
+
+             This macro changes the character set for the device being defined.
+        It does not change the default character set as defined by the previous
+        DEFCHR macro.
+
+             Example : KKORKJ(KANA)
+
+                       This device supports the KATA KANA character set.
+
+
+
+
+
+
+            4.10  ERRMSG - DEFINE THE ERROR MESSAGE LANGUAGE FOR THE DEVICE
+
+
+             SYNTAX: ERRMSG(ARG)
+
+             WHERE ARG = KK OR ENG
+
+             DESCRIPTION:
+
+             THIS  MACRO  DEFINES  THE ERROR  LANGUAGE  TYPE  FOR  THE DEVICES.
+        ENG=ENGLISH KK=KATA  KANA THIS  MACRO FOLLOWS THE  DEVICE MACRO  IN THE
+        TYMFILE.  IF THE ERRMSG MACRO  IS NOT DEFINED THE DEFERR  MACRO DEFINES
+        THE LANGUAGE.
+
+             EXAMPLE:ERRMSG(KK)
+
+             THE LANGUAGE FOR THIS DEVICE WILL BE KATA KANA.
+
+
+
+
+        16                                                           PBT902.DOC
+        DEFIND PARAMETERS FOR DEVICE                               May 29, 1987
+
+
+              4.11  LNGMSG -  MACRO DEFINES LANGUAGE TYPE FOR THE DEVICE
+
+
+                             SYNTAX: LNGMSG(ARG)
+
+             WHERE ARG = KK OR ENG
+
+             DESCRIPTION:
+
+             THIS MACRO DEFINES  THE SCREEN LANGUAGE  TYPE FOR THE  DEVICE. THE
+        MACRO MUST FOLLOW THE DEVICE MACRO IN THE TYMFILE. IF THIS MACRO IS NOT
+        DEFINED THE DEFLNG MACRO DEFINES THE LANGUAGE.
+
+             EXAMPLE:LNGMSG(ENG)
+
+             THE LANGUAGE FOR THIS DEVICE WILL BE ENGLISH.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        17                                                           PBT902.DOC
+        LOGON ELEMENTS                                             May 29, 1987
+
+
+
+
+
+
+                                  5 -  LOGON ELEMENTS
+
+
+             The user  of a 3270  terminal may logon  through the  stored logon
+        process.   In  stored logon  mode,  the required  login  information is
+        defined in the tymfile and stored in memory.
+
+             Users can request the Network  Logon Menu to be displayed  just by
+        pressing the  ENTER key  on an idle  terminal, which  will wake  up the
+        terminal interface and request a host selection menu be sent.
+
+             By  positioning  the  cursor  in  front  of  the  destination host
+        desired, pressing the ENTER  key tells the Terminal Interface  to start
+        the circuit building process.
+
+             Once the logon is requested, the logon procedure  is automatically
+        initiated.  An element is the basic part of a logon string.
+
+             There are  two sets of  elements that are  required by  the stored
+        logon process :
+
+                1. Network Logon Element.
+
+                   The username element is composed of the username,
+                   host number, password and an optional project code.
+
+                2. DSP Menu Element.
+
+                   DSP(ASCII) consists of a Y which specifies an ASCII
+                   session and the project code.
+
+                   DSP(native) consists of a N followed by the characters
+                   answering the DSP screen.
+                   These characters include CRM number, destination interface
+                   address, application identification, destination control
+                   unit address, destination device address, a request for
+                   transparency and a request for color.
+
+
+             There are three  macros NETSCR, ASCDSP  and NATDSP used  to define
+        these three types of elements.
+
+
+
+
+
+
+
+
+
+        18                                                           PBT902.DOC
+        LOGON ELEMENTS                                             May 29, 1987
+
+
+                          5.1  NETSCR - Network Logon Screen
+
+
+             Syntax : NETSCR(label)
+
+             Description :
+
+             This macro  indicates the  start of the  definition of  an element
+        that would request  a network circuit  be built. Whenever  this Network
+        Logon element is  desired for certain  login, referring to  the "label"
+        would provide the necessary information.
+
+             Example : NETSCR(ELE0)
+
+             The label for current element is "ELE0".
+
+             There are four  macros ELEUNA, ELEHST,  ELEPWD and ELENPC  used to
+        define the characters in the current element.
+
+
+
+
+
+                    5.1.1  ELEUNA - Network Username
+
+             Syntax: ELEUNA(string)  Description :
+
+             This  macro  defines an  username  that's being  validated  in the
+        network where Terminal Interface is residing.   Example : ELEUNA(HELLO)
+
+             The username in current element is "HELLO".
+
+
+
+
+
+                    5.1.2  ELEHST - Host Number
+
+             Syntax : ELEHST(host#)
+
+             Description :
+
+             This optional macro  defines a host  number, in decimal,  of which
+        the destination host interface is defined.
+
+             If the username  is home-based to  certain host number,  then this
+        macro will not be required.
+
+             Example : ELEHST(900)
+
+             The host number in current element is 900.
+
+
+
+        19                                                           PBT902.DOC
+        LOGON ELEMENTS                                             May 29, 1987
+
+
+                    5.1.3  ELEPWD - Password
+
+             Syntax : ELEPWD(password)
+
+             Description :
+
+             This macro defines a password for the current element.
+
+             It is optional only if  the username has been validated  such that
+        password is not required to complete the login.
+
+             Example: ELEPWD(WELCOME TO NTD)
+
+             The password in current element is "WELCOME TO NTD".
+
+
+
+
+
+                    5.1.4  ELENPC - Project Code
+
+             Syntax : ELENPC(project code)
+
+             Description :
+
+             This macro defines a text required by the host for placement  in a
+        special program or  project when defined. The  project code is  sent to
+        the host before an ASCII session begins and is optional.
+
+             Example : ELENPC(3270 INTERFACE)
+
+             The project code in current element is "3270 INTERFACE".
+
+
+
+
+
+
+                        5.2  ASCDSP - DSP Screen In ASCII Mode
+
+
+             Syntax : ASCDSP(label)
+
+             Description :
+
+             This macro indicates the start of the definition of an  element to
+        establish a session that's in ASCII mode.
+
+             Example: ASCDSP(ELE2)
+
+             The label for the current element is "ELE2".  User can use ELE2 to
+        refer this element.
+
+
+        20                                                           PBT902.DOC
+        LOGON ELEMENTS                                             May 29, 1987
+
+
+                    5.2.1  ELEAPC - Project Code
+
+             Syntax : ELEAPC(arg)
+
+             Description :
+
+             This macro defines a text required by the host for placement  in a
+        special program or project when defined.  It is sent to the host before
+        an ASCII session begins and is optional.
+
+             A project  code should  be specified  when accessing  an interface
+        that supports both DSP and ASCII.
+
+             Example : ELEAPC(GOODBYE)
+
+             The project code for current element is "GOODBYE".
+
+
+
+
+
+
+                        5.3  NATDSP - DSP Screen In Native Mode
+
+
+             Syntax : NATDSP(label)
+
+             Description :
+
+             This macro indicates  the start of  definition of an  element that
+        will specify a native mode enviroment with 3270 DSP protocol.
+
+             Example: NATDSP(ELE3)
+
+             The label for  the current element is  "ELE3".  User can  refer to
+        ELE3 for an element that defines DSP logon string which will be used in
+        native mode enviroment.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        21                                                           PBT902.DOC
+        LOGON ELEMENTS                                             May 29, 1987
+
+
+             There are  seven macros (ELEARS,  ELECRM, ELELNA,  ELECUA, ELEDVA,
+        ELEXPR and ELECOL) used to define the current element.
+
+
+
+
+
+                    5.3.1  ELEARS - Destination Interface Address
+
+             Syntax : ELEARS(arg)
+
+             Description :
+
+             This macro  defines an optional  destination interface  address in
+        decimal. No more than 14 digits are allowed in this field.
+
+             The first four digits are  always DNIC for Tymnet followed  by the
+        destination host interface number.
+
+             Example : ELEARS(31060901)
+
+             The  destination  interface  address is  31060901  in  the current
+        element.
+
+
+
+
+
+                    5.3.2  ELECRM - CRM Number
+
+             Syntax : ELECRM(CRM#)
+
+             Description :
+
+             This macro specifies the connection request mode number.
+
+             The values of the argument CRM# are the following:
+
+                CRM1 =  fixed class "crm".  The physical control
+                        unit and device addresses must match those
+                        at the destination host.
+
+                CRM2 =  specified class "crm".  Logon is targeted
+                        to a specific application identification,
+                        destination control unit address and
+                        destination device address.  If any one is 
+                        omitted, the destination host interface 
+                        will assign one for it on the basis of 
+                        availability.  If all of them are omitted,
+                        the function is the same as CRM3.
+
+                CRM3 =  nonspecified class "crm". The logon is
+                        targeted to any available device instead
+
+        22                                                           PBT902.DOC
+        LOGON ELEMENTS                                             May 29, 1987
+
+
+                        of a specific one.  User may, however,
+                        specify application identification, 
+                        destination control unit address or 
+                        destination device address.  If all of 
+                        them are specified, the function is the 
+                        same as CRM2.
+
+                CRM4 =  associated device class.  The logon is 
+                        targeted to an associated printer. 
+                        Logon to printers using the network
+                        services screen in native mode.
+                        However, TYMNET users may use this
+                        CRM class to logon to other networks.
+                        The TYMNET 3270 host interface does provide
+                        crm4 in release 10.00 but its function use
+                        is limited to cmt users.
+
+             Example : ELECRM(CRM3)
+
+             The  connection  request mode  (CRM)  class is  3  in  the current
+        element.
+
+
+
+
+
+                    5.3.3  ELEAPP - Application Identification
+
+             Syntax : ELEAPP(app)
+
+             Default : Assigned by HIF.
+
+             Description :
+
+             This macro specifies the application identification in the current
+        element. This ID is in hex and is optional.
+
+             Example : ELEAPP(40)
+
+             The application identification is 40 in the current element.
+
+
+
+
+
+                    5.3.4  ELECUA - Destination Control Unit Address
+
+             Synatx : ELECUA(addr)
+
+             Default : Assigned by HIF.
+
+             Description :
+
+
+        23                                                           PBT902.DOC
+        LOGON ELEMENTS                                             May 29, 1987
+
+
+             This macro specifies the destination control unit address, in hex,
+        in the current element. It is optional in CRM of 3.
+
+             Example : ELECUA(0C2)
+
+             The  destination  control  unit  address  is  0C2  in  the current
+        element.
+
+
+
+
+
+                    5.3.5  ELEDVA - Destination Device Address
+
+             Syntax : ELEDVA(addr)
+
+             Default : Assigned by HIF.
+
+             Description :
+
+             This macro  specifies the destination  device address, in  hex, in
+        the current element.
+
+             Example : ELEDVA(0C1)
+
+             The destination device address is 0C1 in the current element.
+
+
+
+
+
+                    5.3.6  ELEXPR - Request For Transparency
+
+             Syntax : ELEXPR(YES/NO)
+
+             Default : Defined by the DEFXRT or XPRT macro definitions.
+
+             Description :
+
+             This macro  specifies a  request for  transparency in  the current
+        element. If user  invokes macro ELECOR to  request for the  color, then
+        this macro should also  be incorporated to request for  transparency in
+        current element.
+
+             The values of the argument are the following:
+
+                YES =   user logins to a device that can
+                        operate in transparency mode.
+                NO  =   user logins to a device that can 
+                        not operate in transparency mode.
+
+
+             Example : ELEXPR(YES)
+
+        24                                                           PBT902.DOC
+        LOGON ELEMENTS                                             May 29, 1987
+
+
+             User  requests  to  login   to  a  device  that  can   operate  in
+        transparency mode.  The request is actually assigned as  default, using
+        this macro only for clarity.
+
+
+
+
+
+                    5.3.7  ELECOL - Request For Color
+
+             Syntax : ELECOL(YES/NO)
+
+             Default : Defined by DEFCOL or COLOR macro definitions.
+
+             Description :
+
+             This macro specifies a request for color in the current element.
+
+             The values of the argument are the following:
+
+                YES =   user logins to a device that can
+                        handle color.
+                NO  =   user logins to a device that can
+                        not handle color.
+
+
+             Example : ELECOL(NO)
+
+             User requests to login to a device that can not handle  color.  In
+        other words, user does not plan to use a color application.
+
+
+
+
+
+                    5.3.8  ELECHR - Element for Character Set
+
+             Syntax : ELECHR(ENG/KANA/KANJI)
+
+             Default : Defined by the DEFCHR macro.
+
+             Description :
+
+             This macro is  used after the macro  NATDSP to define  the element
+        for the stored  logon process for the  character set.  This  element is
+        used in the call establishment where TIF sends the Call User Data field
+        indicating   the  characteristics   of  the   network  circuit   to  be
+        established. Other elements  include Connect Request  Mode, Destination
+        Interface Address, and Applicationn ID, etc.
+
+             Example : ELECHR(KANA)
+
+             The network service circuit must support KATA KANA.
+
+        25                                                           PBT902.DOC
+        LOGON ELEMENTS                                             May 29, 1987
+
+
+                              5.4  LOGSTR - Logon String
+
+
+             Syntax : LOGSTR(label,text,label1,label2,label3,label4,label5)
+
+             Description :
+
+             This macro specifies a series of logon elements. The logon strings
+        required for completing the logon sequence are refered to in this macro
+        call in the order that will be asked by the network.
+
+             The values of the argument are the following:
+
+                label  = label to reference this logon string.
+                text   = desired text describing this logon string.
+                         this text will be displayed on the initial network
+                         logon menu. The text can be entered as asii characters
+                         directly from the keyboard or bcd hex prefixed with
+                         double quotes ". If ebcdic hex is used the device must
+                         be selected for kk with the LNGMSG MACRO.
+                labeln = label to reference a element defined in macro NETSRN,
+                         ASCDSP or NATDSP.         
+
+
+             Example :
+
+             LOGSTR(STR0,MANUAL LOGON) :ASCII CHARACTERS ENTERED FROM KEYBOARD
+
+             A logon string "MANUAL LOGON" with the label STR0, no elements are
+        required for manual logon.
+
+             LOGSTR(STR0,"D4"C2"D5"E4"C2"D3) :THIS IS TO ALLOW KATA KANA  TO BE
+        ENTERED AND DISPLAYED ON JAPANESE TERMINALS.
+
+              LOGSTR(STR1,TO HOST 900,ELE1,ELE2)
+
+             Element STR1 defines text "TO  HOST 900" that will show up  on the
+        network logon menu to  describe the targeted host interface  number and
+        two elements ELE1, ELE2 defined in macros NETSRN, ASCDSP or NATDSP will
+        be  used  as the  logon  characters for  the  circuit  building process
+        through the network.
+
+
+
+
+
+
+
+
+
+
+
+
+
+        26                                                           PBT902.DOC
+        LOGON ELEMENTS                                             May 29, 1987
+
+
+                               5.5  LOGMEN - Logon Menu
+
+
+             Syntax : LOGMEN(label,label1,label2,.....,label15)
+
+             Description :
+
+             This macro defines a set  of logon strings for a  particular menu.
+        On  this  menu,  only  those elements  that  define  the  targeted host
+        interface can be selected by the terminal users.
+
+             The values of the argument are the following:
+
+                label  = label to reference this logon menu.
+                CONT   = indicate the continuation of the previous 
+                         LOGMENU macro.
+                labeln = label to reference a logon string defined in 
+                         macro LOGSTR.     
+
+
+             Example : LOGMEN(MENU1,STR1,STR2,STR3)
+
+             Logon menu  MENU1 consists of  three logon elements  labeled STR1,
+        STR2, and STR3  which in terms define  certain logon character  sets by
+        the macro LOGSTR.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        27                                                           PBT902.DOC
+        CHANGING DEFAULT LINE HOST TYPE FOR THE SLOT               May 29, 1987
+
+
+
+
+
+
+                   6 -  CHANGING DEFAULT LINE HOST TYPE FOR THE SLOT
+
+
+             The macro  DEFLIN is used  to change the  host type for  the slot.
+        This macro must be used before the LINE marco.
+
+
+
+
+
+
+                      6.1  DEFLIN - Define Default Host Line Type
+
+
+             Syntax : DEFLIN(line-type)
+
+                      where line-type is IBM/ FUJITSU/ HITACHI
+
+             Default : DEFLIN(IBM), or defined by previous DEFLIN macro.
+
+             Description :
+
+             This macro defines the default protocol type for the lines  in the
+        slot. The line-type can be  IBM or FUJITSU or HITACHI. This  macro must
+        be used before the line configuration starts.
+
+             It is used  whenever a definition of  the line type is  desired or
+        when the  line type  has been  changed by  the macro  LINTYP and  a re-
+        definition is intended to clarify the line type of the subsequent lines
+        that are to be configured.
+
+             If this macro is  omitted, the code will automatically  default to
+        the host type of IBM.
+
+             Example: DEFLIN(HITACHI)
+
+                      The default line host type is HITACHI.
+
+
+
+
+
+
+
+
+
+
+
+
+
+        28                                                           PBT902.DOC
+        CHANGING LINE DEFAULT PARAMETERS FOR SLOT                  May 29, 1987
+
+
+
+
+
+
+                    7 -  CHANGING LINE DEFAULT PARAMETERS FOR SLOT
+
+
+             There are FOUR macros DEFHANG, DEFRTS, DEFDTR, AND DEFSWT  used to
+        change the default  for line parameters.   These macros can  be invoked
+        anywhere  in the  TYMFILE.   The default  is  changed at  the  point of
+        invocation,  and  may be  redefined  at a  later  point.  These macro's
+        require  lines  which support  rts,  cts,dtr,and dsr.  The  lines which
+        support  those functions  are  line 2,3,6,  7,10,11,14, and  15  of the
+        engine.
+
+
+
+
+
+
+                        7.1  DEFSWT - default SWITCH/LEASE line
+
+
+             Syntax: DEFSWT(arg)
+
+             where arg = YES or NO.
+
+             Default:   If  this   macro  is   omitted,  the   initial  default
+        value is "NO".
+
+             Description:
+
+             This macro defines the default for macro SWITCH(arg).   The values
+        of the argument  are the following:
+
+                    YES = the line is a dial-up switched line.
+                    NO  = the line is a leased line.
+
+             Example: DEFSWT(YES)
+
+             The default line type for each line is that the line is  a dial-up
+        switched line from this point on.
+
+
+
+
+
+
+
+
+
+
+
+
+        29                                                           PBT902.DOC
+        CHANGING LINE DEFAULT PARAMETERS FOR SLOT                  May 29, 1987
+
+
+                           7.2  DEFHAN - Default Hang Logic
+
+
+             Syntax: DEFHAN(arg)
+
+             where arg = YES or NO.
+
+             Default:   If  this   macro  is   omitted,  the   initial  default
+        value is "NO".
+
+             Description:
+
+             This macro defines the default for macro HANG(arg).  The values of
+        the argument are the following:
+
+                     YES = enable the hang logic.
+                     NO  = disable the hang logic.
+
+             Example: DEFHAN(YES)
+
+             The default hang logic feature for each line is disabled from this
+        point on.
+
+
+
+
+
+
+                    7.3  DEFRTS - Default RTS/CTS Handshake Signals
+
+
+             Syntax: DEFRTS(arg)
+
+             where arg = YES or NO.
+
+             Default:   If  this   macro  is   omitted,  the   initial  default
+        value is "NO".
+
+             Description: This macro defines the default for macro RTSCTS(arg).
+        The macro can be used for all lines which support this signal. The line
+        can be leased  or dial-up. The macro  switch must be used  with dial-up
+        lines.  The values of the arguments are the following:
+
+                     YES = RTS/CTS is required.
+                     NO  = RTS/CTS is not required.
+
+             Example: DEFRTS(NO)
+
+             The default RTS/CTS  handshake signals for  each line is  that the
+        line does not require RTS/CTS handshake signals from this point on.
+
+
+
+
+        30                                                           PBT902.DOC
+        CHANGING LINE DEFAULT PARAMETERS FOR SLOT                  May 29, 1987
+
+
+                    7.4  DEFDTR - default DTR/DSR handshake signals
+
+
+             Syntax: DEFDTR(arg)
+
+             where arg = YES or NO.
+
+             Default:   If  this   macro  is   omitted,  the   initial  default
+        value is "NO".
+
+             Description:
+
+             This macro defines the  default for macro  DTRDSR(arg).  The macro
+        can be used for  all lines which support  this signal. The line  can be
+        leased or dial-up.  The values of the argument  are the following:
+
+                     YES = DTR/DSR is required.
+                     NO  = DTR/DSR is not required.  
+
+             Example: DEFDTR(NO)
+
+             The default DTR/DSR  handshake signals for  each line is  that the
+        line does not require DTR/DSR handshake signals from this point on.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        31                                                           PBT902.DOC
+        CHANGING DEFAULT LANGUAGE PARAMETERS FOR SLOT              May 29, 1987
+
+
+
+
+
+
+                  8 -  CHANGING DEFAULT LANGUAGE PARAMETERS FOR SLOT
+
+
+             There  are  two  macros  DEFLNG AND  DEFERR  which  allow  for the
+        selection  of the  display in  KATA KANA  OR ENGLISH.  The  default for
+        language  if not  specificed is  ENGLISH. These  macros can  be invoked
+        anywhere in the  TYMFILE. These macro's  change the default  values per
+        device. The default  is changed at the  point of invocation,and  may be
+        redefined at a later point.
+
+
+
+
+
+
+             8.1  DEFLNG -  DEFAULT FOR SCREEN LANGUAGE TYPE FOR THE SLOT
+
+
+             SYNTAX: DEFLNG(ARG)
+
+             WHERE ARG = ENG OR KK
+
+             DESCRIPTION:
+
+             THIS MACRO DEFINES THE  DEFAULT SCREENS A CUSTOMER CAN  SELECT FOR
+        THE SLOT.  DEVICE ENGLISH OR KATA KANA. ENG= ENGLISH,KK= KATA  KANA. IF
+        THIS MACRO IS NOT SELECTED THE DEFAULT IS ENGLISH
+
+             EXAMPLE:DEFLNG(KK)
+
+             THE DEFAULT SCREEN IS KATA KANA.
+
+
+
+
+
+
+                 8.2  DEFERR - DEFAULT ERROR MESSAGE LANGUAGE FOR SLOT
+
+
+             SYNTAX: DEFERR(ARG)
+
+             WHERE ARG = KK OR ENG
+
+             DESCRIPTION:
+
+             THIS MACRO DEFINES THE DEFAULT FOR ALL THE MESSAGES FOR  THE SLOT.
+        THE CHOICES ARE KK=KATA KANA ENG=ENGLISH. IF THIS MACRO IS NOT SELECTED
+        THE DEFAULT IS ENGLISH.
+
+        32                                                           PBT902.DOC
+        CHANGING DEFAULT LANGUAGE PARAMETERS FOR SLOT              May 29, 1987
+
+
+             EXAMPLE:DEFERR(FF)
+
+             THE DEFAULT ERROR LANGUAGE IS KATA KANA
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        33                                                           PBT902.DOC
+        CHANGING DEFAULT DEVICE PARAMETERS FOR SLOT                May 29, 1987
+
+
+
+
+
+
+                   9 -  CHANGING DEFAULT DEVICE PARAMETERS FOR SLOT
+
+
+             There  are EIGHT  macros DEFTYP,  DEFCOL, DEFXPR,  DEFPRT, DEFMEN,
+        DEFPVC, DEFCHR and DEFNET used to change the default values  for device
+        parameters.
+
+             These macros can be invoked anywhere in the TYMFILE.
+
+             The default  is changed  at the  point of  invocation, and  may be
+        redefined at a later point.
+
+
+
+
+
+
+                           9.1  DEFTYP - Default Device Type
+
+
+             Syntax : DEFTYP(C####/P####)
+
+             Default : C1920.
+
+             Description :
+
+             This macro defines the default for macro TYPE(arg).
+
+             The values of the argument are the following:
+
+                C#### = CRT, where #### indicates screen size 
+                        in characters per screen, it can be the value
+                        480, 960, 1920, 2560, 3400, or 3564.
+                P#### = Printer, where #### indicates screen size
+                        in characters per screen, it can be the value
+                        480, 690, 1920, 2560, 3400, or 3564.
+
+
+             Example : DEFTYP(C960)
+
+             The default device type is a CRT with the screen of 960.
+
+
+
+
+
+
+
+
+
+        34                                                           PBT902.DOC
+        CHANGING DEFAULT DEVICE PARAMETERS FOR SLOT                May 29, 1987
+
+
+                        9.2  DEFCOL - Default Color Capability
+
+
+             Syntax : DEFCOL(YES/NO)
+
+             Default : NO.
+
+             Description :
+
+             This macro defines the default for the macro COLOR(arg).
+
+             The values of the argument are the following:
+
+                YES = can handle color.
+                NO  = can not handle color.
+
+
+             Example : DEFCOL(YES)
+
+             The default color capability of the device is that the  device can
+        handle color.
+
+
+
+
+
+
+                     9.3  DEFXPR - Default Transparency Capability
+
+
+             Syntax : DEFXPR(YES/NO)
+
+             Default : NO.
+
+             Description :
+
+             This macro defines the default for macro XPRNT(arg).
+
+             The values of the argument are the following:
+
+                YES = can handle transparency.
+                NO  = can not handle transparency.
+
+
+             Example : DEFXPR(YES)
+
+             The  default transparency  capability of  the device  is  that the
+        device can operate in the transparency  mode.
+
+
+
+
+
+
+        35                                                           PBT902.DOC
+        CHANGING DEFAULT DEVICE PARAMETERS FOR SLOT                May 29, 1987
+
+
+                           9.4  DEFMEN - Default Logon Menu
+
+
+             Syntax : DEFMEN(label)
+
+             Default : The first logon menu.
+
+             Description :
+
+             This macro defines the default for the macro MENU(label).
+
+             The value of the argument is the following:
+
+                label = a label defined in macro LOGMENU which
+                        refers to the menu for this device.
+
+
+             Example : DEFMEN(MENU1)
+
+             The default logon menu is the menu with the label MENU1.
+
+
+
+
+
+
+                         9.5  DEFPVC - Default PVC Capability
+
+
+             Syntax : DEFPVC(YES/NO)
+
+             Default : NO.
+
+             Description :
+
+             This macro defines the default for macro PVC(arg).
+
+             Example: DEFPVC(YES)
+
+             The default PVC  capability of each device  is that the  device is
+        logged in with a PVC facility.
+
+
+
+
+
+
+
+
+
+
+
+
+
+        36                                                           PBT902.DOC
+        CHANGING DEFAULT DEVICE PARAMETERS FOR SLOT                May 29, 1987
+
+
+                      9.6  DEFNET - Default Network Services Key
+
+
+             Syntax : DEFNET(PF#/PA#/PFCLR/PFENT/OFF)
+
+             Default : PF4.
+
+             Description :
+
+             This macro defines the default programmable function key for macro
+        NETKEY(arg).
+
+             The value of the augument are the following:
+
+                PF#   = PF1, PF2, PF3, PF4, PF5, PF6, PF7, PF8
+                        PF9, PF10, PF11, PF12, and
+                        the following for IBM/FUJITSU
+                        PF13, PF14, PF15, PF16, PF17, PF18, PF19,
+                        PF20, PF21, PF22, PF23, PF24 or 
+                        the following for HITACHI
+                        HPF13, HPF14, HPF15, HPF16, HPF17, HPF18, HPF19,
+                        HPF20, HPF21, HPF22, HPF23, HPF24.              
+                PA#   = PA1, PA2
+                PFCLR = CLEAR KEY
+                PFENT = ENTER key.
+                OFF   = DISABLE NETWORK SERVICE SCREEN
+
+
+             Example : DEFNET(PF10)
+
+             The default network services key is PF 10 key.
+
+
+
+
+
+
+                      9.7  DEFCHR - Define Default Character Set
+
+
+             Syntax : DEFCHR(ENG/KANA/KANJI)
+
+             Default : DEFCHR(ENG)
+
+             Description :
+
+             This macro  defines the  character set  that will  be used  by the
+        device after network circuit is built.
+
+             Character set of ENG means the session has no  special characters.
+        Character set  of  KANA means the  session uses the  additional special
+        character set of  KATAKANA. The character  set  of KANJI  indicates the
+        inclusion  of the KATAKANA characters plus the KANJI characters.
+
+        37                                                           PBT902.DOC
+        CHANGING DEFAULT DEVICE PARAMETERS FOR SLOT                May 29, 1987
+
+
+             This default character  set can be defined  on a device  basis and
+        can also be changed by the macro KKORKJ.
+
+             Example : DEFCHR(KANA)
+
+                       The special characters for KATA KANA will be used.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        38                                                           PBT902.DOC
+        MACROS TO CHANGE TERMINAL INTERFACE PARAMETERS             May 29, 1987
+
+
+
+
+
+
+                 10 -  MACROS TO CHANGE TERMINAL INTERFACE PARAMETERS
+
+
+
+
+
+
+
+                       10.1  HNGDTR - Interval To Hold DTR Down
+
+
+             Syntax: HNGDTR(t)
+
+             Where t = time  in seconds.  The value  of t  can be  any positive
+        decimal value from 1 to 3600(1 hour).
+
+             Default: If this macro is omitted, the default is  1 second.
+
+             Decription:
+
+             This  macro  specifies  the  time interval  to  hold  DTR  down to
+        disconnect  the  line  between  the  3270 Terminal  Interface  and  the
+        modem. The value of the argument is the following:
+
+                    t = the time interval to hold DTR down.
+
+             Example: HNGDTR(2)
+
+             The DTR signal will be  held down for 2 seconds to  disconnect the
+        line.
+
+
+
+
+
+
+                10.2  MONDSR - time interval to monitor the DSR signal
+
+
+             Syntax: MONDSR(t)
+
+             where t = time in ticks(1 second=600 ticks). The value of t can be
+        any positive decimal value from 300 to 2160000(1 hour).
+
+             Default:  If  this macro  is  omitted, the  default  is  200 ticks
+        (one/third second).
+
+             Description:
+
+
+        39                                                           PBT902.DOC
+        MACROS TO CHANGE TERMINAL INTERFACE PARAMETERS             May 29, 1987
+
+
+             This macro specifies the time interval to check for the  status of
+        the DSR signal, if the line is a full-duplex switched line. For a full-
+        duplex switched line, the  3270 Terminal Interface monitors  the status
+        of the DSR signals periodically  to tell whether the line  is connected
+        or not.  To  guarantee the line is  connected or disconnected,  the DSR
+        will be checked  more than once.   If the DSR  is detected up  for four
+        consecutively, the line  will be declared up.   If the DSR  is detected
+        down for  four consecutively, the  line will be  declared down  and the
+        3270 Terminal Interface will drop  the DTR signal for a  specific time,
+        and then raise  it again; therefore, the  line will not appear  busy to
+        the  other  users  dialing-in.   The  value  of  the  argument  is  the
+        following:
+
+        t = the time interval to check the status  of the DSR signal.
+
+        Example: MONDSR(600)
+
+        The 3270 Terminal interface will check the status of the DSR signal
+        for each line every  600 ticks(1 second).
+
+        *       Mondsr should be 1/4 the value of hngdtr time
+
+
+
+
+
+
+                      10.3  NLOGIN - time interval for no log in
+
+
+             Syntax: NLOGIN(t)
+
+             where t = time in minutes.  The value of the t can be any positive
+        decimal value from 1 to 1440(24 hours).
+
+             Default: If this macro is omitted, the default is   2 minutes.
+
+             Description:
+
+             This macro  specifies the  time interval  for the  user to  log in
+        after the full-duplex line between the Terminal Interface and the Modem
+        is connected.  When this time interval is expired and there is  no user
+        logged in, the line will  be disconnected by lowering DTR.   The  value
+        of the argument is the following:
+
+        t = the time interval for the user to log in after the line is
+            connected.
+
+        Example: NLOGIN(3)
+
+        When the line is connected and there is no  user logged in 3 minutes,
+        the line will be disconnected.
+                        
+
+        40                                                           PBT902.DOC
+        MACROS TO CHANGE TERMINAL INTERFACE PARAMETERS             May 29, 1987
+
+
+        * If tmiact is used on the same line its value should be greater
+          then nlogin
+
+
+
+
+
+
+                 10.4  TMIACT - Time Interval To Check Line Inactivity
+
+
+             Syntax: TMIACT(t)
+
+             where t =  time in seconds.   The value of  t can be  any positive
+        decimal value from 1 to 86400(24 hours).
+
+             Default: If this macro is omitted, the default is  60 second.
+
+             Description:
+
+             This  macro  specifies  the  time  interval  to  check   the  line
+        inactivity if  the hang logic  is applied to  this line. Once  the line
+        inactivity is detected,the DTR signal will be held down for  a specific
+        time to disconnect  the line. To make  sure the Terminal  Interface has
+        enough  time to  send the  polling out,  this time  interval  should be
+        specified  at least twice as  long as the time interval for  slow poll.
+        The value of the argument is the following:
+
+        t = the time interval to check the line inactivity.
+                  
+        Example: TMIACT(120)
+
+        The terminal interface checks the line inactivity every 120 seconds.
+
+        *        tmiact must be greater then hngdtr value and nlogin if
+                 line is full duplex dial-up.
+
+
+
+
+
+
+                        10.5  SLWPOL - Activate Slow Poll Logic
+
+
+             Syntax: SLWPOL(t)
+
+             Default : 60 Seconds.
+
+             Description :
+
+             This  macro specifies  the time  interval, t  seconds  in decimal,
+        without poll responses before the slow poll mode is activated.
+
+        41                                                           PBT902.DOC
+        MACROS TO CHANGE TERMINAL INTERFACE PARAMETERS             May 29, 1987
+
+
+             Example : SLWPOL(90)
+
+             Terminal  interface  will start  the  slow poll,  if  there  is no
+        response for 90 seconds since last response.
+
+
+
+
+
+
+                      10.6  SPOLTM - Time Interval For Slow Poll
+
+
+             Syntax: SPOLTM(t)
+
+             where t = time in seconds.  The value of the t can be any positive
+        decimal value from 1 to 3600(1 hour).
+
+             Default: If this macro is omitted, the default is 20 seconds.
+
+             Description:
+
+             This macro specifies the time interval between the slow polls.  In
+        3270 Terminal  Interface, if there  is no response  in a  specific time
+        since last response,the slow  poll mode is activated.   For half-duplex
+        line modem, if the modem does not receive the data from the engine in a
+        specific time, the  modem will disconnect the  line.  As a  result, the
+        time interval for  slow poll should be  shorter than the  time interval
+        for  the line  being   disconnected by  the  modem.  The  value  of the
+        argument is the following:
+
+        t = the time interval for slow poll.
+
+        Example: SPOLTM(30)
+
+        The 3270 Terminal Interface issues a slow poll every 30 seconds.
+
+
+
+
+
+
+              10.7  NOPOLL - Timeout Interval For No Response To Polling
+
+
+             Syntax : NOPOLL(t)
+
+             Default : 60 seconds.
+
+             Description :
+
+             This  macro  specifies  the  time  interval  between  responses to
+
+
+        42                                                           PBT902.DOC
+        MACROS TO CHANGE TERMINAL INTERFACE PARAMETERS             May 29, 1987
+
+
+        polling before the terminal  declares the control unit as  inactive and
+        disconnects all circuits with devices on this control unit.
+
+             Example : NOPOLL(40)
+
+             40 seconds has passed  since last poll response, then  the control
+        unit is  declared down and  all circuits with  devices on  this control
+        unit are disconnected.
+
+
+
+
+
+
+               10.8  PRESTM - timeout limit for response to the polling
+
+
+             Syntax: PRESTM(t)
+
+             where t = time in seconds.  The value of the t can be any positive
+        decimal value from 1 to 3600(1 hour).
+
+             Default: If this macro is omitted, the default is 3 seconds.
+
+             Description:
+
+             This macro  specifies the  maximum time interval  to wait  for the
+        response to the polling.  The  value of the argument is  the following:
+        t = the timeout limit for the response to the polling.
+
+             Example: PRESTM(5)
+
+             After sending out the  polling, the 3270 Terminal  Interface waits
+        for 5 seconds for the response.
+
+
+
+
+
+
+                10.9  SRESTM - timeout limit for response to the select
+
+
+             Syntax: SRESTM(t)
+
+             where t = time in seconds.  The value of the t can be any positive
+        decimal value from 1 to 3600(1 hour).
+
+             Default: If this macro is omitted, the default is 3 seconds.
+
+             Description:
+
+
+
+        43                                                           PBT902.DOC
+        MACROS TO CHANGE TERMINAL INTERFACE PARAMETERS             May 29, 1987
+
+
+             This macro  specifies the  maximum time interval  to wait  for the
+        response to the  select.  The value of  the argument is  the following:
+        t = the timeout limit for response to  the select.
+
+             Example: SRESTM(5)
+
+             After sending  out the select,  the 3270 Terminal  Interface waits
+        for 5 seconds for the response.
+
+
+
+
+
+
+                 10.10  DRESTM - timout limit for response to the text
+
+
+             Syntax: DRESTM(t)
+
+             where t = time in seconds.  The value of the t can be any positive
+        decimal value from 1 to 3600(1 hour).
+
+             Default: If this macro is omitted, the default is 3 seconds.
+
+             Description:
+
+             This macro  specifies the  maximum time interval  to wait  for the
+        response  to  the  data  block.   The  value  of  the  argument  is the
+        following:
+
+             t = the timeout limit for the response to the data block.
+
+             Example: DRESTM(5)
+
+             After  sending out  the data  block, the  3270  Terminal Interface
+        waits for 5 seconds for he response.
+
+
+
+
+
+
+                 10.11  ARESTM - timeout limit for response to the ACK
+
+
+              Syntax: ARESTM(t)
+
+             where t = time in seconds.  The value of the t can be any positive
+        decimal value from 1 to  3600(1 hour).
+
+             Default: If this macro is omitted, the default is  60 seconds.
+
+             Description:
+
+        44                                                           PBT902.DOC
+        MACROS TO CHANGE TERMINAL INTERFACE PARAMETERS             May 29, 1987
+
+
+             This macro  specifies the  maximum time interval  to wait  for the
+        response  to the  acknowledgement.  The  value of  the argument  is the
+        following:
+
+             t = the timeout limit for response to the acknowledgement.
+
+             Example: ARESTM(80)
+
+             after sending out the acknowledgement, the 3270 Terminal Interface
+        waits for  80 seconds for the response.
+
+
+
+
+
+
+                               10.12  PVCTME - PVC timer
+
+
+             Syntax : PVCTME(t)
+
+             Default : 300 seconds(5 MINS.).
+
+             Description :
+
+             This macro specifies the time  interval for the PVC timer.   For a
+        PVC  device, a  timer routine  will check  the device  status  and will
+        automatically initiate a logon  procedure if this device is  not logged
+        in.
+
+             ** WARNING A SHORT  TIMER INTERVAL WILL CAUSE  ADDITIONAL OVERHEAD
+        FOR THE SUPERVISOR IF THE TERMINALS ARE POWERED OFF AT  NIGHT. CIRCUITS
+        WILL BE ATTEMPTED AS LONG AS THE POWER IS OFF ON THE HOST OR TERMINAL.
+
+             Example : PVCTME(120)
+
+             The PVC timer is activated every 120 seconds.
+
+
+
+
+
+
+                       10.13  PVCOPN - Permanent Virtual Circuit
+
+
+             Syntax : PVCOPN(OPT1/OPT2/OPT3/OPT4/NONE)
+
+             Default : OPT3.
+
+             Description :
+
+
+
+        45                                                           PBT902.DOC
+        MACROS TO CHANGE TERMINAL INTERFACE PARAMETERS             May 29, 1987
+
+
+             This macro specifies whether the  device is logged in with  a PVC.
+        If the device is a PVC, the argument should specify the choice  of four
+        schemes  to initiate  a logon  for a  PVC that  has  been disconnected.
+        Permanet Virtual Circuit (PVC) for 3270 terminal interface is simulated
+        by performing an  automatic logon procedure without  user intervention.
+        There is a  timer routine that runs  periodically and checks  whether a
+        PVC defined device is ready to communicate.  If the device is  ready to
+        communicate, the terminal interface sends the stored logon to  the host
+        and the circuit is built.  The connection appears as a PVC to the user.
+        The  PVC  options (OPT1,  OPT2,  OPT3 and  OPT4)  allow  flexibility in
+        deciding the  type of retry  mechanism.  In describing  these different
+        options, the interval for PVC timer defined in macro PVCTME  is assumed
+        to be five minutes.
+
+             The values of the argument are the following:
+
+                OPT1 = once a circuit for a device which is logged in 
+                       with a PVC is zapped, a circuit rebuilt is 
+                       attempted within five minutes.
+         
+                OPT2 = once a circuit for a device which is logged in
+                       with a PVC is zapped, a circuit rebuilt is 
+                       attemped at an average of five minutes, but 
+                       an attempt may happened anytime from zero to 
+                       ten minutes.
+         
+                OPT3 = once a circuit for a device which is logged in
+                       with a PVC is zapped, a circuit rebuilt is 
+                       attempted after at least five minutes has passed,
+                       but at most ten minutes.
+         
+                OPT4 = once a circuit for a device which is logged in
+                       with a PVC is zapped, a circuit rebuilt is 
+                       immediately attempted and subsequent retries  
+                       are repeated every five minutes.
+
+
+             ** WARNING A SHORT  TIMER INTERVAL WILL CAUSE  ADDITIONAL OVERHEAD
+        FOR THE SUPERVISOR IF THE TERMINALS ARE POWERED OFF AT  NIGHT. CIRCUITS
+        WILL BE ATTEMPTED AS LONG AS THE POWER IS OFF ON THE HOST OR TERMINAL.
+
+             Example : PVCOPN(OPT4)
+
+             Once a  circuit for  a device  which is  logged in  with a  PVC is
+        zapped, a circuit rebuilt is immediately attempted.
+
+
+
+
+
+
+
+
+
+        46                                                           PBT902.DOC
+        MACROS TO CHANGE TERMINAL INTERFACE PARAMETERS             May 29, 1987
+
+
+                          10.14  DSPSRN - Display DSP screen
+
+
+             Syntax : DSPSRN(YES/NO)
+
+             Default : YES.
+
+             Description :
+
+             This macro specifies  whether the DSP  screen is displayed  in the
+        logon process.  With this feature enabled, the DSP screen  is displayed
+        in the logon process. With this feature disabled, the DSP screen is not
+        displayed in the  logon process and   connection request mode  (CRM) is
+        automatically assigned to 3. Then, the logon is initiated  and targeted
+        to  any available  device  which is  assigned by  the  destination host
+        interface.     The values of the argument are the following:
+
+                YES = DSP screen will be displayed.
+                NO  = DSP screen will not be displayed.
+
+
+             Example : DSPSRN(NO)
+
+             The DSP screen wiil not be displayed in the logon process.
+
+
+
+
+
+
+                              10.15  TWOPFK - Two PF Keys
+
+
+             Syntax : TWOPFK(YES/NO)
+
+             Default : NO.
+
+             Description :
+
+             This  macro specifies  whether the  host application  can  use the
+        specified network services screen (NSS) key.  If yes, a  2-key sequence
+        is used to  access the NSS  and all PF keys  are available to  the host
+        application.  If not,  a 1-key sequence is  used to access the  NSS and
+        the key for NSS is unavailable to the host application.
+
+             The values of the argument are the following:
+
+                YES = the NSS is obtained by pressing the network
+                      services key once, followed by any key other
+                      than the keys defined in macros NETKEY, PFMENU,
+                      PF1MEU and PF2MEU.  If the network services key 
+                      is pressed twice, the AID associated with this 
+                      key is sent to the host application.
+
+        47                                                           PBT902.DOC
+        MACROS TO CHANGE TERMINAL INTERFACE PARAMETERS             May 29, 1987
+
+
+
+                NO  = the NSS is obtained only by pressing the 
+                      network services key once.  The network services
+                      key is not sent to the host or to the network.
+
+
+             Example : TWOPFK(NO)
+
+             The host  application can not  use the specified  network services
+        key.  The user can obtain the NSS by pressing the network  services key
+        once.
+
+
+
+
+
+
+                   10.16  PFMEU  - PF Key To Logoff And Obtain MENU
+
+
+             Syntax : PFMEU(pf-key)
+
+             Default : PF3.
+
+             Description :
+
+             This macro specifies the PF key used with the network services key
+        in order to logoff the current circuit and get the menu screen.
+
+             PFMEU can take arguement in any of the following key definitions:
+
+                 PF1,  PF2,  PF3,  PF4,  PF5,  PF6,  PF7,
+                 PF8,  PF9, PF10, PF11, PF12, PF13, PF14,
+                PF15, PF16, PF17, PF18, PF19, PF20, PF21,
+                PF22, PF23, PF24.
+                 PA1,  PA2,  PA3.
+                PFCLR.
+                PFENT.
+
+
+             Example : PFMEU(PF6)
+
+             The current circuit will be logged off and the menu screen will be
+        displayed on the screen when the user presses the network  services key
+        followed by the PF 6 key.
+
+
+
+
+
+
+
+
+
+        48                                                           PBT902.DOC
+        MACROS TO CHANGE TERMINAL INTERFACE PARAMETERS             May 29, 1987
+
+
+                 10.17  PFMEU1 - PF Key To Logoff And Logon First Menu
+
+
+             Syntax : PFMEU1(pf-key)
+
+             Default : PF1
+
+             Description :
+
+             This macro specifies the PF key used with network services  key in
+        order to loggoff the current circuit and logon to the first destination
+        defined in menu screen.
+
+             The value of pf-key is the same as in PFMEU.
+
+             Example : PFMEU1(PF2)
+
+             When the user presses the network services key followed by  the PF
+        2 key, the  current circuit will  be logged off  and a circuit  will be
+        logged on to the second destination defined on the menu screen.
+
+
+
+
+
+
+                  10.18  PFMEU2 - PF key to logoff and logon 2nd menu
+
+
+             Syntax : PFMEU2(pf-key)
+
+             Default : PF2.
+
+             Description :
+
+             This macro specifies the PF key used with network services  key in
+        order to logoff the current circuit and logon to the second destination
+        defined on the menu screen.  If there is no second logon string defined
+        the on menu screen, the terminal interface will send a write command to
+        the user to unlock the keyboard and display "WRONG KEY...TRY  AGAIN" on
+        the screen.
+
+             The value of the pf-key is the same as in PFMEU.
+
+             Example : PFMEU2(PF5)
+
+             When the user presses the network services key followed by  the PF
+        5 key, the  current circuit will  be logged off  and a circuit  will be
+        logged on to the second destination defined on the menu screen.
+
+
+
+
+
+        49                                                           PBT902.DOC
+        MACROS TO CHANGE TERMINAL INTERFACE PARAMETERS             May 29, 1987
+
+
+                10.19  PLTSUP - Interval For Average Polling Ccycle Log
+
+
+             Syntax : PLTSUP(t)
+
+             Default : 1440 minutes or 1 hour.
+
+             Description :
+
+             This  macro specifies  the time  interval, t  in  decimal seconds,
+        which  terminal  interface  reports the  average  polling  time  to the
+        supervisor's log.  An operator may access this log via probe.   Example
+        : PLTSUP(60)
+
+             Every 60  minutes the terminal  interface will record  the polling
+        time to the supervisor log.
+
+
+
+
+
+
+               10.20  MINXMT - Minimum threshold to release for transmit
+
+
+             Syntax : MINXMT(n)
+
+             Default : Hexadecimal 30.
+
+             Description :
+
+             This  macro  defines the  minimum  number of  data  threshold(n in
+        hexadecimal) to hold for  transmit.  In 3270 terminal  interface, there
+        is a "DYNAMIC BUFFER SIZE"  feature that according to the  condition of
+        the transmission line, the number of SYNC insertions and the  number of
+        un-transmitted data at the time ETX is seen are minimized.   The number
+        defined in this macro is  the minimum number of un-transmitted  data at
+        the the time ETX is seen.
+
+             Example : MINXMT(20)
+
+             The minimum number of data threshold to release for transmit is 32
+        characters.
+
+
+
+
+
+
+
+
+
+
+
+        50                                                           PBT902.DOC
+        MACROS TO CHANGE TERMINAL INTERFACE PARAMETERS             May 29, 1987
+
+
+               10.21  MAXXMT - Maximum Threshold To Release For Transmit
+
+
+             Syntax : MAXXMT(n)
+
+             Default : Hexadecimal 300.
+
+             Description :
+
+             This macro defines  the maximum number  of data threshold  to hold
+        for transmit.  In 3270  terminal interface, there is a  "DYNAMIC BUFFER
+        SIZE" feature that according to the condition of the transmission line,
+        the number of SYNC insertions and the number of un-transmitted  data at
+        the time ETX is seen are minimized.
+
+             The number  defined in  this macro  is the  maximum number  of un-
+        transmitted data at the the time ETX is seen.
+
+             Example : MAXXMT(100)
+
+             The maximum number  of data threshold  to release for  transmit is
+        256 characters.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        51                                                           PBT902.DOC
+        DEFINE TERMINAL INTERFACE DEBUGGING PARAMETERS             May 29, 1987
+
+
+
+
+
+
+                 11 -  DEFINE TERMINAL INTERFACE DEBUGGING PARAMETERS
+
+
+
+
+
+
+
+                            11.1  NETCON - Network Console
+
+
+             Syntax: NETCON(arg)
+
+             where arg = YES or NO
+
+             Default: If this macro is missing, the default is NO
+
+             Description:
+
+             This macro  specifies whether the  Network Console can  access the
+        Bisync Operations Monitor (BOM) and issue commands to the  (BOM).   The
+        values of the argument are the following:
+
+             YES = the Network Console can access BOM.
+
+             NO  = the Network Console can not access BOM.
+
+             Example: NETCON(YES)
+
+             The Network Console can access BOM and issue commands to the BOM.
+
+             ACCESSING BOM THROUGH NETWORK CONSOLE
+
+             A new feature to  allow the Network Console to  communication with
+        the Extended  DDT was implemented  in the 3270  Host Interface  and the
+        3270  Terminal Interface.   With this  feature, a  user can  access the
+        Bisync Operation Monitors (BOM) through the Network Console.  To access
+        the BOM through the Network  Console, a user must log into  the Network
+        Console first.   Once the  user is in  the main  commmand level  of the
+        Network Console which is indicated  by an asterisk prompt "*",  the DDT
+        session  can be  initiated  by the  command "XDDT"  (for  Extended DDT)
+        followed the kernel host number and the slot number which the interface
+        resides.  If the connection is successful, the Network Console responds
+        with the prompt "xddt>".  If the connection is not successful, an error
+        message "Extended  DDT unavailable" is  displayed.  To terminate  a DDT
+        session, the  user can  use one  of the  3 commands:  "RETURN", "QUIT",
+        "EXIT".  This  returns the user  to to the  main command level  with an
+        asterisk promp.  An example is given as follows:
+
+
+        52                                                           PBT902.DOC
+        DEFINE TERMINAL INTERFACE DEBUGGING PARAMETERS             May 29, 1987
+
+
+             Please log in: <user name>:<network console host>;<password>
+
+             >
+
+             Network Console - Version 3.02
+
+             name: <name>
+
+             password: <password>
+
+             4/29/86 18:16:20
+
+             * xddt host 555 slot 1
+
+             xddt>status
+
+             HBOM -- 3270PBH Bisync Operations Monitor
+
+             NODE  2062    SLOT  3    29Apr86 18:18:09
+
+             HOST#  STATUS  #PORTS  CIRCUITS
+
+               25    ANSR      3       0
+
+               26    ANSR      3       0
+
+             RESTARTS     LAST START      CIRCUITS
+
+                 1      24Apr86 19:34:25      0
+
+                  BUFFER             CMDLNK              MAPLNK
+
+             LEFT  USED  ZAPS   LEFT  USED   ZAPS   LEFT  USED  ZAPS
+
+              316     3     0    314    17      0    102     0     0
+
+             xddt>return
+
+             *quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        53                                                           PBT902.DOC
+        DEFINE TERMINAL INTERFACE DEBUGGING PARAMETERS             May 29, 1987
+
+
+                           11.2  STPCRSH - Halt After Crash
+
+
+             Syntax : STPCRSH(YES/NO)
+
+             Default : NO.
+
+             Description :
+
+             This macro specifies whether a slot will halt after the crash.
+
+             The values the of argument are the following:
+
+                YES = the slot will halt after a crash.
+                NO  = the slot will restart after a crash.
+
+
+             Example : STPCRSH(YES)
+
+             The slot will halt after a crash.
+
+
+
+
+
+
+                              11.3  IRINGSZ - IRING Size
+
+
+             Syntax : IRINGSZ(n)
+
+             Default : 500 HEX Bytes.
+
+             Description :
+
+             This macro specifies the number  of bytes, n in HEX, for  the ISIS
+        input ring.
+
+
+
+
+
+
+                               11.4  ORINGSZ - RING Size
+
+
+             Syntax : ORINGSZ(n)
+
+             Default : 500 HEX Bytes.
+
+             Description :
+
+
+
+        54                                                           PBT902.DOC
+        DEFINE TERMINAL INTERFACE DEBUGGING PARAMETERS             May 29, 1987
+
+
+             the macro  specifies the  number of bytes  for the     ISIS output
+        ring.
+
+             Example : ORINGSZ(1000)
+
+             The size of the ISIS input ring is 1000 bytes.
+
+
+
+
+
+
+                           11.5  BUFLET  - Bufferlet Number
+
+
+             Syntax : BUFLET(n)
+
+             Default  : Based on the number of lines and ports.
+
+             Description :
+
+             This macro specifies the number of bufferlets allocated to  a 3270
+        interface.  Each bufferlet currently holds 60 characters of  data.  The
+        number should be based on the number of lines associated with  the slot
+        and the nature of the traffic in those lines.
+
+             The values of the argument n are the following:
+
+        NBBFLT+k = need k more bufferlets, where NBBFLT is the value
+                   based on the number of lines and ports assigned 
+                   to the interface.
+
+        k        = need a fixed number k of bufferlets.
+
+        -1       = set to the maximum number of bufferlets possible.
+
+
+             Example : BUFLET(600)
+
+             This 3270 interface slot has 600 bufferlets allocated to it.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        55                                                           PBT902.DOC
+        DEFINE TERMINAL INTERFACE DEBUGGING PARAMETERS             May 29, 1987
+
+
+                        11.6  CMDLNK  - Number Of Command Link
+
+
+             Syntax : CMDLNK(n)
+
+             Default : Bufferlets number plus the number of devices.
+
+             Description :
+
+             This macro specifies the number (in decimal) of command  links for
+        this interface.
+
+             The values of the argument n are the following:
+
+        NCMDLK+k = need k more command links, where NCMDLK is
+                   the value based on the number of bufferlets
+                   plus a minimum for the number of devices.
+
+        k        = need a fixed number k of command links.
+
+
+             Example : CMDLNK(NCMDLK+40)
+
+             The number of  command links is the  value based on the  number of
+        bufferlets plus a minimum for the number of devices plus 40.
+
+
+
+
+
+
+                            11.7  PTRACE  - Protocol Trace
+
+
+             Syntax : PTRACE(n) where n = a positive number (in hexadecimal) or
+        0.
+
+             Default : 1, Protocol trace enabled
+
+             Description :
+
+             This  macro  enables  the  protocol  trace.   The  protocol  trace
+        monitors  control  unit  and  terminal  interface  interaction  at  the
+        terminal  interface.  The  protocol trace  table contains  a  series of
+        codes showing the interaction.
+
+             The possible values of the argument are the following:
+
+                k = enable the protocol trace and allocate k multiples
+                    of 400-byte blocks for the protocol trace table.
+
+                0 = disable protocol trace.
+
+
+        56                                                           PBT902.DOC
+        DEFINE TERMINAL INTERFACE DEBUGGING PARAMETERS             May 29, 1987
+
+
+             Example : PTRACE(2)
+
+             The protocol trace  is enabled; the  protocol trace table  has 800
+        bytes.
+
+
+
+
+
+
+                        11.8  RETCODE - Record Of Return Codes
+
+
+             Syntax : RETCODE(YES/NO)
+
+             Default : NO.
+
+             Description :
+
+             This macro specifies whether  the interface keeps a record  of the
+        number of occurrences of return  codes. The values of the  argument are
+        the following:
+
+                YES = Slot will count occurrences of return codes.
+                NO  = Slot will not count occurrences of return codes.
+
+
+             Example : RETCODE(YES)
+
+             The interface keeps a count of return codes.
+
+
+
+
+
+
+                             11.9  RTRACE  - Receive Trace
+
+
+             Syntax : RTRACE(n,RVDTA,RGEMP,PRHAN,RVSTA,TMRCV,PTCOD)
+
+             Description :
+
+             This macro  specifies the receive  trace options which  applies to
+        each line in the slot.
+
+             There are five trace options:
+
+                1. trace a received-data character.
+                2. trace a ring-empty index.
+                3. trace a process-handling byte.
+                4. trace operation-complete return code 
+                5. trace the time required for data reception.
+
+        57                                                           PBT902.DOC
+        DEFINE TERMINAL INTERFACE DEBUGGING PARAMETERS             May 29, 1987
+
+
+
+
+             These should  be used only  by technical  support respresentatives
+        for debugging.
+
+             The values of the arguments are the following:
+
+                n     = the number of 400-byte blocks allocated for
+                        the trace table.
+                RVDTA = enables the received-data character trace,
+                        optional.
+                RGEMP = enables the ring-empty trace,
+                        optional.
+                PRHAN = ebables the process-handling byte trace,
+                        optional.
+                RVSTA = enables the current received data trace,
+                        optional.
+                TMRCV = enables the time required for data reception trace,
+                        optional.
+                PTCOD = enables the operation-complete return code trace,
+                        optional.
+
+
+             Example : RTRACE(2,RGEMP,PTCOD,RVDTA)
+
+             800  bytes  are allocated  to  the trace  buffer.   The operation-
+        complete return codes trace, the received-data character trace  and the
+        ring-empty index trace are enabled.
+
+
+
+
+
+
+                     11.10  PRTCON  - Print Tymfile Configuration
+
+
+             Syntax : PRTCON(YES/NO)
+
+             Default : YES.
+
+             Description :
+
+             This  macro specifies  whether the  tymfile configuration  will be
+        displayed at the time when generate the system.
+
+             The values of the argument are the following:
+
+                YES = the tymfile configuration will be displayed.
+                NO  = the tymfile configration will not be displayed.
+
+
+             Example : PRTCON(NO)
+
+        58                                                           PBT902.DOC
+        DEFINE TERMINAL INTERFACE DEBUGGING PARAMETERS             May 29, 1987
+
+
+             The configuration defined in tymfile will not be displayed  at the
+        time when generate the system.
+
+
+
+
+
+
+                        11.11  GENNIB -- generate the nib file
+
+
+             Syntax: GENNIB(YES/NO)
+
+             Default: NO.
+
+             Description:  This  macro defines  whether  the nib  file  will be
+        generated if  there is  an assembly error,  undefined symbol  error, or
+        configuration error  during the  system generation.   The value  of the
+        arguments are the  following:
+
+             YES  = the  nib file  will be  generated if  there is  an assembly
+        error, undefined symbol error or configuration error during  the system
+        generation.
+
+             NO  = the nib file will  not be generated if there is  an assembly
+        error, undefined symbol error or configuration error during  the system
+        generation.
+
+             Example:GENNIB(YES)
+
+             During  the  system generation,  if  there is  an  assembly error,
+        undefined symbol error, or configuration error, the nib file will still
+        be generated.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        59                                                           PBT902.DOC
+                                                                   May 29, 1987
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      *   ****  ****  ***** *   * ****  ***** *   *
+                     * *  *   * *   * *     **  * *   *   *    * * 
+                    ***** ****  ****  ****  * * * *   *   *     *  
+                    *   * *     *     *     *  ** *   *   *    * * 
+                    *   * *     *     ***** *   * ****  ***** *   *
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        60                                                           PBT902.DOC
+        CRASH CODES FOR THE 3270 PBT                               May 29, 1987
+
+
+
+
+
+
+                      APPENDIX I.   CRASH CODES FOR THE 3270 PBT
+
+
+
+        These are the crash codes returned and the location of the nearest
+        label associated with that crash.
+
+        Crash   Nearest         Localize        Crash Reason
+        Code    Label           Module          
+
+        20      DSR030                          LINE CANNOT SUPPORT DTR/DSR
+        44      ICRASH                          DROP DTR SVC CRASH
+        44      HHNCRA                          RAISE DTR SVC CRASH
+        60      INDCR           FRNTND          NO ACTIVATION ROUTINE
+        60      INCN1           FRNTND          NO DCB WAS ASSIGNED
+                                                NO STATE TABLE WAS ASSIGNED
+                                                NO ACTIVATION ROUTINE WAS
+                                                ASSIGNED
+        61      ACTIVN                          ILLEGAL PORT 0 MSG OR NEEDLE
+        61      POM30                           ILLEGAL PORT 0 MSG OR NEEDLE
+        61      SPECL           FRNTND          INVALID PORT 0 MESSAGE
+        62      INVAL           FRNTND          INVALID MESSAGE
+        63      INPUT3          FRNTND          INVALID PORT NUMBER,WHICH HAS 
+                                                BEEN
+                                                ACTIVE TO RECEIVE THE NEEDLE
+        81      PBCRAS                          NO BIG BUFFERLET
+        81      GBCRA0          BSCSXM          NO BIG BUFFERLET
+        81      PUTCR           MAIN            NO BIG BUFFERLET
+        81      BCRASH          MAIN            NO BIG BUFFERLET FOR CREATING
+                                                BISYNC FRAME,CALLED BY PUTBX
+        81      PBCRSH          MAIN            NEXT BUFFER ADDRESS NOT FOUND
+        82      GETCRA          MAIN            ATTEMPTED TO GET DATA FROM
+                                                EMPTY   BUFFER
+        83      NXTSC                           NO NEXT ELEMENT FOR STORED 
+                                                LOGON
+        84      GCL01           CMDLST          COMMAND LINK LIST LOCKED FOR
+                                                 'GET'  PROCESS
+        84      GCL1            CMDLST          SAME AS ABOVE
+        85      PCL             CMDLST          COMMAND LINK LIST LOCKED FOR
+                                                 'PUT'  PROCESS
+        86      SRVCRA          BSCSRV          SVC ERROR,TRY TO CONNECT INPUT 
+                                                TWICE
+                                                FOR RECEIVE PROCESS
+        86      DSR020          BSCDTR          QUERY SYNC ATTRIBUTE SVC ERROR
+        86      DSR020          BSCDTR          CONNECT INPUT SVC ERROR
+        86      DTR220          BSCDTR          SAME
+        87      BSXCRA          BSCSXM          SVC ERROR,TRY TO CONNECT INPUT
+                                                TWICE
+                                                FOR TRANSMIT PROCESS
+
+        61                                                           PBT902.DOC
+        CRASH CODES FOR THE 3270 PBT                               May 29, 1987
+
+
+        88      BSXWRT          BSCSXM          ILLEGAL TRANSMIT OP CODE
+        88      BSXWCR          BSCSXM          TRANSMIT LIST TOO SMALL
+        89      BSCD02                          ILLEGAL BUFFER CHARACTER COUNT
+        8D      DA.R11                          RAN OUT OF UNBUSY LINKS
+        8D      DA.X11                          RAN OUT OF UNBUSY LINKS
+        90      DATI20                          UNKNOWN IIX MSG(IF TSTSW=1)
+        90      IZOCRA                          QUERY I/O SVC FAILED
+        91      DSPCR                           ILLEGAL CUD IIX MSG
+        97      IZPVCR          MAIN            NO ELEMENT FOR PVC LOGON
+        98      CLBUG           CMDLST          BUG IN COMMAND LIST USAGE
+        99      CLFULL          CMDLST          COMMAND LINK HAS NO FREE LINK
+        0F      TPT2            TIMEOUT         TIMEOUT FREE LIST EXHAUSTED
+        D0      BUFERR          BBUFER          BIG BUFFERLET LISTS LOCKED WHEN
+                                                 'GET'
+        D0      PBB20           BBUFER          BIG BUFFERLET LISTS LOCKED WHEN
+                                                 'PUT'
+        FF      PCRASH          BSCPTP          BISYNC LINE CRASH
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        62                                                           PBT902.DOC
+        SAMPLE 3270 TERMINAL INTERFACE TYMFILE                     May 29, 1987
+
+
+
+
+
+
+                 APPENDIX II.   SAMPLE 3270 TERMINAL INTERFACE TYMFILE
+
+
+
+
+                SUBTTL  3270 BISYNC TERMINAL INTERFACE VERSION 9.0
+        :
+                        PRTCON(YES)
+        :
+                        HSTPRT(4959)
+        :
+        : DEFINE DEFAULT VALUES FOR LINE PARAMETERS
+        :
+                DEFLIN(HITACHI)                 :all lines default to hitachi
+                DEFDTR(NO)                      :DTR/DSR NOT REQUIRED
+                DEFSWT(NO)                      :LINES ARE LEASED
+                DEFHAN(NO)                      :DISABLE HANG LOGIC FOR LINES
+                DEFRTS(NO)                      :RTS/CTS NOT REQUIRED
+        :
+        : define default values for DEVICE
+        :
+                DEFTYP(C1920)                   :1920 CHARACTER TERMINAL
+                DEFMEN(MEN0)                    :LOGON MEN0 IS DISPLAYED
+                DEFNET(PF4)                     :NETWORK SERVICE KEY IS PF4
+                DEFCOL(NO)                      :DEVICE DOES NOT SUPPORT COLOR
+                DEFXPR(NO)                      :TRANSPARENCY NOT SUPPORTED
+                DEFPVC(NO)                      :NONE PVC DEVICE
+                DEFLNG(KK)                      :LANGUAGE IS KATA KANA
+                DEFERR(KK)                      :LANGUAGE IS KATA KANA
+
+        :       DEFINE DEFAULT SLOT PARAMETERS
+
+                TMIACT(600)                     :INACTIVITY TIMEOUT IS 1 HR
+                HNGDTR(1)                       :DROP DTR FOR 1 SEC
+                MONDSR(300)                     :MONITOR DSR EVERY 1/3 SEC
+                NLOGIN(5)                       :DISCONNECT LINE AFTER 5 MINUTE
+                                                        :OF NO LOGIN
+        :
+        :        DEFINE BOM PARAMETERS HERE
+                
+                DFTMOD  EQ      REL             : REL MODE BY DEFAULT
+                DEFRTY(10)                      :DEFAULT REFAULT RETRY LIMIT
+                DSPERR(NO)                      :DON'T SEND DSP ERROR MSG 
+                                                :TO HPAD
+                DSPTIM(5*60)                    :5 MINUTES
+
+        :        LINE 1 TYPE IBM, 2 WIRE DIAL-UP WITH INACTIVITY SELECTED
+
+                     LINTYP(IBM)
+
+        63                                                           PBT902.DOC
+        SAMPLE 3270 TERMINAL INTERFACE TYMFILE                     May 29, 1987
+
+
+                        LINE(040) ;SWITCH(YES);HANG(YES);RTSCTS(YES)
+                           CUNIT(40)
+                             DEVICE(040);
+                               DEVICE(0C1); TYPE(P1920)
+                                 PRTTXT(1ST PRT ON CU 040);
+                               KKORKJ(ENG)
+
+                           CUNIT(0C1)
+                             DEVICE(040);
+                               KKORKJ(ENG);
+                                LNGMSG(ENG)
+                                ERRMSG(ENG)
+
+                             DEVICE(0C1); TYPE(P1920)
+                                 PRTTXT(1ST PRT ON CU 0C1)
+                              KKORKJ(ENG);
+                        LNGMSG(ENG)     :THIS PRINTER PRTXT MSG WILL DISPLAYED
+                                        :IN ASCII TO EBC HEX
+
+        :       LINE 1 ,HITACHI LINE,4-WIRE DIAL-UP WITH INACTIVITY SELECTED
+
+                        LINE(0C1);SWITCH(YES);HANG(YES);RTSCTS(YES)
+                                DTRDSR(YES)
+
+                          CUNIT(0C0)
+
+                            DEVICE(0A0);
+                              XPRNT(NO); COLOR(NO); KKORKJ(KANJI);
+                              MENU(MEN4);
+
+                            DEVICE(0A1); TYPE(P1920)
+                                 PRTTXT(1ST PTR W COLOR & XPRN)
+                        LNGMSG(ENG)     :DO ASCII TO EBC CONVERSION WITH 
+                                        :PRTTXT TEXT
+
+                              XPRNT(NO); COLOR(NO); KKORKJ(KANJI)
+                              MENU(MEN4);
+
+                            DEVICE(0A2);
+                              KKORKJ(KANA); MENU(MEN5);
+
+                            DEVICE(0A3);
+                        LNGMSG(KK)                      :NECESSARY IF TEXT IS
+                                                        :DEFINED IN HEX
+                                TYPE(P1920)
+                        PRTTXT("D7"D9"C9"D5"E3"C5"D9)   :TEXT IS EBCDIC HEX
+                              KKORKJ(KANA); MENU(MEN5)
+
+                     : LINE 2 ,HITACHI,LEASE,RTS/CTS NECESSARY
+
+                     DEFMEN(MEN4)
+
+                       LINE(0C2) ; RTSCTS(YES)
+
+        64                                                           PBT902.DOC
+        SAMPLE 3270 TERMINAL INTERFACE TYMFILE                     May 29, 1987
+
+
+                         CUNIT(0C0)
+                           DEVICE(0A0);
+                             MENU(MEN4)
+                           DEVICE(0A1); TYPE(P1920)
+                                 PRTTXT(PRT 0A1 ON CU 0C0)
+                             MENU(MEN4);LNGMSG(ENG)
+                           DEVICE(0A2);
+                             MENU(MEN5);
+                           DEVICE(0A3); TYPE(P1920)
+                                PRTTXT(PRT 0A3 ON CU 0C0)
+                             MENU(MEN5);LNGMSG(ENG)
+                : LINE 3 ,FUTJITSU, LEASED LINE
+
+                     LINTYP(FUJITSU)     : CHANGE LINE TYPE TO FUJITSU
+
+                     DEFMEN(MEN0)       : USE MENU0 FOR NETWORK LOGON
+                       LINE(0C3)
+                         CUNIT(40)
+                           DEVICE(40);
+                             KKORKJ(ENG);
+                           DEVICE(0C1);TYPE(P1920)
+                                 PRTTXT(PRINTER 0C1 ON CU 040)
+                             KKORKJ(ENG);LNGMSG(ENG)
+
+                         CUNIT(0C1)
+                           DEVICE(040)
+                           DEVICE(0C1); TYPE(P1920)
+                                 PRTTXT(PRINTER 0C1 ON CU 0C1)
+                                LNGMSG(ENG)
+        :
+        :        DEFINE FIRST ELEMENT FOR NETWORK LOGON STRING
+        :         USER NAME : ANYNAME
+        :         HOST #    : ANYHOST
+        :         PASSWORD  : ANYPSWD
+        :
+                    NETSCR(ELE0)
+                       ELEUNA(ANYNAME); ELEHST(ANYHOST); ELEPWD(ANYPSWD);
+        :
+        :       DEFINE NETWORK LOGON USER NAME, HOST #, AND PASSWORD
+        :
+                    NETSCR(ELE1)
+                       ELEUNA(ANYNAME); ELEHST(ANUHOST); ELEPWD(ANUPSWD);
+        :
+                  NETSCR(ELE2)
+                      ELEUNA(ANYNAME); ELEHST(ANYHOST); ELEPWD(ANYPSWD);
+        :
+                             NETSCR(GATEW)
+                                     ELEUNA(C)
+                             NETSCR(DEMO)
+                                     ELEUNA(DEMOUSN)
+        :
+        :        DEFINE ELEMENT FOR DSP TARGETING
+        :         CRM IS 3 FOR HOST TO SELECT THE DEVICE ASSIGNMENT
+
+        65                                                           PBT902.DOC
+        SAMPLE 3270 TERMINAL INTERFACE TYMFILE                     May 29, 1987
+
+
+        :
+                             NATDSP(DSP0)
+                                     ELECRM(3); ELEARS(31064955);
+        :
+        :       CRM : 2
+        :       Destination Interface Address(Called Address) : 31064955
+        :        Destination Control Unit Address : 0C1
+        :        Destination Device Address : 040
+        :        Character Set : 4              : KATAKANA.
+        :
+                             NATDSP(DSP1)
+                               ELECRM(2); ELEARS(31064955); ELEAPP(40);
+                               ELECUA(040); ELEDVA(040); ELECHR(4);
+                               ELEXPR(YES); ELECOL(YES);
+
+        :        HITACH DSP LOGON
+        :        CRM : 2
+        :       Destination Interface Address : 31064955
+        :        Application Identifier(Destination Line Address): 040
+        :        Destination Control Unit Addre : 0A0
+        :        Destination Device Address : 0A0
+        :        Destination Character Set : 5  :  KANJI
+        :        Request Transparent Device.
+        :        Request Color capable Device
+        :
+                             NATDSP(DSP2)
+                               ELECRM(2); ELEARS(31064955); ELEAPP(40);
+                               ELECUA(0C0); ELEDVA(0A0); ELECHR(5);
+                               ELEXPR(YES); ELECOL(YES);
+        :
+        :        HITACH DSP LOGON
+
+                             NATDSP(DSP3)
+                              ELECRM(2); ELEARS(31064955); ELEAPP(0C1);
+                              ELECUA(0C0); ELEDVA(0A0); ELECHR(4);
+        :
+        :        HITACH DSP LOGON
+        :
+                            NATDSP(DSP4)
+                               ELECRM(2); ELEARS(31064955); ELEAPP(0C2);
+                               ELECUA(0C0); ELEDVA(0A0); ELECHR(4);
+        :
+        :       DEFINE ELEMENT FOR TRANSPARENT DSP LOGON MENU
+        :
+                             NATDSP(DSP5)
+                                     ELECRM(3); ELEARS(31064956);
+        :
+        :        DEFINE LABELS AND LOGON ELEMENTS FOR LOGON MENUS
+        :
+                    LOGSTR(DEMOTSO,TO DEMO HOST THRU GATEWAY,GATEW,DEMO,DSP0)
+                    LOGSTR(STR0,HOST 4855 CRM 3,ELE0,DSP0)
+                    LOGSTR(STR1,HOST 4955 CRM 3,ELE1,DSP0)
+                    LOGSTR(STR2,HOST 4955 CRM 2,ELE1,DSP2)
+
+        66                                                           PBT902.DOC
+        SAMPLE 3270 TERMINAL INTERFACE TYMFILE                     May 29, 1987
+
+
+                    LOGSTR(STR3,HOST 4956 CRM 3,ELE2,DSP0)
+                    LOGSTR(STR4,HOST 4956 CRM 2,ELE2,DSP1)
+        :
+                    LOGSTR(STR5,HOST 4955 CRM 3 WITH XPR,ELE1,DSP5)
+                    LOGSTR(STR6,HOST 4956 CRM 3 WITH XPR,ELE2,DSP5)
+                    LOGSTR(STR7,TELENEX ON LINE 0C1,ELE1,DSP3)
+                    LOGSTR(STRM,MANUAL)
+                    LOGSTR(STR8,TELENEX ON LINE 0C2,ELE1,DSP4)
+                    LOGSTR(STR9,"D4"C1"D5"E4"C1"D3"F0"F1)
+        :
+        :        LOGON MENU FOR SELECTIONS
+        :
+                    LOGMEN(MEN0,DEMOTSO,STR0,STR1,STR2,STRM)
+                    LOGMEN(MEN3,STR5,STR7,STR8,STRM)
+                    LOGMEN(MEN4,STR5,STR6,STR7,STR8,STRM)
+        :
+        :        TRANSPARENT DEVICE LOGON
+        :
+                    LOGMEN(MEN5,STR5,STR6,STR7,STR8,STRM)
+        :
+        :       DISPLAY LOGIN STRING IN KATA KANA
+        :
+                             LOGMEN(MEN6,STR9)
+        :
+                     STPCRSH(YES)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        67                                                           PBT902.DOC
+  :"=g.
