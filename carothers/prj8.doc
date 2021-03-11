@@ -1,0 +1,406 @@
+
+
+
+     PPPPPPP  RRRRRRR   000000  JJJJJJJJ EEEEEEEE  CCCCCC  TTTTTTTT  SSSSSS
+     P      P R      R O      O     J    E        C      C     T    S      S
+     P      P R      R O      O     J    E        C      C     T    S      S
+     P      P R      R O      O     J    E        C            T    S
+     PPPPPPP  RRRRRRR  O      O     J    EEEE     C            T     SSSSSS
+     P        R   R    O      O     J    E        C            T           S
+     P        R    R   O      O J   J    E        C      C     T    S      S
+     P        R     R  O      O J   J    E        C      C     T    S      S
+     P        R      R  OOOOOO   JJJ     EEEEEEE   CCCCCC      T     SSSSSS
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        By:  Steve Carothers
+
+                                        Date:  10/10/90
+
+
+
+                               TABLE OF CONTENTS
+                               -----------------
+
+                    Introduction                                  1
+
+                    Pre-load Checks                               1
+
+                    Reloading Nodes                               3
+
+                    Common Problems from Loads                    4
+
+                    Project Summary Reports                       6
+
+                    Project Implementation Group                  7
+
+                    Pulling Projects off Host 38                  8
+
+                    FE Coordination Projects                      9
+
+                    Project Implementation Logsheets              9
+
+
+
+                                   APPENDIXES
+                                   ----------
+
+                    Xray Example                                  A
+
+                    Prject Summary Report Example                 B
+
+                    Consat/Outdial Node Code Example              C
+
+                    Dedicated Node Code Example                   D
+
+                    Example of Project Report from PI             E
+                                                                          Page 1
+
+
+                                PROJECT PROCEDURES
+                                ------------------
+
+
+               Projects are requests received by Netcon from Projects
+          Implemenaton (PI) to load new code into Tymnet public nodes.
+          The new code will contain changes in the node configuration
+          that are needed.  For example, addition/deletion of a host,
+          addition/deletion of a line, etc...may be requested.
+
+               The following is a guide in how to handle the loads
+          competently and assumes you understand TYM files and Unix load
+          files.
+
+
+       I. PRE-LOAD CHECKS
+          ---------------
+
+            A) Check in the production directory for nib and n00 files.
+               This is done by using the CD command to move to the
+               correct directory and the do a "ls -l n*" command.  There
+               should be a minumum of a nib and n00 files and they
+               should have the same date and time.
+
+                    You may also find n01, n02...files which are for the
+               indiviual slots on the node.  There dates and times may
+               vary.  This is fine.
+
+            B) For system projects, type out the tymfile using the pull
+               command to confirm that the load date is for that evening
+               and check to see that the correct project id is also
+               listed.  For handwrittens, check the date using the ls
+               command mentioned in step A to see if the date genned is
+               today.
+
+            C) Shut the node as necessary to start to decrease the
+               number of ports and/or passthrus on the node.  When doing
+               so, the following should be followed.
+
+                 1) NEVER shut a deadended node (a node with only one
+                    neighbor).
+
+                 2) When shutting nodes with multiple links, leave the
+                    neighbors unshut that are deadended neighbors.
+                    Also, leave one extar link open on the node that is
+                    not deadended to allow access by the deadended
+                    neighbors thru this node to the network.
+
+                         To confirm that you have shut multi-linked
+                    nodes correctly, check the shut links to confirm
+                    that they do not go to a deadended node.  Besides
+                    this, try to log into the node shut thru the
+                    utilities XRAY or ODDJOB.  If you get a "CIRCUIT
+                    BUSY" message, you do not have access to this node.
+                    Remove shuts until you are sucessful in logging into
+                    the node.
+                                                                          Page 2
+
+
+      II. RELOADING NODES
+          ---------------
+
+            A) Handwritten projects will be loaded unless otherwise
+               requested on it.  The system projects will be loaded if
+               in the section ACTIVITY at the bottom of the project
+               report states to SHUT/LOAD or LOAD a node.  If it only
+               says to SHUT, you will not reload unless you have a
+               confirmation from an fe that it is alright to do so.  In
+               this case, there will be written confirmation on the
+               report by Netcon personel indicating the fe called and
+               requested a reload.
+
+            B) Log into XRAY of the node you wish to load and take a
+               hardcopy of the ND command and the HS command.
+
+            C) Confirm that the load on the node is low enough to allow
+               for a minumum of disruption to the network and customers.
+               As a general guideline to use, if a switcher has less
+               than 50 passthrus before evening supervisor swap, go
+               ahead and load, and after the swap, load regaurdless of
+               the number of passthrus.  For Isis and Consat machines, 5
+               ports or less means you can load it.  If you have more
+               than 5 ports, you must wait until after supmove before
+               loading.  If a node is identified as a PRODIGY node, you
+               must first get Customer Services's permission before
+               taking the node.  NO NODE should be taken down before 10
+               pm local time.
+
+            D) Dload/reload the node.  Take a new xray snap of the node
+               and compare it with the one from before the reload.
+               Check for any changes other than those listed on the
+               project.  If you suspect any type of problem, the next
+               section will give you some common problems which occur.
+
+
+                                                                          Page 3
+
+
+     III. COMMON PROBLEMS FROM LOADS
+          --------------------------
+
+            A) Node does not come up - If a node is loaded with a new
+               code and it does not come up in the net, try loading the
+               new code again.  If you get a 0-rec, open a ticket and
+               send to Chad.  The node will need to be rebooted and
+               loaded with the backup code.  Send the ticket o/t PI
+               after the node is back up indicating for them to correct
+               the code and include the node as incomplete on your
+               project summary report.
+
+                    If the node takes the load again, but still will not
+               come up in the net, try loading the backup code.  If the
+               node comes up, the problem is with the new code.  Include
+               this node as an incomplete on your project summary
+               report.
+
+            B) Hosts
+
+                    When new code is loaded, not all slots will always
+               come up.  Use the following guidelines to determine if
+               action is required.
+
+                 1) New host does not come up - If you have a project
+                    which is to add a host, after the new code is
+                    loaded, do a probe snap of the node.  If the new
+                    host is not showing, type out the TYM file to be
+                    sure the new host is included in it.  If it is not,
+                    notify PI to correct code.
+
+                         If the new host is showing in the TYM file,
+                    check the project to see if the host is due to come
+                    up at that time or the next day.  If it is due up
+                    the next day, no need to pursue.  If not, contact
+                    NCS and notify them of situation.  They will pursue
+                    with that customer's CS.
+
+                 2) Old host does not come up - If a host that was
+                    previously up before the reload with new code does
+                    not come up, and is not to be deleted, contact
+                    Customer Service to persue with the cs for slot
+                    code.  If it is a consat or outdial slot, please
+                    persue with PI.  The section for PROJECTS
+                    IMPLEMENTATION, part A, step 4, will help you to
+                    determine if it is a consat or outdial.
+
+            C) Line Outages
+
+                 1) New line does not come up - After loading the new
+                    code, do and xray snap using the ND command to see
+                    if the line came up.  If it did not, check to be
+                    sure if it is listed at the bottom of this command
+                    at the T1LINK NEIGHBORS DOWN point (see appendix a).
+                    If it is not, contact PI to check the code.  If it
+                    is showing in xray, do not pursue the outage for 24
+                    hours.  After that time, if the link is still down,
+                                                                          Page 4
+
+
+                    open a ticket on the outage.
+
+                 2) Old line does not come up - After loading the new
+                    code, if a line that was up previously does not come
+                    up, you need to determine why.
+
+                         Most times, a line does not come up due to the
+                    number of sync lines being reduced by one.  This
+                    normally occurs when your project calls for deletion
+                    of a line.  You can determine if the reduction of
+                    sync lines has occurred by comparing the hardcopy
+                    xray from before the reload with the current xray
+                    snap.
+
+
+                         If the line which is down is to a dead-ended
+                    node (a node with only one neighbor), reload the
+                    back code file because the the dead-ended node will
+                    be off the network.  Make sure the dead-ended node
+                    comes back up on the network and open a ticket on
+                    your project node asking the fe to rotate the line
+                    that was down up on the sync lines.  This will allow
+                    you to load the new code the next night and not have
+                    that line down again.
+
+                         If the line which is down does not run to a
+                    dead-ended node, use the rule of thumb that if the
+                    neighbor node has only one link up, reload the
+                    project node with the backup code.  If it has more
+                    than one link up, leave the new code in.  In either
+                    case, open a ticket and ask the fe to rotate the
+                    neighbor link up on the sync lines.  The ticket
+                    should be severity 3 and indicate that Netcon will
+                    reload the node the next evening.  Include the
+                    ticket number on your project summary report.
+                                                                          Page 5
+
+
+      IV. PROJECT SUMMARY REPORT
+          ----------------------
+
+               At the end of a shift in which scheduled projects are
+          done, a project summary report will need to be sent reporting
+          on the successes and failures on that night's projects.  It
+          should be divided into 2 catagories, complete and incomplete
+          projects.  For each node in these catagories, the following
+          info should be given:
+
+            A) Directory and system the node code is located on.
+
+     P ?                 v   "®   ¯s}X  t^& ;1l,^JT3X(         QUANTUM02;               00000000000000000000000000000000s}X 5@         …    …                                 .    ®   /s}X  6h$ wQRJbN3V`        X2521114:.0023;          00000000000000000000000000000000s}X 5À    •        œ 4\ä  »                       
+   ®   ®s}X  	V&@$0hNbIt3V<         LIM-BRE;                 00000000000000000000000000000000s}Ø 5A    õ    J   ¿ F$                           F   "®   ¯s}X  -= ' tQ_n
+I@3Wx         GEUROSDLC;               00000000000000000000000000000000s}X 5Á                       X ?                            d   ®   /s}X  C#`qaj8^"L$3W         PRODIGY;                 00000000000000000000000000000000s}X 5B                                                :    ®   /s}X  Y!^$ QQ2jJ *3Vl        QUANTUM01;               00000000000000000000000000000000s}X 5Â         …    …                                 .    ®   /s}X  4?^$ BARJ`dd3V`        AXEUROSDLC;              00000000000000000000000000000000s}X 5C    ”    ›    0 4\ä :E	                      z   "®   ¯s}X  AT# <qop^L3X,         TYM.4406;                00000000000000000000000000000000s}X 5Ã            ` ?      :Sä "^X                          ®   ®s}X  `P+ (R0e1&3VD         TYM.2062:G4406;          00000000000000000000000000000000s}Ø 5D         ›    < 8XV  _–                          ®   ®s}X  ]|$ %@U 	?3VD         CCAP;                    00000000000000000000000000000000s}Ù 5Ä   o  u  } :Si  (                      	   "®   ³s}X  QT#`' $$Ac3_F        CSS800;                  00000000000000000000000000000000s}Ø 5E        6    ·  =                           &   b®   ±s}X  (Wn2@pd !n83"[Z         COMTEXT;                 00000000000000000000000000000000s}Ø 5Å   dh ?        P   4 222 <Ž                       L    ®   /s}X  F
+$ G6;b?23"W         COMTEXT;                 00000000000000000000000000000000s}Ø 5F    š    {   • 222 <Ž                       2    ®   /s}X  F
+$ G6;b?23"Vf        EUROUK6SDL;              00000000000000000000000000000000s}X 5Æ    ”    ›    0 4\ä :E	                      x   "®   ¯s}X  t^%@;1n$^JT3"X,         EUROUK6SDL;              00000000000000000000000000000000s}X 5G    ”    ›    0 4\ä :Eˆ                      x   "®   ¯s}X  t^' ;1l,^JT3"X,         CMF24MNY;                00000000000000000000000000000000s}Ùp ?      5Ç    ‰        – :Sd N0                           ®   ®s}X  Q$ <pP
+Ha.3"VH      T  X2517377:.3502;          00000000000000000000000000000000s}X 5H   5‰      7– 4\d H                      
+  b®   ½s}X  b#@A1H bB3"r>         PRODIGY;                 00000000000000000000000000000000s}X 5È                                              8(   ®   /s}X  Y!^#@J2jJ!V3"Vl      *  COMTEXT;                 00000000000000000000000000000000s}Ø 5I    ™   ì    222 <Ž                       ,    ®   /s}X  F
+# <G6;a3"V`        X2515197:.58;            0000000000000000000000000x ?     0000000s}X 5É    ”        › wX$ .l                          ®   ®s}X  r$@9h&1m:3"V<         QUANTUM01;               00000000000000000000000000000000s}X 5J         …    …                                 ,    ®   /s}X  4?^( !RJ`3"V`        NBA001;                  00000000000000000000000000000000s}X 5Ê                                             X   ®   /s}X  +N2#`a/x
+0X3"W8         TYM.2342:.02;            00000000000000000000000000000000s}X 5K            ! wX¤ 
+uL                       0   ®   ®s}X  J( tQ$NuP@3"VN         X2518044:.05;            000000000000000  ?     00000000000000000s}X 5Ë    ”        › wX% S}J                          ®   ®s}X  .B(@E@dFO"x3"V<         QUANTUM01;               00000000000000000000000000000000s}X 5L         …    …                                 ,    ®   /s}X  4?^& aRJ`C 3"V`      (  TYM.5057;                00000000000000000000000000000000s}X 5Ì    m    *    :Så  !!h                         ®   /s}X  [d& t1j3P<x3"WJ         989687202;               00000000000000000000000000000000s}Ø 5M    V   ÷   Í u &*                       N   ®   /s}X  3WP$ C`6rwX3"W         WUI.4042;                00000 ?     000000000000000000000000000s}Ø 5Í    Ê   o   ¹ :S  ,*8                      V   "®   ¯s}X  @5l# 5QB4Rqyr3"X
+    0   RCA.4243:.84;            00000000000000000000000000000000s}X 5N                wWÀ 
+'k                       |   ®   /s}X  C9' 5`!L~@4>3"W0         PRODIGY;                 00000000000000000000000000000000s}Ù 5Î   ?´  Bn  ¢ 7;è                           n   2®   <s}X  Y!^#@*A-J93"o"        XRAY005;                 00000000000000000000000000000000s}X 5O       è   €                                  (   ®   /s}X  _T2 "`'D;Q33"VT         ##XOM##;             and specifies a possible node
+                    code problem causing the slot problems.  PI should
+                    then be contacted and conferenced called in with the
+                    cs.  DO NOT get involved as a middle man with them.
+                    It is up to them to work out any problem between
+                    themselves.
+                                                                          Page 8
+
+
+       VI. NG PROJECT IMPLEMENTATION
+          -----------------------------
+
+               Project Implementation supplies an on-call list to
+          Network Control on a pereiodic basis.
+          The list contains who is on-call, their backup, a second
+          backup-up, beeper number and home phone numbers.
+          Before paging PI, it is necesary for the technician to
+          determine if a problem falls into PI's realm of responsiblity.
+          Section 5 of this document will help in this determination.
+                                                                          Page 9
+
+
+     VII. PULLING PROJECTS OFF HOST 38
+          ---------------------------
+
+
+               Copies of all project reports are kept on Host 38 under
+          the username DBSCHED in seperate files.  The file names fall
+          into the following structure:
+
+                              (DBSCHED)41289E.PL
+
+                              DBSCHED = Username
+                              41289   = Project Number
+                              E       = Region (East or West)
+                              PL      = FE District
+
+               It will sometimes be necessary to type out a copy of a
+          project report to reference.  If you know the file name,
+          simply use the following command:
+
+                              Type (DBSCHED)Filename.Ext
+
+               At times, all a technician will have is the project
+          number, but not the file name.  To find out the file name, use
+          the following command (using project number 33742 as example):
+
+                              Dir (DBSCHED)33742 .*
+
+          This command will list out any files which contain the project
+          number in the file name.
+
+               If no file names are received, it will be wise to confirm
+          you are logged into Host 38 and that the command was correctly
+          used.  If all was done correctly, the project is not on the
+          host.
+
+               In appendix E is an example of a project report.
+                                                                         Page 10
+
+
+    VIII. FE COORDINATION PROJECTS
+          ------------------------
+
+               Projects will be given to Netcon with nodes indicated to
+          be SHUT only and not loaded.  These nodes are the FE
+          COORINATIONS, nodes which are not to be loaded unless a fe,
+          either by ontyme or phone call, has requested Netcon to load
+          it.
+
+               There is a time limit on how long after the installation
+          date on the project these nodes can be loaded, that being 72
+          hours.  If a fe calls after 72 hours, Netcon WILL NOT load the
+          code and the fe will need to reschedule the project with PI.
+
+               It is PI's responsibility to move the project code out of
+          production and back into staging when this time frame has
+          expired.  For example, if a project is scheduled for 10/22 and
+          FSC has not coordinated the load, PI is to BACKOUT of the code
+          before leaving on 10/25.  If PI receives a call from an fe
+          after this timeframe, they will send a new project down to
+          Netcon with a new install date.
+
+
+      IX.  PROJECT LOGSHEETS
+          -----------------
+
+               In order to track what projects are brought into Netcon
+          from PI, PI will bring logsheets down with all projects, both
+          normal projects and hadwrittens, listed on it.  The technician
+          who receives them is responsible to check that the list is
+          accurate and show the discrepancies to PI.  The sheet is to be
+          signed off if all is satisfactory and a copy is to be placed
+          in front of the projects binder and another returned to PI for
+          their records.  NO PROJECTS ARE TO BE ACCEPTED without a
+          logsheet from PI.
+
+               Once it has been determined that PI needs to be
+          contacted, the following should be followed as to whom to
+          contact:
+
+            A) Between 11 pm and 7 am in the morning Monday thru
+               Thursday, call upstairs to PI to Donna Sakai or Vicki
+               Ayers.  They will handle any problems you have.
+
+   3 r
