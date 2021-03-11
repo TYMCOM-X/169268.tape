@@ -1,0 +1,4641 @@
+********* UNIVERSAL 620/V70 I/O DIAGNOSTIC VERSION 6 ************
+*********
+*********
+********* VERSION 6 CONTAINS CODE TO ALLOW
+********* THE DIAGNOSTIC TO BE DOWNSTREAM LOADED.
+*********
+*********
+******************INSTRUCTIONS*************************
+***
+*       1. OPERATES WITH EITHER A 10 OR 30 CPS, RS232 TERMINAL.
+*       2. ALL OPERATING PARAMETERS MUST BE SET BEFORE PROGRAM WILL
+*          EXECUTE PROPERLY.
+*       3. PROGRAM MUST BE LOADED USING THE NEW BOOTSTRAP.
+*       4. PROGRAM TESTS ALL 620 AND V70 MACHINES.
+*       5. PROGRAM WILL TEST V70 SERIES EITHER INTERLEAVED, OR NON-INTERLEAVED.
+*****
+*****
+****************** OPERATING INSTRUCTIONS ****************
+*****
+*****
+*****
+*****
+*       1. LOAD TAPE USING THE NEW BOOTSTRAP. MACHINE WILL HALT WITH
+*          U=77.
+*       2. ENTER TERMINAL SPEED PARAMETERS.
+*
+*          A. ENTER TERMINAL SPEED PARAMETERS INTO "A" REGISTER
+*
+*             0=  30 CPS
+*             1=  10 CPS
+*             2= 120 CPS
+*
+*          B. DEPRESS RUN OR START. MACHINE WILL HALT WITH U=177.
+*       3. ENTER CHECKSUM PARAMETERS INTO "A" REGISTER.
+*
+*          0= YES
+*          1= NO
+*
+*          DEPRESS RUN OR START. MACHINE WILL HALT WITH U=277.
+*       4. ENTER MACHINE PARAMETERS BY SETTING SELECTED SENSE SWITCH.
+*
+*
+*          SS1 = 620I/L 1.8US
+*          SS2 = 620L-100 950NS
+*          SS3 = V70 SERIES MACHINES
+*
+*          DEPRESS RUN OR START. MACHINE WITH HALT WITH ONE OF THE FOLLOWING:
+*
+*          U = 1 "SET I OR L PARAMETERS (PARA 6)
+*          U = 3 "SET 620L-100 PARAMETERS (PARA 7)
+*          U = 4 "SET V70 PARAMETERS (PARA 8)
+*
+*       5. TO SET INDIVIDUAL MACHINE PARAMETERS, PROCEED TO PARAGRAPH
+*          INDICATED ABOVE.
+*       6. U ="1" (SET I OR L PARAMETERS)
+*
+*          A. DEPRESS RUN OR START. MACHINE WILL HALT WITH U=377
+*          B. ENTER MEMORY SIZE PARAMETERS INTO THE "A" REGISTER.
+*
+*               1=8K
+*               2=12K
+*               3=16K
+*               4=20K
+*               5=24K
+*               6=28K
+*               7=32K
+*
+*          C. DEPRESS RUN OR START. MACHINE WILL HALT WITH U=7
+*          D. ENTER EIA CARD TEST PARAMETERS INTO THE "A" REGISTER.
+*
+*             1= SUPER REMOTE
+*             0= STANDARD REMOTE, OR TYMCOM III
+*             3= SUPER TYMCOM III, V77 REMOTE, AND V77 TYMCOM III
+*
+*          E. DEPRESS RUN OR START.
+*
+*       7. U="3" (SET 620L-100 PARAMETERS)
+*
+*          A. ENTER 201 CARD TO BE TESTED INTO THE "A" REGISTER.
+*
+*             0 = 201 CARD #0
+*             1 = 201 CARD #1
+*             3 = BOTH
+*
+*          B. ENTER TYPE OF MACHINE TO BE TESTED INTO THE "B" REGISTER.
+*
+*             0 = STANDARD MACHINE, V77 REMOTE, OR V77 TYMCOM III
+*             1 = NEW SUPER REMOTE OR TYCOM III
+*
+*          C. DEPRESS RUN OR START. MACHINE WILL HALT WITH U=377.
+*          D. ENTER MEMORY SIZE PARAMETERS AS DESCRIBED IN PARA 6B
+*             INTO THE "A" REGISTER.
+*          E. DEPRESS RUN OR START. MACHINE WILL HALT WITH U=7.
+*          F. ENTER EIA CARD TEST PARAMETERS INTO THE "A" REGISTER.
+*
+*             0 = STANDARD REMOTE, OR TYMCOM III
+*             1 = SUPER REMOTE
+*             3 = SUPER TYMCOM III, V77 REMOTE, AND V77 TYMCOM III
+*
+*          G. DEPRESS RUN OR START.
+*
+*
+*       8. U="4" (SET V70 PARAMETERS)
+*
+*          A. ENTER 201 CARD TO BE TESTED INTO "A" REGISTER.
+*
+*             0 = 201 CARD #0
+*             1 = 201 CARD #1
+*             3 = BOTH
+*
+*          B. ENTER TYPE OF MACHINE  TO BE TESTED INTO "B" REGISTER.
+*
+*             0 = STANDARD MACHINE, V77 REMOTE, OR V77 TYMCOM III
+*             1 = SUPER REMOTE, OR TYMCOM III
+*
+*          C. DEPRESS RUN OR START. MACHINE WILL HALT WITH U=377.
+*          D. ENTER MEMORY SIZE PARAMETERS AS DESCRIBED IN PARA 6B
+*             INTO THE "A" REGISTER.
+*          E. DEPRESS RUN OR START. MACHINE WILL HALT WITH U=777
+*          F. ENTER MEMORY INTERLEAVING  PARAMETERS INTO THE "A" REGISTER.
+*
+*             0 = INTERLEAVED
+*             1 = NOT INTERLEAVED
+*             2 = V77
+*
+*          G. ENTER PARITY ERROR MESSAGE PARAMETER INTO "B" REGISTER.
+*
+*             0 = PARITY ERROR MESSAGES PRINTED
+*             1 = NO PARITY ERROR MESSAGES PRINTED  (INTERRUPT INHIBITED)
+*
+*          H. DEPRESS RUN OR START. MACHINE WILL HALT WITH U=7.
+*          I. ENTER EIA CARD TEST PARAMETERS INTO THE "A" REGISTER.
+*
+*             0 = STANDARD REMOTE, OR TYMCOM III
+*             1 = SUPER REMOTE
+*             3 = SUPER TYMCOM III, V77 REMOTE , AND TYMCOM III
+*
+*          J. DEPRESS RUN OR START, MACHINE WILL HALT WITH P=110
+*****
+*****
+*****
+******** UNIV 620/V70 DIAGNOSTIC RELEASED FOR FIELD TEST 06/17/77 ***
+*** PARITY ERROR MESSAGE ADDED 09/06/78 ***
+*** 3600 BPS CLOCK TEST 08/17/78 ***
+*** MODIFIED EIA ERROR (MSG43) MESSAGE 06/30/78 ***
+*** CODE TO ALLOW DOWNSTREAM LOADING 01/25/78 ***
+*** MODIFIED EIA ERROR REPORTING MESSAGES 06/16/77 ***
+*** ADDED NEW V77 PARAMATERS AND FLAG ROUTINE 05/25/77 ***
+*** PUT IN NEW PASSCOUNT ROUTINE 1/23/77
+*** PUT IN NEW MEMORY TEST PARAMETERS 1/22/77
+** PUT IN EXTRA STOP BIT OPTION FOR A 10 CPS TERMINAL 01/20/77
+*** PUT IN V70 INTERLEAVING PARAMETERS 10/28/76
+*** PUT IN 620L-100 PARAM FIX 10/28/76
+*** PUT IN EIA PARAMETER FIX 10/27/76
+*** WORK IN PROGRESS 10/26/76... PUT IN CHKSUM PARAMETERS***
+*** /R10030/ VERSION 1... NOT RELEASED ... 10/1/76 R. RICHTER
+*** UNIVERSAL TEST .. CAN BE USED ON 620I/L, 620L-100, OR V73 SYSTEMS
+*** A MINIMUM OF 8K OF MEMORY IS NECESSARY TO RUN THIS DIAGNOSTIC
+SIX      E       60000
+FIVE     E       50000
+TWO      E       20000
+ONE      E       10000
+BIN      E       350
+OCT      E       340
+AR       E       0
+BR       E       1000
+XR       E       2000
+FSAFE    E       12
+         JMP     FALSESTART
+         77                      DUMMIES TO PROTECT MASKS FROM LITERALS
+         177
+         1
+         7
+         17
+         3
+***TABLES FOR INTERRUPT ROUTINES
+*
+         R       14
+AA       0
+MODE     0                       CONSTANT TO TELL IF 201 (NEG.)
+TEMP1    0
+TEMP2    0
+*
+**INTERRUPT ROUTINES FOR INTERRUPT CARD
+         R       20
+         JMPM    IC0
+         JMPM    IC1
+         JMPM    IC2
+         JMPM    IC3
+         JMPM    IC4
+         JMPM    IC5
+         JMPM    IC6
+         JMPM    IC7
+         R       62
+PARLOC   0
+         R       100
+EMSK50   77
+EMSK60   77
+INTMSK   177
+MSK201   17
+FLG201   3
+FLGTYP   1
+*
+         +CKSUM
+START    JMP     CKSUM           LOCATIONS CHANGED AFTER LOADING TO:
+*                   HLT
+*                   JMP START
+         +START
+*
+OUTB50   OBR     56
+         OBR     52
+         OBR     55
+         OBR     51
+         OBR     54
+         OBR     50
+INTB50   CIA     56
+         CIA     52
+         CIA     55
+         CIA     51
+         CIA     54
+         CIA     50
+OUTB60   OBR     66
+         OBR     62
+         OBR     65
+         OBR     61
+         OBR     64
+         OBR     60
+INTB60   CIA     66
+         CIA     62
+         CIA     65
+         CIA     61
+         CIA     64
+         CIA     60
+RLW      LRLA    0
+PULSER   EXC     730
+         EXC     630
+         EXC     530
+         EXC     430
+         EXC     330
+         EXC     230
+         EXC     130
+         EXC     30
+MASK3    100000
+         40000
+         20000
+         10000
+         4000
+         2000
+         1000
+         400
+MASK2    200
+         100
+MASK1    40                      SAME MASK TABLE AS EIA'S
+         20
+         10
+         4
+         2
+         1
+TFLG     0
+*
+*
+***EIA TEST CONSTANTS AND TABLES
+*
+PAT      0
+PAT1     0
+IN66     0
+         0
+         0
+         0
+         0
+         0
+*
+***CONSTANTS AND WORKING VAR. FOR MEMORY TEST
+*
+RC       0
+A        1
+B        1
+AS       0
+BS       0
+C0       0
+C1       0
+ASAV     0
+BSAV     0
+***CONSTANTS FOR PASS COUNT
+*
+PCNT     0
+PCNT1    0
+TEMPP    0
+*
+*
+*
+**CONSTANTS FOR TYPING ROUTINE
+**
+AREG     0
+BREG     0
+XREG     0
+XSAVE    0
+XXX3     0
+XX4      0
+XX5      0
+OCTSAV   0
+         0
+         0
+         0
+         0
+         0
+*
+*   WORKING VAR. FOR CLOCK TEST
+*
+CKTMP1   0
+CKTMP2   0
+*
+         R       240
+*
+*** INTERRUPT ROUTINES FOR 201 INTERRUPTS ADDRESS 24
+*
+         JMPM    L10XMT
+         JMPM    L10RC
+         JMPM    L11XMT
+         JMPM    L11RC
+         JMPM    L12XMT
+         JMPM    L12RC
+         JMPM    L13XMT
+         JMPM    L13RC
+         JMPM    L14XMT
+         JMPM    L14RC
+         JMPM    L15XMT
+         JMPM    L15RC
+         JMPM    L16XMT
+         JMPM    L16RC
+         JMPM    L17XMT
+         JMPM    L17RC
+**************************************************************
+*                                                            *
+***INTERRUPT ROUTINE - CONSTANTS & TABLES                    *
+**************************************************************
+M201     0                       177 IF 201 TEST, ELSE 377
+INTSK    0                       TRUE INTERRUPT MASK, MODIFIED BY M201
+IC0E     0
+IC1E     0
+IC2E     0
+IC3E     0
+IC4E     0
+IC5E     0
+IC6E     0
+IC7E     0
+AA00     0
+AA01     0
+AA02     0
+AA03     0
+AA04     0
+AA05     0
+AA06     0
+AA07     0
+INTC7    0                       COUNT OF INTERRUPTS
+INTC6    0                       INCREMENTED BY INTERRUPT ROUTINES
+INTC5    0
+INTC4    0
+INTC3    0
+INTC2    0
+INTC1    0
+INTC0    0
+***************************
+* COUNTERS FOR CLOCK TEST *
+***************************
+CKCNT1   0
+CKCNT2   0
+CKCNT3   0
+***TABLES ,ETC. FOR 201 CARD
+*
+OUT201   0                       TABLE OF OUTPUT DATA
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+IN201    0                       TABLE OF INPUT DATA
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+IN201T   0                       TEMP. HOLDING FOR INPUT DATA
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+INTIM    0                       TABLE OF TIME INTERRUPT OCCURRED(EACH CHANNEL)
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+INSTIM   0                       TIME BY WHICH CHANNEL SHOULD BE DONE
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+INT201   0                       IF SET, INTERRUPT OCCURRED
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+         0
+IX00E    0 
+IX01E    0
+IX02E    0
+IX03E    0
+IX04E    0
+IX05E    0
+IX06E    0
+IX07E    0
+IX10E    0
+IX11E    0
+IX12E    0
+IX13E    0
+IX14E    0
+IX15E    0
+IX16E    0
+IX17E    0
+IR00E    0 
+IR01E    0
+IR02E    0
+IR03E    0
+IR04E    0
+IR05E    0
+IR06E    0
+IR07E    0
+IR10E    0
+IR11E    0
+IR12E    0
+IR13E    0
+IR14E    0
+IR15E    0
+IR16E    0
+IR17E    0
+*
+AA00X    0 
+AA00R    0 
+AA01X    0
+AA01R    0
+AA02X    0
+AA02R    0
+AA03X    0
+AA03R    0
+AA04X    0
+AA04R    0
+AA05X    0
+AA05R    0
+AA06X    0
+AA06R    0
+AA07X    0
+AA07R    0
+AA10X    0
+AA10R    0
+AA11X    0
+AA11R    0
+AA12X    0
+AA12R    0
+AA13X    0
+AA13R    0
+AA14X    0
+AA14R    0
+AA15X    0
+AA15R    0
+AA16X    0
+AA16R    0
+AA17X    0
+AA17R    0
+BB0      0
+BB1      0
+BB2      0
+BB3      0
+XX0      0
+XX1      0
+XX2      0
+XX3      0
+AAT      0
+BBT      0
+XXT      0
+TEMP     0
+ORUNF    0
+CK201F   0
+EXCTBL   EXC     27
+         EXC     127
+         EXC     327
+         EXC     24
+         EXC     124
+         EXC     224
+         EXC     324
+         EXC     724
+         EXC     26
+         EXC     126
+         EXC     226
+         EXC     326
+         EXC     726
+OUTTBL   OAR     24
+         OAR     25
+         OAR     26
+         OAR     27
+INTBL    CIA     24
+         CIA     26
+SENTBL   101024
+         101026
+         EXC     77
+         OAR     77
+***************************************************
+*        ERROR HALTS                              *
+***************************************************
+ERRET    JMP     *               EACH ROUTINE SETS PROPER ADDRESS
+NOOR     0
+         INR     EC01
+         JSS2    ERRET
+         LDX     =MSG01
+         JMPM    OUTCH
+         101                     OVERRUN DID NOT OCCUR ON 201
+         JMP     ERRET
+ILER     0
+         INR     EC02
+         JSS2    ERRET
+         STX     XREG
+         LDX     =MSG02
+         JMPM    OUTCH
+         102                     INTERRUPT ON NON-CONNECTED 201 CHANNEL
+*     :X=CHANNEL
+         JMP     ERRET
+ILINER   0
+         LDA     TFLG
+         JAN     ILIN1           201 INTERRUPT DURING EXC 127
+         LDA     MODE
+         JAZ     ILIN2           201 NOT BEING TESTED
+         INR     EC03
+         JSS2    ERRET
+         STX     XREG
+         LDX     =MSG03
+         JMPM    OUTCH
+         103                     INTERRUPT ON DISABLED CHANNEL(201)
+*    :X=CHANNEL NO.
+         JMP     ERRET
+ILIN1    LDA     TEMP1
+         STA     MODE
+         LDA     TEMP2
+         STA     MSK201
+         INR     EC04
+         JSS2    ERRET
+         STX     XREG
+         LDX     =MSG04
+         JMPM    OUTCH
+         104                     ERROR - 201 INTERRUPT AFTER EXC 127
+*    :X=CHANNEL NO.
+         JMP     ERRET
+ILIN2    INR     EC05
+         JSS2    ERRET
+         STX     XREG
+         LDX     =MSG05
+         JMPM    OUTCH
+         105                     ERROR-201 INTERRUPT - SHOULDN'T BE
+*    :X=CHANNEL NO.
+         JMP     ERRET
+DAT201   0
+         INR     EC06
+         JSS2    ERRET
+         STX     XREG
+         LDX     =MSG06
+         JMPM    OUTCH
+         106                     201 DATA ERROR
+*    :A=DATA INPUT
+*    :B=DATA OUTPUT
+*    :X=CHANNEL NO.
+         JMP     ERRET
+IDL201   0
+         INR     EC07
+         JSS2    ERRET
+         STX     XREG
+         LDX     =MSG07
+         JMPM    OUTCH
+         107                     IDLE 201 CHANNEL
+*     :X=CHANNEL NO.
+         JMP     ERRET
+ORUN     INR     EC08
+         JSS2    ERRET
+         LDX     =MSG08
+         JMPM    OUTCH
+         110                     UNEXPECTED OVERRUN
+         JMP     ERRET
+TOFAST   0
+         INR     EC09
+         JSS2    ERRET
+         LDX     =MSG09
+         JMPM    OUTCH
+         111                     INTERRUPT AT LOC. 36 IS RUNNING
+*     :FASTER THEN 1200 BPS
+         JMP     ERRET
+TOSLOW   0
+         INR     EC10
+         JSS2    ERRET
+         LDX     =MSG10
+         JMPM    OUTCH
+         112                     INTERRUPT AT LOC. 36 IS NOT
+*     : RUNNING OR IS RUNNING SLOWER THEN 1200 BPS.
+         JMP     ERRET
+SPURER   0
+         INR     EC11
+         JSS2    SPURER.
+         STX     XREG
+         LDX     =MSG11
+         JMPM    OUTCH
+         113                     SPURIOUS INTERRUPT ON INTERRUPT
+*     :A=INTERRUPT RECEIVED
+*     :X=INTERRUPT NO.
+*
+*     :THE COUNT IN "A" WAS FOUND BEFORE THE
+*     :PULSERS WERE ACTIVATED.
+         JMP     SPURER.
+INTERR   0
+         INR     EC12
+         JSS2    INTERR.
+         STX     XREG
+         LDX     =MSG12
+         JMPM    OUTCH
+         114                     INTERRUPT ERROR
+*     *A=INTERRUPTS RECEIVED
+*     *B=INTERRUPTS SENT
+*     *X=INTERRUPT NUMBER (0-7)
+         JMP     INTERR.
+MHLT     0
+         JSS2    MHLT.
+         JMPM    OUTCH
+         115                     MEMORY ERROR
+*                     A=DATA READ FROM MEMORY
+*                     B=DATA WRITTEN
+*                     X=V73      ADDRESS
+*
+         JMP     MHLT.
+EIAERR   0
+         INR     EC14
+         JSS2    EIAERR.
+         STX     XREG
+         LDX     =MSG14
+         JMPM    OUTCH
+         116
+*              EIA DATA ERROR
+*                A=DATA IN
+*                B=DATA OUT
+*                X=EIA ADDRESS
+*
+*                THE DATA INPUT SHOULD BE RIGHT SHIFTED ONE
+*                FROM THE OUTPUT DATA (BIT 0 WRAPS AROUND
+*                TO BIT 15).
+*
+*                ON EACH PASS, THE DATA FOR THE EIA'S IS
+*                INCREMENTED STARTING WITH ADDR. 60 AS THE
+*                BASE. FOR EXAMPLE, IF THE DATA TO 60 IS 5
+*                THEN THE  DATA TO ALL EIA'S WOULD BE AS
+*                FOLLOWS:
+*                     60 - 5
+*                     64 - 6
+*                     61 - 7
+*                     65 -10
+*                     62 -11
+*                     66 -12
+*
+*                USING THE ABOVE DATA AS AN EXAMPLE;
+*                IF THE DATA OUT FOR 61 IS 7 AND THE DATA IN
+*                FOR 61 IS 11(LEFT SHIFTED 1), YOU SHOULD SUSPECT
+*                DOUBLE ADDRESSING BETWEEN 61 AND 62.
+*
+         JMP     EIAERR.
+CRINT    0
+         INR     EC15
+         JSS2    CRINT.
+         JMPM    OUTCH
+         117                     INTERRUPT TO WRONG LOCATION
+*     :X=PULSER NUMBER
+*     :B=INTERRUPT THAT OCCURRED
+*     :A=NO. OF INTERRUPTS TO B
+         JMP     CRINT.
+EARINT   0
+         INR     EC16
+         JSS2    ERRET
+            OUTCH
+         120                     INTERRUPT DID NOT CLEAR AFTER INTERRUPT
+*     :X=INTERRUPT CAUSING PROBLEM
+*     :X=0201YY - 201 CARD CHANNELL
+*     :YY=CHANNEL NO.
+*     :X=00000Y - INTERRUPT CARD
+*     :Y=INTERRUPT NUMBER
+         JMP     ERRET
+*********************************
+* ERROR HALTS FOR 3600 BPS CLOCK*
+*********************************
+C36FST   0
+         JMPM    OUTCH
+         121                     3600 BPS CLOCK TOO FAST
+         JMP     C36FST.
+***           A = PHASE THAT FAILED
+C36SLW   0
+         JMPM    OUTCH
+         122                     3600 BPS CLOCK TOO SLOW
+         JMP     C36SLW.
+***           A = PHASE THAT FAILED
+CMIXUP   0
+         JMPM    OUTCH
+         123                     3600 BPS PHASES OUT OF SEQUENCE
+         JMP     CMIXUP.
+***           A = PHASE THAT INTERRUPTED
+***           B = PHASE THAT WAS EXPECTED
+********************************
+********************************
+**                            **
+**        N O R M A L         **
+**                            **
+**          H A L T           **
+**                            **
+********************************
+********************************
+NORHLT   0
+         LDA     PCNT
+         LDB     PCNT1
+         JBZ     NORH1
+         LDX     =MSG15
+NORH     JMPM    OUTCH
+         NOP
+         JMPM    ECTYP
+         JSS1    NORHLT.
+         555                     NORMAL HALT
+*     :A=LOWER 15 BIT PASS COUNT
+*     :B=UPPER 15 BIT PASS COUNT
+         JMP     NORHLT.
+NORH1    LDX     =MSG16
+         JMP     NORH
+LIT      0                       LITERAL POOL
+         L       *+300
+END2     0
+TEMP3    0
+CKS1     0
+CKS2     0
+CKS3     0
+CKS4     0
+EIXFLG   0
+FAST     67
+SLOW     112
+RIGHT    114
+TTY      1266
+TTY1     556
+TTY2     2537
+TTY3     1745
+TTY4     1651
+RECK     554
+UPP      27777
+CSTEMP   0
+SLOW36   30
+FAST36   24
+LIMIT    144
+ECMSG    +MSG19
+         +MSG20
+         +MSG21
+         +MSG22
+         +MSG23
+         +MSG24
+         +MSG25
+         +MSG26
+         +MSG27
+         +MSG28
+         +MSG29
+         +MSG30
+         +MSG31
+         +MSG32
+         +MSG33
+         +MSG35
+         +MSG38
+         +MSG47
+         +MSG48
+         +MSG49
+         +MSG50
+         +MSG51
+         +MSG52
+         +MSG53
+         +MSG54
+***ERROR COUNTERS**
+*
+EC01     0                       NO 201 OVERRUN
+EC02     0                       INTERRUPT ON NON-CONNECTED 201 CHANNEL
+EC03     0                       INTERRUPT ON DISABLED 201 CHAN.
+EC04     0                       201 INTERRUPT DURING EXC 177
+EC05     0                       201 INTERRUPT - 201 NOT BEING TESTED
+EC06     0                       201 DATA ERROR
+EC07     0                       201 CHANNEL IS IDLE
+EC08     0                       UNEXPECTED OVERRUN
+EC09     0                       1200 BPS TO FAST
+EC10     0                       1200BPS TOO SLOW OR NOT RUNNING
+EC11     0                       SPURIOUS INTERRUPT ON INTERRUPT CARD
+EC12     0                       INTERRUPT CARD ERROR
+EC13     0                       MEMORY ERROR
+EC14     0                       EIA ERROR
+EC15     0                       PULSER CAUSED WRONG INTERRUPT
+EC16     0                       INTERRUPT DID NOT CLEAR AFTER INTERRUPT
+EC17     0                       POWER FAILURE (S)
+EC18     0                       3600 BPS PHASE 0 TOO FAST
+EC19     0                       3600 BPS PHASE 1 TOO FAST
+EC20     0                       3600 BPS PHASE 2 TOO FAST
+EC21     0                       3600 BPS PHASE 0 TOO SLOW
+EC22     0                       3600 BPS PHASE 1 TOO SLOW
+EC23     0                       3600 BPS PHASE 2 TOO SLOW
+EC24     0                       3600 BPS CLOCK OUT OF SEQUENCE
+EC25     0                       MEMORY PARITY ERROR
+ECLAST   0
+*
+INTFLG   1                       PARITY INTERRUPT FLAG
+*********************************************
+*                                           *
+*   INTERRUPT ROUTINES FOR 201 - XMIT       *
+*                                           *
+*********************************************
+L00XMT   0 
+         STA     AA00X
+         LDA     OUT201
+         OAR     26               OUTPUT DATA
+         LDA     IX00E
+         JAN     IX00ER
+         COM     ,A
+         STA     IX00E
+         EXC     327             ENABLE INTERRUPTS
+         LDA     INTC7
+         STA     INTIM           STORE TIME
+         SEN     26,ORUN         CHECK FOR UNEXPECTED OVERRUN
+         LDA     MSK201
+         ANA     MASK1+5
+         JAZ     BAD00X           ERROR, DISABLED CHAN.
+         COM     ,A
+         STA     INT201          SET INTERRUPT FLAG
+         LDA     OUT201
+         ADD     =401
+         STA     OUT201          UPDATE DATA
+         TZA
+         STA     IX00E
+L00EXT   LDA     AA00X 
+         JMP     L00XMT.          EXIT
+BAD00X   EXC     27 
+         TZX
+         JMPM    ILINER
+L01XMT   0
+         STA     AA01X
+         LDA     OUT201+1
+         OAR     26
+         LDA     IX01E
+         JAN     IX01ER
+         COM     ,A
+         STA     IX01E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+2
+         SEN     26,ORUN
+         LDA     MSK201
+         ANA     MASK1+4
+         JAZ     BAD01X
+         COM     ,A
+         STA     INT201+2
+         LDA     OUT201+1
+         ADD     =401
+         STA     OUT201+1
+         TZA
+         STA     IX01E
+L01EXT   LDA     AA01X
+         JMP     L01XMT.
+BAD01X   EXC     27
+         LDX     =2
+         JMPM    ILINER
+L02XMT   0
+         STA     AA02X
+         LDA     OUT201+2
+         OAR     26
+         LDA     IX02E
+         JAN     IX02ER
+         COM     ,A
+         STA     IX02E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+4
+         SEN     26,ORUN
+         LDA     MSK201
+         ANA     MASK1+3
+         JAZ     BAD02X
+         COM     ,A
+         STA     INT201+4
+         LDA     OUT201+2
+         ADD     =401
+         STA     OUT201+2
+         TZA
+         STA     IX02E
+L02EXT   LDA     AA02X
+         JMP     L02XMT.
+BAD02X   EXC     27
+         LDX     =4
+         JMPM    ILINER
+L03XMT   0
+         STA     AA03X
+         LDA     OUT201+3
+         OAR     26
+         LDA     IX03E
+         JAN     IX03ER
+         COM     ,A
+         STA     IX03E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+6
+         SEN     26,ORUN
+         LDA     MSK201
+         ANA     MASK1+2
+         JAZ     BAD03X
+         COM     ,A
+         STA     INT201+6
+         LDA     OUT201+3
+         ADD     =401
+         STA     OUT201+3
+         TZA
+         STA     IX03E
+L03EXT   LDA     AA03X
+         JMP     L03XMT.
+BAD03X   EXC     27
+         LDX     =6
+         JMPM    ILINER
+L04XMT   0
+         STA     AA04X
+         LDA     OUT201+4
+         OAR     26
+         LDA     IX04E
+         JAN     IX04ER
+         COM     ,A
+         STA     IX04E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+10
+         SEN     26,ORUN
+         LDA     MSK201
+         ANA     MASK1+1
+         JAZ     BAD04X
+         COM     ,A
+         STA     INT201+10
+         LDA     OUT201+4
+         ADD     =401
+         STA     OUT201+4
+         TZA
+         STA     IX04E
+L04EXT   LDA     AA04X
+         JMP     L04XMT.
+BAD04X   EXC     27
+         LDX     =10
+         JMPM    ILINER
+L05XMT   0
+         STA     AA05X
+         LDA     OUT201+5
+         OAR     26
+         LDA     IX05E
+         JAN     IX05ER
+         COM     ,A
+         STA     IX05E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+12
+         SEN     26,ORUN
+         LDA     MSK201
+         ANA     MASK1
+         JAZ     BAD05X
+         COM     ,A
+         STA     INT201+12
+         LDA     OUT201+5
+         ADD     =401
+         STA     OUT201+5
+         TZA
+         STA     IX05E
+L05EXT   LDA     AA05X
+         JMP     L05XMT.
+BAD05X   EXC     27
+         LDX     =12
+         JMPM    ILINER
+L06XMT   0
+         STA     AA06X
+         LDA     OUT201+6
+         OAR     26
+         LDA     IX06E
+         JAN     IX06ER
+         COM     ,A
+         STA     IX06E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+14
+         SEN     26,ORUN
+         LDA     MSK201
+         ANA     MASK2+1
+         JAZ     BAD06X
+         COM     ,A
+         STA     INT201+14
+         LDA     OUT201+6
+         ADD     =401
+         STA     OUT201+6
+         TZA
+         STA     IX06E
+L06EXT   LDA     AA06X
+         JMP     L06XMT.
+BAD06X   EXC     27
+         LDX     =14
+         JMPM    ILINER
+L07XMT   0
+         STA     AA07X
+         LDA     OUT201+7
+         OAR     26
+         LDA     IX07E
+         JAN     IX07ER
+         COM     ,A
+         STA     IX07E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+16
+         SEN     26,ORUN
+         LDA     MSK201
+         ANA     MASK2
+         JAZ     BAD07X
+         COM     ,A
+         STA     INT201+16
+         LDA     OUT201+7
+         ADD     =401
+         STA     OUT201+7
+         TZA
+         STA     IX07E
+L07EXT   LDA     AA07X
+         JMP     L07XMT.
+BAD07X   EXC     27
+         LDX     =16
+         JMPM    ILINER
+L10XMT   0
+         STA     AA10X
+         LDA     OUT201+10
+         OAR     24
+         LDA     IX10E
+         JAN     IX10ER
+         COM     ,A
+         STA     IX10E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+20
+         SEN     24,ORUN
+         LDA     MSK201
+         ANA     MASK3+7
+         JAZ     BAD10X
+         COM     ,A
+         STA     INT201+20
+         LDA     OUT201+10
+         ADD     =401
+         STA     OUT201+10
+         TZA
+         STA     IX10E
+L10EXT   LDA     AA10X
+         JMP     L10XMT.
+BAD10X   EXC     27
+         LDX     =20
+         JMPM    ILINER
+L11XMT   0
+         STA     AA11X
+         LDA     OUT201+11
+         OAR     24
+         LDA     IX11E
+         JAN     IX11ER
+         COM     ,A
+         STA     IX11E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+22
+         SEN     24,ORUN
+         LDA     MSK201
+         ANA     MASK3+6
+         JAZ     BAD11X
+         COM     ,A
+         STA     INT201+22
+         LDA     OUT201+11
+         ADD     =401
+         STA     OUT201+11
+         TZA
+         STA     IX11E
+L11EXT   LDA     AA11X
+         JMP     L11XMT.
+BAD11X   EXC     27
+         LDX     =22
+         JMPM    ILINER
+L12XMT   0
+         STA     AA12X
+         LDA     OUT201+12
+         OAR     24
+         LDA     IX12E
+         JAN     IX12ER
+         COM     ,A
+         STA     IX12E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+24
+         SEN     24,ORUN
+         LDA     MSK201
+         ANA     MASK3+5
+         JAZ     BAD12X
+         COM     ,A
+         STA     INT201+24
+         LDA     OUT201+12
+         ADD     =401
+         STA     OUT201+12
+         TZA
+         STA     IX12E
+L12EXT   LDA     AA12X
+         JMP     L12XMT.
+BAD12X   EXC     27
+         LDX     =24
+         JMPM    ILINER
+L13XMT   0
+         STA     AA13X
+         LDA     OUT201+13
+         OAR     24
+         LDA     IX13E
+         JAN     IX13ER
+         COM     ,A
+         STA     IX13E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+26
+         SEN     24,ORUN
+         LDA     MSK201
+         ANA     MASK3+4
+         JAZ     BAD13X
+         COM     ,A
+         STA     INT201+26
+         LDA     OUT201+13
+         ADD     =401
+         STA     OUT201+13
+         TZA
+         STA     IX13E
+L13EXT   LDA     AA13X
+         JMP     L13XMT.
+BAD13X   EXC     27
+         LDX     =26
+         JMPM    ILINER
+L14XMT   0
+         STA     AA14X
+         LDA     OUT201+14
+         OAR     24
+         LDA     IX14E
+         JAN     IX14ER
+         COM     ,A
+         STA     IX14E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+30
+         SEN     24,ORUN
+         LDA     MSK201
+         ANA     MASK3+3
+         JAZ     BAD14X
+         COM     ,A
+         STA     INT201+30
+         LDA     OUT201+14
+         ADD     =401
+         STA     OUT201+14
+         TZA
+         STA     IX14E
+L14EXT   LDA     AA14X
+         JMP     L14XMT.
+BAD14X   EXC     27
+         LDX     =30
+         JMPM    ILINER
+L15XMT   0
+         STA     AA15X
+         LDA     OUT201+15
+         OAR     24
+         LDA     IX15E
+         JAN     IX15ER
+         COM     ,A
+         STA     IX15E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+32
+         SEN     24,ORUN
+         LDA     MSK201
+         ANA     MASK3+2
+         JAZ     BAD15X
+         COM     ,A
+         STA     INT201+32
+         LDA     OUT201+15
+         ADD     =401
+         STA     OUT201+15
+         TZA
+         STA     IX15E
+L15EXT   LDA     AA15X
+         JMP     L15XMT.
+BAD15X   EXC     27
+         LDX     =32
+         JMPM    ILINER
+L16XMT   0
+         STA     AA16X
+         LDA     OUT201+16
+         OAR     24
+         LDA     IX16E
+         JAN     IX16ER
+         COM     ,A
+         STA     IX16E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+34
+         SEN     24,ORUN
+         LDA     MSK201
+         ANA     MASK3+1
+         JAZ     BAD16X
+         COM     ,A
+         STA     INT201+34
+         LDA     OUT201+16
+         ADD     =401
+         STA     OUT201+16
+         TZA
+         STA     IX16E
+L16EXT   LDA     AA16X
+         JMP     L16XMT.
+BAD16X   EXC     27
+         LDX     =34
+         JMPM    ILINER
+L17XMT   0
+         STA     AA17X
+         LDA     OUT201+17
+         OAR     24
+         LDA     IX17E
+         JAN     IX17ER
+         COM     ,A
+         STA     IX17E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+36
+         SEN     24,ORUN
+         LDA     MSK201
+         ANA     MASK3
+         JAZ     BAD17X
+         COM     ,A
+         STA     INT201+36
+         LDA     OUT201+17
+         ADD     =401
+         STA     OUT201+17
+         TZA
+         STA     IX17E
+L17EXT   LDA     AA17X
+         JMP     L17XMT.
+BAD17X   EXC     27
+         LDX     =36
+         JMPM    ILINER
+****************************************
+*  INTERRUPT ROUTINES FOR 201 - REC    *
+****************************************
+L00RC    0 
+         STA     AA00R
+         CIA     26              INPUT DATA
+         STA     IN201T
+         LDA     IR00E
+         JAN     IR00ER
+         COM     ,A
+         STA     IR00E
+         EXC     327             ENABLE INTERRUPTS
+         LDA     INTC7
+         STA     INTIM+1         STORE TIME
+         SEN     26,ORUN         CHECK UNEXPECTED OVERRUN
+         LDA     MSK201
+         ANA     MASK1+5
+         JAZ     BAD00R           ERROR, DISABLED CHAN.
+         COM     ,A
+         STA     INT201+1        SET INTERRUPT FLAG
+         LDA     IN201T
+         ERA     IN201
+         JAZ     L00OK           JUMP IF OK
+         EXC     27
+         LDA     IN201T
+         LDB     IN201
+         LDX     =1
+         JMPM    DAT201          JUMP ERROR
+L00OK    LDA     IN201 
+         ADD     =401
+         STA     IN201           UPDATE DATA
+         TZA
+         STA     IR00E
+L00REX   LDA     AA00R 
+         JMP     L00RC.           EXIT
+BAD00R   EXC     27
+         LDX     =1
+         JMPM    ILINER
+L01RC    0
+         STA     AA01R
+         CIA     26
+         STA     IN201T+1
+         LDA     IR01E
+         JAN     IR01ER
+         COM     ,A
+         STA     IR01E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+3
+         SEN     26,ORUN
+         LDA     MSK201
+         ANA     MASK1+4
+         JAZ     BAD01R
+         COM     ,A
+         STA     INT201+3
+         LDA     IN201T+1
+         ERA     IN201+1
+         JAZ     L01OK
+         EXC     27
+         LDA     IN201T+1
+         LDB     IN201+1
+         LDX     =3
+         JMPM    DAT201
+L01OK    LDA     IN201+1
+         ADD     =401
+         STA     IN201+1
+         TZA
+         STA     IR01E
+L01REX   LDA     AA01R
+         JMP     L01RC.
+BAD01R   EXC     27
+         LDX     =3
+         JMPM    ILINER
+L02RC    0
+         STA     AA02R
+         CIA     26
+         STA     IN201T+2
+         LDA     IR02E
+         JAN     IR02ER
+         COM     ,A
+         STA     IR02E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+5
+         SEN     26,ORUN
+         LDA     MSK201
+         ANA     MASK1+3
+         JAZ     BAD02R
+         COM     ,A
+         STA     INT201+5
+         LDA     IN201T+2
+         ERA     IN201+2
+         JAZ     L02OK
+         EXC     27
+         LDA     IN201T+2
+         LDB     IN201+2
+         LDX     =5
+         JMPM    DAT201
+L02OK    LDA     IN201+2
+         ADD     =401
+         STA     IN201+2
+         TZA
+         STA     IR02E
+L02REX   LDA     AA02R
+         JMP     L02RC.
+BAD02R   EXC     27
+         LDX     =5
+         JMPM    ILINER
+L03RC    0
+         STA     AA03R
+         CIA     26
+         STA     IN201T+3
+         LDA     IR03E
+         JAN     IR03ER
+         COM     ,A
+         STA     IR03E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+7
+         SEN     26,ORUN
+         LDA     MSK201
+         ANA     MASK1+2
+         JAZ     BAD03R
+         COM     ,A
+         STA     INT201+7
+         LDA     IN201T+3
+         ERA     IN201+3
+         JAZ     L03OK
+         EXC     27
+         LDA     IN201T+3
+         LDB     IN201+3
+         LDX     =7
+         JMPM    DAT201
+L03OK    LDA     IN201+3
+         ADD     =401
+         STA     IN201+3
+         TZA
+         STA     IR03E
+L03REX   LDA     AA03R
+         JMP     L03RC.
+BAD03R   EXC     27
+         LDX     =7
+         JMPM    ILINER
+L04RC    0
+         STA     AA04R
+         CIA     26
+         STA     IN201T+4
+         LDA     IR04E
+         JAN     IR04ER
+         COM     ,A
+         STA     IR04E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+11
+         SEN     26,ORUN
+         LDA     MSK201
+         ANA     MASK1+1
+         JAZ     BAD04R
+         COM     ,A
+         STA     INT201+11
+         LDA     IN201T+4
+         ERA     IN201+4
+         JAZ     L04OK
+         EXC     27
+         LDA     IN201T+4
+         LDB     IN201+4
+         LDX     =11
+         JMPM    DAT201
+L04OK    LDA     IN201+4
+         ADD     =401
+         STA     IN201+4
+         TZA
+         STA     IR04E
+L04REX   LDA     AA04R
+         JMP     L04RC.
+BAD04R   EXC     27
+         LDX     =11
+         JMPM    ILINER
+L05RC    0
+         STA     AA05R
+         CIA     26
+         STA     IN201T+5
+         LDA     IR05E
+         JAN     IR05ER
+         COM     ,A
+         STA     IR05E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+13
+         SEN     26,ORUN
+         LDA     MSK201
+         ANA     MASK1
+         JAZ     BAD05R
+         COM     ,A
+         STA     INT201+13
+         LDA     IN201T+5
+         ERA     IN201+5
+         JAZ     L05OK
+         EXC     27
+         LDA     IN201T+5
+         LDB     IN201+5
+         LDX     =13
+         JMPM    DAT201
+L05OK    LDA     IN201+5
+         ADD     =401
+         STA     IN201+5
+         TZA
+         STA     IR05E
+L05REX   LDA     AA05R
+         JMP     L05RC.
+BAD05R   EXC     27
+         LDX     =13
+         JMPM    ILINER
+L06RC    0
+         STA     AA06R
+         CIA     26
+         STA     IN201T+6
+         LDA     IR06E
+         JAN     IR06ER
+         COM     ,A
+         STA     IR06E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+15
+         SEN     26,ORUN
+         LDA     MSK201
+         ANA     MASK2+1
+         JAZ     BAD06R
+         COM     ,A
+         STA     INT201+15
+         LDA     IN201T+6
+         ERA     IN201+6
+         JAZ     L06OK
+         EXC     27
+         LDA     IN201T+6
+         LDB     IN201+6
+         LDX     =15
+         JMPM    DAT201
+L06OK    LDA     IN201+6
+         ADD     =401
+         STA     IN201+6
+         TZA
+         STA     IR06E
+L06REX   LDA     AA06R
+         JMP     L06RC.
+BAD06R   EXC     27
+         LDX     =15
+         JMPM    ILINER
+L07RC    0
+         STA     AA07R
+         CIA     26
+         STA     IN201T+7
+         LDA     IR07E
+         JAN     IR07ER
+         COM     ,A
+         STA     IR07E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+17
+         SEN     26,ORUN
+         LDA     MSK201
+         ANA     MASK2
+         JAZ     BAD07R
+         COM     ,A
+         STA     INT201+17
+         LDA     IN201T+7
+         ERA     IN201+7
+         JAZ     L07OK
+         EXC     27
+         LDA     IN201T+7
+         LDB     IN201+7
+         LDX     =17
+         JMPM    DAT201
+L07OK    LDA     IN201+7
+         ADD     =401
+         STA     IN201+7
+         TZA
+         STA     IR07E
+L07REX   LDA     AA07R
+         JMP     L07RC.
+BAD07R   EXC     27
+         LDX     =17
+         JMPM    ILINER
+L10RC    0
+         STA     AA10R
+         CIA     24
+         STA     IN201T+10
+         LDA     IR10E
+         JAN     IR10ER
+         COM     ,A
+         STA     IR10E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+21
+         SEN     24,ORUN
+         LDA     MSK201
+         ANA     MASK3+7
+         JAZ     BAD10R
+         COM     ,A
+         STA     INT201+21
+         LDA     IN201T+10
+         ERA     IN201+10
+         JAZ     L10OK
+         EXC     27
+         LDA     IN201T+10
+         LDB     IN201+10
+         LDX     =21
+         JMPM    DAT201
+L10OK    LDA     IN201+10
+         ADD     =401
+         STA     IN201+10
+         TZA
+         STA     IR10E
+L10REX   LDA     AA10R
+         JMP     L10RC.
+BAD10R   EXC     27
+         LDX     =21
+         JMPM    ILINER
+L11RC    0
+         STA     AA11R
+         CIA     24
+         STA     IN201T+11
+         LDA     IR11E
+         JAN     IR11ER
+         COM     ,A
+         STA     IR11E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+23
+         SEN     24,ORUN
+         LDA     MSK201
+         ANA     MASK3+6
+         JAZ     BAD11R
+         COM     ,A
+         STA     INT201+23
+         LDA     IN201T+11
+         ERA     IN201+11
+         JAZ     L11OK
+         EXC     27
+         LDA     IN201T+11
+         LDB     IN201+11
+         LDX     =23
+         JMPM    DAT201
+L11OK    LDA     IN201+11
+         ADD     =401
+         STA     IN201+11
+         TZA
+         STA     IR11E
+L11REX   LDA     AA11R
+         JMP     L11RC.
+BAD11R   EXC     27
+         LDX     =23
+         JMPM    ILINER
+L12RC    0
+         STA     AA12R
+         CIA     24
+         STA     IN201T+12
+         LDA     IR12E
+         JAN     IR12ER
+         COM     ,A
+         STA     IR12E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+25
+         SEN     24,ORUN
+         LDA     MSK201
+         ANA     MASK3+5
+         JAZ     BAD12R
+         COM     ,A
+         STA     INT201+25
+         LDA     IN201T+12
+         ERA     IN201+12
+         JAZ     L12OK
+         EXC     27
+         LDA     IN201T+12
+         LDB     IN201+12
+         LDX     =25
+         JMPM    DAT201
+L12OK    LDA     IN201+12
+         ADD     =401
+         STA     IN201+12
+         TZA
+         STA     IR12E
+L12REX   LDA     AA12R
+         JMP     L12RC.
+BAD12R   EXC     27
+         LDX     =25
+         JMPM    ILINER
+L13RC    0
+         STA     AA13R
+         CIA     24
+         STA     IN201T+13
+         LDA     IR13E
+         JAN     IR13ER
+         COM     ,A
+         STA     IR13E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+27
+         SEN     24,ORUN
+         LDA     MSK201
+         ANA     MASK3+4
+         JAZ     BAD13R
+         COM     ,A
+         STA     INT201+27
+         LDA     IN201T+13
+         ERA     IN201+13
+         JAZ     L13OK
+         EXC     27
+         LDA     IN201T+13
+         LDB     IN201+13
+         LDX     =27
+         JMPM    DAT201
+L13OK    LDA     IN201+13
+         ADD     =401
+         STA     IN201+13
+         TZA
+         STA     IR13E
+L13REX   LDA     AA13R
+         JMP     L13RC.
+BAD13R   EXC     27
+         LDX     =27
+         JMPM    ILINER
+L14RC    0
+         STA     AA14R
+         CIA     24
+         STA     IN201T+14
+         LDA     IR14E
+         JAN     IR14ER
+         COM     ,A
+         STA     IR14E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+31
+         SEN     24,ORUN
+         LDA     MSK201
+         ANA     MASK3+3
+         JAZ     BAD14R
+         COM     ,A
+         STA     INT201+31
+         LDA     IN201T+14
+         ERA     IN201+14
+         JAZ     L14OK
+         EXC     27
+         LDA     IN201T+14
+         LDB     IN201+14
+         LDX     =31
+         JMPM    DAT201
+L14OK    LDA     IN201+14
+         ADD     =401
+         STA     IN201+14
+         TZA
+         STA     IR14E
+L14REX   LDA     AA14R
+         JMP     L14RC.
+BAD14R   EXC     27
+         LDX     =31
+         JMPM    ILINER
+L15RC    0
+         STA     AA15R
+         CIA     24
+         STA     IN201T+15
+         LDA     IR15E
+         JAN     IR15ER
+         COM     ,A
+         STA     IR15E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+33
+         SEN     24,ORUN
+         LDA     MSK201
+         ANA     MASK3+2
+         JAZ     BAD15R
+         COM     ,A
+         STA     INT201+33
+         LDA     IN201T+15
+         ERA     IN201+15
+         JAZ     L15OK
+         EXC     27
+         LDA     IN201T+15
+         LDB     IN201+15
+         LDX     =33
+         JMPM    DAT201
+L15OK    LDA     IN201+15
+         ADD     =401
+         STA     IN201+15
+         TZA
+         STA     IR15E
+L15REX   LDA     AA15R
+         JMP     L15RC.
+BAD15R   EXC     27
+         LDX     =33
+         JMPM    ILINER
+L16RC    0
+         STA     AA16R
+         CIA     24
+         STA     IN201T+16
+         LDA     IR16E
+         JAN     IR16ER
+         COM     ,A
+         STA     IR16E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+35
+         SEN     24,ORUN
+         LDA     MSK201
+         ANA     MASK3+1
+         JAZ     BAD16R
+         COM     ,A
+         STA     INT201+35
+         LDA     IN201T+16
+         ERA     IN201+16
+         JAZ     L16OK
+         EXC     27
+         LDA     IN201T+16
+         LDB     IN201+16
+         LDX     =35
+         JMPM    DAT201
+L16OK    LDA     IN201+16
+         ADD     =401
+         STA     IN201+16
+         TZA
+         STA     IR16E
+L16REX   LDA     AA16R
+         JMP     L16RC.
+BAD16R   EXC     27
+         LDX     =35
+         JMPM    ILINER
+L17RC    0
+         STA     AA17R
+         CIA     24
+         STA     IN201T+17
+         LDA     IR17E
+         JAN     IR17ER
+         COM     ,A
+         STA     IR17E
+         EXC     327
+         LDA     INTC7
+         STA     INTIM+37
+         SEN     24,ORUN
+         LDA     MSK201
+         ANA     MASK3
+         JAZ     BAD17R
+         COM     ,A
+         STA     INT201+37
+         LDA     IN201T+17
+         ERA     IN201+17
+         JAZ     L17OK
+         EXC     27
+         LDA     IN201T+17
+         LDB     IN201+17
+         LDX     =37
+         JMPM    DAT201
+L17OK    LDA     IN201+17
+         ADD     =401
+         STA     IN201+17
+         TZA
+         STA     IR17E
+L17REX   LDA     AA17R
+         JMP     L17RC.
+BAD17R   EXC     27
+         LDX     =37
+         JMPM    ILINER
+ENDPG    0
+*****************************************************************
+*                                                               *
+*   201 CARD TEST ONLY                                          *
+*                                                               *
+*****************************************************************
+         R       4200
+TST201   JMPM    CSCK
+         JMPM    CLREC
+         LDA     =1
+         STA     INTFLG
+         LDA     =TSRET
+         STA     FSAFE+1
+         STA     ERRET+1
+TSRET    JMPM    CSCK
+         JMPM    SENR1
+         JMPM    PCZR
+         JMPM    CK1200
+         JMPM    MODE21
+TSPAS    JMPM    CSCK
+         JMPM    INI201
+         EXC     327
+TSLOP    JMPM    T201
+         LDA     ORUNF
+         JAN     TS1
+         JMP     TSLOP
+TS1      JMPM    ORUNT
+         JMPM    PCUP
+         LDA     =77777
+         DAR
+         JAZ     *+4
+         JMP     *-3
+         LDA     =4200
+         OAR     77
+         LDA     FLG201
+         JAZ     *+10
+         ERA     =1
+         JAZ     *+5
+         LDA     MSK201
+         COM     A,A
+         STA     MSK201
+         JS3M    NORHLT
+         JMP     TSPAS
+*****************************************************************
+*              3600  BPS  CLOCK  TEST                           *
+*                                                               *
+*   ANY ERROR IN THIS TEST WILL ABORT THE CURRENT PASS          *
+*****************************************************************
+         R       4300
+TST36C   JMPM    CSCK            EXECUTE CHECKSUMS
+         JMPM    CLREC
+         LDA     =1
+         STA     INTFLG
+         LDA     =T36RET         SET UP ERROR RETURN ADDRESS
+         STA     FSAFE+1
+         STA     ERRET+1
+T36RET   JMPM    CSCK            EXECUTE CHECKSUMS
+         JMPM    SENR1
+         JMPM    PCZR            RESET PASS COUNTS
+T36LP    JMPM    CK3600          EXECUTE TEST
+         JMPM    PCUP            EXECUTE PASS COUNT ROUTINE
+         LDA     =77777
+         DAR
+         JAZ     *+4
+         JMP     *-3
+         LDA     =4300
+         OAR     77
+         JS3M    NORHLT          JUMP IF SS3 TO NORMAL HALT
+         JMP     T36LP           GO FOR ANOTHER PASS
+*****************************************************************
+*                                                               *
+*   INTERRUPT TEST ONLY                                         *
+*                                                               *
+*****************************************************************
+         R       4400
+TINT     JMPM    CSCK
+         JMPM    CLREC
+         LDA     =1
+         STA     INTFLG
+         LDA     =TINTRT
+         STA     FSAFE+1
+         STA     ERRET+1
+TINTRT   JMPM    CSCK
+         JMPM    SENR1
+         JMPM    PCZR
+         JMPM    INTINT
+         JMPM    NOTMOD
+         EXC     127
+TINTLP   JMPM    CSCK
+         TZA
+         STA     INTC7
+         JMPM    INTTST
+         JMPM    PCUP
+         LDA     =77777
+         DAR
+         JAZ     *+4
+         JMP     *-3
+         LDA     =4400
+         OAR     77
+         JS3M    NORHLT
+         JMP     TINTLP
+***********************************************************
+*                                                         *
+*                    EIA TEST ONLY                        *
+*                                                         *
+***********************************************************
+         R       4500
+TEIA     JMPM    CSCK
+         JMPM    CLREC
+         LDA     =1
+         STA     INTFLG
+         LDA     =TEIRET
+         STA     FSAFE+1
+         STA     ERRET+1
+TEIRET   JMPM    CSCK
+         JMPM    SENR1
+         JMPM    PCZR
+         JMPM    NOTMOD
+TEILOP   JMPM    CSCK
+         JMPM    EIA
+         JMPM    EIB
+         JMPM    EIX
+         JMPM    EIZ
+         JMPM    PCUP
+         LDA     =77777
+         DAR
+         JAZ     *+4
+         JMP     *-3
+         LDA     =4500
+         OAR     77
+         JS3M    NORHLT
+         JMP     TEILOP
+*****************************************************
+*  FIB. MEMORY TEST ONLY                            *
+*****************************************************
+         R       4600
+FIB      JMPM    CSCK
+         JMPM    CLREC
+         LDA     =1
+         STA     INTFLG
+         LDA     =FIBRET
+         STA     FSAFE+1
+         STA     ERRET+1
+FIBRET   JMPM    CSCK
+         JMPM    SENR1
+         JMPM    PCZR
+         JMPM    NOTMOD
+FIBLOP   JMPM    CSCK
+         JMPM    MEM
+         JMPM    PCUP
+         LDA     =77777
+         DAR
+         JAZ     *+4
+         JMP     *-3
+         LDA     =4600
+         OAR     77
+         JS3M    NORHLT
+         JMP     FIBLOP
+************************************************************
+*  EIA, INTERRUPT CARD, FIB. MEMORY TEST                   *
+************************************************************
+         R       4700
+FIE      JMPM    CSCK
+         JMPM    CLREC
+         LDA     =1
+         STA     INTFLG
+         LDA     =FIERET
+         STA     FSAFE+1
+         STA     ERRET+1
+FIERET   JMPM    CSCK
+         JMPM    SENR1
+         JMPM    PCZR
+         JMPM    INTINT
+         JMPM    NOTMOD
+         EXC     127
+FIEPAS   JMPM    CSCK
+         TZA
+         STA     INTC7
+         JMPM    EIA
+         JMPM    EIB
+         JMPM    EIX
+         JMPM    EIZ
+         JMPM    INTTST
+         JMPM    MEM
+         JMPM    PCUP
+         LDA     =77777
+         DAR
+         JAZ     *+4
+         JMP     *-3
+         LDA     =4700
+         OAR     77
+         JS3M    NORHLT
+         JMP     FIEPAS
+*************************************************************
+*    MAIN TEST                                              *
+*                                                           *
+*   1.201 TEST                                              *
+*   2.EIA TEST                                              *
+*   3.INTERRUPT CARD TEST                                   *
+*   4.FIB. MEMORY TEST                                      *
+*************************************************************
+         R       5000
+FULTST   JMPM    CSCK
+         JMPM    CLREC
+         LDA     =1
+         STA     INTFLG
+         LDA     =FULRET
+         STA     FSAFE+1         SET POWERFAILSAFE RETURN
+         STA     ERRET+1         SET 201 ERROR RETURN
+FULRET   JMPM    CSCK
+         JMPM    SENR1
+         JMPM    PCZR
+         JMPM    CK1200          SEE IF 1200BPS WORKING
+         JMPM    MODE21          SET 201 MODE
+         JMPM    INTINT          INITALIZE INTERRUPT CARD
+FULPAS   JMPM    CSCK
+         JMPM    INI201          INITALIZE 201 CARD
+         EXC     327
+FULLOP   JMPM    EIA
+         JMPM    EIB
+         JMPM    EIX
+         JMPM    EIZ
+         JMPM    INTTST          TEST INTERRUPT CARD
+         JMPM    MEM             FIB. MEMORY TEST
+         JMPM    T201            GO AND SEE HOW 201 IS DOING
+         LDA     ORUNF
+         JAN     FUL1            GO TEST OVERRUN
+         JMP     FULLOP          ELSE GO DO AGAIN
+FUL1     JMPM    ORUNT           TEST OVERRUN
+         JMPM    PCUP            UP PASS COUNT
+         LDA     =77777
+         DAR
+         JAZ     *+4
+         JMP     *-3
+         LDA     =5000
+         OAR     77
+         LDA     FLG201
+         JAZ     *+10
+         ERA     =1
+         JAZ     *+5
+         LDA     MSK201
+         COM     A,A
+         STA     MSK201
+         JS3M    NORHLT          HALT IF SS3
+         JMP     FULPAS
+*
+***ZERO ERROR COUNTS
+*
+CLREC    0
+         LDX     =ECLAST-EC01-1
+         LDB     =ECLAST-1
+         TZA
+CLR1     STA     0,6
+         JXZ     CLREC.
+         DXR
+         DBR
+         JMP     CLR1
+JMPTAB   +ADDSET
+         +BIN2
+         +C36FST
+         +C36SLW
+         +CHAR
+         +CK1200
+         +CK3600
+         +CKWAIT
+         +CLINT0
+         +CLINT1
+         +CLINT2
+         +CLREC
+         +CMIXUP
+         +CRINT
+         +CRLF
+         +CROSIT
+         +CROSZZ
+         +CSCK
+         +CYCLE
+         +CYCLE2
+         +DAT201
+         +DELAY
+         +EARINT
+         +EARLY
+         +ECTYP
+         +EIA
+         +EIAERR
+         +EIAXX
+         +EIAYY
+         +EIB
+         +EIBXX
+         +EIBYY
+         +EIX
+         +EIXXX
+         +EIXYY
+         +EIZ
+         +EIZXX
+         +EIZYY
+         +IC0
+         +IC1
+         +IC2
+         +IC3
+         +IC4
+         +IC5
+         +IC6
+         +IC7
+         +IC7EXT
+         +IDL201
+         +ILER
+         +ILINER
+         +ILL10
+         +ILL11
+         +ILL12
+         +ILL13
+         +ILL14
+         +ILL15
+         +ILL17
+         +INI201
+         +INTERR
+         +INTINT
+         +INTTST
+         +INTXX
+         +INTZCK
+         +INTZR
+         +L00RC
+         +L00XMT
+         +L01RC
+         +L01XMT
+         +L02RC
+         +L02XMT
+         +L03RC
+         +L03XMT
+         +L04RC
+         +L04XMT
+         +L05RC
+         +L05XMT
+         +L06RC
+         +L06XMT
+         +L07RC
+         +L07XMT
+         +L10RC
+         +L10XMT
+         +L11RC
+         +L11XMT
+         +L12RC
+         +L12XMT
+         +L13RC
+         +L13XMT
+         +L14RC
+         +L14XMT
+         +L15RC
+         +L15XMT
+         +L16RC
+         +L16XMT
+         +L17RC
+         +L17XMT
+         +MEM
+         +MEMPAR
+         +MHLT
+         +MODE21
+         +NOOR
+         +NORHLT
+         +NOTMOD
+         +ORUNT
+         +OUTCH
+         +PARAM
+         +PCUP
+         +PCZR
+         +RAND
+         +SENR1
+         +SPURER
+         +T201
+         +TEMPER
+         +TOFAST
+         +TOSLOW
+JMPLAS   0
+CSTAB    0
+         +FSAFE
+         20
+         61
+         63
+         77
+         107
+         +TFLG-1
+         240
+         277
+         +EXCTBL
+         +ERRET
+         +NOOR
+         +END2-1
+         +ECMSG
+         +EC01-1
+         +L00XMT
+         +ENDPG
+         4200
+         +CKSUM-1
+         +SENR1
+         +END1-1
+         10000
+         +SKIPCS-1
+         +ORUNT
+         +END-1
+         -1
+**********************************
+*  CHECK SUM ROUTINE             *
+**********************************
+CSCK     0
+         EXC     27
+         LDX     =CSCK
+         LDA     0,5
+         STA     END2            SAVE RETURN
+         LDA     RLW
+         LDX     =RL
+         LDB     0,5
+         STB     CSTEMP
+         STA     0,5             RESET MEMORY TEST
+         LDX     =JMPLAS-1
+         TZA
+         STA     CKS3
+         STA     CKS4
+CSCK01   LDB     0,5
+         TZA
+         STA     0,6             CLEAR JMPM'S BY WRITTING ZEROS INTO
+         TXA                     ALL LOCATIONS IN JMPTAB
+         SUB     =JMPTAB
+         JAZ     CSCK02
+         DXR
+         JMP     CSCK01
+CSCK02   LDX     =CSTAB-2
+CSCK03   IXR
+         IXR
+         LDA     0,5
+         JAN     CSCK08          JUMP IF FINISHED
+         TAB
+CSCK04   ROF                     RESET OVERFLOW
+         LDA     0,6
+         ADD     CKS3
+         JOF     CSCK06
+         STA     CKS3
+CSCK05   TBA
+         SUB     1,5
+         JAZ     CSCK03          GET NEXT SET
+         IBR
+         JMP     CSCK04
+CSCK06   ANA     =77777
+         STA     CKS3
+         LDA     0,6
+         JAP     CSCK07          ADD OR SUBSTRACT?
+         LDA     CKS4            SUBSTRACT.
+         DAR
+         STA     CKS4
+         JMP     CSCK05
+CSCK07   INR     CKS4            ADD.
+         JMP     CSCK05
+CSCK08   LDA     CKS1
+         SUB     CKS3
+         JAZ     CSCK10          OK SO FAR
+CSCK09   LDX     =MSG39
+         JMPM    OUTCH
+         NOP
+         LDX     =UPP
+         TZA
+         STA     0,5
+         JMP     UPP.
+CSCK10   LDA     CKS2
+         SUB     CKS4
+         JAZ     CSCK11          JUMP IF OK
+         JMP     CSCK09
+CSCK11   LDX     =RL
+         LDA     CSTEMP
+         STA     0,5             RESTORE MEMORY TEST
+         JMP     END2.
+         0
+CKSUM    NOP
+RAV1     EXC     27
+         LDA     =666            DESTROY JUMP
+         STA     START
+         LDA     =1000
+         STA     START+1
+         JMPM    PARAM
+         LDX     =PARAM
+         TZA
+         STA     0,5             CLEAR PARAM JMPM
+         LDX     =MEMPAR
+         STA     0,5             CLEAR MEMPAR JMPM
+         JMPM    ADDSET
+         LDX     =ADDSET
+         TZA
+         STA     0,5             CLEAR ADDSET JMPM
+         LDX     =CSTAB-2
+CSLOP    IXR
+         IXR
+         LDA     0,5
+         JAN     CS5             DONE WITH CHECKSUM
+         TAB
+CS1      ROF
+         LDA     0,6
+         ADD     CKS1
+         JOF     CS3
+         STA     CKS1
+CS2      TBA
+         SUB     1,5
+         JAZ     CSLOP           GET NEXT SET
+         IBR
+         JMP     CS1
+CS3      ANA     =77777
+         STA     CKS1
+         LDA     0,6
+         JAP     CS4
+         LDA     CKS2
+         DAR
+         STA     CKS2
+         JMP     CS2
+CS4      INR     CKS2
+         JMP     CS2
+CS5      LDX     =MSG41
+         JMPM    OUTCH
+         NOP
+         LDX     =MSG40
+         JMPM    OUTCH
+         NOP
+         JMP     START           STOP
+******************************************************
+*                                                    *
+******************************************************
+SENR1    0
+         EXC     27
+         LDA     TEMP3
+         EXC     77
+         OAR     77
+         JMP     SENR1.
+***********************************************************
+*     PARAMETER INPUT AREA                                *
+***********************************************************
+PARAM    0
+         TZA
+         77                      HLT SET TERMINAL PARAMETERS INTO THE "A" REG.
+*                *0= 30 CPS
+*                *1= 10 CPS
+*                *2=120 CPS
+***
+***
+***
+***
+         JAZ     PARAM1
+         ERA     =1
+         JAZ     PARAM2
+         ERA     =3
+         JAZ     PARAM3
+         JMP     PARAM+1
+PARAM3   LDA     =255
+         STA     TTY
+         LDA     =133
+         STA     TTY1
+         LDA     =530
+         STA     TTY2
+         LDA     =371
+         STA     TTY3
+         LDA     =352
+         STA     TTY4
+         JMP     PARAM1
+PARAM2   LDA     =1750
+         STA     TTY1
+         LDA     =3550
+         STA     TTY
+         LDA     =7314
+         STA     TTY2
+         LDA     =5277
+         STA     TTY3
+         LDA     =5026
+         STA     TTY4
+         JMP     *+7
+PARAM1   LDX     =DEL10
+         LDA     =5000
+         STA     0,5
+         IXR
+         STA     0,5             REMOVES STOP BIT FOR 10 CPS OPERATION.
+         TZA
+         177                     HLT ENTER CHECKSUM ROUTINE PARAMETERS INTO "A" REG.
+*     *
+*     * 0=ENABLE CHECKSUM ROUTINE
+*     * 1=DESABLE CHECKSUM ROUTINE
+*     *
+*     *
+         JAZ     *+16
+         ERA     =1
+         JAZ     *+4
+         JMP     PARAM1+5
+         LDX     =CSCK+1
+         LDA     =1000
+         STA     0,5
+         IXR
+         LDA     =CSCK
+         ORA     =100000
+         STA     0,5
+         277
+******* HLT ENTER MACHINE PARAMETERS BY SETTING SENSE SWITCHES.
+***
+***
+         JSS1    PARMIL           TESTS 620I/L 1.8US MACHINES
+         JSS2    PAR100           TESTS 620L-100 950 NS MACHINES
+         JSS3    PARV73           TEST V70 SERIES MACHINES
+         JMP     PARAM1+25
+***
+***
+**********
+PARMIL   COP     ,ABX
+         STA     FLGTYP
+         STA     FLG201
+         STA     EMSK50
+         1                       HLT SET I AND L PARAMETERS
+         JMPM    MEMPAR
+         LDA     =17
+         STA     MSK201
+         LDA     =35
+         STA     FAST
+         LDA     =47
+         STA     SLOW
+         LDA     =50
+         STA     RIGHT
+         LDA     =14
+         STA     SLOW36
+         LDA     =11
+         STA     FAST36
+         LDA     =300
+         STA     RECK
+         LDA     TTY1
+         STA     TTY
+         JMP     PARAM.
+PAR100   COP     ,ABX
+         3                       HLT SET 620L-100 PARAMETERS
+         STA     FLG201           201 CARD FLAG(CARD NUMBER TO BE TESTED)
+***
+***
+*                   0=201 CARD NUMBER "0"
+*                   1=201 CARD NUMBER "1"
+*                   3=BOTH
+***
+***
+         STB     FLGTYP           SUPER REMOTE(YES OR NO)
+*              YES="1"
+*              NO="0"
+         JMPM    MEMPAR
+         TZA
+         STA     EMSK50
+         LDA     FLGTYP
+         ERA     =1
+         JAZ     PARSUP
+         LDA     =17
+         STA     MSK201
+         JMP     PARAM.
+PARV73   COP     ,ABX
+         4                       HLT SET V70 PARAMATERS
+         STA     FLG201           201 CARD FLAG (CARD NUMBER TO BE TESTED)
+*              0=201 CARD NUMBER "0"
+*              1=201 CARD NUMBER "1"
+*              3=BOTH
+*
+         STB     FLGTYP           SUPER REMOTE (YES OR NO)
+*              YES="1"
+*              NO="0"
+*
+         JMPM    MEMPAR
+CONTS    TZA
+         TZB
+         777                     HALT ENTER MEMORY INTERLEAVING PARAMETERS, OR V77 FLAG
+*                      0=INTERLEAVED
+*                      1=NOT INTERLEAVED
+*                      2=V77
+***
+***
+*                    "B" REGISTER
+*                      0=PARITY ERROR MESSAGE PRINTED
+*                      1=PARITY ERROR MESSAGE NOT PRINTED
+*
+         JBZ     *+5
+         EXC     545             DISABLE PARITY INTERRUPTS
+         JMP     *+3
+         EXC     445             ENABLE PARITY INTERRUPTS
+         JAZ     CONTS2
+         ERA     =1
+         JAZ     CONTS1
+         ERA     =3
+         JAZ     CONTS3
+         JMP     CONTS
+CONTS1   LDA     TTY3
+         STA     TTY
+         LDA     =117
+         STA     FAST
+         LDA     =152
+         STA     SLOW
+         LDA     =155
+         STA     RIGHT
+         LDA     =40
+         STA     SLOW36
+         LDA     =33
+         STA     FAST36
+         LDA     =1462
+         STA     RECK
+         JMP     PARAM.
+CONTS2   LDA     =143
+         STA     FAST
+         LDA     =205
+         STA     SLOW
+         LDA     =211
+         STA     RIGHT
+         LDA     =56
+         STA     SLOW36
+         LDA     =52
+         STA     FAST36
+         LDA     TTY2
+         STA     TTY
+         LDA     =1232
+         STA     RECK
+         JMP     PARAM.
+CONTS3   LDA     TTY4
+         STA     TTY
+         LDX     =MSG42
+         LDA     =120240         2 ASCII SPACES
+         STA     13,X            EXTEND PARITY ERROR MESSAGE FOR V77'S
+         STA     14,X
+         JMP     CONTS1+2
+PARSUP   LDA     FLG201
+         ERA     =1
+         JAZ     NRONE
+         LDA     FLG201
+         ERA     =3
+         JAZ     NRTWO
+         LDA     =377
+         STA     MSK201
+         JMP     PARAM.
+NRONE    LDA     =177400
+         STA     MSK201
+         JMP     PARAM.
+NRTWO    LDA     =170017
+         STA     MSK201
+         JMP     PARAM.
+MEMPAR   0
+         TZA
+         377                     HALT ENTER MEMORY SIZE INTO THE "A" REG.
+*                 *
+*                 * 1=8K
+*                 * 2=12K
+*                 * 3=16K
+*                 * 4=20K
+*                 * 5=24K
+*                 * 6=28K
+*                 * 7=32K
+***
+***
+         JAZ     MEMPAR+1
+         TZB
+         DBR
+         LLRL    14
+         ERA     =140
+         STA     UPP
+         JMP     MEMPAR.
+**********************************
+*  PASS COUNT ROUTINES           *
+**********************************
+PCZR     0
+         EXC     27
+         TZA
+         STA     PCNT
+         STA     PCNT1
+         STA     RC               INIT MEM. TEST
+         LDA     RLW
+         LDX     =RL
+         STA     0,5
+         TZA
+         LDX     =7
+PCZR1    STA     IC0E,5
+         STA     IX00E,5
+         STA     IX10E,5
+         STA     IR00E,5
+         STA     IR10E,5
+         JXZ     PCZR2
+         DXR
+         JMP     PCZR1
+PCZR2    LDA     TFLG
+         JAN     PCZR3           GO AND RESET MODE IF IN TRAP MODE
+         JMP     PCZR.
+PCZR3    LDA     TEMP2
+         STA     MSK201
+         LDA     TEMP1
+         STA     MODE
+         TZA
+         STA     TFLG
+         JMP     PCZR.
+*
+PCUP     0
+         LDA     PCNT
+         OAR     77
+         ROF
+         INR     PCNT
+         JOF     PCUP1
+         JMP     PCUP.
+PCUP1    TZA
+         STA     PCNT
+         INR     PCNT1
+         ROF
+         JMP     PCUP.
+*************************
+* MODE SETTERS          *
+*************************
+MODE21   0
+         LDA     =177
+         STA     M201
+         LDA     =-1
+         STA     MODE
+         TZA
+         STA     INTC7
+         STA     CK201F
+         STA     TFLG
+         STA     ORUNF
+         JMP     MODE21.
+NOTMOD   0
+         LDA     =377
+         STA     M201
+         TZA
+         STA     MODE
+         STA     CK201F
+         STA     TFLG
+         JMP     NOTMOD.
+END1     0
+         R       10000
+*************************************************************
+*  CHECK 1200 BPS INTERRUPT SUBPROGRAM                      *
+*                                                           *
+*   PROGRAM CHECKS THAT 1200BPS INTERRUPT IS WORKING.       *
+*    IT VERIFIES THE SPEED OF THE UNIT WITHIN 10 PERCENT.   *
+*************************************************************
+CK1200   0
+         EXC     27
+         LDA     MSK201
+         STA     TEMP2           SET UP TRAP
+CKER     COM     ,A
+         STA     TEMP1
+         STA     TFLG
+         TZA
+         STA     MODE
+         STA     MSK201
+         STA     INTC7
+         EXC     127
+         JMPM    CKWAIT
+         LDA     INTC7
+         JAZ     CK2             ERROR, NEVER STARTED
+         JMPM    CKWAIT
+         JAZ     CK2             TOO SLOW FOR SURE
+         JMPM    CKWAIT
+         TBA
+         SUB     FAST
+         JAP     CK1             JUMP IF SLOW ENOUGH
+         EXC     27
+         JMPM    TOFAST
+CK1      TBA
+         SUB     SLOW
+         JAP     CK2             ERROR,TOO SLOW OR NOT WORKING
+         EXC     27
+         LDA     TEMP2           CLEAR TRAP
+         STA     MSK201
+         COM     ,A
+         STA     MODE
+         TZA
+         STA     TFLG
+         JMP     CK1200.         EXIT IF OK
+CK2      JMPM    TOSLOW
+*
+CKWAIT   0
+         TZB
+         LDA     INTC7
+         TAX
+CKWLOP   TXA                     (1)
+         ERA     INTC7           (2)
+         JAZ     CKW1            (2)
+         COM     ,A
+         JMP     CKWAIT.
+CKW1     IBR                     (1)
+         TBA                     (1)
+         ERA     RIGHT           (2)
+         JAZ     CKWAIT.         (2)
+         JMP     CKWLOP          (2)
+******************************************
+*         3600 BAUD CLOCK TEST           *
+*                                        *
+* THIS TEST VERIFIES THAT THE 3 1200     *
+* BAUD CLOCKS RUN AT THE RIGHT SPEED AND *
+* ARE 120 DEGREES OUT OF PHASE.          *
+******************************************
+CK3600   0
+         EXC     27              INTERRUPTS OFF
+         LDB     =INTJMP         GET NEW INTERRUPT ROUTINES
+         LDX     =5
+XFERLP   E       *               ASSIGN NEW INTERRUPT ROUTINES
+         LDA     32,X            AND STORE OLD ONES SO THAT THEY
+         STA     13,B            MAY BE RESTORED AT END OF TEST
+         LDA     5,B             (ONLY THE CLOCK INTERRUPT ROUTINES
+         STA     32,X            ARE CHANGED)
+         DBR
+         DXR
+         TXA
+         JAP     XFERLP
+         TZB
+         STB     CKCNT1          ZERO THE LOOP COUNTERS
+         STB     CKCNT2
+         STB     CKCNT3
+         STB     INTC7           ZERO INT COUNTER
+         EXC     127             INTERRUPTS ON
+REGO     JMPM    CKWAIT
+         TZX                     (1)
+         LDA     INTC7           (2) LOAD THE COUNTER AND CHECK IT OUT
+         JAZ     TSLOW           (2)
+         SUB     =3              (2) DO IT 3 TIMES.
+         JAN     REGO            (2)
+         TZB                     (1)
+         STB     INTC5           (2) STORE ZEROS IN THE INTERRUPT
+         STB     INTC6           (2) COUNTERS
+         STB     INTC7           (2)
+         LDX     =1              (2)
+CL01     IBR                     (1) INCREMENT LOOP COUNTER
+         TBA                     (1)
+         SUB     SLOW36          (2) CHECK FOR TOO LONG
+         JAP     TSLOW           (2) JUMP IF ERROR
+         LDA     INTC6           (2) GET PHASE 1 INT COUNTER
+         SUB     INTC5           (2) SUB PHASE 2 INT COUNTER
+         JAZ     CL01            (2) LOOP IF PHASES EQUAL
+         JAN     CK36ER          (2) JUMP IF WRONG INT
+         TBA                     (1)
+         SUB     FAST36          (2) CHECK FOR TOO FAST
+         JAN     TFAST           (2) JUMP IF ERROR
+         TBA                     (1)
+         ADD     CKCNT1          (2) ADD UP TIME FOR PHASE 1
+         STA     CKCNT1          (2) STORE TIME FOR PHASE 1
+         TZB                     (1)
+         IXR                     (1)
+CL02     IBR                     (1) INCREMENT LOOP COUNTER
+         TBA                     (1)
+         SUB     SLOW36          (2) CHECK FOR TOO LONG
+         JAP     TSLOW           (2) JUMP IF ERROR
+         LDA     INTC5           (2) GET PHASE 2 INT COUNTER
+         SUB     INTC7           (2) SUB PHASE 0 INT COUNTER
+         JAZ     CL02            (2) LOOP IF PHASES EQUAL
+         JAN     CK36ER          (2) JUMP IF WRONG INT
+         TBA                     (1)
+         SUB     FAST36          (2) CHECK FOR TOO FAST
+         JAN     TFAST           (2) JUMP IF ERROR
+         TBA                     (1)
+         ADD     CKCNT2          (2) ADD UP TIME FOR PHASE 2
+         STA     CKCNT2          (2) STORE TIME FOR PHASE 2
+         TZB                     (1)
+         TZX                     (1)
+CL03     IBR                     (1) INCREMENT LOOP COUNTER
+         TBA                     (1)
+         SUB     SLOW36          (2) CHECK FOR TOO LONG
+         JAP     TSLOW           (2) JUMP IF ERROR
+         LDA     INTC7           (2) GET PHASE 0 INT COUNTER
+         SUB     INTC6           (2) SUB PHASE 1 INT COUNTER
+         JAN     CL03            (2) LOOP IF PHASES NOT EQUAL
+         TBA                     (1)
+         SUB     FAST36          (2) CHECK FOR TOO FAST
+         JAN     TFAST           (2) JUMP IF ERROR
+         TBA                     (1)
+         ADD     CKCNT3          (2) ADD UP TIME FOR PHASE 0
+         STA     CKCNT3          (2) STORE TIME FOR PHASE 0
+         TZB                     (1)
+         IXR                     (1)
+         LDA     INTC7           (2) GET PHASE 0 INT COUNTER
+         ERA     LIMIT           (2) CHECK FOR LIMIT REACHED
+         JAZ     CKDONE          (2) JUMP IF DONE
+         JMP     CL01            (2) JUMP BACK TO PHASE 1
+CKDONE   EXC     27              INTERRUPTS OFF
+         LDB     =INTJMP         GET OLD INT ROUTINES
+         LDX     =5
+XBACLP   E       *
+         LDA     13,6            REASSIGN PROPOR INTERRUPT ROUTINES
+         STA     32,5            TO THE CLOCK INTERRUPTS
+         DBR
+         DXR
+         TXA
+         JAP     XBACLP
+         LDX     =CK3600
+         LDA     0,5             SAVE RETURN ADDRESS
+         STA     CKTMP1
+         JMPM    CSCK            CHECKSUM TO VERIFY REASSIGNMENTS
+         JMP     CKTMP1.         EXIT TEST
+*********************************
+*       ERROR   ROUTINES        *
+*********************************
+TSLOW    EXC     27              INTERRUPTS OFF
+         STB     BREG            SAVE THE COUNT
+         STX     XSAVE
+         LDX     =CK3600
+         LDA     0,5             GET AND STORE AWAY OLD RETURN
+         STA     CKTMP2          ADDRESS
+         LDA     =COMBKS         GET AND USE TEMP RETURN ADDRESS
+         STA     0,5
+         JMP     CKDONE          RESTORE INT ROUTINES
+COMBKS   LDA     =EC21           (THIS IS FOR THE SUMMARY)
+         ADD     XSAVE
+         TAB
+         INR     0,6
+         JSS2    CKTMP2.         NO LOOPING ALLOWED
+         LDB     BREG            LOAD THE COUNT
+         LDA     XSAVE           SET UP TO PRINT MESSAGE
+         LDX     =MSG44
+         JMPM    C36SLW          JUMP TO HALT ROUTINE
+         JMP     CKTMP2.         END TEST
+TFAST    EXC     27              INTERRUPTS OFF
+         STB     BREG            SAVE THE COUNT
+         STX     XSAVE
+         LDX     =CK3600
+         LDA     0,5             GET AND STORE AWAY OLD RETURN
+         STA     CKTMP2          ADDRESS
+         LDA     =COMBKF         GET AND USE TEMP RETURN ADDRESS
+         STA     0,5
+         JMP     CKDONE          RESTORE INT ROUTINES
+COMBKF   LDA     =EC18           (THIS IS FOR THE SUMMARY)
+         ADD     XSAVE
+         TAB
+         INR     0,6
+         JSS2    CKTMP2.         NO LOOPING ALLOWED
+         LDB     BREG            LOAD THE COUNT
+         LDA     XSAVE           SET UP PRINT MESSAGE
+         LDX     =MSG45   
+         JMPM    C36FST          JUMP TO HALT ROUTINE
+         JMP     CKTMP2.         END TEST
+CK36ER   EXC     27              INTERRUPTS OFF
+         STX     XSAVE
+         LDX     =CK3600
+         LDA     0,5             GET AND STORE AWAY OLD RETURN
+         STA     CKTMP2          ADDRESS
+         LDA     =COMBKM         GET AND USE TEMP RETURN ADDRESS
+         STA     0,5
+         JMP     CKDONE          RESTORE INT ROUTINES
+COMBKM   INR     EC24            INCREMENT COUNTER
+         JSS2    CKTMP2.         NO LOOPING ALLOWED
+         LDX     XSAVE
+         TXA                     SET UP TO PRINT MESSAGE
+         TXB
+         SUB     =2
+         JAZ     *+4
+         TXA
+         IAR
+         LDX     =MSG46
+         JMPM    CMIXUP          JUMP TO HALT ROUTINE
+         JMP     CKTMP2.         END TEST
+*******************************************
+* 3600 BAUD CLOCK TEST INTERRUPT ROUTINES *
+*******************************************
+CLINT0   0
+         INR     INTC7           (3) INCREMENT PHASE 0 COUNTER
+         EXC     127             (?) INTERRUPTS ON
+         JMP     CLINT0.         (3) EXIT INTERRUPT ROUTINE
+CLINT1   0
+         INR     INTC6           (3) INCREMENT PHASE 1 COUNTER
+         EXC     127             (?) INTERRUPTS ON
+         JMP     CLINT1.         (3) EXIT INTERRUPT ROUTINE
+CLINT2   0
+         INR     INTC5           (3) INCREMENT PHASE 2 COUNTER
+         EXC     127             (?) INTERRUPTS ON
+         JMP     CLINT2.         (3) EXIT INTERRUPT ROUTINE
+************************
+* INTERRUPT JUMP TABLE *
+************************
+INTJMP   JMPM    CLINT2          INT LOCATION 32
+         JMPM    CLINT1          INT LOCATION 34
+         JMPM    CLINT0          INT LOCATION 36
+SKIPCS   0
+         R       *+5             AREA FOR OLD JUMP LOCATIONS
+***********************
+*  201 OVERRUN TEST   *
+***********************
+ORUNT    0
+         EXC     27              DISABLE INTERRUPTS
+         LDA     MSK201
+         STA     TEMP2
+         COM     ,A
+         STA     TEMP1
+         STA     TFLG             SET TRAP FLAG
+         TZA
+         STA     MODE
+         STA     MSK201           SET TRAP FOR 201
+         STA     INTC7            CLEAR 1200BPS COUNTER
+         EXC     127             ENABLE INTERRUPT CARD ONLY
+OR1      SEN     26,OR2
+         SEN     24,OR2          JUMP IF OVERRUN
+         LDA     INTC7
+         SUB     =22
+         JAN     OR2             JUMP IF TIME NOT UP
+         EXC     27              TIME RUN OUT(18 1200BPS TIMES)
+         JMP     NOOR            JUMP TO ERROR
+OR2      EXC     27              OVERRUN OCCURED
+         LDA     TEMP2
+         STA     MSK201          RESET MASK
+         COM     ,A
+         STA     MODE            RESET 201 MODE
+         TZA
+         STA     TFLG            CLEAR TRAP FLAG
+         JMP     ORUNT.          NORMAL EXIT
+************************************
+*  INTERRUPT CARD INITALIZE        *
+************************************
+INTINT   0
+         LDA     MODE
+         STA     TEMP1
+         LDA     MSK201
+         STA     TEMP2
+         COM     ,A
+         STA     TFLG
+         TZA
+         STA     MSK201          TRAP FOR 201 NOT RECOG. EXC
+         STA     MODE            SET NON-201 MODE
+         EXC     127             ENABLE INTERRUPT CARD
+         LDA     =20
+         DAR                     ALLOW ANY INTERRUPTS TO CLEAR
+         NOP
+         JAP     *-2
+         EXC     27
+         LDA     TEMP1
+         STA     MODE            RESET MODE
+         LDA     TEMP2
+         STA     MSK201          RESET 201 MASK
+         LDX     =7
+         TZA
+         STA     TFLG
+INTI1    STA     IC0E,5
+         STA     INTC7,5         CLEAR INTERRUPT COUNTERS
+         JXZ     INTINT.         EXIT
+         DXR
+         JMP     INTI1
+******************************
+*  201 INIT. ROUTINE         *
+******************************
+INI201   0
+         EXC     27
+         EXC     226              MAKE SURE SCANNER STARTS(POWER FS)
+         LDA     =17
+I201A    OAR     27              DISABLE AND CLEAR ALL LINES
+         JAZ     I221B
+         DAR
+         JMP     I201A
+I221B    EXC     27
+         EXC     224
+         LDA     =17
+         OAR     25
+         JAZ     I201B
+         DAR
+         JMP     I221B+3
+I201B    LDA     MSK201
+         JAZ     INI201.         EXIT IF NONE ACTIVE
+         EXC     726             SOFTWARE RESET
+         EXC     126             TURN OFF SCANNER
+I201C    LDX     =7
+         LDB     =20
+I201D    LDA     MSK201
+         ANA     MASK3+10,5
+         JAZ     I201E           JUMP IF LINE NOT ENABLED 1ST CARD
+         TXA
+         COM     A,A             CONVERT 3 TO 0, 2 TO 1 ETC.
+         ANA     =7
+         LRLA    1
+         COP     AB,A
+         OAR     27              ENABLE LINE
+         JMPM    CYCLE
+         LDA     =177777
+         OAR     26              PUT ONES IN XMIT CHAN.
+         JMPM    CYCLE
+I201E    JXZ     I221C           ENABLE SECOND CARD
+         DXR
+         JMP     I201D
+I221C    EXC     724
+         EXC     124
+         LDX     =7
+         LDB     =20
+         LDA     MSK201
+         ANA     MASK3,5
+         JAZ     I221C1          JUMP IF LINE NOT ENABLED 2ND CARD
+         TXA
+         COM     A,A
+         ANA     =7
+         LRLA    1
+         COP     AB,A
+         OAR     25
+         JMPM    CYCLE2
+         LDA     =177777
+         OAR     24
+         JMPM    CYCLE2
+I221C1   JXZ     I201E1          FINISH ENABLING
+         DXR
+         JMP     I221C+4
+*********************************************************************
+*  INTERRUPT ROUTINES FOR ILLEGAL 201 INTERRUPTS                    *
+*********************************************************************
+ILL10    0
+         LDX     =10
+         JMPM    ILER
+ILL11    0
+         LDX     =11
+         JMPM    ILER
+ILL12    0
+         LDX     =12
+         JMPM    ILER
+ILL13    0
+         LDX     =13
+         JMPM    ILER
+ILL14    0
+         LDX     =14
+         JMPM    ILER
+ILL15    0
+         LDX     =15
+         JMPM    ILER
+ILL17    0
+         LDX     =17
+         JMPM    ILER
+*
+***ISSURE SOFTWARE RESET TO CLEAR OUTPUT FF'S
+*
+I201E1   EXC     726              SOFTWARE RESET
+         EXC     126             STOP SCANNER AGAIN
+         LDX     =17
+I201E2   COP     BX,A
+         OAR     27              SET ZERO DETECT 1ST CARD
+         JMPM    CYCLE
+         DXR
+         JXZ     I221F
+         DXR
+         JMP     I201E2
+I221F    EXC     724
+         EXC     124
+         LDX     =17
+         COP     BX,A
+         OAR     25              SET ZERO DETECT 2ND CARD
+         JMPM    CYCLE2
+         DXR
+         JXZ     I201F
+         DXR
+         JMP     I221F+3
+I201F    LDX     =17             ZERO TABLES
+         COP     ,AB
+         STA     INTC7
+         STA     ORUNF
+I201G    STA     OUT201,5
+         STA     IN201,5
+         STB     INT201,5
+         STB     INT201+20,5
+         ADD     =401
+         JXZ     I201H
+         DXR
+         JMP     I201G
+I201H    LDX     =37
+         LDA     =42
+         STA     INSTIM,5         SET TIME LIMIT FOR REC CHAN.
+         DXR
+         LDA     =22
+         STA     INSTIM,5         SET TIME LIMIT FOR XMIT CHANS.
+         JXZ     I201I
+         DXR
+         JMP     I201H+1
+I201I    EXC     26
+         EXC     24              CLEAR OVERRUN
+         NOP
+         NOP
+         NOP
+         NOP
+         NOP
+         JMP     INI201.
+CYCLE    0
+         EXC     326
+         EXC     326
+         EXC     326
+         EXC     326
+         JMP     CYCLE.
+CYCLE2   0
+         EXC     324
+         EXC     324
+         EXC     324
+         EXC     324
+         JMP     CYCLE2.
+************************************************
+*   SUBPROGRAM TO CHECK 201 ACTIVITY           *
+************************************************
+T201     0
+         STA     AAT
+         STB     BBT
+         STX     XXT
+         LDB     INTC7           RECHECK THAT 1200 BPS IS RUNNING
+         LDA     RECK
+         DAR
+         JAP     *-1
+         TBA
+         SUB     INTC7           INTRPT SHOULD HAVE OCCURRED
+         JAZM    TOSLOW           JUMP TO ERROR OTHERWISE
+         TZB
+         STB     TEMP
+         LDX     =37
+T1       LDA     MSK201          CHECK INTERRUPT FLAGS
+         LDB     TEMP
+         LSRB    1
+         ANA     MASK3,6
+         JAZ     T3               JUMP IF INACTIVE CHANNEL
+         LDA     INT201,5
+         JAZ     T2               JUMP NO INTERRUPT
+         TZA
+         STA     INT201,5        CLEAR FLAG
+         LDA     INTIM,5
+         ADD     =21
+         STA     INSTIM,5        STORE NEW TIME LIMIT
+T2       LDA     INSTIM,5        CHECK FOR TIME EXPIRING
+         SUB     INTC7
+         JAN     T6              ERROR, IDLE CHANNEL
+T3       JXZ     T4               JUMP IF ALL CHANNELS
+         DXR
+         INR     TEMP
+         JMP     T1
+T4       LDA     INTC7
+         SUB     =11600
+         JAN     T5              EXIT IF NOT 4 SEC. OF RUNNING
+         COM     ,A
+         STA     ORUNF           ELSE SET OVERRUN TEST FLAG
+T5       TZA
+         STA     CK201F
+         LDA     AAT
+         LDB     BBT
+         LDX     XXT
+         JMP     T201.           EXIT
+T6       EXC     27
+         JMPM    IDL201
+******************************************************************
+*    EIA TEST SUBPROGRAM                                         *
+*                                                                *
+*                                                                *
+*  TEST EIA'S IN FOLLOWING MANNER:                               *
+*                                                                *
+*    NOTE: EIA CARDS ARE ENABLED BY MASK "EIAMSK" DEFINED AS:    *
+*                                                                *
+*      6201I BIT  5  4  3  2  1  0                               *
+*      EIA ADDR. 66 62 65 61 64 60                               *
+*                                                                *
+*   1. OUTPUTS DATA TO ALL CARDS.  THE DATA IS MADE DIFFERENT    *
+*      FOR EACH CARD BY INCREMENTING THE DATA BY ONE AS EACH     *
+*      OUTPUT OCCURS.  FOR EXAMPLE: IF A 22(OCTAL) WAS OUTPUT TO *
+*      WORD 60 THEN 64 WOULD RECEIVE A 23, 61 A 24, ETC.         *
+*                                                                *
+*   2. INPUTS DATA FROM EACH CARD.  BECAUSE OF PLUGBOARD         *
+*      WIRING THE DATA IS RIGHT SHIFTED ONE.                     *
+*                                                                *
+*   3. CHECKS DATA.                                              *
+*        NOTE: BECAUSE ALL OUTPUTS ARE DONE AT ONCE AND THEN     *
+*              THE INPUTS, THE TEST SHOULD CATCH DOUBLE          *
+*              ADDRESSING.                                       *
+******************************************************************
+EIA      0
+         LDA     EMSK60
+         JAZ     EIA.            EXIT IMMED IF NO EIA'S
+         TZA
+         STA     PAT
+EIAERL   LDB     PAT
+         LDX     =5
+         LDA     CK201F
+         JANM    T201
+EIAOL    LDA     EMSK60
+         ANA     MASK1,5
+         JAZ     EIAL1           JUMP IF NO TEST
+         TXA
+         SUB     =5
+         JAN     EIAOL1
+         TBA
+         ORA     =1              PROTECT DEC. TTY ON 60
+         TAB
+EIAOL1   LDA     OUTB60,5
+         STA     *+1             STORE OUTPUT "B" REG.
+EIAXX    0
+         TXA
+         SUB     =5
+         JAN     EIAL1
+         LDB     PAT             RESET PATTERN AFTER 60
+EIAL1    IBR
+         JXZ     EIAIN           JUMP IF FINISHED OUTPUT
+         DXR
+         JMP     EIAOL
+EIAIN    LDX     =5
+EIAIN1   LDA     EMSK60
+         ANA     MASK1,5
+         JAZ     EIAL2           JUMP IF NO INPUT
+         LDA     INTB60,5
+         STA     *+1             STORE CIA INSTR.
+EIAYY    0
+         STA     IN66,5
+EIAL2    JXZ     EIACK           JUMP IF INPUT FINISHED
+         DXR
+         JMP     EIAIN1
+*    CHECK RESULTS
+EIACK    LDX     =5
+         LDA     CK201F
+         JANM    T201
+         LDA     PAT
+         STA     PAT1
+EIAL3    LDA     EMSK60
+         ANA     MASK1,5
+         JAZ     EIAOK           JUMP IF NO CHECK
+         TXA
+         ERA     =5
+         JAZ     EIA60           TEST 60 SPECIAL
+         LDA     EIXFLG
+         JAZ     EIAL3A
+         ERA     =3
+         JAZ     EIAL3A
+         TXA
+         ERA     =3
+         JAZ     EIAOK
+         TXA
+         ERA     =2
+         JAZ     EIAOK
+EIAL3A   LDA     IN66,5
+         LRLA    1
+         ERA     PAT1
+         JAZ     EIAOK           JUMP IF OK
+EIA3A    LDA     INTB60,5
+         ANA     =77
+         TAB
+         LDA     IN66,5
+         TBX
+         LDB     PAT1
+         JMPM    EIAERR
+         JMP     EIAERL
+EIA60    LDA     IN66,5
+         LRLA    1               MOVE UPPER BIT TO 0
+         LLSR    1               MOVE BIT INTO B
+         LSRA    1               DUMP UNKNOWN BIT
+         LLRL    2               REPOSITION BITS TO MATCH PATTERN
+         ERA     PAT1            COMPARE
+         ANA     =177776         GET RID OF BIT 0
+         JAZ     EIAOK           JUMP IF OK
+         JMP     EIA3A           ELSE GO TO ERROR
+EIAOK    JXZ     EIAFIN
+         DXR
+         INR     PAT1
+         JMP     EIAL3
+EIAFIN   LDA     PAT
+         ADD     =10421
+         STA     PAT
+         ANA     =17
+         JAZ     EIA.            EXIT IF 16 ITERATIONS
+         JMP     EIAERL
+EIB      0
+         LDA     EMSK50
+         JAZ     EIB.            EXIT IMMEDIATELY IF NO EIA'S
+         TZA
+         STA     PAT
+EIBERL   LDB     PAT
+         LDX     =5
+         LDA     CK201F
+         JANM    T201
+EIBOL    LDA     EMSK50
+         ANA     MASK1,5
+         JAZ     EIBL1           JUMP IF NO TEST
+EIBOL1   LDA     OUTB50,5
+         STA     *+1             STORE OUTPUT "B" REG.
+EIBXX    0
+EIBL1    IBR
+         JXZ     EIBIN           JUMP IF FINISHED OUTPUT
+         DXR
+         JMP     EIBOL
+EIBIN    LDX     =5
+EIBIN1   LDA     EMSK50
+         ANA     MASK1,5
+         JAZ     EIBL2           JUMP IF NO INPUT
+         LDA     INTB50,5
+         STA     *+1             STORE CIA INSTR.
+EIBYY    0
+         STA     IN66,5
+EIBL2    JXZ     EIBCK           JUMP IF INPUT FINISHED
+         DXR
+         JMP     EIBIN1
+*    CHECK RESULTS
+EIBCK    LDX     =5
+         LDA     CK201F
+         JANM    T201
+         LDA     PAT
+         STA     PAT1
+EIBL3    LDA     EMSK50
+         ANA     MASK1,5
+         JAZ     EIBOK           JUMP IF NO CHECK
+         LDA     EIXFLG
+         JAZ     EIBL3A
+         ERA     =3
+         JAZ     EIBL3A
+         TXA
+         ERA     =3
+         JAZ     EIBOK
+         TXA
+         ERA     =2
+         JAZ     EIBOK
+EIBL3A   LDA     IN66,5
+         LRLA    1
+         ERA     PAT1
+         JAZ     EIBOK           JUMP IF OK
+EIB3A    LDA     INTB50,5
+         ANA     =77
+         TAB
+         LDA     IN66,5
+         TBX
+         LDB     PAT1
+         JMPM    EIAERR
+         JMP     EIBERL
+EIBOK    JXZ     EIBFIN
+         DXR
+         INR     PAT1
+         JMP     EIBL3
+EIBFIN   LDA     PAT
+         ADD     =10421
+         STA     PAT
+         ANA     =17
+         JAZ     EIB.            EXIT IF 16 ITERATIONS
+         JMP     EIBERL
+EIX      0
+         LDA     EIXFLG
+         JAZ     EIX.
+         ERA     =3
+         JAZ     EIX.
+         LDA     EMSK60
+         JAZ     EIX.
+         TZA
+         STA     PAT
+EIXERL   LDB     PAT
+         LDX     =3
+         LDA     CK201F
+         JANM    T201
+EIXOL    LDA     EMSK60
+         ANA     MASK1,5
+         JAZ     EIXL1
+         IXR
+EIXOL1   LDA     OUTB60,5
+         STA     *+1
+EIXXX    0
+EIXL1    IBR
+         DXR
+         TXA
+         JAN     EIXIN
+         TZX
+         LDA     EMSK60
+         ANA     MASK1+2
+         JAZ     EIXL1
+         JMP     EIXOL1
+EIXIN    LDX     =3
+EIXIN1   LDA     EMSK60
+         ANA     MASK1,5
+         JAZ     EIXL2
+         LDA     INTB60,5
+         STA     *+1
+EIXYY    0
+         STA     IN66,5
+EIXL2    TXA
+         ERA     =2
+         JAZ     EIXCK
+         DXR
+         JMP     EIXIN1
+EIXCK    LDX     =3
+         LDA     CK201F
+         JANM    T201
+         LDA     PAT
+         STA     PAT1
+EIXL3    LDA     EMSK60
+         ANA     MASK1,5
+         JAZ     EIXOK
+         LDA     IN66,5
+         LRLA    1
+         ERA     PAT1
+         JAZ     EIXOK
+EIX3A    LDA     INTB60,5
+         ANA     =77
+         TAB
+         LDA     IN66,5
+         TBX
+         LDB     PAT1
+         JMPM    EIAERR
+         JMP     EIXERL
+EIXOK    TXA
+         ERA     =2
+         JAZ     EIXFIN
+         DXR
+         INR     PAT1
+         JMP     EIXL3
+EIXFIN   LDA     PAT
+         ADD     =10421
+         STA     PAT
+         ANA     =17
+         JAZ     EIX.
+         JMP     EIXERL
+EIZ      0
+         LDA     EIXFLG
+         JAZ     EIZ.
+         ERA     =3
+         JAZ     EIZ.
+         LDA     EMSK50
+         JAZ     EIZ.
+         TZA
+         STA     PAT
+EIZERL   LDB     PAT
+         LDX     =3
+         LDA     CK201F
+         JANM    T201
+EIZOL    LDA     EMSK50
+         ANA     MASK1,5
+         JAZ     EIZL1
+         IXR
+EIZOL1   LDA     OUTB50,5
+         STA     *+1
+EIZXX    0
+EIZL1    IBR
+         DXR
+         TXA
+         JAN     EIZIN
+         TZX
+         LDA     EMSK50
+         ANA     MASK1+2
+         JAZ     EIZL1
+         JMP     EIZOL1
+EIZIN    LDX     =3
+EIZIN1   LDA     EMSK50
+         ANA     MASK1,5
+         JAZ     EIZL2
+         LDA     INTB50,5
+         STA     *+1
+EIZYY    0
+         STA     IN66,5
+EIZL2    TXA
+         ERA     =2
+         JAZ     EIZCK
+         DXR
+         JMP     EIZIN1
+EIZCK    LDX     =3
+         LDA     CK201F
+         JANM    T201
+         LDA     PAT
+         STA     PAT1
+EIZL3    LDA     EMSK50
+         ANA     MASK1,5
+         JAZ     EIZOK
+         LDA     IN66,5
+         LRLA    1
+         ERA     PAT1
+         JAZ     EIZOK
+EIZ3A    LDA     INTB50,5
+         ANA     =77
+         TAB
+         LDA     IN66,5
+         TBX
+         LDB     PAT1
+         JMPM    EIAERR
+         JMP     EIZERL
+EIZOK    TXA
+         ERA     =2
+         JAZ     EIZFIN
+         DXR
+         INR     PAT1
+         JMP     EIZL3
+EIZFIN   LDA     PAT
+         ADD     =10421
+         STA     PAT
+         ANA     =17
+         JAZ     EIZ.
+         JMP     EIZERL
+******************************************
+*                                        *
+*  INTERRUPT CARD TEST SUBPROGRAM        *
+*                                        *
+******************************************
+INTTST   0
+         LDA     INTMSK
+         ANA     M201
+         JAZ     INTTST.
+         STA     INTSK
+         JMPM    INTZCK
+         EXC     27
+         JMPM    IC0
+         TZA
+         STA     INTC0
+         JMPM    CROSIT
+         LDX     =100
+         TZA
+         STA     INTFLG
+INT1AA   LDB     =7
+         LDA     CK201F
+         JANM    T201
+INT1     LDA     INTSK
+         ANA     MASK2,6
+         JAZ     INT2
+         LDA     PULSER,6
+         STA     *+1
+INTXX    0
+INT2     JBZ     INT3
+         DBR
+         JMP     INT1
+INT3     DXR
+         JXZ     INTCK
+         JMP     INT1AA
+INTCK    LDX     =7
+         LDA     INTSK
+         ANA     MASK2,5
+         JAZ     INTOK
+         LDA     INTC7,5
+         ERA     =100
+         JAZ     INTOK
+         LDB     INTC7,5
+         TXA
+         COM     A,A
+         ANA     =7
+         TAX
+         TBA
+         LDB     =100
+         JMPM    INTERR
+         JMPM    INTZR
+         JMP     INTTST+1
+INTOK    JXZ     INTEND
+         DXR
+         JMP     INTCK+1
+INTEND   JMPM    INTZR
+         LDA     =1
+         STA     INTFLG
+         JMP     INTTST.
+*
+***SETS INTERRUPT COUNTERS TO ZERO
+*
+INTZR    0
+         LDX     =7
+         TZB
+INT1A    LDA     INTSK
+         ANA     MASK2,5
+         JAZ     INT1B
+         STB     INTC7,5
+INT1B    JXZ     INTZR.
+         DXR
+         JMP     INT1A
+*
+***CHECK FOR SPURIOUS INTERRUPTS
+*
+INTZCK   0
+         LDX     =7
+INTZ1    LDA     INTSK
+         ANA     MASK2,5
+         JAZ     INTZ2
+         LDA     INTC7,5
+         JAZ     INTZ2
+         TAB
+         TXA
+         COM     A,A
+         ANA     =7
+         TAX
+         TBA
+         JMPM    SPURER
+         JMP     INTZCK.
+INTZ2    JXZ     INTZCK.
+         DXR
+         JMP     INTZ1
+*******************************
+*   FIB. MEMORY SUBTEST       *
+*******************************
+MEM      0
+RST2     LDX     =END1
+         LDA     A
+         STA     C0
+         STA     AS
+         LDA     B
+         STA     C1
+         STA     BS
+W        JMPM    RAND
+         STA     0,5
+         JBZ     W
+         LDX     =END1
+         LDA     AS
+         STA     A
+         LDA     BS
+         STA     B
+R        JMPM    RAND
+         STA     BSAV
+         LDA     0,5
+         STA     ASAV
+         ERA     BSAV
+         JAZ     OK
+         LDA     ASAV             WAS
+         LDB     BSAV             SHOULD BE
+         INR     EC13             INCREMENT ERROR COUNTER
+         STX     XREG             STASH AWAY THE X REGISTER FOR LATER
+         LDX     =MSG13           GET THE RIGHT ERROR MEESAGE
+         JMPM    MHLT
+         LDA     C0
+         STA     A
+         LDA     C1
+         STA     B
+         JMP     RST2
+OK       JBZ     R
+         JMP     MEM.
+RAND     0
+         LDA     CK201F
+         JANM    T201
+         INC     X,AX
+         SUB     =10000
+         JAZ     R4
+         TXA
+         SUB     UPP
+         JAZ     R3
+         JMP     RAND1
+R3       INR     RC
+         LDA     RC
+         LSRA    1
+         ANA     =17
+         ORA     RLW
+         STA     RL
+         LDA     A
+         ADD     B
+         COM     ,B
+         JMP     RAND.
+RAND1    LDA     A
+         LDB     B
+         STB     A
+         ADD     B
+         STA     B
+RL       LRLA    0
+         TZB
+         JMP     RAND.
+R4       LDX     =END
+         JMP     RAND1
+************************************************
+*    MESSAGE  PRINT  ROUTINE                   *
+************************************************
+OUTCH    0
+         EXC     27
+         STA     AREG
+         STB     BREG
+         STX     XSAVE
+OTLOP    LDA     0,5             GET NEXT MSG CHAR
+         STA     TEMP
+         JAZ     OUTA            JUMP IF END OF MSG TEXT (0)
+         COM     A,A
+         JAZ     OUT1            JUMP IF END OF LINE (-1)
+         COM     A,A
+         ANA     =377
+         SUB     =340
+         JAP     OUTSP
+         LDA     TEMP
+         LRLA    10
+         ANA     =377
+         JMPM    CHAR
+         LDA     TEMP
+         ANA     =377
+         JAZ     OUTE
+         JMPM    CHAR
+OUTE     INR     XSAVE
+         LDX     XSAVE
+         JMP     OTLOP
+OUTA     JSS1    OUTA1
+         LDA     AREG
+         LDB     BREG
+         LDX     XREG
+         JMP     OUTCH.
+OUTA1    LDX     =OUTCH
+         INR     0,5
+         JMP     OUTA+2
+OUT1     JMPM    CRLF
+         JMP     OUTE
+OUTSP    LDA     TEMP
+         LSRA    11
+         ANA     =7
+         TAB
+         LDB     AREG,6          PICK UP REGISTER
+         LDA     TEMP
+         ANA     =377
+         SUB     =350
+         JAP     OUTBIN          JUMP IF BINARY OUTPUT
+         TZA
+         LLRL    1
+         STA     OCTSAV+5        PUT AWAY BIT 15
+         LDX     =4
+SPC1     TZA                     BUST UP REST OF WORD
+         LLRL    3
+         STA     OCTSAV,5
+         JXZ     SPC2
+         DXR
+         JMP     SPC1
+SPC2     LDA     TEMP
+         LRLA    4
+         ANA     =7
+         DAR
+         TAX                     PICK UP COUNT
+SPC3     LDA     OCTSAV,5        OUTPUT OCTAL NO.
+         ORA     =260
+         STX     XXX3
+         JMPM    CHAR
+         LDX     XXX3
+         JXZ     OUTE            DONE
+         DXR
+         JMP     SPC3
+OUTBIN   TZA
+         LLRL    1
+         STB     TEMP
+         ORA     =260
+         JMPM    CHAR
+         LDA     =240
+         JMPM    CHAR
+         LDX     =4
+BIN1     JMPM    BIN2
+         JXZ     OUTE            DONE WITH BINARY OUTPUT
+         DXR
+         JMP     BIN1
+BIN2     0
+         STX     XXX3
+         LDX     =2
+BIN3     LDB     TEMP
+         LDA     =130
+         LLRL    1
+         STB     TEMP
+         STX     XX4
+         JMPM    CHAR
+         LDX     XX4
+         JXZ     BIN4
+         DXR
+         JMP     BIN3
+BIN4     LDA     =240
+         JMPM    CHAR
+         LDX     XXX3
+         JMP     BIN2.
+CHAR     0
+         TAX
+         LDA     =177776
+         OAR     60
+         JMPM    DELAY
+CH       TXA
+         TZB
+         LLSR    1
+         TAX
+         LDA     =177776
+         JBZ     *+3
+         COM     ,A
+         OAR     60
+         JMPM    DELAY
+         JXZ     *+4
+         JMP     CH
+         COM     ,A
+         OAR     60
+         JMPM    DELAY
+DEL10    JMPM    DELAY
+         JMP     CHAR.
+DELAY    0
+         LDA     TTY
+         DAR
+         JAZ     DELAY.
+         JMP     DELAY+2
+CRLF     0
+         LDA     =215
+         JMPM    CHAR
+         LDA     =215
+         JMPM    CHAR
+         LDA     =212
+         JMPM    CHAR
+         JMP     CRLF.
+******************************************************
+*    TEXT  MESSAGES                                  *
+*                                                    *
+*       -1   CAUSES CARRIAGE RETURN, LINE FEED       *
+*        0   MARKS END OF MESSAGE                    *
+******************************************************
+MSG01    -1
+         ASC     '201 OVERRUN DID NOT OCCUR'
+         -1
+         0
+MSG02    -1
+         ASC     'BAD INTRPT ON 201 CHAN. '
+         +OCT+XR+TWO
+         -1
+         0
+MSG03    -1
+         ASC     'BAD INTRPT ON DISABLED 201 CHAN. '
+         +OCT+XR+TWO
+         -1
+         0
+MSG04    -1
+         ASC     '201 INTRPT AFTER EXC 127'
+         -1
+         ASC     'CHAN'
+         +OCT+XR+TWO
+         -1
+         0
+MSG05    -1
+         ASC     '201 INTRPT??? CHAN '
+         +OCT+XR+TWO
+         -1
+         0
+MSG06    -1
+         ASC     '201 DATA ERR - CHAN '
+         +OCT+XR+TWO
+         -1
+         ASC     'DATA OUT '
+         +BIN+BR
+         -1
+         ASC     'DATA IN  '
+         +BIN+AR
+         -1
+         0
+MSG07    -1
+         ASC     '201 CHAN '
+         +OCT+TWO+XR
+         ASC     ' IS IDLE'
+         -1
+         0
+MSG08    -1
+         ASC     'UNEXPECTED 201 OVERRUN'
+         -1
+         0
+MSG09    -1
+         ASC     '1200BPS TOO FAST'
+         -1
+         0
+MSG10    -1
+         ASC     '1200BPS TOO SLOW(NOT WORKING?)'
+         -1
+         0
+MSG11    -1
+         ASC     'SPURIOUS INTRPT - INTRPT CARD'
+         -1
+         +OCT+SIX+AR
+         ASC     ' INTRPTS REC. ON CHAN '
+         +OCT+TWO+XR
+         -1
+         0
+MSG12    -1
+         ASC     'INTRPT CARD ERR - CHAN '
+         +OCT+XR+TWO
+         -1
+         +OCT+SIX+AR
+         ASC     ' REC.'
+         -1
+         +OCT+SIX+BR
+         ASC     ' SENT'
+         -1
+         0
+MSG13    -1
+         ASC     'MEMORY ERR - LOC '
+         +OCT+FIVE+XR
+         -1
+         +OCT+SIX+BR
+         ASC     ' WRITTEN'
+         -1
+         +OCT+SIX+AR
+         ASC     ' READ'
+         -1
+         0
+MSG14    -1
+         ASC     'EIA ERR - '
+         +OCT+TWO+XR
+         -1
+         ASC     'DATA IN  '
+         +BIN+AR
+         ASC     ' (RIGHT SHIFTED ONE)'
+         -1
+         ASC     'DATA OUT '
+         +BIN+BR
+         -1
+         0
+MSG15    -1
+         +OCT+FIVE+BR
+         +OCT+FIVE+AR
+         ASC     ' PASSES'
+         -1
+         0
+MSG16    -1
+         +OCT+FIVE+AR
+         ASC     ' PASSES'
+         -1
+         -1
+         0
+MSG17    -1
+         ASC     'PULSER '
+         +XR+ONE+OCT
+         ASC     ' IS CAUSING INTRPTS TO '
+         +BR+ONE+OCT
+         -1
+         0
+MSG18    +AR+OCT+SIX
+         0
+MSG19    ASC     ' NO 201 OVERRUN'
+         -1
+         0
+MSG20    ASC     ' INTRPT(S) - NON-CONNECTED 201 CHAN.'
+         -1
+         0
+MSG21    ASC     ' INTRPT(S) ON DISABLED 201 CHAN.'
+         -1
+         0
+MSG22    ASC     ' 201 INTRPT(S) DURING EXC 127'
+         -1
+         0
+MSG23    ASC     ' 201 INTRPT(S), NO 201 TEST'
+         -1
+         0
+MSG24    ASC     ' 201 DATA ERR(S)'
+         -1
+         0
+MSG25    ASC     ' 201 CHAN. IDLE'
+         -1
+         0
+MSG26    ASC     ' UNEXPECTED 201 OVERRUN(S)'
+         -1
+         0
+MSG27    ASC     ' 1200 BPS TOO FAST'
+         -1
+         0
+MSG28    ASC     ' 1200 BPS TOO SLOW'
+         -1
+         0
+MSG29    ASC     ' SPURIOUS INTRPT(S) ON INTRPT CARD'
+         -1
+         0
+MSG30    ASC     ' INTRPT CARD ERR(S)'
+         -1
+         0
+MSG31    ASC     ' MEMORY ERR(S)'
+         -1
+         0
+MSG32    ASC     ' EIA ERR(S)'
+         -1
+         0
+MSG33    ASC     ' PULSER CAUSED WRONG INTRPT'
+         -1
+         0
+MSG34    ASC     'SUMMARY'
+         -1
+         0
+MSG35    ASC     ' INTRPT DID NOT CLEAR(201 OR INTRPT CARD)'
+         -1
+         0
+MSG36    -1
+         ASC     'INTRPT NO '
+         +OCT+TWO+XR
+         ASC     ' ON INTRPT CARD IS NOT CLEARING AFTER INTRPT'
+         -1
+         0
+MSG37    -1
+         ASC     '201 CHAN '
+         +OCT+TWO+XR
+         ASC     ' INTRPT NOT CLEARING AFTER INTRPT'
+         -1
+         0
+MSG38    ASC     ' POWER FAILURE(S)'
+         -1
+         0
+MSG39    -1
+         ASC     'CHECKSUM ERROR IN CODE'
+         -1
+         ASC     'RELOAD!!!!! (DO NOT PASS GO, GO DIRECTLY TO JAIL)'
+         -1
+         0
+MSG40    -1
+         -1
+         ASC     'SUPER I/O DIAGNOSTIC LOADED'
+         -1
+         -1
+         0
+MSG41    -1
+         103607
+         103607
+         103607
+         103607
+         103607
+         103607
+         0
+MSG42    -1
+         ASC     'MEMORY PARITY ERROR '
+         -1                      CHANGED TO SPACES IF RUN ON A V77
+         0                       CHANGED TO SPACES IF RUN ON A V77
+         ASC     'LOCATION = '
+         +OCT+SIX+AR
+         -1
+         0
+MSG43    -1
+         ASC     'EIA ERR - '
+         +OCT+TWO+XR
+         -1
+         ASC     'DATA IN  '
+         +BIN+AR
+         -1
+         ASC     'DATA OUT '
+         +BIN+BR
+         -1
+         0
+MSG44    -1
+         ASC     'PHASE '
+         +OCT+ONE+AR
+         ASC     ' OF 3600 BAUD CLOCK TOO SLOW'
+         -1
+         0
+MSG45    -1
+         ASC     'PHASE '
+         +OCT+ONE+AR
+         ASC     ' OF 3600 BAUD CLOCK TOO FAST'
+         -1
+         0
+MSG46    -1
+         ASC     '3600 BAUD CLOCK ERROR'
+         -1
+         ASC     'PHASE '
+         +OCT+ONE+AR
+         ASC     ' IS AHEAD OF PHASE '
+         +OCT+ONE+BR
+         -1
+         0
+MSG47    ASC     ' PHASE 0 FAST ERR(S)'
+         -1
+         0
+MSG48    ASC     ' PHASE 1 FAST ERR(S)'
+         -1
+         0
+MSG49    ASC     ' PHASE 2 FAST ERR(S)'
+         -1
+         0
+MSG50    ASC     ' PHASE 0 SLOW ERR(S)'
+         -1
+         0
+MSG51    ASC     ' PHASE 1 SLOW ERR(S)'
+         -1
+         0
+MSG52    ASC     ' PHASE 2 SLOW ERR(S)'
+         -1
+         0
+MSG53    ASC     ' 3600 BPS CLOCK SEQUENCE ERR(S)'
+         -1
+         0
+MSG54    ASC     ' MEMORY PARITY ERR(S)'
+         -1
+         0
+***********************************
+*  TESTS FOR CROSSED INTERRUPTS   *
+***********************************
+CROSIT   0
+         LDA     CK201F
+         JANM    T201
+         LDX     =7
+         TZA
+         STA     INTFLG
+CROS1    LDA     INTSK
+         ANA     MASK2,5
+         JAZ     CROS4           JUMP IF NO TEST
+         STX     TEMPER
+         JMPM    INTZR
+         LDX     TEMPER
+         LDA     PULSER,5
+         STA     *+1
+CROSZZ   0
+         LDA     =4
+         NOP
+         DAR
+         JAP     *-2
+         LDB     =7
+CROS2    LDA     INTSK
+         ANA     MASK2,6
+         JAZ     CROS3           JUMP IF NO TEST
+         LDA     INTC7,6
+         JAZ     CROS3           JUMP IF NO INTERRUPT
+         TBA
+         STX     TEMPER
+         ERA     TEMPER
+         JAZ     CROS3           JUMP IF FOUND ITSELF
+         COM     B,A
+         ANA     =7
+         TAB
+         COM     X,A
+         ANA     =7
+         TAX
+         LDA     INTC7,6
+         STX     XREG
+         LDX     =MSG17
+         JMPM    CRINT
+         JMPM    INTZR
+         JMP     INTTST+1
+TEMPER   0
+CROS3    JBZ     CROS4           DONE WITH TABLE?
+         DBR
+         JMP     CROS2
+CROS4    JXZ     CROS5           JUMP IF DONE WITH ALL
+         DXR
+         JMP     CROS1
+CROS5    JMPM    INTZR
+         LDA     =1
+         STA     INTFLG
+         JMP     CROSIT.         EXIT
+***********************************
+*  TYPE ERROR(S) ON SS3 HALT      *
+***********************************
+ECTYP    0
+         EXC     27
+         TZA
+         STA     TEMPP
+         LDX     =ECLAST-EC01-1
+         LDB     =ECLAST-1
+ECT1     LDA     0,6
+         JAZ     ECT2            JUMP IF NO ERROR
+         LDA     TEMPP
+         JAN     ECT1A
+         STX     XX5
+         LDX     =MSG34
+         JMPM    OUTCH
+         NOP
+         COM     ,A
+         STA     TEMPP
+         LDX     XX5
+ECT1A    LDA     0,6
+         STX     XX5
+         LDX     =MSG18
+         JMPM    OUTCH
+         NOP
+         LDA     =ECMSG
+         ADD     XX5
+         TAX
+         LDX     0,5
+         JMPM    OUTCH
+         NOP
+         LDX     XX5
+         TZA
+         STA     0,6
+ECT2     JXZ     ECT3            FINISHED?
+         DBR
+         DXR
+         JMP     ECT1
+ECT3     LDA     PCNT
+         LDB     PCNT1
+         JMP     ECTYP.
+**********************************
+*  POWER FAILSAFE STOP           *
+**********************************
+PFSTOP   EXC     27
+         INR     EC17
+         LDA     TFLG
+         JAN     PF1
+         JMP     SENR
+PF1      LDA     TEMP2
+         STA     MSK201
+         LDA     TEMP1
+         STA     MODE
+         TZA
+         STA     TFLG
+SENR     JSS1    *+3
+         ORA     =2
+         JSS2    *+3
+         ORA     =4
+         JSS3    *+3
+         ORA     =10
+         COM     A,A
+         ANA     =16
+         STA     TEMP3
+         0                       HLT
+EARLY    0
+         TXA
+         SUB     =20100
+         JAP     EAR1            JUMP IF 201 PROBLEM
+         STX     XREG
+         LDX     =MSG36
+         JMPM    EARINT
+EAR1     STX     XREG
+         LDX     =MSG37
+         JMPM    EARINT
+*
+*
+IX00ER   LDX     =20100
+         JMPM    EARLY
+IX01ER   LDX     =20102
+         JMPM    EARLY
+IX02ER   LDX     =20104
+         JMPM    EARLY
+IX03ER   LDX     =20106
+         JMPM    EARLY
+IX04ER   LDX     =20110
+         JMPM    EARLY
+IX05ER   LDX     =20112
+         JMPM    EARLY
+IX06ER   LDX     =20114
+         JMPM    EARLY
+IX07ER   LDX     =20116
+         JMPM    EARLY
+IX10ER   LDX     =20120
+         JMPM    EARLY
+IX11ER   LDX     =20122
+         JMPM    EARLY
+IX12ER   LDX     =20124
+         JMPM    EARLY
+IX13ER   LDX     =20126
+         JMPM    EARLY
+IX14ER   LDX     =20130
+         JMPM    EARLY
+IX15ER   LDX     =20132
+         JMPM    EARLY
+IX16ER   LDX     =20134
+         JMPM    EARLY
+IX17ER   LDX     =20136
+         JMPM    EARLY
+*
+*
+IR00ER   LDX     =20101
+         JMPM    EARLY
+IR01ER   LDX     =20103
+         JMPM    EARLY
+IR02ER   LDX     =20105
+         JMPM    EARLY
+IR03ER   LDX     =20107
+         JMPM    EARLY
+IR04ER   LDX     =20111
+         JMPM    EARLY
+IR05ER   LDX     =20113
+         JMPM    EARLY
+IR06ER   LDX     =20115
+         JMPM    EARLY
+IR07ER   LDX     =20117
+         JMPM    EARLY
+IR10ER   LDX     =20121
+         JMPM    EARLY
+IR11ER   LDX     =20123
+         JMPM    EARLY
+IR12ER   LDX     =20125
+         JMPM    EARLY
+IR13ER   LDX     =20127
+         JMPM    EARLY
+IR14ER   LDX     =20131
+         JMPM    EARLY
+IR15ER   LDX     =20133
+         JMPM    EARLY
+IR16ER   LDX     =20135
+         JMPM    EARLY
+IR17ER   LDX     =20137
+         JMPM    EARLY
+IC0ER    TZX
+         JMPM    EARLY
+IC1ER    LDX     =1
+         JMPM    EARLY
+IC2ER    LDX     =2
+         JMPM    EARLY
+IC3ER    LDX     =3
+         JMPM    EARLY
+IC4ER    LDX     =4
+         JMPM    EARLY
+IC5ER    LDX     =5
+         JMPM    EARLY
+IC6ER    LDX     =6
+         JMPM    EARLY
+IC7ER    LDA     INTC7           CHECK FOR ASYNC 1200 BPS
+         SUB     =2
+         JAZ     IC7C
+         LDX     =7
+         JMPM    EARLY
+*
+IC0EX    NOP
+         TZA
+         STA     IC0E
+         LDA     AA00
+         JMP     IC0.
+IC1EX    NOP
+         TZA
+         STA     IC1E
+         LDA     AA01
+         JMP     IC1.
+IC2EX    NOP
+         TZA
+         STA     IC2E
+         LDA     AA02
+         JMP     IC2.
+IC3EX    NOP
+         TZA
+         STA     IC3E
+         LDA     AA03
+         JMP     IC3.
+IC4EX    NOP
+         TZA
+         STA     IC4E
+         LDA     AA04
+         JMP     IC4.
+IC5EX    NOP
+         TZA
+         STA     IC5E
+         LDA     AA05
+         JMP     IC5.
+IC6EX    NOP
+         TZA
+         STA     IC6E
+         LDA     AA06
+         JMP     IC6.
+IC7EX    LDA     INTC7
+         ANA     =3
+         JAZ     IC7X2
+IC7X1    TZA
+         EXC     27
+         STA     IC7E
+         LDA     AA07
+         EXC     327
+         JMP     IC7EXT.
+IC7X2    COM     ,A
+         STA     CK201F
+         JMP     IC7X1
+IC7EX1   NOP
+         TZA
+         EXC     27
+         STA     IC7E
+         LDA     AA07
+         EXC     127
+         JMP     IC7EXT.
+***********************************************
+*  INTERRUPT ROUTINES FOR INTERRUPT CARD      *
+***********************************************
+IC0      0
+         INR     INTC0
+         STA     AA00
+         LDA     IC0E
+         JAN     IC0ER           EARLY INTERRUPT
+         COM     ,A
+         STA     IC0E
+         LDA     MODE
+         JAN     IC0A            JUMP IF 201 CARD RUNNING
+         EXC     127
+         JMP     IC0EX
+IC0A     EXC     327
+         JMP     IC0EX
+IC1      0
+         INR     INTC1
+         STA     AA01
+         LDA     IC1E
+         JAN     IC1ER
+         COM     ,A
+         STA     IC1E
+         LDA     MODE
+         JAN     IC1A
+         EXC     127
+         JMP     IC1EX
+IC1A     EXC     327
+         JMP     IC1EX
+IC2      0
+         INR     INTC2
+         STA     AA02
+         LDA     IC2E
+         JAN     IC2ER
+         COM     ,A
+         STA     IC2E
+*
+         LDA     MODE
+         JAN     IC2A
+         EXC     127
+         JMP     IC2EX
+IC2A     EXC     327
+         JMP     IC2EX
+IC3      0
+         INR     INTC3
+         STA     AA03
+         LDA     IC3E
+         JAN     IC3ER
+         COM     ,A
+         STA     IC3E
+*
+         LDA     MODE
+         JAN     IC3A
+         EXC     127
+         JMP     IC3EX
+IC3A     EXC     327
+         JMP     IC3EX
+IC4      0
+         INR     INTC4
+         STA     AA04
+         LDA     INTFLG
+         JAZ     IC4S
+         EXC     545             DISABLE PARITY INTERRUPTS
+         INR     EC25            INCREMENT ERROR COUNTER
+         LDA     PARLOC
+         LDX     =MSG42
+         JMPM    OUTCH
+         124                     HALT LOCATION FOR PARITY ERRORS
+         EXC     445             ENABLE PARITY INTERRUPTS
+IC4S     LDA     IC4E
+         JAN     IC4ER
+         COM     ,A
+         STA     IC4E
+         LDA     MODE
+         JAN     IC4A
+         EXC     127
+         JMP     IC4EX
+IC4A     EXC     327
+         JMP     IC4EX
+IC5      0
+         INR     INTC5
+         STA     AA05
+         LDA     IC5E
+         JAN     IC5ER
+         COM     ,A
+         STA     IC5E
+         LDA     MODE
+         JAN     IC5A
+         EXC     127
+         JMP     IC5EX
+IC5A     EXC     327
+         JMP     IC5EX
+IC6      0
+         INR     INTC6
+         STA     AA06
+         LDA     IC6E
+         JAN     IC6ER
+         COM     ,A
+         STA     IC6E
+         LDA     MODE
+         JAN     IC6A
+         EXC     127
+         JMP     IC6EX
+IC6A     EXC     327
+         JMP     IC6EX
+IC7D     JAN     IC7ER
+         LDA     IC7
+         STA     IC7EXT
+         JMP     IC7C
+IC7EXT   0
+IC7      0
+         INR     INTC7
+         STA     AA07
+         LDA     IC7E
+         JMP     IC7D
+IC7C     COM     ,A
+         STA     IC7E
+         LDA     MODE
+         JAN     IC7A
+         EXC     127
+         JMP     IC7EX1
+IC7A     LDA     INTC7
+         JAP     IC7B
+         TZA
+         STA     INTC7
+IC7B     EXC     327
+         JMP     IC7EX
+ADDSET   0
+         TZA
+         7                       HALT SET "A" REG TO STANDARD REMOTE,STANDARD TYMCOM III
+***********************************************************************
+*   SUPER REMOTE, OR SUPER TYMCOM III                                 *
+*                                                                     *
+*                 0=STANDARD REMOTE, OR STANDARD TYMCOM III           *
+*                 1=SUPER REMOTE                                      *
+*                 3=SUPER TYMCOM III, V77 REMOTE, AND V77 TYMCOM III  *
+***********************************************************************
+         STA     EIXFLG
+         JAZ     CHANG1
+         ERA     =1
+         JAZ     ADDSET.
+         LDA     EIXFLG
+         ERA     =3
+         JAZ     ADDSET.
+         JMP     ADDSET+1
+CHANG1   LDB     =24
+         LDX     =ADDSET-1
+CHAN1A   LDA     0,5
+         ERA     EXCTBL,6
+         JAZ     CHANG2
+         JMP     CHANG3
+CHANG2   LDA     EXCTBL,6
+         ORA     =50
+         STA     0,5
+CHANG3   TXA
+         SUB     =L00XMT
+         JAZ     CHANG4
+         DXR
+         JMP     CHAN1A
+CHANG4   JBZ     CHANG5
+         DBR
+         JMP     CHANG1+1
+CHANG5   LDB     =2
+         LDX     =END1-1
+CHAN5A   LDA     0,5
+         ERA     SENTBL+1,6
+         JAZ     CHANG6
+         JMP     CHANG7
+CHANG6   LDA     =5000
+         STA     0,5
+CHANG7   TXA
+         SUB     =TS1
+         JAZ     CHANG8
+         DXR
+         JMP     CHAN5A
+CHANG8   DBR
+         JBZ     ADDSET.
+         JMP     CHAN5A-1
+**************************************************
+*  FALSE START TO ALLOW DOWNSTREAM LOADING       *
+**************************************************
+FALSESTART E     *
+         EXC     77
+         EXC     27
+         LDA     =1000
+         STA     10
+         STA     12
+         LDA     =PFSTOP
+         STA     11
+         LDA     =12
+         STA     13
+         LDB     =INTABSTRT
+         LDX     =37
+MOVELOOP E       *
+         LDA     37,B
+         STA     40,X
+         DBR
+         DXR
+         TXA
+         JAP     MOVELOOP
+         JMP     START
+*******************************************************
+*  INTERRUPT ROUTINES FOR 201 CARD ADDRESS 26         *
+*******************************************************
+INTABSTRT E      *
+         JMPM    L00XMT
+         JMPM    L00RC
+         JMPM    L01XMT
+         JMPM    L01RC
+         JMPM    L02XMT
+         JMPM    L02RC
+         JMPM    L03XMT
+         JMPM    L03RC
+         JMPM    L04XMT
+         JMPM    L04RC
+         JMPM    L05XMT
+         JMPM    L05RC
+         JMPM    L06XMT
+         JMPM    L06RC
+         JMPM    L07XMT
+         JMPM    L07RC
+END      0
+   @<ô
