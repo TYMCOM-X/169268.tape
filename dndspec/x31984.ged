@@ -1,0 +1,2263 @@
+                                                                  June 29, 1987
+
+
+
+
+
+
+
+                    General External Design Specifications
+
+                                      For
+
+          1984 CCITT Recommendation X.3 Parameter References (19-22)
+
+                                      By
+
+                                 Stephen Liang
+
+                                    TYMNET
+                        NETWORK TECHNOLOGY DEVELOPMENT
+                                 June 29, 1987
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+     ====================================================================
+     |   TYMNET's proprietary rights  are included in  the information  |
+     |   disclosed herein.  The recipient, by receiving this document,  |
+     |   agrees  that  neither  this  document  nor   the  information  |
+     |   disclosed herein nor  any part thereof shall be reproduced or  |
+     |   transferred to other documents or used or disclosed to others  |
+     |   for  manufacturing  or  for  any  other   purpose  except  as  |
+     |   specifically authorized in writing by TYMNET.                  |
+     ====================================================================
+
+
+
+
+                                                             1984 CCITT X.3 GED
+                                                                  June 29, 1987
+
+
+
+
+
+
+
+                                   TABLE OF CONTENTS
+
+        Section                                                            Page
+
+
+
+        1.   Introduction                                                     1
+
+
+        2.   Design Considerations                                            2
+
+
+        3.   Editing PAD Service Signals - Reference 19                       3
+
+
+        4.   Echo Mask - Reference 20                                         6
+
+
+        5.   Parity Treatment - Reference 21                                  9
+          5.1   Parity Detection                                             10
+          5.2   Parity Checking                                              12
+          5.3   Parity Generation                                            13
+          5.4   CONSAT/PAD Operation Monitor - Parity Setting Display        13
+
+
+        6.   Page Wait - Reference 22                                        14
+
+
+        7.   How will it affect the users                                    16
+          7.1   Example 1 - Read Terminal Parameter Command                  16
+          7.2   Example 2 - Set terminal Parameter Command                   17
+          7.3   Example 3 - Help Display                                     18
+
+
+        8.   System Generation/New Marcos                                    20
+          8.1   SETFLAG - Enable Flag                                        20
+          8.2   New Marcos                                                   21
+             8.2.1    DEFPTY - Default Parity Type                           21
+             8.2.2    PRTPAR - Port Parity                                   21
+             8.2.3    PARERR - Parity Error Retry Count                      22
+             8.2.4    PRFDEF - Profile Definition                            23
+
+
+        9.   Tymfile Configuration                                           24
+
+
+        10.  Acronyms                                                        27
+
+
+                                                             1984 CCITT X.3 GED
+                                                                  June 29, 1987
+
+
+        11.  Related Documents                                               28
+
+
+                                     APPENDICES
+                                     ==========
+
+
+        I.   Appendice                                                       30
+          I-1   Appendix I. X.3 Terminal Parameter Meanings                  30
+          I-2   Appendix II. Available Profiles                              32
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                             1984 CCITT X.3 GED
+        Introduction                                              June 29, 1987
+
+
+
+
+
+
+                                   1 -  Introduction
+
+
+         
+             This   document   describes  the  General  External   Design 
+        Specification  for the Tymnet CONSAT/PAD [1] support of the  1984 
+        CCITT   Recommendation  X.3  PAD.   Specifically,   the   current 
+        CONSAT/PAD  interface  will  be  enhanced  to  provide  the  full 
+        functionality   and  syntax  of  1984  CCITT  Recommendation  X.3 
+        reference 19, 20, 21, and 22.
+         
+             Features implemented will conform to the 1984 Recommendation 
+        X.3,  X.28,  and  X.29  specified by CCITT  [2].  Thus,  the  new 
+        CONSAT/PAD enhancements will include the following areas:
+           
+             (1) Editing PAD service signals  (Reference 19)
+             (2) Echo Mask                    (Reference 20)
+             (3) Parity Treatment             (Reference 21)
+             (4) Page Wait                    (Reference 22)
+
+             In  addition,  the new enhancement of the CONSAT/PAD  should 
+        also  provide  the Tymnet Extended X.28 command mode  support  in 
+        accordance with the CONSAT/PAD version 6.
+
+         
+        NOTE: 1. "[n]" is a reference to note "n" in the Acronym section.
+           
+              2. "1984  X.3"  will  be  used in  short  throughout   this 
+                 document to represent 1984 CCITT Recommendation X.3
+         
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        1                                                    1984 CCITT X.3 GED
+        Design Considerations                                     June 29, 1987
+
+
+
+
+
+
+                              2 -  Design Considerations
+
+
+             The  1984  CCITT  recommendation X.29 defines  how  the  PAD 
+        should respond  to a valid "set",  "read",  or "set and read" PAD 
+        message.  The CONSAT/PAD's response to a valid "read" or "set and 
+        read" PAD message will contain a list of parameter references and
+        their current values.
+            
+             The  current  Tymnet  X.25 interface can  only  support  X.3 
+        parameter  1 to 18.  Considering if we response to a  "read"  PAD 
+        message  with 22 parameters (1 to 22),  this will not be accepted 
+        by  the  remote  X.25  interface.
+         
+              In order to avoid this incompatibility, a new flag "X32584" 
+        is  designed to provide the switch of support between 1980's  and 
+        1984's X.25 interfaces.
+         
+             If flag "X32584" is set to ON,  the CONSAT/PAD will  respond 
+        to  a valid "read" PAD message with all parameter references  (1-
+        22)  and  their current values.  Otherwise,  the CONSAT/PAD  will 
+        respond  to a valid "read" PAD message with 18 parameters  (1-18) 
+        only. (Please see section 8 System Generation for details)
+
+             PVC is not supported for  PAD  ports.  However,  marcos  are 
+        provided for ports that do not go through T20 detection  for  the
+        parity type.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        2                                                    1984 CCITT X.3 GED
+        Editing PAD Service Signals - Reference 19                June 29, 1987
+
+
+
+
+
+
+                    3 -  Editing PAD Service Signals - Reference 19
+
+             As  1984 CCITT Recommendation X.3  specified,  PAD  provides 
+        editing  function  for the start-stop mode DTE users in both  PAD 
+        command  state  and data transfer state.  This  editing  function 
+        contains three basic operations;  (1) Character delete,  (2) Line 
+        delete, and (3) Line display.
+         
+             The editing function is always available when user is in the 
+        PAD  command state,  and the use of editing function in the  data 
+        transfer state is determined by parameter 15.  
+              
+             The   editing   function  support  of  the   CONSAT/PAD   is 
+        implemented to allow user to select the following:
+            
+             (1) Whether or not  PAD service signals are  transmitted  to 
+                 the user terminal; and
+         
+             (2) in what format PAD service signals should be used. 
+         
+
+             The PAD editing functions are governed by parameters [3]  6, 
+        15,  16, 17, 18. Herein, we discuss only the details of parameter 
+        19 in terms of using editing PAD service signals.
+         
+             Editing  PAD  service  signals are available only  when  the 
+        following conditions are met:
+         
+             (a) Parameter 2 is set to 1;
+             (b) Parameter 6 is set to equal or greater than 1;
+            
+             With   (a)   and  (b)  properly   defined,   the   following 
+        combinations  of conditions will be applied to the use of Editing 
+        PAD service signals in compliance with 1984 X.3:
+
+             (1) Parameter 19 is set to zero (0). 
+                 No  editing PAD service signals will be provided in both 
+                 command and data transfer state.
+
+             (2) Parameter 15 is set to zero (0) and parameter 19 is  set 
+                 to greater than 1. 
+                 Editing PAD service signals shall be provided in command
+                 state only.
+
+             (3) Parameter  15  is  set to 1 and parameter 19 is  set  to 
+                 greater  than 1.
+                 Editing PAD service signals shall be provided  for  both 
+                 command and data transfer states.
+
+
+        3                                                    1984 CCITT X.3 GED
+        Editing PAD Service Signals - Reference 19                June 29, 1987
+
+
+             The  use of editing PAD service signals can be described  in 
+        Table 1/X.3.
+                  
+                             Table 1/X.3      
+          -------------------------------------------------------------
+          |      |          | Selectable possible |        PAD        |
+          | Par. |   Par.   |        values       |     parameter     |
+          | ref. | descrip. |---------------------|      meaning      |
+          |      |          | Mandatory | Optional|                   |
+          -------------------------------------------------------------
+          |      |          |           |         |                   | 
+          |  2   | Echo(E)  |     1     |         | Echo              |
+          |      |          |           |         |                   |
+          -------------------------------------------------------------
+          |      | Control  |           |         |                   |
+          |  6   | of  PAD  |     1     | Values  | PAD service signal|
+          |      | service  |           |   >=    | are transmitted to|
+          |      | signals  |           |   1     | start-stop DTE    |
+          |      |          |           |         |                   | 
+          -------------------------------------------------------------
+          |      |          |           |         |                   |
+          |  15  | Editing  |     0     |         | No use of editing |
+          |      |          |           |         | in  data transfer |
+          |      |          |           |         | state             |
+          |      |          |           |         |                   |
+          |      |          |     1     |         | Use of editing in |
+          |      |          |           |         | the data transfer |
+          |      |          |           |         | state             |
+          |      |          |           |         |                   |  
+          -------------------------------------------------------------
+          |      |          |           |         |                   |
+          |  19  | Editing  |           |    0    | No editing PAD    |
+          |      |   PAD    |           |         | service signals   |
+          |      | service  |           |         |                   |
+          |      |          |     1     |         | Editing PAD       |
+          |      |          |           |         | service signals   |
+          |      |          |           |         | for printers      |
+          |      |          |           |         |                   |
+          |      |          |           |    2    | Editing PAD       |
+          |      |          |           |         | for display       |
+          |      |          |           |         | terminals         |
+          |      |          |           |    8    | Editing PAD       |
+          |      |          |           |         |                   |
+          |      |          |           |  32-126 | service signals   |
+          |      |          |           |         | using one char.   |
+          |      |          |           |         | from the range of |
+          |      |          |           |         | IA5               |
+          |      |          |           |         |                   |
+          ------------------------------------------------------------- 
+           
+          NOTE(s): 1. Par. ref. - Parameter references
+                   2. Par. descrip. - Parameter descriptions
+          
+
+        4                                                    1984 CCITT X.3 GED
+        Editing PAD Service Signals - Reference 19                June 29, 1987
+
+
+            
+
+             For  security  reason,  the  line display  function  is  not 
+        allowed  in  the call setup command mode.  The  character  delete 
+        function is allowed in general,  but it will be prohibited in the 
+        user password field.  Therefore,  the editing PAD service signals 
+        are not applicable to these situations.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        5                                                    1984 CCITT X.3 GED
+        Echo Mask - Reference 20                                  June 29, 1987
+
+
+
+
+
+
+                             4 -  Echo Mask - Reference 20
+
+             The CONSAT/PAD provides function that receives  character(s) 
+        from the user terminal and echoes them back to the user terminal.
+        These characters are also checked for other purpose.
+
+             In  addition to the CONSAT/PAD "Echoing"  capability,  users 
+        will  be allowed to select defined sets of character(s)  received 
+        from  the  terminal  to be "MASKED" and not echoed  back  to  the 
+        terminal.  
+
+             Echo of character(s) is determined by X.3 parameter  2.  And 
+        character(s) "echo mask" is determined by X.3 parameter 20.  This 
+        is described in Table 2/X.3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        6                                                    1984 CCITT X.3 GED
+        Echo Mask - Reference 20                                  June 29, 1987
+
+
+                             Table 2/X.3      
+          -------------------------------------------------------------
+          |      |          | Selectable possible |        PAD        |
+          | Par. |   Par.   |        values       |     parameter     |
+          | ref. | descrip. |---------------------|      meaning      |
+          |      |          | Mandatory | Optional|                   |
+          -------------------------------------------------------------
+          |  2   | Echo(E)  |     0     |         | No echo           |
+          |      |          |     1     |         | Echo              |
+          -------------------------------------------------------------
+          |      |          |           |         |                   |
+          |  20  | Echo     |     0     |         | No echo mask (all |
+          |      | Mask     |           |         | characters echoed)|
+          |      |          |           |         |                   |
+          |      |          |           |    1    | No echo of CR     |
+          |      |          |           |         |                   |
+          |      |          |           |    2    | No echo of LF     |
+          |      |          |           |         |                   |
+          |      |          |           |    4    | No echo of VT, HT,|
+          |      |          |           |         | FF                |
+          |      |          |           |    8    | No echo of BEL,BS |
+          |      |          |           |         |                   |
+          |      |          |           |   16    | No echo of ESC,ENQ|
+          |      |          |           |         |                   |
+          |      |          |           |   32    | No echo of ACK,NAK|
+          |      |          |           |         | SOH, EOT, ETB ETX |
+          |      |          |           |         |                   |
+          |      |          |           |   64    | No echo of Editing|
+          |      |          |           |         | char. as  designed|
+          |      |          |           |         | by par. 16, 17, 18|
+          |      |          |           |         |                   | 
+          |      |          |           |   128   | No echo of all    |
+          |      |          |           |         | other char. in    |
+          |      |          |           |         | col. 0, and 1 not |
+          |      |          |           |         | mentioned  above  |
+          |      |          |           |         | and DEL           |
+          |      |          |           |         |                   |
+          -------------------------------------------------------------
+         
+          NOTE(s): 1. Par. ref. - Parameter references.
+                   2. Par. descrip. - Parametscriptions. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+        7                                                    1984 CCITT X.3 GED
+        Echo Mask - Reference 20                                  June 29, 1987
+
+
+
+         
+             There are certain rules that must be observed and followed:
+         
+             (1) User selection of the character(s) echo and echo mask is
+                 applied to both command state and data transfer state.
+         
+             (2) Parameter 20  applies only when parameter 2 is set to 1. 
+                 If parameter 2 is set to zero (0),  CONSAT/PAD will  not 
+                 echo any  received character(s) in any state and at  any 
+                 time. 
+             
+             (3) The X-ON and X-Off are not echoed if parameter 5, 12, or
+                 22 is set to a non-zero (0) value. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        8                                                    1984 CCITT X.3 GED
+        Parity Treatment - Reference 21                           June 29, 1987
+
+
+
+
+
+
+                         5 -  Parity Treatment - Reference 21
+
+             The  enhanced  CONSAT/PAD will provide the functionality  of 
+        parity  checking  and parity generation in accordance  with  1984 
+        X.3 reference 21.
+         
+             The CONSAT/PAD  will  transmit and expect to  receive  8-bit 
+        character(s)  to  and/or from the user terminal in  both  command 
+        state and data transfer state. 
+           
+             When  the value of parameter 21 is set to 0,  the CONSAT/PAD 
+        will not perform the parity checking and generation  process.  It 
+        will  only inspect the first seven bits and will not take account 
+        of  eighth  bit  (the last bit preceding the stop  element.)  The 
+        result of setting parameter 21 is described in Table 3/X.3.
+         
+                  
+                             Table 3/X.3      
+          -------------------------------------------------------------
+          |      |          | Selectable possible |        PAD        |
+          | Par. |   Par.   |        values       |     parameter     |
+          | ref. | descrip. |---------------------|      meaning      |
+          |      |          | Mandatory | Optional|                   |
+          -------------------------------------------------------------
+          |  21  | Parity   |     0     |         | No parity checking|
+          |      | treatment|           |         | or generation     |
+          |      |          |           |         |                   |
+          |      |          |           |    1    | Parity checking   |
+          |      |          |           |         |                   |
+          |      |          |           |    2    | Parity generation |
+          |      |          |           |         |                   |
+          |      |          |           |    3    | Parity checking   |
+          |      |          |           |         | and  generation   |
+          |      |          |           |         | Value  formed  by |
+          |      |          |           |         | combination (1+2) |
+          |      |          |           |         |                   |
+          ------------------------------------------------------------- 
+
+             If  parameter 21 is set to zero (0) then no parity  checking 
+        and generation will take place.  However, the PAD service signals 
+        will be sent in "Even" parity toward the user terminal.  
+
+         
+         
+             
+        NOTE(s): 1. Par. ref. - Parameter references.
+                 2. Par. descrip. - Parameter descriptions.
+
+
+
+        9                                                    1984 CCITT X.3 GED
+        Parity Treatment - Reference 21                           June 29, 1987
+
+
+                                 5.1  Parity Detection
+
+             Parity detection can be performed based on the TID (Terminal 
+        Identifier) at the user login time. Three perspective TID(s) will 
+        be used to represent the parity types. Thus, 
+             
+                        -----------------------------
+                        | TID(s)   |   Parity Type  |
+                        -----------------------------
+                        |          |                |  
+                        |  <CR>    |    Even/Odd    |
+                        |   A      |    Save        |
+                        |   O      |    Mark/Space  |
+                        |          |                |
+                        -----------------------------
+                  
+
+             A  <CR> will be used as a TID character to detect the "Even" 
+        or  "Odd" parity,  and CRTID flag will be used to define carriage 
+        return <CR> as a valid TID character accordingly.  If AEQCR  flag 
+        is used and set to ON,  the TID "A" will be treated just like TID 
+        character <CR>.
+         
+             TID  character "A" will be used to indicate that no  "parity 
+        treatment" is required.  This is actually the "Save" parity.  The
+        CONSAT/PAD will preserve the parity and pass data transparently.
+         
+             TID  character  "O"  will be used to detect the  "Space"  or 
+        "Mark"  parity since it has been already used for "Space"  parity 
+        treatment by the CONSAT.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        10                                                   1984 CCITT X.3 GED
+        Parity Treatment - Reference 21                           June 29, 1987
+
+
+
+             A new marco "DEFPTY" will be created  to  provide  a  global
+        parity setting, therefore, users may define,  at the slot  level,
+        default parity type for all ports  during the  system  generation
+        time.
+
+             A  new  marco "PRTPAR" will be created to allow the user  to 
+        specify  the parity type on the port basis at  system  generation 
+        time. (Please see section 9 New Marcos for details.)
+
+             The marco "PRTPAR" will  override  the port  default  parity
+        type specified by the marco "DEFPTY".
+
+             The type of parity detected by the TID character(s) at login
+        time  will  override the port parity type defined by  the  system 
+        generation marcos "DEFPTY" and "PRTPAR".
+         
+             Finally, the parity setting for a port  can be determined in
+        the following priority order:
+           
+                (1) TID character(s) at the user login time;
+                (2) Port parity type specified by the marco "PRTPAR"; 
+                (3) The global default parity type specified by the marco
+                    "DEFPTY".
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        11                                                   1984 CCITT X.3 GED
+        Parity Treatment - Reference 21                           June 29, 1987
+
+
+                                 5.2  Parity Checking
+
+
+             Data character(s) received by the CONSAT/PAD will be checked 
+        against  the parity type to ensure the error free  transimission. 
+        If a parity error occurs,  a PAD parity error service signal will 
+        be sent  toward  the  user terminal.  Users  are  allowed  for  a 
+        specified  numbers of parity error retries.  If the parity  error 
+        retry count is exceeded, call will be cleared.
+
+             CCITT  currently  has not defined the format of  PAD  parity 
+        error  service  signal.  The  Tymnet extended  PAD  parity  error 
+        service signal will be provide and  this  can be  redefined  with
+        "MTEXT" marco. Thus,
+              
+             The characters "0/13 (CR) 5/0(P) 4/1 (A) 5/2 (R) 4/9 (I) 5/4 
+        (T) 5/9 (Y) 4/5 (E) 5/2 (R) 5/2 (R)" will be sent. 
+
+             Mesg. No.  Header  "Default Text"
+           
+              91          1     '"8DPARITY ERR'
+           
+             (Please see CONSAT ERS version 6 for MTEXT marco.)
+
+             The PAD parity error service signal will be  always provided
+        when parity checking is in place.
+
+             A  new  marco "PARERR(n)" will  be  provided  for  the  user 
+        to specify the possible parity error occurrences during the call. 
+        (Please see section 9 New Marco for details.)
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        12                                                   1984 CCITT X.3 GED
+        Parity Treatment - Reference 21                           June 29, 1987
+
+
+                                5.3  Parity Generation
+
+
+             Parity generation process will be performed upon receipt  of 
+        data  character(s) from the network (host).  The data  characters 
+        will  be mapped to the correct parity type,  and passed on toward 
+        the user terminal.
+
+
+
+
+
+
+              5.4  CONSAT/PAD Operation Monitor - Parity Setting Display
+
+             An additional command "PARITY" is provided in the CONSAT/PAD
+        Operation Monitor for the "Parity Setting Display" of  all active
+        ports.  The syntax and output of this command are illustrated  in
+        in the following example;
+
+        please log in: isistech:575;
+        node: 2067
+        host: 575
+         
+        slot #: 1
+        Slot 01 running: DDT
+        ?vern
+         
+        ISIS version: 700d, slot's version: 7.000
+        *?stat
+         
+        :>parity
+
+        PORT ISIS DEFAULT CURRENT
+                  PARITY  PARITY
+         
+        17     4D  SAVE    EVEN
+        23     4E  SAVE    EVEN
+        32     4F  SAVE    SAVE
+        48     4B  SAVE    SAVE
+        54     50  SAVE    SAVE
+        57     4C  SAVE    SPACE
+        58     49  SAVE    ODD
+        67     4A  SAVE    MARK
+
+
+
+
+
+
+
+
+
+
+        13                                                   1984 CCITT X.3 GED
+        Page Wait - Reference 22                                  June 29, 1987
+
+
+
+
+
+
+                             6 -  Page Wait - Reference 22
+
+           
+           
+             Enhanced CONSAT/PAD will be able to suspend the transmission 
+        after  a  specified  number of linefeed  character(s)  have  been 
+        transmitted toward the user terminal.
+         
+             This  function  is  much like data traffic  "flow  contorl". 
+        However,  it  is  being  done by  the  "paging  mechanism".   For 
+        example,  if "page wait" function (parameter 22) is enabled, data 
+        character(s)  will be transmitted from the CONSAT/PAD toward  the 
+        user  terminal  one  page  at a time.  The  size  of  a  page  is 
+        determined   by  the  number  of  linefeed(s)  which  have   been 
+        transmitted  by  the  CONSAT/PAD.  Definition of  the  number  of 
+        linefeed(s)  is  user  selectable in order to trigger  the  "page 
+        wait" condition. This is described in Table 4/X.3.
+               
+             The  "page wait" function applies only to the data  transfer 
+        state.
+          
+                  
+                             Table 4/X.3      
+          -------------------------------------------------------------
+          |      |          | Selectable possible |        PAD        |
+          | Par. |   Par.   |        values       |     parameter     |
+          | ref. | descrip. |---------------------|      meaning      |
+          |      |          | Mandatory | Optional|                   |
+          -------------------------------------------------------------
+          | 22   |  Page    |           |         |                   |
+          |      |  Wait    |     0     |         | Page wait disabled|
+          |      |          |           |         |                   |
+          |      |          |           | 1 - 22  | Number  of   line |
+          |      |          |           |         | feed character(s) |
+          |      |          |           |         |                   |
+          |      |          |     23    |         | considered by the |
+          |      |          |           |         | PAD for the  page |
+          |      |          |           | 24-225  | wait function.    |
+          |      |          |           |         |                   |
+          |      |          |           |         |                   |
+          |      |          |           |         |                   |
+          -------------------------------------------------------------
+
+         
+          NOTE(s): 1. Par. ref. - Parameter references.
+                   2. Par. descrip. - Parameter descriptions.
+         
+
+
+
+        14                                                   1984 CCITT X.3 GED
+        Page Wait - Reference 22                                  June 29, 1987
+
+
+
+             At the end of each page of data transmission, an "page  wait" 
+        PAD service signal will be sent to the user terminal if parameter 
+        6 is not set to zero (0). And no further data will be transmitted
+        toward  the  user  terminal until the "page  wait"  condition  is 
+        cancelled. 
+         
+             Upon  receiving  the cancellation of "page wait"  condition, 
+        the CONSAT/PAD will transmit a format effector [x] and resume the 
+        normal data transmission. 
+         
+             The cancellation of "page wait" condition is determined when 
+        any of following occurs:
+         
+           1.
+            (a) On  receipt  of any condition that resets the  count  of 
+                linefeeds (See (2) Page wait reset conditions);
+          
+            (b) On  receipt  of  the "page wait" cancellation  character
+                (X-ON); or
+         
+            (c) On resetting parameter 22 to zero (0).
+             
+           2. The  count  of linefeed  will be reset to zero (0)  by  the 
+              CONSAT/PAD when any of following occur:
+             
+            (a) After  the  format  effector  following  the  page  wait 
+                cancellation character;
+            
+            (b) On receipt of all data forwarding conditions;
+         
+            (c) On echoing linefeed in user input;
+           
+            (d) After  the  "line deleted PAD service" signal (will all 
+                associated linefeeds) has been set; or
+             
+            (e) On leaving the "PAD command" state after all  associated 
+                linefeeds. 
+            
+                 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        15                                                   1984 CCITT X.3 GED
+        How will it affect the users                              June 29, 1987
+
+
+
+
+
+
+                           7 -  How will it affect the users
+
+             
+             The enhanced CONSAT/PAD will produce minimum impact  to  the
+        PAD users. Differences from the current CONSAT/PAD implementation
+        can be noticed and illustrated in the following examples.
+         
+           
+         
+
+
+
+
+
+
+                   7.1  Example 1 - Read Terminal Parameter Command
+
+
+        Remark: Please refer to Appendix I for new X.3 terminal parameter
+                and Appendix II for the revised terminal profiles.
+            
+           
+        :*** the current CONSAT/PAD version 6
+        pad>par? 
+
+        par  1:1, 2:1, 3:2, 4:0, 5:1, 6:5, 7:0,  8:0,  9:0, 10:80, 11:3, 
+        12:1, 13:0, 14:0, 15:1, 16:127, 17:24, 18:18, 0:0, 101:1, 102:1, 
+        103:30
+
+
+        :*** the enhanced CONSAT/PAD
+        pad>par?
+
+        par  1:1, 2:1, 3:2, 4:0,  5:1, 6:5, 7:0, 8:0, 9:0, 10:80, 11:3,
+        12:1, 13:0, 14:0, 15:1, 16:127, 17:24, 18:18, 19:0, 20:0, 21:0, 
+        22:0, 0:0, 101:1, 102:1, 103:30
+
+         
+
+
+
+
+
+
+
+
+
+
+
+
+        16                                                   1984 CCITT X.3 GED
+        How will it affect the users                              June 29, 1987
+
+
+                    7.2  Example 2 - Set terminal Parameter Command
+
+
+        pad>set? 19:1
+
+        par 19:1
+
+         
+
+        pad>set? 20:129
+
+        par 20:inv
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        17                                                   1984 CCITT X.3 GED
+        How will it affect the users                              June 29, 1987
+
+
+
+
+
+
+
+
+
+                             7.3  Example 3 - Help Display
+
+
+        Remark: This example illustrates the difference of help screen no.
+                4 between version 6 and the enhanced CONSAT/PAD.
+         
+
+
+        :*** Help display for the CONSAT/PAD version 6
+        pad>help 4
+
+        Help for extended commands that set CCITT X.3 terminal parameters
+
+        Parm    Command             Description
+         No
+          1  ESC(ape)          - escape from data transfer mode
+          2  ECH(o)            - echo
+          3  FOR(ward)         - data forwarding combinations
+          4  IDL(e)            - idle timer
+          5  ANC(illary)       - flow control of terminal by network
+          6  SER(vice)         - types of service signals sent
+          7  BRE(ak)           - action if a break typed
+          8  FLU(sh)           - discard output to terminal
+          9  CRP(adding)       - padding after carriage return
+         10  WID(th)           - column at which a line ends
+         11  SPE(ed)           - (output) terminal speed
+         12  FLO(w)            - flow control of network by terminal
+         13  CRL(f)            - linefeed insertion after carriage return
+         14  LFP(adding)       - padding after linefeed
+         15  EDI(t)            - data editing capability
+         16  CHA(racterdelete) - value of ascii symbol used to backspace
+         17  LIN(edelete)      - value of ascii symbol used to clear the 
+                                 edit buffer
+         18  DIS(playline)     - value of ascii symbol used to display the 
+                                 edit buffer
+        Please see HELP 6 to display examples.
+
+         
+
+
+
+
+
+
+
+
+
+        18                                                   1984 CCITT X.3 GED
+        How will it affect the users                              June 29, 1987
+
+
+
+        :*** Help display for new enhanced the CONSAT/PAD
+        pad>help 4
+
+        Help for extended commands that set CCITT X.3 terminal parameters
+
+        Parm Command             Description
+          1  ESC(ape)          - escape from data transfer mode
+          2  ECH(o)            - echo
+          3  FOR(ward)         - data forwarding combinations
+          4  IDL(e)            - idle timer
+          5  ANC(illary)       - flow control of terminal by network
+          6  SER(vice)         - types of service signals sent
+          7  BRE(ak)           - action if a break typed
+          8  FLU(sh)           - discard output to terminal
+          9  CRP(adding)       - padding after carriage return
+         10  WID(th)           - column at which a line ends
+         11  SPE(ed)           - (output) terminal speed
+         12  FLO(w)            - flow control of network by terminal
+         13  CRL(f)            - linefeed insertion after carriage return
+         14  LFP(adding)       - padding after linefeed
+         15  EDI(t)            - data editing capability
+         16  CHA(racterdelete) - value of ascii symbol used to backspace
+         17  LIN(edelete)      - value of ascii symbol used to clear the 
+                                 edit buffer
+         18  DIS(playline)     - value of ascii symbol used to display the 
+                                 edit buffer
+         19  EPS(s)            - editing PAD service signals
+         20  EMS(k)            - echo mask
+         21  PRT(m)            - parity treatment
+         22  PAG(e)            - page wait
+         
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        19                                                   1984 CCITT X.3 GED
+        System Generation/New Marcos                              June 29, 1987
+
+
+
+
+
+
+                           8 -  System Generation/New Marcos
+
+
+
+
+
+
+
+                              8.1  SETFLAG - Enable Flag
+
+
+            
+             Flag  "X32584"  will  be  created to  indicate  the  current 
+        support of X.3 parameters by the Tymnet X.25 interface.
+           
+             Syntax      : SETFLAG(X32584,NO/OFF)
+             Default     : OFF
+             Description :
+         
+             This marco definition enables/disables the response  of 1984 
+        X.3 parameters to a valid "read" or "set and "read" PAD message.
+             
+             If flag X32584 is set to ON then the CONSAT/PAD will respond
+        to  a valid "read" PAD message with all parameter references  (1-
+        22) and their current values.
+
+             If  flag  X32584  is set to OFF  then  the  CONSAT/PAD  will 
+        respond  to  a valid "read" PAD message with 18 parameter  (1-18) 
+        only.
+         
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        20                                                   1984 CCITT X.3 GED
+        System Generation/New Marcos                              June 29, 1987
+
+
+                                    8.2  New Marcos
+
+             The following two marcos will be used to determine the  port
+        parity type when ports do not go through TID detection process.
+
+
+
+
+
+                    8.2.1  DEFPTY - Default Parity Type
+         
+             Syntax      : DEFPTY(EVEN/ODD/SPACE/MARK/SAVE)
+         
+             Default     : SAVE parity
+           
+             Description :
+
+             This marco is used to define the default parity type for all
+             ports at system  generation  time.  If  this  marco  is  not
+             defined, the port parity type  will  be  default  to  "SAVE"
+             parity since parameter 21 defaults to zero (0) for no parity
+             treatment.  The CONSAT/PAD will preserve the parity and pass
+             data transparently.
+
+
+
+
+
+
+                    8.2.2  PRTPAR - Port Parity
+             
+             Syntax      : PRTPAR(EVEN/ODD/SPACE/MARK/SAVE,p0,p1,..pn)
+            
+             Default     : SAVE parity
+             
+             Description :
+           
+             This  macro defines the parity type for a particular port or 
+             a  set of ports at system generation time.  Once the  parity 
+             type is defined, it will be used for the parity checking and
+             generation purpose by the CONSAT/PAD.   The port parity type
+             can be changed during the TID detection process.
+
+
+
+
+
+
+
+
+
+
+
+
+        21                                                   1984 CCITT X.3 GED
+        System Generation/New Marcos                              June 29, 1987
+
+
+                    8.2.3  PARERR - Parity Error Retry Count
+
+           Syntax      : PARERR(n)
+                         where n = 1 to 100 decimals
+           Default     : n = 3
+          
+           Description : 
+            
+           This marco is used to define the parity error retry count at system
+           generation time.  The default value  of  retry count is 3.  If  the 
+           parity error retry count is exceeded,  the call (circuit)  will  be
+           cleared. The retry count will be reset upon receipt  of  good  data
+           character within the retry limit.
+
+           If the parity error retry count is set to less than zero (0) then a
+           warning message will be sent toward user terminal at  slot  tymfile
+           assembly time. The default value 3 will be assumed for  the  parity 
+           error retry count.
+         
+           If the parity error retry count is set to zero (0),  marco "PARERR"
+           will be disabled, and no call will be cleared due to parity error.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        22                                                   1984 CCITT X.3 GED
+        System Generation/New Marcos                              June 29, 1987
+
+
+                    8.2.4  PRFDEF - Profile Definition
+
+           The NAD "marco" can accept at most 16 arguments at a time.   Due to
+           this limitation, the marco "PRFDEF" will be modified as following:
+         
+           Syntax  : PRFDEF(pno,pnam,p1,p2,p3,p4,p5,p6,p7,p10,p11,p12,p13,p15,
+                            p16,17,p18) or
+                     PRFDEF(CONT,p19,p20,p21,p22)
+
+                     where pno        = Profile Index Number
+
+                           pnam       = Symbolic name of the profile
+
+                           CONT       = Indicate CONTINUATION of previous
+                                        profile definition for parameters
+                                        19 - 22
+
+                           p1,...,p22 = A set of X.3 CCITT parameter  values
+                                        to be associated with the designated
+                                        profile.
+         
+           Description :
+
+           (Please refer CONSAT ERS version 6 for details)
+           
+           Example: PRFDEF(3,Tymnet Simple Standard,1,1,94,0,1,5,4,80,1,0,
+                           1,127,4,18)
+                    PRFDEF(CONT,0,0,0,0)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        23                                                   1984 CCITT X.3 GED
+        Tymfile Configuration                                     June 29, 1987
+
+
+
+
+
+
+                              9 -  Tymfile Configuration
+
+
+             The following is a sample CONSAT/PAD slot TYMFILE. 
+         
+        :***
+        :       ISIS CONSAT / PAD Sample Configuration file
+        :       ISCS07.T00 
+        :***
+        :***
+        :       Examples of macros
+        ISISRING(1024)     :Set ISIS dispatcher ring size in decimal
+        ASYNCRING(64)      :Set Async I/O ring size in decimal
+        SHOWME(10)         :level of configuration information
+        :
+        :    Declare target node, slot
+        :
+        LOCATION(2657,2)
+        :
+        :    Declare ASYNC physical ports
+        :
+        DECLARE(ASYNC,16)  :64 ASYNC ports
+
+        :    Origination accounting host
+                ACHOST(912)
+        :***
+        :    Port definition
+
+        :       Declare exceptions
+                TID120(0-1)        :Ports 0-1 to use 120 CPS TID-msg
+                TID240(2-3)        :Ports 2-3 to use 240 CPS TID-msg
+                TID480(4)          :Port 4 to use 480 CPS TID-msg
+                TIDSPP(5-6)        :Ports 5-6 to use TID-message 
+        :                          :with space parity
+        :
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        24                                                   1984 CCITT X.3 GED
+        Tymfile Configuration                                     June 29, 1987
+
+
+        : PAD functions and options
+        :    Declare configuration
+             PADRELATEDFUNCTIONS(ON) :turn PAD functions on
+        :    Enhanced Options
+             AUTOCAL(DEFCMD,NUSERNAME"BBPASSWORD"AD"AE552,8)
+                  COMTIMER(5,11-12)  :hangs port in cmd state
+        :                            :if timer exp
+                  CUDUSE(-12)        :# chars copied from usern placed in
+        :                            :cud field,(-)from last char entered
+             CUG(1,1,1,3)            :CUG facility sw opt's
+             CUGPREF(0,3)            :specifying preferential cug 
+             CUGROUP(0,3106,0,3)     :specifying interlock code mapping
+             EDITBUFFERSIZE(128,1-15):size of editing buffer
+             INCOMINGCALLS(AUTO,0-15,911,0-15,ANY,YES) :inc calls answ auto
+                                     :YES for collect call
+             INITMODE(1,11-12)       :PAD cmd mode initially(ports 11-12)
+             INITMODE(0,13-15)       :login mode initially (ports 13-15)
+             LESSHELP(OFF)           :provide maximum help
+             MAXASSEMBLYTIMER(5,4)   :packet forwarding timer
+             NNUICAL(ON)             :non NUI facility call
+             ODNIC(3210)             :DNIC used to address the network
+             PADCOMMANDS(1,0-15)     :support TYMENT extended commands
+             POSMODES(1,1-5)         :login mode only=default,(ports 1-5)
+             POSMODES(2,6-10)        :command mode only, (ports 6-10)
+             POSMODES(3,11-15)       :allow PAD cmd and login mode
+             SEGAC(30)               :# of char in a segment for acctg
+             UUNUMB(ON)              :implements the NATIONAL NO SYS
+        :
+        :.........   PROFILE DEFINITIONS   ........................
+        :    Define additional terminal profiles
+        :Profiles #1-2 are listed here for reference, they can
+        :not be changed.
+        :
+        :       CCITT PARAMETERS 1 - 22
+        :       I
+        :       D                               P P P P  P   P  P 
+        :       X            P P  P   P P P  P  1 1 1 1  1   1  1
+        :     Profile name  ,1,2, 3 , 4,5,6, 7, 0,2,3,5, 6 , 7, 8
+        :+-------------------+--+-+---+---+-+-+--+---+-+-+-+---+--+---+--
+        :PRFDEF(1,CCITT Smpl,1,1,126, 0,1,1,02, 0,1,0,0,127,24,18)
+        :PRFDEF(CONT,0,0,0,0)        :Continue marco PRFDEF for par 19-22
+        :PRFDEF(2,CCITT Tran,0,0,  0,20,0,0,02, 0,0,0,0,127,24,18)
+        :PRFDEF(CONT,0,0,0,0)        :Continue marco PRFDEF for par 19-22
+         PRFDEF(3,Tymnet    ,1,1, 94, 0,1,5,04,80,1,0,1,127,24,18)
+         PRFDEF(CONT,0,0,0,0)        :Continue marco PRFDEF for par 19-22
+        :.................................................................
+        :            ^ ^ ^ ^
+        :            | | | |         Continuation of CCITT
+        :            P P P P          Parameter Reference
+        :            1 2 2 2               19 - 22
+        :            9 0 1 2
+        :.................................................................
+
+
+        25                                                   1984 CCITT X.3 GED
+        Tymfile Configuration                                     June 29, 1987
+
+
+        :
+        :       Define national parameters for additional profiles
+        :       Again, national parameters for profiles #1-2 are
+        :       listed for reference.  They can't be changed.
+        :..............................................................
+        :
+        :       TYMNET NATIONAL PARAMETERS 1 - 3
+        :
+        :       I 
+        :       D N N  N
+        :       X,1,2, 3
+        :--------+-+-+--+------------------------------------------
+        :PRFNDF(1,1,0, 0)
+        :PRFNDF(2,0,0, 0)
+         PRFNDF(3,1,1, 0)   :echo <TAB>, Expand <TAB> with <SPACES>
+
+         PROFILE(3,11-15)   :Default profile
+        :***
+        :
+        :***            Force a TID to ct like <CR> TID:
+        SETFLAG(CRTID,ON)   :make cr a valid TID
+        SETFLAG(AEQCR,ON)   :change TID of A EQ <CR>
+        :
+        :***            1984 CCITT X.29 "Read" Cmd is not supported
+        SETFLAG(X32584,OFF) :
+        :   
+        :***            Parity Error Retry Count
+        PARERR(3)           :Parity Error is allowed at most three times
+        :***            Default Ports Parity Type
+        DEFPTY(SAVE)        :All ports are default to "save" parity
+        :***            Ports are forced "Parity Type"
+        PRTPAR(EVEN,7-15)   :Ports 7-15 are forced to "Even" parity   
+        :***
+        :
+        :***            Messages:
+         LTEXT(ULMSG,Tymnet Consat"AFPAD"8D"8A)
+         MTEXT(8,"8D"8ACUSTOMER NAME : )    :change PAD msg #8
+        :***
+
+         
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        26                                                   1984 CCITT X.3 GED
+        Acronyms                                                  June 29, 1987
+
+
+
+
+
+
+                                    10 -  Acronyms
+
+            
+          
+        1.  CONSAT - Consolidated Tymsat
+           
+            PAD - Packet Assembly/Disassembly Facility (PAD)
+            
+            CONSAT/PAD - Tymnet version of PAD provides a packetizing and
+                         depacketizing functions in accordance with CCITT 
+                         Recommendation X.3, X.28, and X.29.
+
+        2.  CCITT - The International Telegraph And Telephone 
+                    Consultative Committee.
+          
+        3.  X.3, X.28, X.29, and X.25
+
+            (a) Recommendation X.3 - defines  the  operation and function
+                of the PAD in support of a start-stop terminal.
+            
+            (b) Recommendation X.28 - defines the procedures by which the 
+                start-stop terminal can interact with the PAD.
+            
+            (c) Recommendation X.29 - defines  the procedures,  use,  and 
+                formats  of  X.29 PAD messages that are sent  between  an 
+                X.25  DTE and local PAD or between the PAD  supporting  a 
+                non-X.25 DTE and the local PAD. An X.29 PAD message is an 
+                X.25 qualified data packet.
+           
+            (d) Recommendation X.25 - defines the procedures  used by the 
+                PAD in an connection between the start-stop terminal  and 
+                the remote DTE.
+           
+        4.  Reference/Parameter - CCITT uses both Reference and Parameter
+            in  regard to the functionality of PAD.  Herein,  we use them 
+            interchangeably throughout this document.
+         
+
+         
+
+
+
+
+
+
+
+
+
+
+
+        27                                                   1984 CCITT X.3 GED
+        Related Documents                                         June 29, 1987
+
+
+
+
+
+
+                                11 -  Related Documents
+
+             
+
+         
+             (1) CCITT (Red Book),  Volume VIII - FASCICLE  VIII.2,  Data 
+                 Communication   Networks   Services    And   Facilities, 
+                 Recommendations  X.1  - X.15.  VIIIth Plenary  Assembly, 
+                 Malaga-Torremolinos, 8 - 19 October 1984.
+           
+             (2) CCITT (Red Book),  Volume VIII - FASCICLE  VIII.3,  Data
+                 Communication   Networks   Services   And    Facilities, 
+                 Recommendations  X.20 - X.32.  VIIIth Plenary  Assembly, 
+                 Malaga-Torremolinos, 8 - 19 October 1984. 
+              
+             (3) CCITT (Red Book),  Volume VII - FASCICLE VII.3, Terminal 
+                 Equipment   And   Protocols  For   Telematic   Services, 
+                 Recommendations   of  The  T  Series.   VIIIth   Plenary 
+                 Assembly, Malaga-Torremolinos, 8 - 19 October 1984. 
+                 (T.50 International Alphabet No. 5)
+                
+             (4) Consolidated  Tymsat  External Reference  Specification. 
+                 Tymnet Networks Technology Development, June 4, 1987.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        28                                                   1984 CCITT X.3 GED
+                                                                  June 29, 1987
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      *   ****  ****  ***** *   * ****  ***** *   *
+                     * *  *   * *   * *     **  * *   *   *    * * 
+                    ***** ****  ****  ****  * * * *   *   *     *  
+                    *   * *     *     *     *  ** *   *   *    * * 
+                    *   * *     *     ***** *   * ****  ***** *   *
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        29                                                   1984 CCITT X.3 GED
+        Appendice                                                 June 29, 1987
+
+
+
+
+
+
+                                APPENDIX I.   Appendice
+
+
+
+
+
+
+
+
+                   I-1  Appendix I. X.3 Terminal Parameter Meanings
+
+         
+
+             Terminal  Parameter Numbers,  Meanings,  and TYMNET Extended 
+        "Set" Command Formats ("ON" and "1" are equivalent, "OFF" and "0" 
+        are equivalent)
+
+         X.3 Parameter           Meaning                TYMNET Extend
+           Reference                                    Set Cmd Format
+             1        Escape character                  ESCape_n
+             2        Echo                              ECHo_{ON/OFF}
+             3        Selection of data forwarding
+                      signal                            FORward_n
+             4        Selection of idle timer delay     IDLe_n
+             5        Ancillary device control          ANCillary_{ON/OFF}
+             6        Command service signals           SERvice_n
+             7        Action on break character         BREak_n
+             8        Discard output flag               FLUsh_{ON/OFF}
+             9        Padding after carriage return     CRPadding_n
+            10        Line folding                      WIDth_n
+            11        Terminal speed                    SPEed_n
+            12        Flow control by DTE               FLOw_{ON/OFF}
+            13        LF insertion after CR             CRLf_n
+            14        Linefeed padding                  LFPadding_n
+            15        Edit in data transfer             EDIt_{ON/OFF}
+            16        Character delete symbol           CHAracterdelete_n
+            17        Line delete symbol                LINedelete_n
+            18        Display line symbol               DISplayline_n
+            19        Editing PAD service signals       EPSS_{ON/OFF} 
+            20        Echo Mask                         EMSK_n   
+            21        Parity Treatment                  PRTM_n
+            22        Page Wait                         PAGE_{ON/OFF}   
+
+
+
+
+
+
+
+
+        30                                                   1984 CCITT X.3 GED
+        Appendice                                                 June 29, 1987
+
+
+
+         TYMNET National         Meaning                Set Cmd Format
+          Parameters
+          101         Echo of Control-I                 TAB_{ON/OFF}
+          102         Expand Control-I with spaces      EXPtab_{ON/OFF}
+          103         Code to emulate break key         BRKkey_N
+
+             
+         
+          (Refer to CONSAT ERS for detail explanation.)   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        31                                                   1984 CCITT X.3 GED
+        Appendice                                                 June 29, 1987
+
+
+                         I-2  Appendix II. Available Profiles
+
+
+        The following profiles are currently  supported by the CONSAT.  A
+        "T"  in  the  value  field means  that  the  parameter  value  is
+        determined by the terminal identifier  (TID) entered when contact
+        with  the  CONSAT is  first  made  (ie.  by the  service  request
+        signal).  The  TID may be the same as was used for the  unenhance 
+        CONSAT.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        32                                                   1984 CCITT X.3 GED
+        Appendice                                                 June 29, 1987
+
+
+               Appendix II.(0) Profile 0, Tymnet transparent std profile
+           
+
+            * This profile is used by Consat PAD software in login mode.
+              It can not be set by a user.
+
+         ----------------------------------------------------------------
+         CCITT
+         Parameter  Value              Description
+             1        0   Command mode entered only from login mode, not
+                          during a call (escape from data transfer mode)
+             2        0   Echo initially off
+             3       255  Data forwarded when any character is typed.
+             4        0   No idle timer
+             5        0   No use of X-ON and X-OFF by CONSAT
+             6        0   No PAD service signals sent to the start-stop
+                          mode DTE
+             7        4   Break signal causes a Break-Indication
+             8        0   Normal data delivery (no discard output)
+             9        T   Padding after carraige return set by TID
+            10        0   No line folding
+            11        T   Speed of DTE set by TID
+            12        0   Use of X-ON and X-OFF by DTE
+            13        4   Linefeed insertion after echoing carriage return
+            14        T   Linefeed padding set by TID
+            15        0   Editing not allowed in data transfer state
+            16      127   Default character delete symbol is DEL
+            17       24   Default line delete symbol is control-X (CAN)
+            18       18   Default line display symbol is control-R (DC2)
+            19        0   No Editing PAD service signals   
+            20        0   No echo mask (all characters echoed)    
+            21        0   No parity checking or generation
+            22        0   Page wait disabled   
+           
+         TYMNET
+         Parameter  Value              Description
+           101        0   No echo of control-I
+           102        0   Control-I not expanded with spaces
+           103        0   No key is reserved to emulate the <Break> key
+
+         
+
+
+
+
+
+
+
+
+
+
+
+
+
+        33                                                   1984 CCITT X.3 GED
+        Appendice                                                 June 29, 1987
+
+
+               Appendix II.(1) Profile 1, CCITT simple standard profile
+
+
+         CCITT
+         Parameter  Value              Description
+             1        1   Command mode entered not only from login mode,
+                          but during a call (escape from data transfer
+                          mode)
+             2        1   Echo initially on
+             3      126   Data forwarded when any control characters and
+                          <DELETE> is typed.
+             4        0   No idle timer
+             5        1   Use of X-ON and X-OFF by CONSAT
+             6        1   PAD service signals sent to the start-stop
+                          mode DTE
+             7        2   Break signal causes a reset
+             8        0   Normal data delivery (no discard output)
+             9        T   Padding after carraige return set by TID
+            10        0   No line folding
+            11        T   Speed of DTE set by TID
+            12        1   Use of X-ON and X-OFF by DTE
+            13        0   No linefeed insertion after carriage return
+            14        T   Linefeed padding set by TID
+            15        0   Editing not allowed in data transfer state
+            16      127   Default character delete symbol is DEL
+            17       24   Default line delete symbol is control-X (CAN)
+            18       18   Default line display symbol is control-R (DC2)
+            19        0   No editing PAD service signals
+            20        0   No echo mask (all characters echoed)
+            21        0   No parity checking or generation   
+            22        0   Page wait disabled  
+
+         TYMNET
+         Parameter  Value              Description
+           101        1   Echo control-I
+           102        0   Control-I not expanded with spaces
+           103        0   No key is reserved to emulate the <Break> key
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        34                                                   1984 CCITT X.3 GED
+        Appendice                                                 June 29, 1987
+
+
+                 Appendix II.(2) Profile 2, CCITT transparent profile
+
+
+         CCITT
+         Parameter  Value              Description
+             1        0   Command mode entered only from login mode, not
+                          during a call (data transfer state)
+             2        0   Echo initially off
+             3        0   Data forwarded when full packets (128 chars) or
+                          idle timer expires (no forwarding characters)
+             4       20   Data forwarded when idle for 1 second (20/20ths)
+             5        0   No use of X-ON and X-OFF by CONSAT
+             6        0   No service signals sent to the start-stop
+                          mode DTE
+             7        2   Break signal causes a reset
+             8        0   Normal data delivery (no discard output)
+             9        T   Padding after carraige return set by TID
+            10        0   No line folding
+            11        T   Speed of DTE set by TID
+            12        0   No use of X-ON and X-OFF by DTE
+            13        0   No linefeed insertion after carriage return
+            14        T   Linefeed padding set by TID
+            15        0   No editing in data transfer state
+            16      127   Default character delete symbol is DEL
+            17       24   Default line delete symbol is control-X (CAN)
+            18       18   Default line display symbol is control-R (DC2)
+            19        0   No editing PAD service signals
+            20        0   No echo mask (all characters echoed)
+            21        0   No parity checking or generation 
+            22        0   Page wait disabled
+
+
+         TYMNET
+         Parameter  Value              Description
+            101       0   Control-I not echoed
+            102       0   Control-I not expanded with spaces
+            103       0   No key is reserved to emulate the <Break> key
+         
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        35                                                   1984 CCITT X.3 GED
+        Appendice                                                 June 29, 1987
+
+
+               Appendix II.(3) Profile 3, TYMNET simple standard profile
+
+
+             This  profile is supplied in the sample tymfile with what is 
+        considered as the best setting of terminal  parameters.  However, 
+        its use is not mandatory, i.e. its definition can be removed from 
+        a tymfile. If its setting is considered desirable but its name is 
+        not, it can be renamed.
+
+           CCITT
+         Parameter  Value              Description
+             1        1   Command mode entered not only from login mode,
+                          but during a call (escape from data transfer 
+                          mode)
+             2        1   Echo initially on
+             3       94   Data forwarded when full packet (128 chars),
+                          idle timer expires, or on forwarding characters
+             4        0   No idle timer
+             5        1   Use of X-ON and X-OFF by CONSAT
+             6        5   All service signals sent to the start-stop
+                          mode DTE
+             7        4   Break signal causes indication of break
+             8        0   Normal data delivery (no discard output)
+             9        T   Padding after carraige return set by TID
+            10        0   No line folding
+            11        T   Speed of DTE set by TID
+            12        1   Use of X-ON and X-OFF by DTE
+            13        0   N0 linefeed insertion after carriage return
+            14        T   Linefeed padding set by TID
+            15        1   Editing allowed in data transfer state
+            16      127   Default character delete symbol is DEL
+            17       24   Default line delete symbol is control-X (CAN)
+            18       18   Default line display symbol is control-R (DC2)
+            19        0   No editing PAD service signals
+            20        0   No echo mask (all characters echoed)
+            21        0   No parity checking or generation
+            22        0   Page wait disabled 
+
+
+         TYMNET
+         Parameter  Value              Description
+           101        1   Control-I not echoed
+           102        1   Expand control-I with spaces
+           103        0   No key is reserved to emulate the <Break> key
+
+
+
+
+
+
+
+
+
+
+        36                                                   1984 CCITT X.3 GED
+    g xM
