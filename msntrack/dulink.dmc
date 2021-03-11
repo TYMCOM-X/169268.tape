@@ -1,0 +1,68 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! 
+! Program:	(MSNTRACK)DULINK.DPL
+!
+! Author:	Jason L. Ma
+!
+! Date:		1/31/86
+! Rev. Date:	6/9/86
+!
+! Description:	This program runs under the DELUTI monthly PERP job
+!		DUEOM.PRP.  It outputs the "link file" DULINK.OUT.
+!		The program DUBLD.FTF then inputs this "link file"
+!		(and the "node file" created by DUNODE.DPL), and 
+!		creates the new "queue" database DUQUE.DMS to be
+!		used for the new DELUTI survey month.
+!
+! References:	1. DUEOM.PRP
+!		2. DUNODE.DPL
+!		3. DUBLD.FTF
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!!!!!
+!!! The obj of this section is to create the temp file DULINK.DMI, which:
+!!! (1) contains exactly two identical records per link and is not 
+!!!     sorted
+!!! (2) has in each record node number < neighbor number
+!!! (3) will be used in the latter half of the program to create
+!!!     the final output file DULINK.OUT.
+
+
+	o (netstat)ckts.
+	init 1 DULINK.DMI.
+	dpl start.
+
+!	f status nct "D" and nct "C".
+!f status nct "D".
+!	sea class1 1 2 3 4 5 and class2 1 2 3 4 5 and pty1 nct "HOST" &
+!		and pty2 nct "HOST" and cct nct "MS" and nct "HW".
+
+        fi pt1 2363.
+	sort pt1 pt2.
+	let node1 0 node2 0.
+
+
+
+start:	getrec end.
+		if node1 neq pt1 then take.
+		if node2 neq pt2 then take.
+	goto start.
+
+take:		let node1 eq pt1 node2 eq pt2.
+		let kern1 eq khost1 kern2 eq khost2.
+		let n1 eq node1 n2 eq node2.
+whowins:	if n1 gt n2 then twowins.
+onewins:	p on 1 n1 kern1 n2 format i5 1x i5 1x i5 end.
+	goto start.
+twowins:	p on 1 n2 kern2 n1 format i5 1x i5 1x i5 end.
+	goto start.
+
+end:	release 1.
+	dpl stop.
+	dpl end.
+
+
+
+
+
