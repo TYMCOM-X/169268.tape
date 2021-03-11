@@ -1,0 +1,1111 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+             INBAND SIGNALLING MODEMS CONTROL PROJECT
+
+
+                      GENERAL EXTERNAL DESIGN
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+McDonnell Douglas Corporation's proprietary rights are included in the
+information disclosed herein. The recipient, by receiving this document,
+agrees that neither this document nor the information disclosed herein,
+nor any part thereof shall be used or disclosed to others for manufacturing
+or for any other purpose except as specifically authorized in writting
+by the McDonnell Douglas Corporation.
+
+
+
+
+
+
+Tymnet Development Group                                 Philippe Lardilleux
+McDonnell Douglas Information Systems France             June 87
+106 Bureaux de la Colline
+92213 SAINT CLOUD (France)
+
+
+
+
+
+
+
+INBAND SIGNALLING PROJECT        General External Design
+
+
+
+
+
+                               TABLE OF CONTENTS
+
+
+
+                   Section
+
+
+
+  1  Design overview
+
+      1.1   General performances                                        Page 2
+
+      1.2   General description of the implementation                   Page 3
+
+
+  2  External specifications
+
+
+      2.1 Operator interface : accessing the Line and Modem             Page 5
+                               Maintenance Utility
+
+      2.2 Operator interface : Description of the set of commands       Page 6
+
+		2.2.1  Command summary                                  Page 6
+		2.2.2  Line and Modem status                            Page 7
+		2.2.3  Modem self-test                                  Page 8
+		2.2.4  Modem transmit/receive test                      Page 9
+                2.2.5  Channel status                                   Page 10
+                2.2.6  Channel test                                     Page 10
+		2.2.7  Perform all tests                                Page 10
+                2.2.8  Redisplay the previous result                    Page 11
+                2.2.9  Leaving the Line and Modem Maintenance Utility   Page 11
+
+  3  Implementation
+
+     3.1 Network configuration modifications
+
+               3.1.1 TMCS changes                                       Page 12
+               3.1.2 LMMU new interface                                 Page 12
+               3.1.3 ISRM changes                                       Page 13
+
+     3.2 Security issue                                                 Page 14
+
+
+
+
+annex 1 : Exchanges during a test    (example)                         Page 17
+annex 2 : Failure reports to supervision (to be written)               Page 18
+annex 3 : Glossary of terms                                            Page 19
+
+   INBAND SIGNALLING PROJECT          General External Design           Page 1
+
+
+
+
+
+                           References
+
+
+
+
+
+(1)      Link Problem Determination Aid
+         (LPDA protocol)
+         Source : IBM
+
+
+(2)      Link Problem Determination
+         NOKIA INFORMATION SYSTEMS
+         Data Communications
+         Heikki Makijarvi        26 February 87
+
+
+(3)      TMCS11.DOC
+         January 87, NTD,
+         McDonnell Douglas Network Systems Company Inc.
+
+
+ (4)     ISRM.DOC     Automatic Port Switch System
+                      General External Design
+         March  85, NTD
+         McDonnell Douglas Network Systems Company Inc.
+
+
+ (5)     XOM users guide
+         October 1, 1982, NTD
+         McDonnell Douglas Network Systems Company Inc.
+
+
+ (6)     LMMU users guide
+         to be written
+
+
+
+   INBAND SIGNALLING PROJECT          General External Design           Page 2
+
+
+
+SECTION 1.0 Design overview :
+-----------------------------
+
+This document contains the General External Design (GED) for the Inband
+Signalling project.
+
+
+The purpose of the project is to implement in the Tymnet technology the
+ability for the network operator to check the modem equipment of the
+X25 subscribers, as well as the line transmission quality.
+
+
+
+
+
+
+SECTION 1.1 General performances :
+---------------------------------
+
+
+The following contains the main highlights offered by this implementation :
+
+   . The tests will be disruptive : the line will be removed from the
+     subscriber's traffic and attached to a dedicated test system during
+     the test.
+
+   . The NOKIA modems on which DATAPAK's subscribers are connected support
+     a subset range of commands of LPDA2 IBM protocol (1).
+     These commands are supported through the implementation.
+     In addition the implementation also supports two basic tests of the SIO
+     channel, as the SIO subsystem is not involved by LPDA2 tests.
+
+
+   . Access to the test facility is restricted to authorized personnel.
+     TYMNET Monitoring Control System (TMCS) will provide this service.
+     The control of access will not be available in networks on which TMCS
+     is not installed. However a direct access to the Line and Modem
+     Maintenance Utility is allowed for those kind of networks.
+
+   . Network operators can access the Line and Modem Maintenance Utility
+     through TTY type terminals from anywhere in the network.
+     A user friendly interface will be provided.  However, the operator should
+     not logout from the Line and Modem Maintenance Utility during a test.
+
+   . The implementation will require the addition of a limited amount of
+     software in TMCS and in the node connected to the line.
+     A new TMCS slave, which is to be designed, will perform the major tasks.
+
+INBAND SIGNALLING PROJECT      GED           Implementation overview    Page 3
+
+
+
+
+
+SECTION 1.2 General description of the implementation :
+-------------------------------------------------------
+
+The implementation of the Line and Modem Maintenance Utility (LMMU) is shared
+between 3 systems:  TMCS, LMMU, and ISRM (ISIS System Recovery Module).
+XCOM (the TYMNET X25 and X75 interface) is concerned by the approach but will
+not require any modifications.
+
+
+TMCS is responsible for controlling the user's access to the line test
+facility, and disconnecting the subscriber connection. TMCS also maintains
+all references which will be used by the Line and Modem Maintenance Utility
+to address the target line.
+
+
+The new TMCS slave, called LMMU in this document, handles the operator
+interface for the Line and Modem Maintenance Utility (LMMU).
+Upon operator command, LMMU takes the control of SIO lines with the
+assistance of ISRM, acting as an interface to the line.
+LMMU handles LPDA2 protocol.
+
+
+The ISRM interface has currently the responsability of the logic control
+of the software associated with the links. ISRM detects the failure of
+this software, and switches physically the line to the backup machine.
+This functionality will be extended to allow it to test the line.
+ISRM will act as a relay between LMMU and the line, and interpret LMMU
+elementary orders, such as :  attach LU, transmit a frame, get SIO
+status, etc.
+
+
+
+
+
+The following schema is a global view of the implementation in the network.
+INBAND SIGNALLING PROJECT      GED      Implementation overview     Page 4
+
+
+
+
+
+
+
+
+
+                            T Y M N E T type
+ 			    N E T W O R K
+
+
+
+		    /			        \
+TTY type           /			         \
+terminal          /			          \
+	         /			           \
+  /|	        /		     -----------    \
+ / |	       /		    | Isis node |    \
+/__|	      /			    |-----------|     \
+   |  -------/-			    |           |      \     ___  ___
+___|	    / /    _________	    |-----------|       \    |M|  |M|  -----
+           /  --> /         \	   /|  I S R M  |---     \   |O|  |O|  |X25|
+  /|      /	 |  T M C S  |    / |-----------|   :-----\--|D|--|D|--|DTE|
+ / |     /    --> \_________/    /  |  X C O M  |---'      \ |E|  |E|  -----
+/__|    /      \  	  \	 \  |-----------|	    \|M|  |M|
+   | --/-------		   \ 	  \ |           |	     \--  ---
+___|  /			    \  	  / |___________|	      \
+     /		             \   /                             \
+    /		              \ /          			\
+   |		             _________   			 |
+    \		            /         \  			/
+     \		           |  L M M U  |		       /
+      \			    \_________/			      /
+       \			\			     /
+        \ 		         \			    /
+         \			 /   -----------	   /
+          \		        /   | Isis node |   	  /
+           \			\   |-----------|        / ___   ___
+	    \			 \  |           |       /  |M|   |M|
+	     \			  \ |-----------|      /   |O|   |O|
+	      \			   \|  I S R M  |-----/----|D|---|D|
+	       \		    |-----------|    /     |E|   |E|
+	        \		    |  X C O M  |-- /      |M|   |M|
+	         \		    |-----------|  /       ---   ---
+	          \    		    |           | /
+	           \		    |___________|/
+		    \			        /
+INBAND SIGNALLING PROJECT       GED        Accessing  LMMU          Page 5
+
+SECTION 2   External specifications :
+            -------------------------
+
+This paragraph presents the external specifications for the implementation
+of the Line and Modem Maintenance Utility.
+
+ 2.1 Operator interface : Accessing the Line & Modem Maintenance Utility
+     -------------------------------------------------------------------
+
+This paragraph contains the main part of the specifications that will be
+applicable to TMCS.  The reader should read the document (3), in order to
+understand the new operator interface of TMCS version 11.
+
+Access to the Line and Modem Maintenance Utility will be made by
+using a terminal connected to the network.
+The user will log into TMCS and request the access to the XOM subsystem of
+TMCS (5).
+From this XOM subsystem, the user is able to get all information regarding
+the subscriber's access.
+
+Access to LMMU requires that the TMCS user possess a new license :
+the "Modem Maintenance" license. This license will be part of the TMCS user
+PROFILE.
+
+A new command, Modtest, will be added within the XOM subsystem of TMCS :
+
+xom>  Modtest [Host <host number>] [Link <link number>] [Line <line number>]
+
+Through this command, the operator requests the access to the Line and Modem
+Maintenance Utility.
+
+The host, link and line numbers reported by the XCOM interface will be used as
+parameters for this command to indicate the line the operator wants to test.
+
+    1)If either the Host parameter is selected or an XCOM command defining
+      the host number was previously entered, the host must be in profile
+      access set and it becomes the host of interest.
+      If the selected host number is not in profile access set the user will
+      get an "host not allowed" error message.
+    2)If no Host parameter is selected and no XCOM command was previously
+      entered, the hosts of interest will be limited to those in profile.
+    3)Using HOSTLINK command in XOM : TMCS will choose links to hosts of
+      interest and if Link parameter is selected, to just that link.
+      If the host associated with the selected link number is not in profile
+      access set, the user will get an "host associated with link not allowed"
+      error message.
+    4)Using LINKLU command in XOM: TMCS will choose the LU for selected
+      link(s) and if Line parameter is selected, to just that line.
+
+If the user's selection of parameters is not sufficent for identifying the
+line the operator wants to test, he will get the message :
+    "parameters combination not sufficent to identify one line"
+
+If the user's selection of parameters is not correct, i.e no line was found,
+he will get the message:
+    "invalid combination of parameters"
+
+INBAND SIGNALLING PROJECT   GED        Accessing LMMU                   Page 6
+
+The XOM subsystem of TMCS checks if the user is allowed to access to this line
+and if the user has the "Modem Maintenance" license.
+The XOM subsystem of TMCS will ensure the status of the X25 line is correct :
+The X25 connection must be closed to the subscriber traffic.
+This command will be performed automatically by TMCS before accessing LMMU.
+This command corresponds to the XOM command : "change linestate DOWNSOFT".
+
+The XOM subsystem of TMCS will pass to LMMU all the information needed to
+address the line . TMCS maintains this information in its own database.
+This information will consist of :
+
+              -  the ISRM host number
+              -  the XCOM slot number
+              -  the LU number
+
+The XOM subsystem of TMCS will then be transparent for all commands the user
+may type. It is up to LMMU to handle the operator dialog.
+The set of commands at to the disposal of the operator are described in the
+following paragraph .
+
+When LMMU has obtained all the information from TMCS regarding the location
+of the line the network operator wants to test, LMMU accesses the engine the
+line is connected to, through the ISRM interface.
+
+SECTION 2.2 Description of the set of commands :
+--------------------------------------------------
+
+2.2.1 Command summary:
+      ----------------
+
+   Below is the list of commands which are available to the user. The syntax
+of the commands is expressed here as a reminder and may be subject to change.
+A specific chapter dealing with the printout format will be provided at a
+later date.  However, the syntax must be close to the syntax of the one used
+for the XOM subsystem of TMCS, which is used by the network operators before
+and after the usage of the Line and Modem Maintenance commands.
+These commands are transparent to TMCS and handled by LMMU.  LMMU interprets
+these commands and builds the scenarios of elementary commands for the ISRM
+relay to the line. Please refer to paragraph 3 for more information regarding
+the subject.
+
+modtest> MSTatus         display the last modem status reported   see 2.2.2
+modtest> SLFtest         modem self-test command                  see 2.2.3
+modtest> TRRtest         modem transmit/receive test command      see 2.2.4
+modtest> CSTatus         SIO channel status                       see 2.2.5
+modtest> CTTest          SIO channel transmission test            see 2.2.6
+modtest> ALLtests        3 tests made : CSTatus+SLFtest+TRRtest   see 2.2.7
+modtest> LSTresult       redisplay previous test result           see 2.2.8
+modtest> RETurn          leave the Line and Modem test Utility    see 2.2.9
+
+Any test can be interrupted using a key (the "break" key, for example).
+The tests which may be ongoing IN the modems will be stopped. According
+to the document (2), LMMU should send a LPDA2 "read modem status" command
+on the line.
+When the tests are stopped, the operator will be prompted for a new command.
+
+INBAND SIGNALLING PROJECT      GED        Network operators commands    Page 7
+
+2.2.3 Modem status command :
+      ----------------------
+
+ Reference:	ModemStatus
+    Command:	MSTatus
+   Response:	The response is made up of 6 parts :
+
+	. The header :	 		<command type> <line identification>
+	. ISRM execution diagnostic :  	<command forwarded to the modem>
+	. The delay for the report :    <report in XX seconds>
+					<A star "*" every 5 seconds>
+	. The final report :		<parameter : > <value>
+	. A diagnostic :		<diag>
+	. The prompt : 			Modtest>
+
+Description:	This command forwards the LPDA2 "read modem status" frame
+                on the attached line.
+		The test frame is a request to the modem to forward the
+		last modem status . See document (2) for details.
+		The user will have to wait some time for the modem report,
+		The typical delay for the answer is 10 seconds.
+		The ISRM execution diagnostic is the interpretation of how ISRM
+		handled the command .
+		The final report is the interpretation of the report as
+		returned by the modems.  LMMU will request ISRM for the test
+		report every 5 seconds and return a star to the operator if the
+		report is not available.
+
+		A final diagnostic is returned to the operator at the
+		end of the report. This diagnostic is deducted from some
+		simple considerations.   LMMU will not take any action
+		based on these deductions. LMMU will only give a warning
+		to the operator.
+		The list of the events to take into account for this
+		diagnostic will be restricted. (To be defined)
+
+Example :	Modem status request      ISRM host 832   slot 4 LU 2
+
+		Command sent on the line ... please wait 10 seconds.
+		* *
+		Report received form the line :
+		Command accepted by the local modem;
+
+						LOCAL MODEM :
+		Modem type :   NOKIA  ####
+		Modem model :
+		Time since last detected hit : 110 seconds
+		Time since last power off : 10 seconds
+		...............................
+		Modem speed :   9.6 kbps
+
+						REMOTE MODEM :
+		Modem type : NOKIA #####
+		Modem Model :
+		Number of carrier loss during last 15 mn : 5
+		................................
+		Modem speed : 9.6 kbps
+		---------------------------------------------
+		Diagnostic :	   DTE POWER LOSS   !!!!!  		
+		---------------------------------------------
+
+INBAND SIGNALLING PROJECT      GED        Network operator commands     Page 8
+
+2.2.3 Modem self-test :
+      -----------------
+
+  Reference:	ModemselfTest
+    Command:	SLFtest
+   Response:	The response is made up of 6 parts :
+
+	. The header :	 		<command type> <line identification>
+	. ISRM execution diagnostic :  	<Command forwarded to the modem>
+	. The delay for the report :    <report in XX seconds>
+					<A star "*" every 5 seconds>
+	. The final report :		<parameter : > <value>
+	. A diagnostic :		<diag>
+	. The prompt : 			Modtest>
+
+Description:	This command forwards a maintenance frame on the attached line.
+		The order is a request to the modem to perform a self-test
+		See document (2) for details.
+		The user will have to wait some time for the modem report.
+		The typical delay for the answer is 10 seconds.
+		The ISRM execution diagnostic is the interpretation of how ISRM
+		handled the command.
+		The final report is the interpretation of the report as
+		returned by the modems.
+		A final diagnostic is returned to the operator at the
+		end of the report. This diagnostic is deducted from some
+		simple considerations.   LMMU will not take any action
+		based on these deductions. LMMU will only give a warning
+		to the operator.
+		The list of thnts to take into account for this
+		diagnostic will be restricted. (To be defined)
+
+Example:	Modem self test command        ISRM host 832  slot 5    LU 3
+
+		Command sent on the line ... please wait 10 seconds.
+		* *
+		Report received form the line :
+
+		Command accepted by the local modem;
+
+						LOCAL MODEM :
+		Modem type :   NOKIA  ####
+		Modem model :
+		Time since last detected hit : 110 seconds
+		Time since last power off : 10 seconds
+		...............................
+		MOdem speed :   9.6 kbps
+
+						REMOTE MODEM :
+		Modem type : NOKIA #####
+		Modem Model :
+		Number of carrier loss during last 15 mn : 5
+		................................
+		Modem speed : 9.6 kbps
+
+			-----------------------------------
+			   DTE POWER LOSS   !!!!!  		
+			-----------------------------------
+
+INBAND SIGNALLING PROJECT      GED        Network operator commands     Page 9
+
+2.2.4  Modem transmit/receive test:
+       ---------------------------
+
+  Reference:	TransmitReceivetest
+    Command:	TRRtest <optional parameter>
+   Response:	The response is made up of 6 parts :
+
+	. The header :	 		<command type> <line identification>
+	. ISRM execution diagnostic :  	<Command forwarded to the modem>
+	. The delay for the report :    <report in XX seconds>
+					<A star "*" every 5 seconds>
+	. The final report :		<parameter : > <value>
+	. A diagnostic :		<diag>
+	. The prompt : 			Modtest>
+
+Description:	This command forwards a test frame on the attached line.
+		The order is a request to the modem to perform a
+		transmit/receive test. See document (2) for details.
+
+		The parameter is the number of exchanges between the
+		local and the remote modem. Default : 1
+
+		The user will have to wait some time for the modem report
+		The typical delay for the answer will be calculated by LMMU
+		and reported to the operator.
+		The final report is the interpretation of the report as
+		returned by the modems.
+		A final diagnostic is returned to the operator at the
+		end of the report. This diagnostic is deducted from some
+		simple considerations.   LMMU will not take any action
+		based on these deductions. LMMU will only give a warning
+		to the operator.
+		The list of the events to take into account for this
+		diagnostic will be restricted. (To be defined)
+		
+EXAMPLE :	Modem tranmit/receive test      ISRM host 832  slot 5   LU 4
+
+		Command sent on the line ... please wait 10 minutes.
+		* * * * * * * * * * * * * * * * * * * * * * * * * * * *
+		* * * * * * * * * * * * * * * * * * * * * * * * * * * *
+		* * * * *
+		Report received form the line :
+
+		Command accepted by the local modem;
+	LOCAL MODEM :
+		Modem type :   NOKIA  ####
+		Modem model :
+		Line quality : xxx
+		Number of blocks received : xxx  out of xxx sent
+		...............................
+		Modem speed :   9.6 kbps
+	REMOTE MODEM :
+		Modem type : NOKIA #####
+		Modem model :
+		................................
+		Modem speed : 9.6 kbps
+			-----------------------------------
+			   DTE POWER LOSS   !!!!!  		
+			-----------------------------------
+
+INBAND SIGNALLING PROJECT      GED        Network operator commands    Page 10
+
+2.2.5  SIO channel status :
+       -------------------
+
+  Reference:	SIO channel status
+    Command:	CSTatus
+   Response:	The status of the V24 interface is returned immediately.
+
+        	. The header :		<command type> <line identification>
+	        . The status of the V24 interface:
+                    Tx clock   present/absent
+                    Rx clock   present/absent
+                    CTS        received/not received
+                    DSR        received/not received
+                    HDLC line idle
+                    Idle line count since the line attachment to ISRM
+                    CRC error count since the line attachment to ISRM
+                    Abort error count since the line attachment to ISRM
+         	. The prompt :           Modtest>
+
+Description:    The purpose of this command is to solve some wellknown hardware
+                problems such as :
+                 . absence of Rx and Tx clock
+                 . bad V24 signals
+                 . incorrect addresses of the SIO mother and/or daughter boards
+                An eventual indication of absence of response from the channel
+                may be returned.
+
+
+2.2.6    SIO channel transmission test
+         -----------------------------
+  Reference:	SIO channel transmission test
+    Command:    CTTest
+   Response:	The response is made up of 4 parts :
+
+	. The header :	 		<command type> <Line identification>
+	. The delay for the report :    <report in XX seconds>
+					<A star "*" every 5 seconds>
+	. A line of report is printed as soon as as test sequence is completed
+	. The prompt : 			Modtest>
+
+Description:	The purpose of this command is to perform a transmission
+                test which will involve the SIO subsystem.
+                A loopback should be installed by an operator at some place on
+                the line.
+                The transitions of the V24 signals : CTS,RTS,DSR,DTR will
+                be tested.
+                Sequences of various frames will be sent on the line, and
+                are expected to be returned from the line.
+		The user will have to wait some time for the modem report
+		The typical delay for the answer will be calculated by LMMU
+		and reported to the operator.
+
+
+INBAND SIGNALLING PROJECT      GED        Network operator commands     Page 11
+
+                The report will be a selection among the following messages
+                depending on the problems encountered.
+
+                  CTS and RTS do not toggle accordingly.
+                  DSR and DTR do not toggle accordingly.
+
+                  sss frames sent on the line
+                  ccc frames received and correct
+                  nnn frames received and not correct
+                  rrr CRC errors during the test
+                  iii Idle errors during the test
+                  aaa Abort errors during the test
+                End of test
+
+2.2.7  Perform all tests command:
+       --------------------------
+
+    Command:	ALLtest
+   Response:	idem CSTatus plus idem SLFtest plus TRRtest
+Description:	This command fully tests the modems with the use of only
+                one command.
+		LMMU will do first the SIO channel test, then the LPDA2
+                selftest, then the LPDA2 transmit/receive test.
+		Results are identical to the above, and are displayed as
+                soon as available.
+
+2.2.8  Redisplay the previous result :
+       -------------------------------
+
+   Command : 	LSTresult
+   Response :	The result of the previous operator command is printed out.
+ Description:	This command will be useful if the display of the terminal
+		has lost all or part of the previous results.
+		
+
+
+2.2.9  Leaving the Line and Modem Maintenance Utility
+       ----------------------------------------------
+
+In order to leave the Modem Maintenance Utility, the user needs to issue the
+command "RETurn" when prompted for a new command by LMMU.
+If the user does not have the prompt (a test command is ongoing), then he
+should type "BREAK" in order to abort the current test.
+
+The "RETurn" command will do the following :
+
+     - The Logical Unit (the line) is attached back to the original owner.
+     - TMCS will return the protocol state of the line to the user
+       (the line should be in "DOWNSOFT" state).
+     - The user will return to the XOM subsystem of TMCS (he gets the "xom"
+       prompt)
+
+
+INBAND SIGNALLING PROJECT      GED         Implementation             Page 12
+
+SECTION 3   Implementation :
+            ----------------
+This section describes the impact that the external specifications described
+in the section 2 have on the network topology.
+The security issue is addressed in section 3.2.   (how the system handles the
+network failures)
+
+SECTION 3.1 Network configuration modifications :
+           -------------------------------------
+3.1.1 TMCS changes :
+      -------------
+
+The modifications that are brought to TMCS  are described in section 2.1
+and 2.2.9. The responsability of TMCS is to give access to the LMMU interface
+and to maintain the addressing elements for the line in its database.
+TMCS checks the X25 line state through the use of a XOM command.
+The TMCS profile maintains a new licence.
+TMCS needs to generate various PROBE messages, as well as warning messages
+to the network operator (ref section 3.2).
+
+The Line and Maintenance Utility access is selectable by a switch when TMCS
+is generated. This new code for TMCS will take a few K bytes of core,
+but one must not forget to add the LMMU users when configuring TMCS.
+
+3.1.2 LMMU new interface :
+      -------------------
+LMMU is a new NCC application within the network. LMMU runs in an ISIS
+slot and acts as a slave for TMCS and a master for ISRM.  The section
+2.2 describes the external specifications which are applicable to LMMU.
+
+In order to share the load and also for security purposes, one can install
+many LMMUs interfaces in the network.
+
+The LMMU interface is not associated with a particular TMCS or a particular
+ISRM. When a network operator requests an access to the Line and Modem
+Maintenance Utility, TMCS builds a new circuit towards LMMU. If many LMMUs
+are available, it will be up to the routing algorithm of the supervisor
+to select the slave for this circuit (the sup chooses the lowest cost path).
+Due to this, the fact that a given LMMU is busy (has reached the maximum
+number of users) will have to be reported to the supervisor, the supervisor
+will then route the next call to another LMMU.
+
+The gouging level of the circuit between TMCS and LMMU is equal to the gouging
+level of the circuit between the operator terminal and TMCS. This should
+ensure a reasonable response time to operator requests.
+
+According to a generation switch, LMMU can give access directly to the network
+operators, instead of having to pass through TMCS. This method of access is
+exclusive with the TMCS access : LMMU will not offer both at the same time
+(ref section 1.1).
+In that case the network operator will be prompted for all the information
+which should have been supplied by TMCS at the login.
+The rest of the LMMU commands are identical to the TMCS access case, with
+the exception that the system will not manipulate the logical state of the
+X25 line through XOM commands.
+
+The LMMU application will require less than 250 K bytes of core, plus 15 K
+bytes per user (estimate).
+
+INBAND SIGNALLING PROJECT       GED      Implementation                Page 13
+
+
+3.1.3 ISRM modifications :
+      -------------------
+
+The ISRM interface is responsible for acting as a relay between LMMU
+and the line. ISRM is addressed by LMMU with a ISRM host number.
+This is different from the current access method to the ISRM interface.
+(i.e., the ISRM is accessed via the kernel host.
+ISRM will ensure that the caller is an LMMU type interface. Other
+incoming calls will be rejected.
+
+Below is a list of commands which are executed by ISRM :
+
+   . Get APSS status for a given slot
+   . Attach Logical Unit
+   . Detach Logical Unit
+   . Get SIO status for the attached LU
+   . Force V24 signals on the attached LU
+   . Send a frame on the attached LU
+   . Get the received frame from the attached LU
+
+If the circuit between LMMU and ISRM is broken, it will be up to ISRM to
+restore the Logical Unit to the slot owner.
+
+ISRM maintains a logger of the commands related to the modem maintenance.
+This logger will not be lost upon reinitialisation of the interface.
+Will be recorded in this logger the most significant events of the dialogue
+between LMMU and ISRM :  New circuit, circuit zap, report to LMMU, command
+from LMMU.
+This logger is readable through an extended DDT command of the ISRM
+interface (a new command).
+
+Example :
+:> LOGMM
+
+ Fastc    Port #      Event                     details
+
+83DC5A     6        LMMU login
+83E000     6        LMMU command         01 03 05 06
+83E055     6        Report to LMMU       01 03 56 47 35 26
+83F002     6        Circuit Zapped
+
+This facility can be disabled by a statement at the generation of the
+ISRM interface.
+
+The number of simultaneous LMMU test circuits that can be accepted by
+ISRM is a generation switch.  The ISRM code increase will be less than
+5 K bytes, plus 1 K bytes/master circuit  (approximately).
+A sysgen switch will enable/disable all the code generation for this
+LMMU relay function.
+
+
+INBAND SIGNALLING PROJECT      GED           Security issues           Page 14
+
+SECTION 3.2   Security issues :
+              -----------------
+			
+This section describes how the Line and Modem Maintenance Utility will recover
+from network failures.
+The term "network operator" below refers in the following lines to the person
+which performs the test.
+The warnings or diagnostics the operator gets upon the following failures
+will be described in document (6).
+Failures reports from ISRM, LMMU and TMCS to PROBE will be described in
+annex 2.   They consist in specific ISIS messages, interpreted by TMCS as :
+" Node report from <node name> <slot type> <event number> "
+
+-------------------------------------------------------------------------------
+  Description of the failure          :        Reaction of the network
+-------------------------------------------------------------------------------
+                                      :
+Circuit failure between the network   :
+operator and TMCS                     : The test is halted
+                                      : ISRM returns the LU to XCOM.
+                                      : The XCOM line remains shut.
+                                      :
+-------------------------------------------------------------------------------
+                                      :
+Circuit failure between TMCS and LMMU : The test corresponding to this circuit
+                                      : is halted.
+                                      : ISRM returns the LU to XCOM.
+                                      : The XCOM line remains shut.
+                                      : The network operator 
+                                      : gets a warning_______
+                                      : from TMCS, followed by the "xcom"
+                                      : prompt. He can type the XOM commands.
+                                      : LMMU sends a warning_______ to PROBE.
+                                      : TMCS sends a warning_______ to PROBE.
+                                      :
+------------------------------------------------------------------------------
+                                      :
+Circuit failure between LMMU and ISRM : The test is stopped
+                                      : ISRM returns the LU to XCOM.
+                                      : The XCOM line remains shut.
+                                      : The network operator
+                                      : gets a warning_______
+                                      : from TMCS, followed by the "xcom"
+                                      : prompt. He can type the XOM commands.
+                                      : LMMU sends a warning_______ to PROBE.
+                                      : ISRM sends a warning_______ to PROBE.
+                                      :
+-------------------------------------------------------------------------------
+                                      :
+The behaviour of the modem in test    : This kind of error is normally handled
+does not conform to the LPDA2 stan-   : by LMMU. LMMU should
+dard                                  :  issue a diagnostic_________
+                                      : to the network operator.
+                                      :
+-------------------------------------------------------------------------------
+                                      :
+TMCS crashes                          : same as circuit failure between TMCS
+                                      : and the network operator.
+                                      : LMMU sends a warning_______ to PROBE
+                                      :
+
+INBAND SIGNALLING PROJECT      GED        Security issues               Page 15
+
+-------------------------------------------------------------------------------
+  Description of the failure          :        Reaction of the network
+-------------------------------------------------------------------------------
+                                      :
+LMMU crashes                          : The test(s) is (are) stopped
+                                      : ISRM returns the LU to XCOM.
+                                      : The XCOM line remains shut
+                                      : The network operator gets a 
+                                      : warning_______
+                                      : from TMCS, followed by the "xcom"
+                                      : prompt. He can type the XOM commands.
+                                      : LMMU sends a warning_______ to PROBE 
+                                      : (crash)
+                                      : TMCS sends a warning_______ to PROBE
+                                      : (slave lost)
+                                      :
+-------------------------------------------------------------------------------
+                                      :
+XCOM crashes, and one of its X25 line : ISRM sends a report to LMMU.
+is being tested. A backup configura-  : The test is halted by LMMU.
+tion is available for XCOM.           : ISRM returns the LU to XCOM.
+                                      : ISRM sends a warning_______ to PROBE.
+                                      : ISRM switches the "load group" to the
+                                      : backup configuration, where the X25
+                                      : line is ready to work.
+                                      : The network operator is advised of
+                                      : the action taken.
+                                      : In summary, the test is halted, and
+                                      : the backup configuration is active.
+                                      :
+-------------------------------------------------------------------------------
+                                      :
+ISRM crashes.                         : This is a major failure, from which
+                                      : ISIS suspends all the slots controlled
+                                      : by ISRM. The backup system is activa-
+                                      : ted. An eventual ongoing test running
+                                      : in the modems cannot be interrupted.
+                                      : The backup XCOM slot, which has just
+                                      : been resumed, will not be able to use
+                                      : the modem under test for a while, and
+                                      : will flush the report.
+                                      : The ISRM primary system restores the
+                                      : LU to the primary XCOM slot when it
+                                      : (the ISRM) restarts. This means that
+                                      : ISRM retains the configuration of the
+                                      : LU attached even after a crash.
+                                      : The network operator will see this
+                                      : event as a circuit failure between
+                                      : LMMU and ISRM. But the NCC operator
+                                      : gets the warning_______s through PROBE.
+                                      :
+
+
+INBAND SIGNALLING PROJECT      GED        Security issues               Page 16
+
+
+-------------------------------------------------------------------------------
+  Description of the failure          :        Reaction of the network
+-------------------------------------------------------------------------------
+                                      :
+The engine (primary, backup or un-    : All slots will restart. Thus ISRM will
+switched) restarts                    : restore the LU to its owner. The net-
+                                      : work operator will see this event as
+                                      : a circuit failure between LMMU and ISRM
+                                      : The test is stopped for the network but
+                                      : may be ongoing on the modem now at-
+                                      : tached to XCOM. This is a temporary
+                                      : anomaly which will disappear either
+                                      : after 30 minutes, or if the network
+                                      : operator retests this line.
+                                      :
+-------------------------------------------------------------------------------
+                                      :
+ISRM gets an error upon LU transfer.  : This indicates a configuration problem.
+                                      : ISRM will report an error to PROBE.
+                                      : The network operator gets a 
+                                      : diagnostic__________
+                                      : on his "Modtest <XCOM line number>"
+                                      : command, and should not resume the test
+                                      : before an NCC intervention.
+                                      :
+-------------------------------------------------------------------------------
+                                      :
+Protocol error for the exchanges      : The system which detects a protocol
+between to systems (ISRM, LMMU TMCS)  : error reports a message to PROBE and
+                                      : zaps the concerned circuit.
+                                      :
+-------------------------------------------------------------------------------
+                                      :
+Lack of test ressources : a LMMU is   : The system which detects the event
+not available to TMCS, or ISRM not    : reports it to the supervisor (PROBE).
+available to LMMU                     : The network operator gets a
+                                      : warning_______.
+------------------------------------------------------------------------------
+                                      :
+Configuration error in the TMCS       : The system which detects the event
+database.                             : reports it to the supervisor (PROBE)
+                                      : The network operator gets a 
+                                      : warning_______.
+                                      :
+------------------------------------------------------------------------------
+                                      :
+TMCS gets a failure when it checks    : TMCS rejects the MODTEST command :
+that the X25 link is closed to the    : The network operator gets a 
+                                      : warning_______.
+subscriber traffic.                   : He gets the "xcom" prompt.
+(ref paragraph 2.1)                   : No circuit is built to LMMU.
+                                      :
+------------------------------------------------------------------------------
+                                      :
+
+ INBAND SIGNALLING PROJECT          exchanges during a test           Page 17
+
+                      annex 1 : Exchanges during a test  (example)
+
+
+Network                TMCS                      LMMU                   ISRM
+operator
+
+         Log-in          |                         |
+       ---------->       |                         |
+         Prompt          |                         |
+*      <----------       |                         |
+                         |                         |
+      XOM access request |                         |
+       ---------->       |                         |
+         Prompt          |                         |
+xcom>  <----------       |                         |
+                         |                         |
+       MODTEST 123       |                         |
+       ---------->       |                         |
+               User profile check up               |
+               line state check up                 |
+                         |                         |
+                         |         Log-in          |
+                         |       ---------->       |
+                         | line address references |
+                         |       ---------->       |
+                         |                         |        Log-in
+                         |                         |       ---------->
+                         |                         |     Attaches <line ref>
+                         |                         |       ---------->
+          prompt         |         prompt          |         ok
+       <---------        |       <----------       |      <----------
+ >modtest                |                         |
+                         |                         |
+         SLFtest         |                         |
+       ---------->       |                         |
+                TMCS is transparent                |
+                         |         SLFtest         |
+                         |       ---------->       |
+                         |                  test scenario
+                         |                    in LMMU
+                         |                         | Modem self test HDLC frame
+                         |                         |       ---------->
+ ----------              |    report header        |       command accepted
+ | Header |<------       |        <----------      |       <----------
+ | *      |              | ^                       |
+ ----------              | | 5 sec.                |
+                         | v            *          |
+ *     <----------       | ^      <----------      |
+                         | |5 sec.                 |
+                         | v            *          |
+*      <----------       | ^      <----------      |
+                         | |5 sec.                 | Modem Report (HDLC frame)
+                         | v                       |        <----------
+ ---------               |         report          |
+ | Report | <-----       |        <----------      |
+ ----------              |         prompt          |
+            prompt       |        <----------      |
+ >modtest   <-----       |                         |
+                         |                         |
+------------------------------------------------------------------------------
+                         |                         |
+
+   INBAND SIGNALLING PROJECT          General External Design         Page 18
+
+
+annex 2                    Failure reports to the supervisor
+
+
+     To be written
+
+
+
+   INBAND SIGNALLING PROJECT          General External Design         Page 19
+
+
+annex 3 :                   Glossary of terms
+
+
+APSS      Automatic Port Switch System
+
+ISRM      Isis System Recovery Module
+
+LMMU      Line and Modem Maintenance Utility
+
+LPDA2     see document (1)
+
+PROBE     The program which controls the network
+
+SIO       Serial Input Output   (TYMNET hardware interface to the lines)
+
+TMCS      The NCC operator universal interface
+
+XCOM      X25 Tymnet interface
+
+XOM       XCOM operation monitor
+
+
+     Q‚
