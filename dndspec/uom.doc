@@ -1,0 +1,1005 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    TYMNET UTS4000 Operations Monitor (UOM)                    ______ _______ __________ _______ _____
+
+
+                                 Specification
+                                  Second Draft
+
+
+
+
+
+
+
+
+
+
+                                Kevin R. Rudman
+
+                                 Jon C. Ericson
+
+
+                                  Tymnet, Inc.
+
+
+                          Network Technology Division
+
+
+                                  May 27, 1986
+
+
+           ---------------------------------------------------------
+           |                                                       |
+           | This document is the sole property and confidential   |
+           | information of Tymnet, Inc., and may not be copied    |
+           | in whole or part, or disclosed to any third party     |
+           | without the prior written consent of TYMNET.          |
+           |                                                       |
+           ---------------------------------------------------------
+
+             Copyright 1986 by Tymnet, a McDonnell Douglas Company
+
+
+
+
+
+
+
+
+                                    PREFACE                                    _______
+
+
+
+
+        This document describes a specification for a UTS4000  Operations
+        Monitor (UOM) to be included as a part of the TYMNET UTS Terminal
+        and Host interfaces.
+
+
+
+
+
+
+                               Table of Contents                               _____ __ ________
+
+
+
+
+        1. General Information Functions..........................1
+           1.1.  EXIT command.....................................1
+           1.2.  QUIT command.....................................1
+           1.3.  CODE command.....................................1
+           1.4.  STATUS command...................................2
+           1.5.  DR command.......................................3
+           1.6.  DIR command......................................3
+           1.7.  DOR command......................................3
+
+        2. Line, Poll Group and Station Functions.................4
+           2.1.  MODE command.....................................4
+           2.2.  LLINE command....................................4
+           2.3.  LRID command.....................................5
+           2.4.  LSID command.....................................6
+           2.5.  LDID command.....................................7
+           2.6.  LHIS command.....................................8
+           2.7.  CHIS command.....................................9
+           2.8.  UPLINE command...................................9
+           2.9.  DNLINE command...................................9
+           2.10. UPRID command....................................9
+           2.11. DNRID command....................................9
+           2.12. UPSID command....................................9
+           2.13. DNSID command...................................10
+           2.14. CHRID command...................................10
+           2.15. CHSID command...................................10
+           2.16. LUSER command...................................10
+           2.17. CHUSER command..................................11
+           2.18. SCOPE command...................................11
+           2.19. TRCSUP command..................................15
+           2.20. KILL command....................................15
+           2.21. BUILD command...................................15
+           2.22. RESET command...................................16
+
+        Introduction        ____________
+
+
+        The UOM (UTS4000 Operations Monitor) is a  tool  to  monitor  and
+        control operation of the UTS terminal and host interfaces.
+
+        The UOM is currently accessed through the ?STAT command  in  DDT.
+        When  in the UOM, the prompt (:>) indicates that the UOM is ready
+        to accept commands.
+
+        Command lines are terminated by a carriage return.  Arguments are
+        separated by either a comma, space, line feed, or tab.
+
+        There is limited editing control for the UOM.  An  ESCAPE  aborts
+        the  current  command  line  and  returns  to the prompt (:>).  A
+        control W (^W) discards the partial token already  input,  either
+        word  or number.  A control A (^A) and control H (^H) discard the
+        last character of the token, effectively a backspace.
+
+        A control C (^C) can be entered at  any  time  to  terminate  the
+        current  process  of  the  UOM  (i.e., halt output).  The user is
+        returned from the UOM to DDT.
+
+        The date is displayed in the form ddmmmyy;  where dd is the  day,
+        mmm is the month, and yy is the year (e.g., 10JUL85).
+
+        When the UOM specification refers to the relative poll group,  or
+        station  address,  it  refers to the order in which each of these
+        was defined in the  interface  Tymfile.   The  first  poll  group
+        defined is poll group 0, the second is poll group 1, etc.
+Tymnet UTS4000 Operations Monitor (UOM)                                   Page 1
+
+
+        1.  General Information Functions        __  _______ ___________ _________
+
+        The first section of the UTS4000 Operations Monitor Specification
+        consists  of  commands that provide general information about the
+        monitor itself and about the state of the UTS interface.
+
+
+        1.1.  Exit Command        ____  ____ _______
+
+        Syntax:  EXIT
+
+        The EXIT command logs the user  off  of  the  UTS4000  Operations
+        Monitor and off of DDT.
+
+
+        1.2.  Quit Command        ____  ____ _______
+
+        Syntax:  QUIT or Q
+
+        The QUIT command exits  the  user  from  the  UTS4000  Operations
+        Monitor to the slots DDT.
+
+
+        1.3.  Code Command        ____  ____ _______
+
+        Syntax:  CODE
+
+        The CODE command displays a description of the slot.
+
+
+        TERMINAL UOM - UTS4000 Operations Monitor  node  2104 slot 4
+        21May86 12:48:47
+        UTS4000 TERMINAL interface - version 03.01 - assembled 20May86
+        14:34:47
+        ProdID KernalHost LINEs PollGroups SIDs PseudoHost 
+            4B      588      3       9       39      839
+
+
+        The display is interpreted as follows:
+
+        version
+                Version number as version.revision level
+        assembled
+                Date assembled in GMT daymonthyear hour:minute:second
+        prodID
+                Slot Product Identifier
+        KernelHost
+                Engine Kernel host number
+        LINEs
+                Number of lines
+        PollGroups
+                Number of poll groups
+        SIDS
+                Number of stations
+        PseudoHost
+Tymnet UTS4000 Operations Monitor (UOM)                                   Page 2
+
+
+                Origination host number (used for accounting, TIF only)
+        HOSTS
+                Number of hosts (HIF only)
+
+
+        1.4.  Status Command        ____  ______ _______
+
+        Syntax:  STATUS
+
+        The STATUS command displays the status of the slot.
+
+
+        TERMINAL UOM - UTS4000 Operations Monitor  node  2104 slot 4
+        21May86 12:48:58
+         restarts     when started      when assembled
+                0   21May86 12:42:41   20May86 14:34:38
+         pos now PVC nss / nbbflt bufuse bufcnt in use / ncmdlk c links
+        in use
+          39   0   0   0       85      0     84      1     1572    1414  
+         158
+
+
+        The display is interpreted as follows:
+
+        restarts
+                Number of restarts
+        when started
+                Time    of    last    start    in    GMT,    daymonthyear
+                hour:minute:second
+        when assembled
+                Time of assembly in GMT, daymonthyear hour:minute:second
+        pos
+                Number of possible circuits
+        now
+                Number of circuits now
+        PVC
+                Number of PVC circuits in use
+        nss
+                Number of nss circuits in use
+        nbbflt
+                Number of buffers in interface
+        bufuse
+                greatest Number of buffers used since slot started
+        bufcnt
+                Number of buffers left
+        in use
+                Number of buffers in use
+        ncmdlk
+                Number of command links in interface
+        c links
+                Number  of  command  links  left   (Command   links   are
+                descriptors  that contain error codes or the location and
+                quantity of data in buffers for a given device.)
+        in use
+                Number of command links in use
+Tymnet UTS4000 Operations Monitor (UOM)                                   Page 3
+
+
+        1.5.  Display ISIS rings Command        ____  _______ ____ _____ _______
+
+
+        Syntax:  DR This command causes a "real time" display of the ISIS
+        input and output rings.
+
+
+        1.6.  Display ISIS input ring Command        ____  _______ ____ _____ ____ _______
+
+
+        Syntax:  DIR adr
+
+        This command causes a "real time" display of the ISIS input  ring
+        only.   If  adr is not specified, the display begins at the start
+        of the input ring area.  If it is specified, the  display  begins
+        at the specified address.
+
+
+        1.7.  Display ISIS output ring Command        ____  _______ ____ ______ ____ _______
+
+
+        Syntax:  DOR adr
+
+        This command causes a "real time" display of the ISIS output ring
+        only.   If  adr is not specified, the display begins at the start
+        of the output ring area.  If it is specified, the display  begins
+        at the specified address.
+Tymnet UTS4000 Operations Monitor (UOM)                                   Page 4
+
+
+        2.  Line, Poll Group and Station Functions        __  _____ ____ _____ ___ _______ _________
+
+
+        The  second   section   of   the   UTS4000   Operations   Monitor
+        Specification consists of commands that provide information about
+        the current  status  of  the  lines,  poll  groups  and  stations
+        connected  to  the slot and provide a means to exert control over
+        them.
+
+        2.1.  Mode Command        ____  ____ _______
+
+        Syntax:  MODE aaa
+
+        Default:  ADR
+
+        The MODE command sets  the  selection  mode,  where  aaa  is  the
+        desired mode.  This determines whether in the applicable commands
+        the poll groups and stations are specified by  relative  position
+        number  or  address.  The default mode is ASCII.  Modes cannot be
+        mixed within a single command line.  The modes are  specified  as
+        follows:
+
+        REL
+                Relative position number.
+        ASCII
+                Address in ASCII (RID or SID).
+        HEX
+                Address in hexadecimal (RID or SID).
+        OCTAL
+                Address in octal (RID or SID).
+
+
+        If the MODE command is entered without  specifying  a  mode,  the
+        current mode is displayed.
+
+        Most commands requiring a  poll  group  and/or  station  argument
+        (ri/si)  operate  in  either mode.  The arguments entered will be
+        interpreted according to the current state of MODE.
+
+
+        2.2.  List Line Command        ____  ____ ____ _______
+
+        Syntax:  LLINE [ln]
+
+        The LLINE command displays the  line  status  for  the  specified
+        line,  where ln is the line number.  If no line is specified, the
+        command displays the status of all lines.
+
+
+        TERMINAL UOM - UTS4000 Operations Monitor  node  2104 slot 4
+        21May86 12:47:49
+         rL MDRP phyL nRIDs nSIDs flag rexmt Ptype   fast inac slow rate
+          0   no    8     3    12  up        SPCFC   .100   5.  30. SLOW
+          1  YES    9     3    12  up        SPCFC   .333   2.  20. fast
+          2   no   10     3    15  up         gnrl   .250       15. SLOW
+Tymnet UTS4000 Operations Monitor (UOM)                                   Page 5
+
+
+        Where the display is interpreted as follows:
+
+        rL
+                Relative line number (0, 1, 2....)
+        HOST
+                Host number associated with the line (HIF only)
+        MDRP
+                YES or no for multidrop
+        phyL
+                Physical line (synchronous port to which line is
+                attached)
+        nRIDs
+                Number of poll groups on the line
+        nSIDs
+                Number of SIDs on the line.
+        flag
+                shows up/down status of line
+        rexmt
+                number of retransmits
+        pType
+                indicates general or specific poll type
+        fast
+                time between polls when polling fast
+        inac
+                time between polls when polling at the inactive rate
+        slow
+                time between polls when polling slow
+        rate
+                which polling rate is currently in effect
+
+
+        2.3.  List Rid (poll group) Command        ____  ____ ___ _____ ______ _______
+
+        Syntax:  LRID ln,[ri]
+
+        The LRID command dibsplays  the  status  of  the  specified  poll
+        group,  where ln is the line number and ri is the poll group.  If
+        no poll group is specified, the status of all poll groups on  the
+        specified line is displayed.
+
+
+        TERMINAL UOM - UTS4000 Operations Monitor  node  2104 slot 4
+        21May86 12:48:01
+         rR RID nSIDs flag rexmt Ptype   fast inac slow rate
+          0   !     4  up        SPCFC   .300   5.  30. fast
+          1         4  up         gnrl   .300   5.  30. fast
+          2   %     4  up         gnrl   .300   5.  30. fast
+
+
+        Where the display is interpreted as follows:
+
+        rR
+                Relative RID (poll group) number on the interface (0,  1,
+                2,....)
+        RID
+Tymnet UTS4000 Operations Monitor (UOM)                                   Page 6
+
+
+                RID address as defined in the tymfile.
+        nSIDs
+                Number of stations in the poll group.
+        flag
+                up/DOWN status of the poll group
+        rexmt
+                the number of STX type retransmits (tif only) only).
+        Ptype
+                general or specific poll type is indicated here
+        fast
+                time between polls when polling fast
+        inac
+                time between polls when polling at the inactive rate
+        slow
+                time between polls when polling slow
+        rate
+                which polling rate is currently in effect
+
+
+        2.4.  List Station Command        ____  ____ _______ _______
+
+        Syntax:  LSID ln,ri,[si]
+
+        The LSID command displays the status of  the  specified  station,
+        where  ln is the line number, ri is the poll group, and si is the
+        station.  If no station is specified, the status of all  stations
+        in  the  specified  poll group is displayed.  In the address mode
+        the command will be  rejected  if  the  line  and/or  poll  group
+        numbers are not entered.
+
+        The poll group and station fields will be  interpreted  according
+        to the current mode.
+
+        TERMINAL UOM - UTS4000 Operations Monitor  node  2104 slot 4
+        21May86 12:48:11
+         rS SID nDIDs ckt key prt state flag   fast inac slow rate
+          0   Q     5 PVC             .  up    .900   5.  30. fast
+          1   R     5 nss F5          .  up    .900   5.  30. fast
+          2   S     5 nss F5          . DOWN
+          3   T     5 nss F5          .  up    .900   5.  30. fast
+
+
+        The display is interpreted as follows:
+
+        rS
+                The relative SID number for this SID on the interface.
+        SID
+                The SID address as defined in the tymfile.
+        nDIDs
+                The number  of  Peripheral  devices  accessible  to  this
+                station
+        ckt
+                The circuit type as specified in the tymfile  either  PVC
+                or NSS (SVC).
+        key
+Tymnet UTS4000 Operations Monitor (UOM)                                   Page 7
+
+
+                the pf key that causes the nss screen to be displayed
+        prt
+                Dispatcher port  number,  blank  indicates  there  is  no
+                circuit for this station.
+        state
+                Station state.  "." indicates that no  circuit  currently
+                exists  for  specified  station.   LOGIN  indicates  that
+                terminal interface  is  currently  building  circuit  for
+                specified  device.   UTS  indicates  that  circuit exists
+                between terminal interface and UTS type host via UTS host
+                interface  (TIF  only).   ASCII  indicates that a circuit
+                exists between terminal interface and an ASCII type  host
+                (host  that  accepts  ASCII character mode data streams).
+                LOCKED indicates that the SID has been  locked  out  (HIF
+                only) and will not be accesible until reset via the RESET
+                command (see 2.14).
+        fast
+                time between polls when polling fast
+        inac
+                time between polls when polling at the inactive rate
+        slow
+                time between polls when polling slow
+        rate
+                which polling rate is currently in effect
+
+
+        2.5.  List Device Command        ____  ____ ______ _______
+
+        Syntax:  LDID ln,[ri],[si]
+
+        The LDID command displays the last known status of all devices in
+        a  SID  where ln is the line number, ri is the poll group, and si
+        is the station.  If no station is specified, the  status  of  all
+        stations  in  the  specified poll group is displayed.  If no poll
+        group is specified, the status of allpoll groups on the specified
+        line is displayed.
+
+        The poll group and station fields will be  interpreted  according
+        to the current mode.
+
+      MINAL UOM - UTS4000 Operations Monitor  node  2104 slot 4
+        21May86 12:48:32
+        RID !
+          SID Q abs SID   0
+        s  .
+        t  .
+        u  .
+        v  .
+        w  .
+          SID R abs SID   1
+        s  .
+        t  .
+        u  message queued    4
+        v  .
+        w  .
+Tymnet UTS4000 Operations Monitor (UOM)                                   Page 8
+
+
+        the possible states are:
+
+        ready - selected  >
+        deselected        = and DID is r
+        selection delayed 5
+        message queued    4
+        NO RESPONSE       = and DID not r
+        TIMING ERROR      :
+        UNABLE TO PROCEED <
+        power on test     6
+        THRU      semicolon
+
+
+        2.5.  List History Command        ____  ____ _______ _______
+
+        Syntax:  LHIST ln/dr
+
+        The LHIST command displays the current history counts of xmit and
+        rcv   operations.    For  the  host  interface  this  history  is
+        maintained on  a  per  line  (ln)  basis  and  for  the  terminal
+        interface  it  is  maintained  on  a  per  drop (dr) basis.  In a
+        multiplexer configuration there may be multiple poll groups at  a
+        single physical drop (hence the distinction between drop and poll
+        group).
+
+
+        TERMINAL UOM - UTS4000 Operations Monitor  node  2104 slot 4
+        21May86 12:50:41
+        LINE 0
+        RECEIVE STATS
+          LSYN  OVER  NOIB  TIME  CRCE  LDAT  UNDF  FORC  PARE  ntrf  
+        Ack  Wabt  pa . 
+                              80                                         
+                    
+          pa A  pa W  pst.  pstA  pstW  sst.  sstA  sstW  rprq  disc 
+        txt.  txtA  txtW 
+                                                                         
+                    
+        TRANSMIT STATS
+          text  pol.  polA  stp.  stpA  rxrq  msgw  disc 
+                  81                                    
+        LINE 1
+           RID $
+        RECEIVE STATS
+          LSYN  OVER  NOIB  TIME  CRCE  LDAT  UNDF  FORC  PARE  ntrf  
+        Ack  Wabt  pa . 
+                              26                                         
+                    
+          pa A  pa W  pst.  pstA  pstW  sst.  sstA  sstW  rprq  disc 
+        txt.  txtA  txtW 
+                                                                         
+                    
+        TRANSMIT STATS
+          text  pol.  polA  stp.  stpA  rxrq  msgw  disc 
+                  26                                    
+Tymnet UTS4000 Operations Monitor (UOM)                                   Page 9
+
+
+        2.7.  Clear Line or Drop Xmit and Rcv operation history counts        ____  _____ ____ __ ____ ____ ___ ___ _________ _______ ______
+
+        Syntax:  CHIST ln/dr
+
+        The CHIST command zeros the history counts of  all  transmit  and
+        receive operations (as displayed by LHIST).
+
+
+        2.8.  Up Line Command.        ____  __ ____ ________
+
+        Syntax:  UPLINE ln
+
+        For  the  terminal  interface  the  UPLINE  command  causes   the
+        specified  Lines to be reentered in the polling list and to cause
+        polling to be resumed.   For  the  host  interface  this  command
+        causes the specified lines to respond to host polls.
+
+
+        2.9.  Down Line Command.        ____  ____ ____ ________
+
+        Syntax:  DNLINE ln
+
+        For  the  terminal  interface  the  DNLINE  command  causes   the
+        specified  line  to be removed from the polling list and to cause
+        polling to stop.  For the host interface this command causes  the
+        specified line to stop responding to polls.
+
+
+        2.10.  Up RID Command.        _____  __ ___ ________
+
+        Syntax:  UPRID ln,ri
+
+        For the terminal interface the UPRID command causes the specified
+        poll group to be reentered in the polling list for line ln and to
+        cause polling to be resumed.  For the host interface this command
+        causes the specified poll group(s) to respond to host polls.
+
+
+        2.11.  Down RID Command.        _____  ____ ___ ________
+
+        Syntax:  DNRID ln,ri
+
+        For the terminal interface the DNRID command causes the specified
+        poll group to be removed from the polling list for line ln and to
+        cause polling to stop.   For  the  host  interface  this  command
+        causes the specified poll group(s) to stop responding to polls.
+
+
+        2.12.  Up SID Command.        _____  __ ___ ________
+
+        Syntax:  UPSID ln,ri,si
+
+        For the terminal interface the UPSID command causes the specified
+        station  to  be  reentered in the polling list for line ln and to
+        cause polling to be resumed.  For the host interface this command
+Tymnet UTS4000 Operations Monitor (UOM)                                  Page 10
+
+
+        causes the specified stations to respond to host polls.
+
+
+        2.13.  Down SID Command.        _____  ____ ___ ________
+
+        Syntax:  DNSID ln,ri,si
+
+        For the terminal interface the DNSID command causes the specified
+        station  to  be  removed from the polling list for line ln and to
+        cause polling to stop.   For  the  host  interface  this  command
+        causes the specified station to stop responding to polls.
+
+
+        2.14.  Change RID Command.        _____  ______ ___ ________
+
+        Syntax:  CHRID ln,ori,nri
+
+        The CHRID command allows the user to change a RID address,  where
+        ln is the specified line, ori is the original RID address and nri
+        is the new RID address.
+
+        This command  is  only  accepted  if  the  poll  group  is  first
+        deactivated by the DNRID or DNLINE command.
+
+
+        2.15.  Change SID Command.        _____  ______ ___ ________
+
+        Syntax:  CHSID ln,ri,osi,nsi
+
+        The CHSID command allows the user to change a SID address,  where
+        ln  is the specified line, ri is the RID, osi is the original SID
+        address and nsi is the new SID address.
+
+        The command is only accepted if the poll group of which  SID  osi
+        is  a  member, is first deactivated by the DNSID, DNRID or DNLINE
+        command.
+
+
+        2.16.  List Display Logon String Command (TIF only).        _____  ____ _______ _____ ______ _______ ____ ______
+
+        Syntax:  LUSER
+
+        The LUSER command displays all the logon strings asked for.   For
+        SIDs  specified as PVCs there will be only one such logon string.
+        For Network Service Screen entries there will be a number of such
+        strings  depending  on  the  number of options configured for the
+        specified SID i.e the number of target hosts.
+
+        A list of choices is displayed:
+
+        1 only one SID
+        2 all SIDs on one RID
+        3 all SIDs on one LINE
+        4 all SIDs on interface
+        enter selection: [1, 2, 3 or 4]
+Tymnet UTS4000 Operations Monitor (UOM)                                  Page 11
+
+
+        all entries? (y or n): [y or n]
+
+        After the questions are answered, the strings are displayed.
+
+        LINE 0
+           RID !
+             SID Q
+               PVC  rel  0  MJASTRZ:835;xxxxxx
+
+             SID R
+               NSS 
+         rel  0         Fkey  F1     RUDMAN:835;xxxxxx
+
+
+        2.17.  Change Logon String Command. (TIF only)        _____  ______ _____ ______ ________
+
+        Syntax:  CHUSER
+.lit
+************************************************************************
+**       The CHUSER command changes the logon information for SID  si  and**
+************************************************************************
+.end lit
+.21        the  relative  entry rel for that SID.  For PVCs rel is always 0.
+        The arguments ln, ri, si and rel must all be specified along with
+        <string> which replaces the current logon information.
+
+        A list of choices is displayed:
+
+        1 only one SID
+        2 all SIDs on one RID
+        3 all SIDs on one LINE
+        4 all SIDs on interface
+        enter selection:
+        all entries? (y or n):
+
+        the user will be prompted for the information needed, then the 
+        operation will be performed.
+
+
+        2.18.  scope protocol command        _____  _____ ________ _______
+
+        Syntax:  SCOPE ln
+
+        This command displays a foreground protocol trace  for  line  ln.
+        This  trace  includes  RID/SID/DID  information, protocol manager
+        state, decoded function key, station  status,  peripheral  status
+        and  peripheral  initate  information together with poll response
+        times.  It provides  a  detailed  level  remote  line  monitoring
+        capability.
+
+
+        TIF
+
+         Transmit rsd   Receive rsd             State    e-b   since last
+           1 pol. 0Pp    3 TIME                rLIDLE  3.500
+           1 pol. 1Pp    3 TIME                rLIDLE  3.523         .076
+           1 pol. !Pp    3 TIME                rLIDLE  3.500         .025
+           1 pol. 0Pp    3 TIME                rLIDLE  3.500        9.375
+Tymnet UTS4000 Operations Monitor (UOM)                                  Page 12
+
+
+        HIF
+
+         Receive  rsd  Transmit rsd             State    e-b   since last
+           9 pol. 2Pp    2 Ack  2Tp            rACKNW   .000
+           B polA 2Pp    1 ntrf                rLIDLE   .000         .096
+          10 text 2Su   FF ....      Esc Dc2   rDPOLL               1.349
+
+
+        Each line of the SCOPE display shows  1  "transaction".   In  the
+        case  of  the  TIF,  first  a  transmit  to  the stations, then a
+        response.  In the case of the HIF, first a receive from the host,
+        then a response.
+
+        rsd
+                rsd stands for RID SID DID.  If the Transmit  or  Receive
+                condition has associated with it a RID SID and DID, these
+                are displayed
+
+        The following is a  list  of  all  possible  receive  conditions.
+        Conditions  that  appear in CAPS are error conditions detected in
+        the interface, not actual UTS4000 messages.  
+
+                 LSYN 0  lost sync
+                 OVER 1  overrun
+                 NOIB 2  no initial bufferlet
+                 TIME 3  timeout
+                 CRCE 4  crc error
+                 LDAT 5  lost data, no bufferlets
+                 UNDF 6  undefined
+                 FORC 7  forced completion
+                 PARE 8  parity error
+
+                if    TIF
+
+                 ntrf 9  no traffic                 (special)
+                  Ack a                             Dle 1
+                 Wabt b  wait a bit                 Dle ?
+                 pa . c  program attention          SEE NOTE 3
+                 pa A d     "        "     w/ACK
+                 pa W e     "        "     w/WABT
+                 pst. f  peripheral status          SEE NOTE 1
+                 pstA 10      "        "   w/ACK
+                 pstW 11      "        "   w/WABT
+                 sst. 12 station status             SEE NOTE 2
+                 sstA 13    "       "   w/ACK
+                 sstW 14    "       "   w/WABT
+                 rprq 15 RePly ReQuest              Dle Enq 
+                 disc 16 disconnect                 Dle Eot 
+                 txt. 17 text                       Stx SEE NOTE 4
+                 txtA 18   "  w/ACK
+                 txtW 19   "  w/WABT
+
+                else    HIF
+
+                 pol. 9  (select) poll              (none)
+Tymnet UTS4000 Operations Monitor (UOM)                                  Page 13
+
+
+                 rxrq a  ReXmission ReQuest         Dle Nak 
+                 polA b  (select) poll w/ACK        Dle 1
+                 stpA c  status poll w/ACK          Dle 1 Enq 
+                 disc d  disconnect                 Dle Eot Stx 
+                 stp. e  status poll                Enq 
+                 msgw f  message wait               Bel Stx 
+                 text 10 text                       Stx SEE NOTE 4
+                 dm p 11 dump print
+                 dm x 12 dump xmit
+                 dmpx 13 dump print, then dump xmit
+
+        The following is a list of all possible transmit conditions.
+
+                 text       0                             Stx SEE NOTE 4
+
+                if    TIF
+
+                 pol.       1  select / poll              (none)
+                 polA       2     "       "  w/ACK        Dle 1
+                 stp.       3  status poll                Enq 
+                 stpA       4     "     "  w/ACK          Dle 1 Enq 
+                 rxrq       5  ReXmission ReQuest         Dle Nak 
+                 msgw       6  message wait               Bel Stx 
+                 disc       7  disconnect                 Dle Eot Stx 
+
+                else    HIF
+
+                 ntrf       1  no traffic                 (special)
+                 Ack        2                             Dle 1
+                 Wabt       3  wait a bit                 Dle ?
+                 pa .       4  program attention          SEE NOTE 3
+                 pa A       5     "         "    w/ACK
+                 pa W       6     "         "    w/WABT
+                 pst.       7  peripheral status          SEE NOTE 1
+                 pstA       8      "         "   w/ACK
+                 pstW       9      "         "   w/WABT
+                 sst.       a  station status             SEE NOTE 2
+                 sstA       b     "       "   w/ACK
+                 sstW       c     "       "   w/WABT
+                 rprq       d  RePly ReQuest              Dle Enq 
+                 disc       e  disconnect                 Dle Eot 
+
+        NOTE 1
+
+        In the cases of pst.  pstA pstW  (peripheral  status)  additional
+        detail is displayed in the untitled column
+
+         Dle >   ==> ready - selected
+         Dle <   ==> depends on device (perhaps UNABLE TO PROCEED)
+         Dle :   ==> depends on device (perhaps TIMING ERROR)
+         Dle =   ==> NO RESPONSE (or deselected)
+
+        NOTE 2
+
+        In the cases of  sst.   sstA  sstW  (station  status)  additional
+Tymnet UTS4000 Operations Monitor (UOM)                                  Page 14
+
+
+        detail is displayed in the untitled column
+
+         Dle 0   ==> text-available response to status poll
+         Dle 4   ==> message queued
+         Dle 5   ==> peripheral selection is delayed
+         Dle 6   ==> power on confidence test completed
+         Dle ;   ==> THRU (station is through with peripheral interface)
+
+        NOTE 3
+
+        In the cases of pa .  pa A pa W (program  attention),  the  ASCII
+        code  coresponding to a program attention key is displayed in the
+        untitled column.  Use the table below.
+
+        Program Attention Key Codes
+
+        Key Label     ASCII HEX
+
+        MSG WAIT      Bel   07
+        F1            7     37
+        F2            G     47
+        F3            W     57
+        F4            g     67
+        F5            Sp    20
+        F6            !     21
+        F7            "     22
+        F8                  23
+        F9            $     24
+        F10           %     25
+        F11                 26                      _
+        F12           '     27
+        F13           (     28
+        F14           )     29
+        F15           *     2a
+        F16           +     2b
+        F17           ,     2c
+        F18           -     2d
+        F19           .     2e
+        F20           /     2f
+        F21           0     30
+        F22           1     31
+
+        NOTE 4
+
+        In the cases of text txt.  txtA txtW (text) the first  few  bytes
+        of the data are displayed in the untitled column.
+
+
+        State
+
+        This column indicates the state of the protocol manager.
+        All possible states are listed below
+
+                if    TIF
+                  rLIdle    line or poll group in idle state
+Tymnet UTS4000 Operations Monitor (UOM)                                  Page 15
+
+
+                  rStaPl    wtg for status poll response
+                  rSelPl    wtg for selection poll response
+                  rSelEr    selection poll error
+                  rTmSel    specific poll after selection delayed timeout
+                  rTmDel    specific poll after ack+selection delayed
+                  rTmQue    specific poll after ack+message queued
+                  rTmWAB    specific poll after WABT timeout
+                  rAcknw    wtg for ACK after ack'able message
+                  rTSdPi    sent poll after text/sd/pi
+                  rTxtSd    sent poll after text/sd
+                  rTxtPi    sent poll after text/pi
+
+                else  HIF
+
+                  rLIdle    initial state (wtg for host polling)
+                  rAcknw    wtg for host ACK
+                  rDPolA    wtg for poll after rcv'ing STX data)
+                  rDPoll    same as above but no host ACK req.
+                  rDiscn    wtg for host ACK (sent disconnect)
+
+        e-b
+                This  column  shows  how  much  time  (in  seconds)   the
+                operation consumed.  (end time minus begin time)
+
+        since last
+                This column shows how much time has elapsed  between  the
+                end  of  the  previous  event  and  the  beginning of the
+                current event.
+
+
+        2.19.  toggle trace no response suppression command        _____  ______ _____ __ ________ ___________ _______
+
+        Syntax:  TRCSUP [0 or 1]
+
+        This command allows the user to suppress the tracing of ntrf  (no
+        traffic)  entries in the SCOPE command.  1 causes the suppression
+        0 disables the suppression.  If  TRCSUP  is  entered  without  an
+        argument, the current state is displayed.
+
+        TrcSup is = 0
+
+
+        2.20.  Kill Circuits Command.        _____  ____ ________ ________
+
+        Syntax:  KILL ln,ri,si
+
+        The KILL command kills the circuit associated with the  specified
+        SID.  For PVCs, automatic re-establishment is prohibited.
+
+
+        2.21.  Build Circuits Command. (TIF only)        _____  _____ ________ ________
+
+        Syntax:  BUILD ln,ri,si (TIF only)
+
+        The BUILD command allows the  PVC  circuit  associated  with  the
+Tymnet UTS4000 Operations Monitor (UOM)                                  Page 16
+
+
+        specified SID that was killed by the KILL command to be rebuilt.
+
+
+        2.22.  Reset SID command (HIF only)         _____  _____ ___ _______
+
+        Syntax:  RESET ln,ri,si
+
+        This command unlocks a SID at the host interface.  The SID  state
+        may  become  LOCKED  (shown  in  LSID)  when  a prespecified host
+        signoff sequence does not complete successfully.  Locking the SID
+        ensures that no other user will be able to access that particular
+        SID and thus guards against session security violation.
+  )Qn Y
