@@ -1,0 +1,626 @@
+ SET FMSG OFF.
+  O
+ (PERSTATS)HSTHST.DMS
+ (NETSTAT)CKTS.DMS (MKHELLAF)HOMING (MKHELLAF)EURHST.DMS
+ (PERSTATS)NODNOD.DMS (PERSTATS)SITSIT.DMS
+ (NETSTAT)00529A.DMS 
+ (NETSTAT)00529B.DMS 
+ (NETSTAT)00529C.DMS 
+  (NETSTAT)00529D.DMS 
+                    .
+init  1 tmp.dmi.
+init  2 tty:.
+init  3 host.tra.
+define integer xnode.
+define integer ynode.
+define real    xcps12.
+define real    xcps21.
+define real    xsesln.
+define  real    x.
+define  real    y.
+define  real    z.
+define integer xsesnu.
+define integer xnumss.
+define integer xohost.
+define integer xthost.
+define text 1  iresp.
+define text 4  xsite1.
+define text 4  xsite2.
+define text 15 xcity1.
+define text 15 xcity2.
+define integer xstart.
+define integer xend.
+define text 1 xori.
+define text 1 xdest.
+define real xchar.
+
+dpl start.
+
+print on 2 fmt " do you want to clean hstshst.dms (y/n)? ->"$ end.
+accept iresp.
+if iresp eq 'n' then lab300.
+if iresp eq 'N' then lab300.
+dbs 1.
+f all.
+delete.
+lab300:print on 2 fmt " do you want to clean nodnod.dms (y/n)? ->"$ end.
+accept iresp.
+if iresp eq 'n' then lab301.
+if iresp eq 'N' then lab301.
+dbs 5.
+f all.
+delete.
+lab301:print on 2 fmt " do you want to clean sitsit.dms (y/n)? ->"$ end.
+accept iresp.
+if iresp eq 'n' then lab56.
+if iresp eq 'N' then lab56.
+dbs 6.
+f all.
+delete.
+
+if iresp ne '555' then lab99.
+ 
+ 
+LAB56:DBS 4.
+F ALL.
+PRINT ON 2 FMT " SEARCHING FOR SESSIONS ORIGINATING IN EUROPE" END.
+LAB50:DBS 4.
+GETREC LAB51.
+LET XOHOST EQ HOST.
+DBS  7.
+F ALL.
+F ORIGHOST EQ XOHOST.
+LAB52:DBS  7.
+GETREC LAB50.
+LET XNODE EQ ORIGNODE.
+LET YNODE EQ TERMNODE.
+LET XTHOST EQ TERMHOST.
+LET XCPS12 EQ 0.0 + INPUTCHAR/1000.0.
+LET XCPS21 EQ 0.0 + OUTPUTCHAR/1000.0.
+LET XSESLN EQ 0.0 + TOTMIN/60.0.
+LET XSESNU EQ SESSNO.
+LET XSTART STARTTIME.
+LET XEND   ENDTIME.
+ 
+IF STARTDATE EQ ENDDATE GOTO LAB53.
+LET XSTART EQ 0.
+LAB53:LET XORI 'E'.
+LET XDEST 'U'.
+IF XNODE GT YNODE GOTO LAB54.
+ 
+PRINT ON 1 XNODE  YNODE  XCPS12  XCPS21
+  XSESLN  XSESNU XOHOST XTHOST
+           XORI XDEST XSTART XEND
+FMT    I5 1X I5 1X F4.5 1X F4.5 1X F4.5  1X I10 1X I10 1X I10 1X A1 1X
+       A1 I10 1X I10 END.
+GOTO LAB52.
+LAB54:PRINT ON 1 XNODE  YNODE  XCPS12
+  XCPS21  XSESLN  XSESNU XOHOST XTHOST
+           XORI XDEST XSTART XEND
+FMT    I5 1X I5 1X F4.5 1X F4.5 1X F4.5 1X I10 1X I10 1X I10 1X A1 1X
+       A1 I10 1X I10 END.
+GOTO LAB52.
+ 
+ 
+LAB51: DBS 4.
+PRINT ON 2 FMT " SEARCHING FOR SESSIONS TERMINATING IN EUROPE" END.
+F ALL.
+LAB55:DBS 4.
+GETREC LAB66.
+LET XTHOST EQ HOST.
+DBS  7.
+F ALL.
+F TERMHOST EQ XTHOST.
+LAB57:GETREC LAB55.
+LET XNODE EQ ORIGNODE.
+LET YNODE EQ TERMNODE.
+LET XOHOST EQ ORIGHOST.
+LET XCPS12 EQ 0.0 + INPUTCHAR/1000.0.
+LET XCPS21 EQ 0.0 + OUTPUTCHAR/1000.0.
+LET XSESLN EQ 0.0 + TOTMIN/60.0.
+LET XSESNU EQ SESSNO.
+LET XSTART STARTTIME.
+LET XEND   ENDTIME.
+LET XORI 'U'.
+LET XDEST 'E'.
+IF XNODE GT YNODE GOTO LAB58.
+PRINT ON 1 XNODE YNODE XCPS12 XCPS21 XSESLN
+ XSESNU XOHOST XTHOST
+           XORI XDEST XSTART XEND
+FMT    I5 1X I5 1X F4.5 1X F4.5 1X F4.5 1X I10 1X I10 1X I10 1X A1 1X A1
+       I10 1X I10 END.
+GOTO LAB57.
+LAB58:PRINT ON 1 XNODE  YNODE  XCPS12
+  XCPS21  XSESLN  XSESNU XOHOST XTHOST
+           XORI XDEST XSTART XEND
+FMT    I5 1X I5 1X F4.5 1X F4.5 1X F4.5 1X I10 1X I10 1X I10 1X A1 1X A1
+       I10 1X I10 END.
+GOTO LAB57.
+ 
+ 
+LAB66:DBS 4.
+F ALL.
+PRINT ON 2 FMT " SEARCHING FOR SESSIONS ORIGINATING IN EUROPE" END.
+LAB60:DBS 4.
+GETREC LAB61.
+LET XOHOST EQ HOST.
+DBS  8.
+F ALL.
+F ORIGHOST EQ XOHOST.
+LAB62:DBS  8.
+GETREC LAB60.
+LET XNODE EQ ORIGNODE.
+LET YNODE EQ TERMNODE.
+LET XTHOST EQ TERMHOST.
+LET XCPS12 EQ 0.0 + INPUTCHAR/1000.0.
+LET XCPS21 EQ 0.0 + OUTPUTCHAR/1000.0.
+LET XSESLN EQ 0.0 + TOTMIN/60.0.
+LET XSESNU EQ SESSNO.
+LET XSTART STARTTIME.
+LET XEND   ENDTIME.
+ 
+IF STARTDATE EQ ENDDATE GOTO LAB63.
+LET XSTART EQ 0.
+LAB63:LET XORI 'E'.
+LET XDEST 'U'.
+IF XNODE GT YNODE GOTO LAB64.
+ 
+PRINT ON 1 XNODE  YNODE  XCPS12  XCPS21
+  XSESLN  XSESNU XOHOST XTHOST
+           XORI XDEST XSTART XEND
+FMT    I5 1X I5 1X F4.5 1X F4.5 1X F4.5  1X I10 1X I10 1X I10 1X A1 1X
+       A1 I10 1X I10 END.
+GOTO LAB62.
+LAB64:PRINT ON 1 XNODE  YNODE  XCPS12
+  XCPS21  XSESLN  XSESNU XOHOST XTHOST
+           XORI XDEST XSTART XEND
+FMT    I5 1X I5 1X F4.5 1X F4.5 1X F4.5 1X I10 1X I10 1X I10 1X A1 1X
+       A1 I10 1X I10 END.
+GOTO LAB62.
+ 
+ 
+LAB61: DBS 4.
+PRINT ON 2 FMT " SEARCHING FOR SESSIONS TERMINATING IN EUROPE" END.
+F ALL.
+LAB65:DBS 4.
+GETREC LAB76.
+LET XTHOST EQ HOST.
+DBS  8.
+F ALL.
+F TERMHOST EQ XTHOST.
+LAB67:GETREC LAB65.
+LET XNODE EQ ORIGNODE.
+LET YNODE EQ TERMNODE.
+LET XOHOST EQ ORIGHOST.
+LET XCPS12 EQ 0.0 + INPUTCHAR/1000.0.
+LET XCPS21 EQ 0.0 + OUTPUTCHAR/1000.0.
+LET XSESLN EQ 0.0 + TOTMIN/60.0.
+LET XSESNU EQ SESSNO.
+LET XSTART STARTTIME.
+LET XEND   ENDTIME.
+LET XORI 'U'.
+LET XDEST 'E'.
+IF XNODE GT YNODE GOTO LAB68.
+PRINT ON 1 XNODE YNODE XCPS12 XCPS21 XSESLN
+ XSESNU XOHOST XTHOST
+           XORI XDEST XSTART XEND
+FMT    I5 1X I5 1X F4.5 1X F4.5 1X F4.5 1X I10 1X I10 1X I10 1X A1 1X A1
+       I10 1X I10 END.
+GOTO LAB67.
+LAB68:PRINT ON 1 XNODE  YNODE  XCPS12
+  XCPS21  XSESLN  XSESNU XOHOST XTHOST
+           XORI XDEST XSTART XEND
+FMT    I5 1X I5 1X F4.5 1X F4.5 1X F4.5 1X I10 1X I10 1X I10 1X A1 1X A1
+       I10 1X I10 END.
+GOTO LAB67.
+ 
+ 
+LAB76:DBS 4.
+F ALL.
+PRINT ON 2 FMT " SEARCHING FOR SESSIONS ORIGINATING IN EUROPE" END.
+LAB70:DBS 4.
+GETREC LAB71.
+LET XOHOST EQ HOST.
+DBS  9.
+F ALL.
+F ORIGHOST EQ XOHOST.
+LAB72:DBS  9.
+GETREC LAB70.
+LET XNODE EQ ORIGNODE.
+LET YNODE EQ TERMNODE.
+LET XTHOST EQ TERMHOST.
+LET XCPS12 EQ 0.0 + INPUTCHAR/1000.0.
+LET XCPS21 EQ 0.0 + OUTPUTCHAR/1000.0.
+LET XSESLN EQ 0.0 + TOTMIN/60.0.
+LET XSESNU EQ SESSNO.
+LET XSTART STARTTIME.
+LET XEND   ENDTIME.
+ 
+IF STARTDATE EQ ENDDATE GOTO LAB73.
+LET XSTART EQ 0.
+LAB73:LET XORI 'E'.
+LET XDEST 'U'.
+IF XNODE GT YNODE GOTO LAB74.
+ 
+PRINT ON 1 XNODE  YNODE  XCPS12  XCPS21
+  XSESLN  XSESNU XOHOST XTHOST
+           XORI XDEST XSTART XEND
+FMT    I5 1X I5 1X F4.5 1X F4.5 1X F4.5  1X I10 1X I10 1X I10 1X A1 1X
+       A1 I10 1X I10 END.
+GOTO LAB72.
+LAB74:PRINT ON 1 XNODE  YNODE  XCPS12
+  XCPS21  XSESLN  XSESNU XOHOST XTHOST
+           XORI XDEST XSTART XEND
+FMT    I5 1X I5 1X F4.5 1X F4.5 1X F4.5 1X I10 1X I10 1X I10 1X A1 1X
+       A1 I10 1X I10 END.
+GOTO LAB72.
+ 
+ 
+LAB71: DBS 4.
+PRINT ON 2 FMT " SEARCHING FOR SESSIONS TERMINATING IN EUROPE" END.
+F ALL.
+LAB75:DBS 4.
+GETREC LAB86.
+LET XTHOST EQ HOST.
+DBS  9.
+F ALL.
+F TERMHOST EQ XTHOST.
+LAB77:GETREC LAB75.
+LET XNODE EQ ORIGNODE.
+LET YNODE EQ TERMNODE.
+LET XOHOST EQ ORIGHOST.
+LET XCPS12 EQ 0.0 + INPUTCHAR/1000.0.
+LET XCPS21 EQ 0.0 + OUTPUTCHAR/1000.0.
+LET XSESLN EQ 0.0 + TOTMIN/60.0.
+LET XSESNU EQ SESSNO.
+LET XSTART STARTTIME.
+LET XEND   ENDTIME.
+LET XORI 'U'.
+LET XDEST 'E'.
+IF XNODE GT YNODE GOTO LAB78.
+PRINT ON 1 XNODE YNODE XCPS12 XCPS21 XSESLN
+ XSESNU XOHOST XTHOST
+           XORI XDEST XSTART XEND
+FMT    I5 1X I5 1X F4.5 1X F4.5 1X F4.5 1X I10 1X I10 1X I10 1X A1 1X A1
+       I10 1X I10 END.
+GOTO LAB77.
+LAB78:PRINT ON 1 XNODE  YNODE  XCPS12
+  XCPS21  XSESLN  XSESNU XOHOST XTHOST
+           XORI XDEST XSTART XEND
+FMT    I5 1X I5 1X F4.5 1X F4.5 1X F4.5 1X I10 1X I10 1X I10 1X A1 1X A1
+       I10 1X I10 END.
+GOTO LAB77.
+ 
+ 
+LAB86:DBS 4.
+F ALL.
+PRINT ON 2 FMT " SEARCHING FOR SESSIONS ORIGINATING IN EUROPE" END.
+LAB80:DBS 4.
+GETREC LAB81.
+LET XOHOST EQ HOST.
+DBS 10.
+F ALL.
+F ORIGHOST EQ XOHOST.
+LAB82:DBS 10.
+GETREC LAB80.
+LET XNODE EQ ORIGNODE.
+LET YNODE EQ TERMNODE.
+LET XTHOST EQ TERMHOST.
+LET XCPS12 EQ 0.0 + INPUTCHAR/1000.0.
+LET XCPS21 EQ 0.0 + OUTPUTCHAR/1000.0.
+LET XSESLN EQ 0.0 + TOTMIN/60.0.
+LET XSESNU EQ SESSNO.
+LET XSTART STARTTIME.
+LET XEND   ENDTIME.
+ 
+IF STARTDATE EQ ENDDATE GOTO LAB83.
+LET XSTART EQ 0.
+LAB83:LET XORI 'E'.
+LET XDEST 'U'.
+IF XNODE GT YNODE GOTO LAB84.
+ 
+PRINT ON 1 XNODE  YNODE  XCPS12  XCPS21
+  XSESLN  XSESNU XOHOST XTHOST
+           XORI XDEST XSTART XEND
+FMT    I5 1X I5 1X F4.5 1X F4.5 1X F4.5  1X I10 1X I10 1X I10 1X A1 1X
+       A1 I10 1X I10 END.
+GOTO LAB82.
+LAB84:PRINT ON 1 XNODE  YNODE  XCPS12
+  XCPS21  XSESLN  XSESNU XOHOST XTHOST
+           XORI XDEST XSTART XEND
+FMT    I5 1X I5 1X F4.5 1X F4.5 1X F4.5 1X I10 1X I10 1X I10 1X A1 1X
+       A1 I10 1X I10 END.
+GOTO LAB82.
+ 
+ 
+LAB81: DBS 4.
+PRINT ON 2 FMT " SEARCHING FOR SESSIONS TERMINATING IN EUROPE" END.
+F ALL.
+LAB85:DBS 4.
+GETREC LAB99.
+LET XTHOST EQ HOST.
+DBS 10.
+F ALL.
+F TERMHOST EQ XTHOST.
+LAB87:GETREC LAB85.
+LET XNODE EQ ORIGNODE.
+LET YNODE EQ TERMNODE.
+LET XOHOST EQ ORIGHOST.
+LET XCPS12 EQ 0.0 + INPUTCHAR/1000.0.
+LET XCPS21 EQ 0.0 + OUTPUTCHAR/1000.0.
+LET XSESLN EQ 0.0 + TOTMIN/60.0.
+LET XSESNU EQ SESSNO.
+LET XSTART STARTTIME.
+LET XEND   ENDTIME.
+LET XORI 'U'.
+LET XDEST 'E'.
+IF XNODE GT YNODE GOTO LAB88.
+PRINT ON 1 XNODE YNODE XCPS12 XCPS21 XSESLN
+ XSESNU XOHOST XTHOST
+           XORI XDEST XSTART XEND
+FMT    I5 1X I5 1X F4.5 1X F4.5 1X F4.5 1X I10 1X I10 1X I10 1X A1 1X A1
+       I10 1X I10 END.
+GOTO LAB87.
+LAB88:PRINT ON 1 XNODE  YNODE  XCPS12
+  XCPS21  XSESLN  XSESNU XOHOST XTHOST
+           XORI XDEST XSTART XEND
+FMT    I5 1X I5 1X F4.5 1X F4.5 1X F4.5 1X I10 1X I10 1X I10 1X A1 1X A1
+       I10 1X I10 END.
+GOTO LAB87.
+LAB99:DBS 7.
+CLOSE.
+DBS  8.
+CLOSE.
+DBS  9.
+CLOSE.
+DBS 10.
+CLOSE.
+lab809:init 1 garbage.
+print on 2 fmt " loading the results in a temporary database" end.
+dbs 1.
+append data tmp.dmi.
+!load tmp.
+
+lab555:let xsesnu eq -1.
+print on 2 fmt " illiminating duplicate records" end.
+dbs 1.
+f all.
+update on.
+sort sesnu.
+lab800:getrec lab899.
+if sesnu ne xsesnu goto lab801.
+delete.
+goto lab800.
+lab801: let xsesnu eq sesnu.
+goto lab800.
+
+lab899:update off.
+print on 2 fmt "updating orig-desti" end.
+dbs 4.
+f all.
+lab701:dbs 4.
+getrec lab702.
+let xohost host.
+dbs 1.
+update on.
+f all.
+search orighost xohost.
+lab677:getrec lab676.
+change orig 'E'.
+goto lab677.
+lab676:f all.
+search termhost xohost.
+lab678:getrec lab679.
+change desti 'E'.
+goto lab678.
+lab679:goto lab701.
+
+lab702:dbs 1.
+update off.
+f all.
+lab704:getrec lab703.
+let xori orig.
+let xdest desti.
+let xstart startime. 
+let xend  endtime.
+let xsesln seslen.
+let xchar (kcps12+kcps21).
+print on 3 xori xdest xstart xend xsesln xchar
+format     1x a1 2x a1 2x i4 2x i4 2x f5.4 2x f5.4 end.
+goto lab704. 
+
+lab703:dbs 1.
+print on 2 fmt " compressing records for nodnod file" end.
+f all.
+sort node1 node2.
+getrec lab777.
+lab600:let xnode eq node1.
+let ynode eq node2.
+let xcps12 eq kcps12.
+let xcps21 eq kcps21.
+let xsesln eq seslen.
+let xnumss eq 1.
+lab700:getrec lab778.
+if xnode ne node1 goto lab750.
+if ynode ne node2 goto lab750.
+let x eq kcps12.
+let y eq kcps21.
+let z eq seslen.
+let xcps12 eq xcps12 + x.
+let xcps21 eq xcps21 + y.
+let xsesln eq xsesln + z.
+let xnumss eq xnumss + 1.
+goto lab700.
+lab750: dbs 2.
+let xsite1 eq '-1'.
+let xsite2 eq '-1'.
+let xcity1 eq '-- '.
+let xcity2 eq '-- '.
+f all.
+f pt1 eq xnode.
+lab531:getrec lab550.
+if pty1 eq 'HOST' goto lab531.
+let xsite1 eq site1.
+let xcity1 eq place1.
+lab550: f all.
+f pt1 eq ynode.
+lab532:getrec lab560.
+if pty1 eq 'HOST' goto lab532.
+let xsite2 eq site1.
+let xcity2 eq place1.
+lab560:dbs 5.
+!print on 2 fmt " adding record to nodnod" end.
+add node1 xnode node2 ynode kcps12 xcps12 kcps21 xcps21 seslen xsesln 
+    numses xnumss site1 xsite1 site2 xsite2 city1 xcity1 city2 xcity2.
+goto lab600.
+lab778:dbs 5.
+!print on 2 fmt " adding record to nodnod" end.
+add node1 xnode node2 ynode kcps12 xcps12 kcps21 xcps21 seslen xsesln 
+    numses xnumss site1 xsite1 site2 xsite2 city1 xcity1 city2 xcity2.
+lab777:dbs 1.
+close.
+dbs 2.
+close.
+dbs 5.
+print on 2 fmt " compressing records for site file" end.
+f all.
+sort site1 site2.
+getrec lab802.
+lab625:let xsite1 eq site1.
+let xsite2 eq site2.
+let xcity1 eq city1.
+let xcity2 eq city2.
+let xcps12 eq kcps12.
+let xcps21 eq kcps21.
+let xsesln eq seslen.
+let xnumss eq numses.
+lab725:getrec lab803.
+if xsite1 ne site1 goto lab775.
+if xsite2 ne site2 goto lab775.
+let x eq kcps12.
+let y eq kcps21.
+let z eq seslen.
+let xcps12 eq xcps12 + x.
+let xcps21 eq xcps21 + y.
+let xsesln eq xsesln + z.
+let xnumss eq xnumss + numses.
+goto lab725.
+lab775:dbs 6.
+!print on 2 fmt " adding record to sitsit" end.
+add     numses xnumss site1 xsite1 site2 xsite2 city1 xcity1 city2 xcity2
+        kcps12 xcps12 kcps21 xcps21 seslen xsesln .
+
+goto lab625.
+lab803:dbs 6.
+!print on 2 fmt " adding record to sitsit" end.
+add     numses xnumss site1 xsite1 site2 xsite2 city1 xcity1 city2 xcity2
+        kcps12 xcps12 kcps21 xcps21 seslen xsesln .
+
+lab802:dbs 6.
+f all.
+lab33:dbs 6.
+getrec lab44.
+let xsite1 eq site1.
+let xsite2 eq site2.
+dbs 3.
+f oldsit eq xsite1.
+getrec lab39.
+let xsite1 eq newsit.
+let xcity1 eq city.
+dbs 6.
+change site1 xsite1.
+change city1 xcity1.
+lab39:dbs 3.
+f oldsit eq xsite2.
+getrec lab33.
+let xsite2 eq newsit.
+let xcity2 eq city.
+dbs 6.
+change site2 xsite2.
+change city2 xcity2.
+goto lab33.
+
+lab44:dbs 6.
+f all.
+lab360:dbs 6.
+getrec lab999.
+let xsite1 eq site1.
+let xsite2 eq site2.
+dbs 4.
+f all.
+f site eq xsite1.
+getrec lab138.
+goto lab139.
+lab138:dbs 6.
+print on 2 xsite1 city1 fmt "changing" a4 2x a12 end.
+change site1 'US'.
+change city1 'US' .
+lab139: dbs 4.
+f site eq xsite2.
+getrec lab141.
+goto lab360.
+lab141:dbs 6.
+print on 2 xsite2 city2 fmt "changing" a4 2x a12 end.
+change site2 'US'.
+change city2 'US' .
+goto lab360.
+lab999:dbs 6.
+f all.
+lab47:getrec lab7777.
+if site1 ne 'US' goto lab47.
+let xsite1 eq site2.
+let xcity1 eq city2.
+change site1 xsite1.
+change city1 xcity1.
+change site2 'US'.
+change city2 'US'.
+let x eq kcps12.
+let y eq kcps21.
+change kcps12 y.
+change kcps21 x.
+goto lab47.
+lab7777:print on 1 fmt " finish with file d" end.
+dpl end.
+!dbs 6.
+!f all.
+!sort site1 site2.
+!getrec lab1802.
+!type site1 site2.
+!lab1625:dbs 6.
+!let xsite1 eq site1.
+!let xsite2 eq site2.
+!let xcity1 eq city1.
+!let xcity2 eq city2.
+!let xcps12 eq kcps12.
+!let xcps21 eq kcps21.
+!let xsesln eq seslen.
+!let xnumss eq numses.
+!lab1725:getrec lab1803.
+!type site1 site2.
+!if xsite1 ne site1 goto lab1775.
+!if xsite2 ne site2 goto lab1775.
+!let x eq kcps12.
+!let y eq kcps21.
+!let z eq seslen.
+!let xcps12 eq xcps12 + x.
+!let xcps21 eq xcps21 + y.
+!let xsesln eq xsesln + z.
+!let xnumss eq xnumss + numses.
+!goto lab1725.
+!lab1775:dbs 8.
+!print on 2 fmt " adding record to sitsit" end.
+!add     numses xnumss site1 xsite1 site2 xsite2 city1 xcity1 city2 xcity2
+!        kcps12 xcps12 kcps21 xcps21 seslen xsesln .
+!goto lab1625.
+!lab1803:dbs 8.
+!print on 2 fmt " adding record to sitsit" end.
+!add     numses xnumss site1 xsite1 site2 xsite2 city1 xcity1 city2 xcity2
+!        kcps12 xcps12 kcps21 xcps21 seslen xsesln .
+!lab1802: dbs 6.
+!f all.
+!delete.
+!dbs 8.
+!f all.
+!dbs 6.
+!append set 8.
+!dpl end.   
