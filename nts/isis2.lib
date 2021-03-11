@@ -1,0 +1,1253 @@
+.	<<	file	ISIS2.LIB	>>
+
+.SEC(|ISIS LIBRARY PACKAGES|)
+.TOPIC(|ISIS library|)
+.TOPIC(|library|)
+.TOPIC(|packages, library|)
+	For convenience in developing and maintaining interfaces,
+a collection of library packages have been created.
+These are maintained in directory ISIS2, and all have the
+extension "*.LIB".
+
+.SS(|ISIS Interface Library Packages|)
+
+	These packages all require that certain parameters be pre-defined.
+	The following parameters should be included in all interfaces:
+.BEGIN BOX
+:	FILE.T0n		the name of this file
+MAXHST	EQ	1		:maximum number of hosts for slot
+MAXPRT	EQ	$A 32		:maximum number of ports for slot
+NTOUT	EQ	5		:number of timeout entries
+IRSIZE	EQ	200		:size of ISIS input ring, bytes
+ORSIZE	EQ	300		:size of ISIS output ring, bytes
+CNTRL	EQ	1		:See first word of CTA area
+.TOPIC(|CTA|)
+MAXCHAR	EQ	14		:number of chars to input before break
+ECHO	EQ	1		:set up for tymsat echo
+ENGINE	EQ	1		:set up for tymnet engine
+.END
+	Additional parameters may be defined as needed for the specific
+interface.
+Some of the above symbols are not needed if certain *.LIB files
+are not used, but provide a good first approximation to the
+set required.
+
+.SSS(|START.LIB|)
+	This file should always be assembled IMMEDIATELY AFTER
+the *.T0n file.
+Among other items, segment usage is initialized.
+	The following parameters should be defined in the *.com file:
+.BEGIN VERBATIM
+
+MAXHST	maximum number of hosts associated with this interface slot
+MAXPRT	maximum number of ports associated with this interface slot
+NTOUT	number of timeout list entries to generate
+CNTRL	dispatcher control bits
+ENGINE	set to 1 if executing on a Tymnet Engine
+IRSIZE	number of bytes to provide for input ring, from dispatcher
+ORSIZE	number of bytes to provide for output ring, to dispatcher
+	(note...IRSIZE and ORSIZE must each be less than 32K!)
+
+	The following MUST be defined SOMEWHERE in the assembly:
+
+IRING	the start of the input ring, from dispatcher
+ORING	the start of the output ring, to dispatcher
+ENTRY	the location of the first instruction to be executed
+
+	The following symbols are defined for convenience:
+
+RATE	the rate of the fast clock (ticks/second)
+NRATE	address of a word containing the value RATE
+FASTC	address of a word containing  realtime fast clock
+SLOWC	address of a word containing  realtime slow clock (1-second)
+GMT	address of a word containing GMT clock
+TEMPER	address of a byte containing machine temperature
+VOLTS	address of a byte containing machine voltage
+VERNO	halfword containing ISIS version number
+HOSTX	halfword containing Kernel host number
+NODEX	halfword containing Kernel node number
+SLOTNO	halfword containing slot number
+R0-R15	symbolic names for the registers
+SEGn	the start address of segment n (0-0E)
+HOSTS	halfword array of host numbers as known by the dispatcher (R/O)
+PORTS	halfword array of ports/host as known by dispatcher (R/O)
+
+
+	The following symbols MAY be defined. defaults used otherwise
+
+APROTn	protection byte for area n. default area 1 write protected,
+	other areas execution protected.
+HOSTn	host number for host position n. default none.
+HPRTn	number of ports for host position n. default none.
+DSTART	user DDT execution start address. default none
+FPANEL	halfword cell for front panel display. default cell allocated
+FRISIS	Bit array for input-allowed (1=allowed). Default array
+	allocated
+TOISIS	Bit array for output-allowed (1=allowed). Default array
+	allocated
+VERSION	version number for slot (default zero)
+REVLEV	revision level for slot code (default zero)
+PCTTBL	bit array for indicating characters terminating project code
+	(default none)
+A.DATA	segment number for data area. Default 0
+A.CODE	segment number for code area. Default 1
+A.BDAT	segment number for based data. Default 2.
+A.RING	segment number for rings. Default 2.
+A.BUFF	segment number for buffer(let)s. Default 2.
+
+In addition, most SVC calls have been assigned symbolic names.
+.END
+
+.SSS(|TRACE.LIB|)
+	This file provides the necessary backbone for using the TYMNET-ENGINE
+hardware-trace feature.  It should be assembled IMMEDIATELY AFTER the
+START.LIB file.  The file may be assembled directly from the library
+version, in which case it is necessary to patch the appropriate test
+into the assembled code, OR it may be copied and the test hard-coded.
+Storage is allocated in segments 0 and A.CODE.
+	The symbols available are:
+.BEGIN BLOX
+	TRACE###A patch area for code.  There are 144d bytes of area available.
+This patch area is initialized with code to save the last trapped address in
+TRSAVE and resume the trace.  It may be patched or recoded for any other
+special operations required, such as checking the state of a particular cell.
+	TRBGN###Transfer to this location will cause execution to proceed at
+ENTRY, with trace enabled.
+	TRPSD###The last trap PSD saved.  Initialized to transfer to ENTRY,
+tracing enabled.
+	TRSAVE##17d words of temp storage, available to save registers, etc.
+	IPSD####The PSD loaded by TRBGN.  Initialized to transfer to ENTRY,
+with trace enabled.
+.END
+	The user should refer to the TYMNET ENGINE DOCUMENT
+(source:  (ISISDOC)ENGINE.DOC) for details of the operation of the trace
+feature.
+
+.SSS(|BID.LIB|)
+	Library package for BID, BIDH.
+Used to find the index of the left-most bit within a bit pattern.
+Either routine is called with bit pattern in R1, link on R3.
+Returns number of the left-most non-zero bit in R2.
+R0, R4-R15 are preserved.
+Storage is allocated in segment 1.
+.BEGIN BLOX
+.TOPIC(|BIDH routine|)
+	BIDH####Halfword bit identifier.
+CONSTRAINT---left half of R1 must be zero if bit 16 is zero!
+Returns original word in R1, number of leftmost bit of right half of
+R1 in R2.
+.TOPIC(|BID routine|)
+	BID#####FULLWORD bit identifier.
+Returns original word in R1, number of leftmost non-zero bit in R2.
+.END
+	Note that if the symbol ENGINE is defined and .GT. 0 then the
+Tymnet Engine instructions JFFO and JFFOH will be used, respectively.
+
+.SSS(|TIMOUT.LIB|)
+	This package contains the standard timeout routines.
+These permit the near-automatic scheduling of routines, which are
+to execute at some specific time in the future.
+Times are based on FASTC, and thus provide a resolution of
+approximately 1.6 milliseconds.
+Storage is defined in segments 0 and 1.
+	The following parameter MUST be defined at assembly time:
+.ONCE BLOX
+	NTOUT###number of timeout entries which may be active at any one time.
+	Six symbols are declared:
+.BEGIN BLOX
+.TOPIC(|IZT routine|)
+	IZT#####InitialiZe Timeout.
+Called at initialization, link on R0.   Registers are not preserved.
+Should be called before any attempts are made to call TOPUT.
+.TOPIC(|TIMOUT routine|)
+	TIMOUT##Timeout servicing.
+To be called periodically,  link on on R0.   Will in turn jump to any
+routines which should be serviced (no registers are preserved):
+.BEGIN BOX
+		R0 = routine address
+		R1 = current fast-clock time.
+.END
+.TOPIC(|TORET ADDRESS|)
+	TORET###Timeout service return address.
+ALL routines called by TIMOUT should exit to here.
+.TOPIC(|TOPUT ROUTINE|)
+	TOPUT###Timeout Put-Up-Timeout.
+Expects to   JAL R10,CRASH   if list overflows, crash type is then 15d.
+Any code may call this to place an entry on timeout list:
+.BEGIN BOX
+		link on R5...R6--R15 preserved
+		R0 = address to transfer to
+		R1 = next time to call routine
+.END
+.TOPIC(|TOGET routine|)
+	TOGET###delete an existing timeout entry.
+Called to delete an entry already on timout list:
+.BEGIN BOX
+		link on R5...R6--R15 preserved
+		R0 = routine address...entry with
+		    this address will be deleted.
+.END
+.TOPIC(|TONOW routine|)
+	TONOW###execute a timeout entry IMMEDIATELY.
+Called to flush an entry, and execute it NOW!
+.BEGIN BOX
+		link on R5...NO registers preserved!
+		routine address in R0
+.END
+.END
+	NOTE...when a routine is called from timeout list,
+it is removed from list,
+and must call TOPUT to be called again.
+	ALSO...TOGET and TONOW both do normal returns,
+even if no entry is found.
+
+.SSS(|FRING.LIB|)
+.TOPIC(|RING|)
+.TOPIC(|ISIS rings|)
+	A package is available for handling the ISIS rings.
+It does require the dedication of registers R14 or R15 during a message
+sequence, but does permit the concurrent manipulation of both
+input and output rings.
+It is fast because the descriptor is maintained in the register,
+and thus only the operand need be a memory reference.
+It also permits one to scan through an input message, and then "back-up"
+and restart the scan if some condition is detected.
+	The following CONSTRAINTS apply:
+	1.  Once started, register 14 or 15 is dedicated to that
+operation, until it is "ended".
+	2.  If a new operation is started before the previous operation is
+"ended", the previous operation is aborted, and the appropriate
+ring is effectively left unchanged.
+	3.  This package now permits simultaneous input and output!
+.BEGIN BOX
+		R14 is used for input operations;
+		R15 is used for output operations.
+.END
+	The routines may be divided into utility, primative input,
+and primative output routines:
+.SSSS(|Utility Routines|)
+	These are all called with link R5, and expect a pointer to the string
+in R3.  Registers R6-R13 and R15 are preserved.
+Each of these expects an argument in SC format (SC format consists
+of 1 byte containing a count of bytes, followed by that number of bytes):
+.BEGIN BLOX
+.TOPIC(|OCS routine|)
+	OCS#####Output Canned String.
+OCS expects R2 = port number.
+OCS will output the string as a data message to the specified port.
+OCS may be used to place a complete text message to the port.
+OCS goes to completion, and then terminates the operation.
+.TOPIC(|OCM routine|)
+	OCM#####Output Canned Message.
+OCM expects R2 = port number.
+OCM will output the string as a message to the specified port.
+The first character of the string is passed as the message type.
+OCM may be used for fixed messages, such as logon strings, etc.  OCM goes
+to completion, and terminates the operation.
+.TOPIC(|OBS routine|)
+	OBS#####Output Byte String.
+OBS expects R2 = number of characters.
+OBS will output the specified string into the current message.
+OBS neither "starts" nor "terminates" the message, but instead may be
+used to insert "canned" fragments into a message being constructed.  The
+string is NOT expected to be in SC format.
+.END
+.SSSS(|Primative Input Routines|)
+	All link on R4, and pass the argument (if any) in R0., preserving
+R1-R3, R5-R13, and R15:
+.BEGIN BLOX
+.TOPIC(|LOOK routine|)
+	LOOK####Determine if an input message exists...normal return if not;
+skip (4) return if so, and then:
+.BEGIN BOX
+		R1 = port number
+		R2 = message type code (peek)
+.END
+	########On skip return, condition codes are set such that JE will
+succeed if message is for port 0.  The port number will have been removed from
+the message, but the message code will not have been removed (you get a peek
+at it).
+.TOPIC(|GETCH routine|)
+	GETCH###Get a character.
+.TOPIC(|GETH routine|)
+	GETH####Get a halfword.
+An even number of bytes should previously have been removed for expected
+results.
+.TOPIC(|GETW routine|)
+	GETW####Get a word.
+An even number of halfwords should have been removed previously for
+expected results.
+.TOPIC(|FLUSH routine|)
+	FLUSH###Flush away remainder of input message.
+R0 is number of bytes remaining, to skip over.  After absorbing these bytes,
+performs ELIR.
+.TOPIC(|ELIR routine|)
+	ELIR####End-Logical-Input-Record.
+"Ends" current message, sets up pointers for next message.
+.END
+.SSSS(|Primative Output Routines|)
+	All link on R4, primary argument in R0; preserve R0-R3, R5-R14, unless
+used for arguments, or otherwise specified:
+.BEGIN BLOX
+.TOPIC(|ROOM routine|)
+	ROOM####R0 = number of characters required for next message, returns
+when that much room is available in output ring.  MAY DISMISS.
+SMASHES R1.
+.TOPIC(|SPACE routine|)
+	SPACE###Returns number of characters of space available in output ring.
+.TOPIC(|SLOR routine|)
+	SLOR####Start Logical Output Record.  MAY DISMISS!  Provides function
+of ROOM,  PUTH, and PUTCH for first 3 chars of message:
+.BEGIN BOX
+		R0 = number of bytes required
+		R1 = port #
+		R2 = message type code
+.END
+.TOPIC(|PUTCH routine|)
+	PUTCH###places character in next position of ring.
+.TOPIC(|PUTW routine|)
+	PUTH####places halfword in next position of ring.  An even number of
+bytes should have been output previously in this message.
+.TOPIC(|PUTW routine|)
+	PUTW####places word in next position of ring.  An even number of
+halfwords should have been output previously in this message.
+.TOPIC(|ELODR routine|)
+	ELODR###End Logical Output Data Record.  Places byte count into
+message type to make data message, then performs ELOR.
+.TOPIC(|ELOR routine|)
+	ELOR####End Logical Output Record.
+"Ends" message.  Forwards message to DISPATCHER.
+.END
+
+
+.SSS(|BUFFER.LIB|)
+	This package contains all code and storage allocation needed for
+bufferlet usage.
+	If the symbol BUFTRC is defined and has a value greater than 0,
+then a trace of all GCI and WCI calls will be included and
+HISX will be a halfword pointer into a table HISTAB.
+.BEGIN BLOX
+	HISTAB##will contain 100 one word entries.  Each entry contains
+a one byte character, one byte of buffer number, and a halfword
+address of the caller of GCI/WCI.  The table is circular:
+.BEGIN BOX
+	byte 0		the character
+	byte 1		buffer number
+	byte 3,4	the halfword address from which the routine
+				was called.
+.END
+.END
+	The following parameters MUST be defined before assembly:
+.BEGIN BOX
+NBUF	the number of buffers to create
+NBFLET	the number of bufferlets to create
+.END
+	A ~<BUFFERLET> is an element in a pool of data, set up as a
+set of linked lists.
+A bufferlet is 8 bytes long, and can contain up to 6 bytes of data
+(the other 2 bytes are used for list linking).
+	A ~<BUFFER> is a set of four half-word descriptors; it contains
+no data of itself.
+It DOES contain pointers to the data associated with it, in a
+pool of storage associated with the routines.
+Buffers are numbered 0, 1, ..., NBUF-1.
+Buffers are addressed by ~<buffer index>: the index for a buffer is
+twice the number of that buffer.
+	Buffer index may be used to index into the following halfword arrays
+from external routines:
+.BEGIN BOX
+BF	buffer flags (see below)
+BB	buffer start address (in bufferlet pool)
+BE	buffer end address (in bufferlet pool)
+BCT	buffer counts
+.END
+	The following should also be defined externally (in the user package):
+.BEGIN BLOX
+	FLAGS###a bit array of length corresponding to the maximum BF
+(buffer flag) value.
+.END
+	The significance of FLAGS is as follows:  normally, one has
+several different processes running concurrently (e.g., input, output),
+each of which may need to service a collection of buffers--in particular,
+that set of buffers that is non-empty.
+Whenever a character is placed into an empty buffer,
+the associated BF value is taken as a (bit) index into
+FLAGS, and the assigned bit is turned on.
+This permits the process to pick up one of it's flag words, and
+detect if it has anything to do.
+(If so, it can use BID to determine one of the bits, and then
+service the associated buffer.)
+The bit is automatically turned off when the last character is removed
+from the buffer.
+	NOTE...it is up to the user program to initialize the BF array, and
+thereby force the partitioning of the FLAGS array.
+	There are several routines available.
+Each routine is called with (unless otherwise specified):
+.BEGIN BOX
+		Link on R4
+		R0 = argument
+		R1 = buffer index (buffer number*2)
+.END
+	Routines:
+.BEGIN BLOX
+.TOPIC(|IZBF routine|)
+	IZBF####link on R5, used to initialize buffers.
+.TOPIC(|GCI routine|)
+	GCI#####get a character from buffer.
+.TOPIC(|WCI routine|)
+	WCI#####write a character into buffer.
+.TOPIC(|WCD routine|)
+	WCD#####back up a buffer to restore last character.
+.TOPIC(|EMPTY routine|)
+	EMPTY###empty (flush) buffer.
+.END
+	The package uses routines in TIMOUT.LIB --- requires one timeout list
+entry.
+	The bufferlet pool is divided into two parts:
+the main pool, and the reserve tank.
+(The reserve tank normally contains 1/8 of the total number of
+bufferlets.)
+If the main pool is ever emptied, the reserve tank is transfered to it.
+At some later time, an attempt is made to restore the reserve tank,
+zapping one or more buffers as necessary.  If this happens, a diagnostic
+will be sent to the supervisor, advising of the buffer zap.
+This condition is abnormal, and caused by a malfunctioning program,
+or by a misallocation of bufferlets (too few for the application).
+	If the macro ZAPBUF is defined then the code in the macro will
+be executed whenever CKBZ is forced to zap a buffer. The code
+will be executed immediately following the call to EMPTY
+(R1 will contain the buffer index).  The first line of the macro
+must be "ZAPBUF MACRO [.X" (where X may be a carriage return
+or semicolon).
+
+.SSS(|BBFLET.LIB|)
+	This package contains all code and storage allocation needed for
+dynamic allocation of big bufferlets.  It contains no routines
+which manage data in big bufferlets.  Such routines are left to
+be written by the user.
+
+	This is the two level re-entrant version (all routines can be called
+by both foreground and background).
+	The following parameters MUST be defined before assembly:
+.BEGIN BLOX
+	NBBFLT###the number of big bufferlets to create.  Two of them will
+"never" be allocated, to avoid possible race conditions
+and unraveling of the free list.  This can't be
+counted on, however, since it is possible for one of the
+unusable 2 to get allocated if things are timed in just the
+right order.
+	BBFLSZ##the size (in bytes) of a big bufferlet, MUST be even.
+.END
+	If more than one segment (64K) of bufferlets are being
+defined, the symbol FWBBF must be globally defined and set
+to 1.  This will cause all bufferlet pointers to be a fullword.
+All external references to the bufferlet pointers must reflect this.
+	The following parameters are defined for the user:
+.BEGIN BLOX
+	BBUFER##base address of big bufferlet storage area.
+	BBFPSZ##The size in bytes of a bufferlet pointer.
+.END
+	The following external routines are used:
+.BEGIN BLOX
+	CRASH###JAL R10,Cperformed if catastrophic theoretically
+impossible conditions occur.
+.END
+	The big bufferlets are kept in a double linked free list
+from which they are allocated when needed.  The pointers
+used are relative to BBUFER.
+	The package contains both utility and primitive routines
+(utility routines are called with link on R5, with R2, R6, and R7 volatile):
+.BEGIN BLOX
+	PBBC####Put Big Bufferlet Chain.
+R3 = pointer to 1st big bufferlet in chain.
+PBBC will return a chain of big bufferlets to the dynamic pool.
+.END
+	Primitive routines are called with link on R4, with R2, R6, and R7
+volatile:
+.BEGIN BLOX
+	IZBB####Initialize Big Bufferlets.
+Initializes big bufferlet double linked list used to
+dynamically allocate big bufferlets.
+	GBB#####Get Big Bufferlet.
+.BEGIN BOX
+		Return		-No Big Bufferlet is available.
+		Skip return	-R3 has pointer to big bufferlet,
+				 chain half-word in big bufferlet
+				 set to zero.
+.END
+	PBB#####Put Big Bufferlet.
+R3 has pointer to big bufferlet to return to dynamic pool.
+.END
+	Debugging modes (active if symbol defined as a positive number):
+.BEGIN BLOX
+	BBF.D1##Count GBB and RBB calls in global cell 'BUFCNT'.
+When all bufferlets put back, BUFCNT=0.  Crash if BUFCNT<0.
+	BBF.D2##Software crash when no bufferlets available on GBB call.
+	BBF.D3##On all returns of BB to chain, check BB address range.
+	BBF.D4##On all gets and puts to the bufferlet pool an indicator is
+set to indicate the status of the bufferlet.  If a bufferlet in use is reused
+or an unused bufferlet is released it will crash.
+.END
+
+.SSS(|CRASH.LIB|)
+	This is a generalized crash package.
+It handles both software and hardware crashes.  On any crash, the
+registers are saved in CRREG, and CRSHCT is incremented.
+Software crashes occur via:
+.ONCE CENTER
+JAL R10,CRASH.
+CRASH saves (R10) in cell  CPOINT.
+	Software crashes may be "good" or "bad"...if "good", the
+calling sequence is:
+.BEGIN BOX
+	JAL	R10,CRASH
+	HC	0		:this key distinguishes a "good"
+				:crash from bad
+	BC	4*L,Y		:first byte is 4*register linked
+				:to routine, Y is crash type
+.END
+	Then register (L) is saved in CFROM, and Y is saved in CRASHC.
+	In the event of a hardware failure,
+CPOINT contains the instruction address
+at the time of failure, CRASHC contains the failure reason, and
+CFROM is set =-1.
+	On completion of crash, transfers to label START, defined
+in the user code.
+	If the symbol CRSTOP is defined, and set .GT. 0, then this routine
+will permit only one crash (except power failure or manual restart).
+When this routine executed the second time the registers will be restored
+from CRREG and the slot will be HALTED.
+
+.SSS(|FRONT.LIB|)
+	This package is the ISIS front end...used to service the
+ISIS input and output rings, and to activate user code
+whenever a break (user defined) is encountered.
+	It also activates user code when a user-processable
+(also user defined) non-data message is encountered,
+if excessive data is input without a break, or if a timeout
+occurs for a port.
+
+.SSSS(|Conventions|)
+	Each of NPORT ports has a buffer-pair associated with it.
+Even numbered buffers are input buffers...the corresponding
+odd numbered buffer is that port's output buffer.  The user-
+provided code should initialize these buffers.
+	A 0-byte in the buffer is an escape...it is followed by a
+data-0, or by an ISIS message code and the appropriate
+character stream following.  (This does NOT apply to needles
+[message code = 0],
+and thus unassigned ports should be connected to an appropriate
+process.  Needles are parsed, and the following usage applies on
+activation <Needles ALWAYS activate>:
+.BEGIN BOX
+		R5	Invoice number,
+		R6	Destination Host number,
+		R7	Originating Node number,
+		R8	Originating Port number,
+		R9	TID,
+		R10	number of characters in user name (the
+			username is placed into the port's buffer.)
+.END
+	Data breaks on C/R if no break array is specified.
+	Activation always occurs at the END of the message which
+contains one or more breaks.
+	Break is activated with the buffer index in R1, and links on R15.
+All registers are available for use while in the user code, and
+on return, R0 is to contain a number N.  If N>0, it is default timeout
+(in seconds) until the next activation...else timeout is disabled.
+All data characters are automatically placed in the input buffer,
+as are any control messages specified for user-handling.
+	ALL ISIS special messages are placed in the buffer for port 0,
+and each breaks automatically.
+	For non-text messages, the escape convention applies ONLY to the
+message type...the body of the message is unescaped.  ALL such
+messages handled by the user cause a break.
+	The following WORD arrays (length NPORT words), and are to be initialized
+by the user program:
+.BEGIN BLOX
+	BREAK###a pointer to the bit array of characters to break upon.
+	MBREAK##a pointer to the bit array of message types to break on.
+	PROCESS#a pointer to the process to be activated upon a break condition.
+.END
+	The following items are to be provided by the user:
+.BEGIN BLOX
+	A bit array TISIS of length NPORT, to signal output data.
+	A symbol MAXCHAR...causes break if the buffer count exceeds
+this value.
+	A symbol ECHO...causes tymsat echoing for terminals if >0.
+.END
+	The following routines should be called by the user (link R0):
+.BEGIN BLOX
+	IZFRONT#at initialization time, after calling IZT.
+	INPUT###from exec loop, to process input from ISIS.
+	OUTPUT##from exec loop, to process output to ISIS.
+.END
+
+.SSS(FRNTND.LIB)
+	This package is an ISIS Front End interface to Tymnet. It
+is used to service the ISIS input ring, and to activate user
+defined routines whenever a message is found for a port.
+The package is designed to permit the activation routines to be
+defined on an individual port basis if desired. It is also
+designed so that context within a process can be indicated by 
+dynamically changing to a different set of activation routines.
+.SKIP
+.ONCE CENTER
+Conventions
+	The following symbols are to be provided by the user:
+.BEGIN BLOX
+	ECHO####if TRUE causes Tymsat echoing for terminals.
+	AUTOBP##if TRUE causes automatic backpressure application and release
+for a port based upon comparing number of characters
+in input buffer and MAXCHAR.
+	PTIMEO##if TRUE port timeouts are available.
+	MAXCHAR#maximum number of characters in a port's input buffer
+before backpressure should be applied.
+.END
+	The following symbol is to be initialized by the user:
+.BEGIN BLOX
+	PECHO###a bit for each port. If set then echoing will be honored
+for the port, otherwise defered echo mode will not be
+honored.
+.END
+	The following symbols may be provided by the user
+(If not provided, default values will be used):
+.BEGIN BLOX
+	CRIPOM##crash code for invalid port zero message (default 20x).
+	CRNAR###crash code for no activation routine found (default 21x).
+	CRINVN##crash code for invalid needle received (default 22x).
+	CRINVM##crash code for invalid message received (default 23x).
+.END
+	The following data structures are to be provided and initialized
+ by the user (They may be located in any segment):
+.BEGIN BLOX
+	DCB#####Device Control Block, a data structure which contains all
+the context information for a port. There should be NPORT
+DCB's defined starting at address DCBLKS. Within each DCB
+the following offsets must be defined:
+.BEGIN BOX
+		DCBICC	input character count (halfword)
+		ACTIVD	relative address in A.CODE of data
+			activation routine.
+		ACTIVC	relative address in A.CODE of a table of
+			halfword offsets in A.CODE of routines
+			for each possible control message.
+		ACTIVT	relative address in A.CODE of timeout
+			activation routine.
+		ACTIVO	relative address in A.CODE of output
+			activation routine.
+.END
+	PORTAB##Port Table, a halfword array containing entries for each
+port which are the relative offset from DCBLKS of the
+DCB for the port.
+.END
+	In addition, activation routines must be defined for port zero
+messages (ACITV0) to for needles (ACITVN). These labels should
+be the location of the actual routine not offsets in A.CODE.
+	Whenever a data or control message activation routine is called,
+the following registers are set up:
+.BEGIN BOX
+	R1	port number
+	R2	message type
+	R5	link register
+	R12	DCB pointer
+	R14	input ring pointer
+.END
+	The activation routines are responsible for extracting all the
+message data for the current logical record from the input ring.
+Upon return, this package willend the logical input record (ELIR).
+Therefore R14 must be pointing to the end of the message
+when this package regains control. All other registers may be
+smashed.
+
+	Needles are handled differently. The are parsed and the following
+registers loaded.
+.BEGIN BOX
+		R1	port number
+		R2	number of characters in username
+		R5	link register
+		R6	invoice number
+		R7	destination host number
+		R8	originating node number
+		R9	originating host number
+		R10	originating port number
+		R11	dialect code
+		R13	TID
+		R14	input ring pointer
+.END
+	Upon a needle activation, everything up to and including the
+username length will have been extracted from the input ring.
+The ACTIVN routine is responsible for extracting the username.
+	If PTIMEO is true then a normal return from any activate'ed
+process indicates that the timeout state of the port should not
+be modified. If a skip return is taken, then R0 will be
+examined. If R0 is non-zero, a timeout for that
+many seconds will be set for the port. If R0 is zero then any 
+timeout for the port will be cleared. When a timeout expires for a port
+the timeout activation routine for the port will be called with
+the following registers set up:
+.BEGIN BOX
+		R1	port number
+		R5	link register
+		R12	DCB pointer
+.END
+	Upon return from the timeout activation routine, the same
+skip/normal return convention is followed.
+	The user may also set or clear a timeout for a port directly.
+The routines SETTO and CLRTO are used to set or clear a
+timeout for a port respectively. They are used when a timeout
+is to be set (or cleared) at a time other than a the return from
+an activation. The routines should be called with R1 = port number.
+For SETTO R0 should contain the interval, in seconds, until
+the timeout activation routine for the DCB in activated.
+	The output routine searches for any ports requiring output service
+which are not backpressured. For each such port, the output
+activation routine found in the port's DCB will be activated
+with the following registers set up:
+.BEGIN BOX
+	R1	port number
+	R5	link register
+	R12	DCB pointer
+.END
+	Upon return from the output activation routine, the same
+skip/normal return convention for timeouts is followed.
+	The following routines are to be called by the user (link R0).
+.BEGIN BLOX
+	IZFRNT##at initialization time, after calling IZT.
+	INPUT###from EXEC loop, to process input from ISIS.
+	OUTPUT##from EXEC loop, to process output requests.
+.END
+	In order to facilitate setting up the control message
+activation routine table some symbols, routines, and macros
+have been defined.
+
+	The following symbols have the values of the offsets from A.CODE of
+a number of control message processing routines:
+.BEGIN BOX
+	Symbol	Routine	Description
+
+	XTOSS	TOSS	tosses the message
+	XZAP	ZAP	handles zapper
+	XNOSEND	NOSEND	handles backpressure
+	XRESEND	RESEND	handles release backpressure
+	XGOBBLE	GOBBLE	handles gobbler
+	XFLBACK	FLBACK	handles flush backward
+	XEDEM	EDEM	handles enter defered echo mode
+	XLDEM	LDEM	handles leave defered echo mode
+	XGB	GB	handles green ball
+	XRB	RB	handles red ball
+	XOB	OB	handles orange or black ball
+	XPNEED	PNEED	handles either pseudo needle
+	XXLIM	XLIM	handle xmit limit
+	XINVAL	INVAL	crashes with invalid message code
+.END
+	The following macros are used to set up the tables:
+.BEGIN BLOX
+	HTABVT##with argument table name is used to set up the 
+process table for a typical virtual terminal port.
+	HTABIA##with argument table name is used to set set up the
+process table for an inactive port.
+	CHGTAB##with arguments table name, msg number, and routine
+label is used to substitute for a default process
+routine in the table.
+.END
+	Example -- 
+To set up the control message activation routine table for
+a virtual terminal handler which must call a routine to
+release resources (RELRSC) upon losing the circuit on a port
+the following code might be used.
+.BEGIN BOX
+		SEG	A.CODE
+		MO	.,FRNTND
+
+		HTABVT(VTAB)		:GENERATE DEFAULT TABLE
+		CHGTAB(VTAB,9E,RELRSR)	:CHANGE ZAPPER HANDLER
+	RELRSC	------			:CODE TO CLEAN UP AND RELEASE
+		------			:RESOURCES USED BY PORT
+		J	ZAP		:JUMP TO ZAP PROCESSOR TO CLEAN
+					:UP ITS TABLES
+		EM
+		END
+.END
+	It should be noted that the above code is in the module FRNTND.
+This is the Input Handler module. The preceeding symbols, routines
+and macros are not global'ed so the code must be in the same
+module or the symbols LOCAL'ed.
+It should also be noted that the user defined processing
+routines should jump to the default process routine or perform
+similar processing on the input ring and status indicators.
+
+.SSS(|ARING.LIB|)
+	For convenience in handling ~<ASYNC I/O>, this package is provided
+with a set of routines to get and place characters for the async
+driver, performing all required bookkeeping on the appropriate
+port ring's pointers.
+	The following parameter MUST be defined before assembly:
+.ONCE BLOX
+	NAPORT##number of async ports.
+	The following quantities are defined by the package:
+.BEGIN BLOX
+	NGRP####number of groups (16 ports each) required for NAPORT ports.
+	RBS#####number of bytes in a port's ring entry.
+	ARING###the start address of the async ring storage.
+	DSR#####NGRP-halfword bit array for DSR term.
+	DTR#####NGRP-halfword bit array for DTR term.
+	CP######NGRP-halfword bit array for CP term.
+	TAM#####NGRP-halfword bit array for Transmitter Active Mask.
+	TOPORT##NGRP-halfword bit array, set if data present for port.
+	FPORT###NGRP-halfword bit array, set if data present coming from port.
+.END
+	The following routines are included.
+All link on R4, expect port number in R5 (unless otherwise specified):
+.BEGIN BLOX
+	IZASYN##Initialize ASYNC handling.
+preserves NO registers.
+on return, has set:
+.BEGIN BOX
+		DSR	0
+		DTR	1
+		CP	0
+		TAM	1
+		TOPORT	0
+		FPORT	0
+		ARING	0
+.END
+.TOPIC(|AGCI routine|)
+	AGCI####get a character from Async input ring.
+If that ring is empty, performs a normal
+return (turns off FPORT bit).
+Else skip (4) return, character in R0.
+.TOPIC(|AWCI routine|)
+	AWCI####Place a single char in Async output ring.
+R0 is char to transmit.
+If less than 4 characters of space remain in
+ring after placing character, TAM is turned
+off.  TOPORT bit is always turned on.
+.TOPIC(|AWCP routine|)
+	AWCP####Place escaped char in Async output ring.
+R0 is char to transmit.
+Places escaped character PAIR into output
+ring, then acts like AWCI.
+.END
+	AWCI and AWCP turn off TAM sufficiently early
+that a program may place another character or character pair into
+the ring before running into trouble.
+This insures that a sequence of several characters may be placed
+without the necessity of implicitly checking if there is room available,
+or of "backing-up" in a ring (dangerous, since the driver is
+executing concurrently).
+	The following conventions apply to input and output data characters:
+.BEGIN BOX
+	INPUT CODES
+
+0	escape...always followed by second char
+1-FF	data codes 0-FF
+0|0	escaped data code 0
+0|8x	escaped terminal speed:
+	x=0	10 cps
+	x=1	15 cps
+	x=2	30 cps
+	x=3	40 cps
+	x=4	60 cps
+	x=5	120 cps
+	x=6	30 cps (3767)
+	x=7	14.7 cps (2741)
+0|90	escaped break detected
+0|91	escaped break end
+.END
+.BEGIN BOX
+	OUTPUT CODES
+
+0	escape...always followed by second char
+1-FF	data code
+0|0	data 0
+0|1-8F	delay time
+0|90-AF	output baud rate
+0|B0-CF	input baud rate
+0|D0-DF	enter connect mode
+0|E0	enter data mode
+0|E1	disconnect
+0|E2	enable
+0|E3	RS up
+0|E4	RS down
+.END
+
+.SSS(|FINISH.LIB|)
+	This file should ALWAYS be assembled LAST!!
+It generates diagnostics if necessary, and computes the
+value of the symbols SnSIZE, where n is the segment number (0 - E).
+	The CTA table is created including the HOSTS, PORTS, and
+PTABLE arrays. Values are assigned to the symbols CTA and CTASIZE.
+	It will also type out the memory requirements, and cause
+all undefined symbols to be listed on the control terminal.
+
+.SS(|Utility Routines|)
+
+	There are several utility routines, capable of providing commonly-used
+functions.
+
+.SSS(|OUTNUM.LIB|)
+	This package provides a mechanism to convert a binary number, according
+to any radix R (1 < R < 17d), and place the appropriate string of digits
+and other characters into the specified user buffer.  The calling sequence
+specifies parameters such as:  Signed number;  Blank or zero fill;  and
+Field width.
+Storage is allocated in segments A.DATA and A.CODE.
+	The symbols available are:
+.BEGIN BLOX
+	OUTNUM##Subroutine to convert a binary number and place the
+corresponding character string into the specified buffer.  Conventions:
+.END
+.BEGIN BOX
+	R0	control information...format:
+
+		    - - -.- - f f.f f f f.s z b r.r r r r
+
+	      where:
+		  -	unused
+		  f	output field width
+		  s	signed output
+		  z	zero field fill
+		  b	blank field fill
+		  r	Radix
+	R1	pointer to buffer area
+	R2	binary number to be output
+	R6	link register
+	R3-R5	internal scratch registers
+.END
+	NOTES:  If the output number is too big for the field, the field
+is generated with the leading character ">", to indicate the condition.
+	If both blank-fill and zero-fill are specified, zero-fill will
+override.
+	If neither blank- nor zero-fill are specified, exactly as many
+characters as required will be placed in the buffer (variable length
+specification).
+	R1 is always returned pointing at the next character of the buffer to
+be filled.
+
+.SSS(|CONVRT.LIB|)
+	This package provides a mechanism to convert a binary number to either
+a decimal or a hexidecimal, signed string of characters in the users buffer.
+Storage is allocated in segments A.DATA and A.CODE.
+	The routines are:
+.BEGIN BLOX
+	BINDEC##Subroutine to convert a binary number to decimal.
+	BINHEX##Subroutine to convert a binary number to hexidecimal.
+.END
+	Both routines have the register conventions:
+.BEGIN BOX
+	R4	Link register.
+	R9	the binary number.
+	R10	number of digits to output.
+	R11	pointer to the output area.
+.END
+
+.SSS(|DATIME.LIB|)
+	This package provides a set of routines to manipulate GMT (Greenwich
+Mean Time).
+Storage is allocated in segments A.DATA and A.CODE.
+	The routines are:
+.BEGIN BLOX
+	DATIME##Subroutine to convert the GMT clock relative to 1/1/74, from
+seconds to DDMMMYY HH:MM (GMT), or DDMMMYY HH:MM:SS (GMT).  Register usage:
+.BEGIN BOX
+		R3	No. of second since 1/1/74 (beyond 1/1/76)
+		R4	No. of characters of output (13d or 16d)
+		R5	Address of output string
+		R6	Link register.
+.END
+.SKIP
+	TMSTMP##Subroutine to convert the fullword GMT time of day to
+HH:MM or HH:MM:SS.  Register usage:
+.BEGIN BOX
+		R3	Fullword time of day (GMT clock)
+		R4	No. of characters to output (5 or 8)
+		R5	Address of output string
+		R6	Link register.
+.END
+.SKIP
+	DATE####Subroutine to convert the fullword GMT time of day to a
+fullword representation of the date and time.  The format of the
+result is MMDDHHMM, where MM, DD, HH, and MM represent Month,
+Day, Hour, and Minute, respectively -- all in decimal format.  I.e.
+DEC 12 13:41 would be 12121341 (hex).
+.BEGIN BOX
+		R3	GMT Clock Value
+		R5	Link register
+		R6	Value returned.
+.END
+.END
+	If the symbol TIMEZON is defined it should be the time-zone
+correction factor from CUT (Coordinated Universal Time).  I.e. PST is -8.
+	NOTE...This package uses CONVRT.LIB.
+
+.SSS(|STATUS.LIB - User Command Handler|)
+	The Status package is intended to provide an extension to DDT,
+invocable via the "?STAT" command in DDT.  Once "?STAT" is typed at DDT
+level, the prompt ":" appears, and additional commands may be defined as
+slot-specific extensions to DDT.  In particular, since no licence is
+required to execute "?STAT", the unprivileged user may use these extensions
+for a variety of status information.
+	It is recommended that all applications
+include the commands "HELP" (to inform the user of the menu of operations
+he can perform) and "CODE" (to type out a brief description of this process).
+	There is limited editing control built into the package ("^W" means
+Control-W):
+.BEGIN BOX
+	ESC	aborts back to command level,
+	^W	discards partial token already input (word or number),
+	^A	discards last char of token (backspace).
+.END
+	Delimiters may occur in multiple (e.g. ", " is OK).  Valid
+delimiters are:
+.ONCE VERBATIM
+	C/R	L/F	H/T	","	and BLANK.
+	The entry points and routines are:
+.BEGIN BLOX
+.TOPIC(|DSTART ROUTINE|)
+	DSTART##Place to exit on completion of command.  Outputs ": " and
+accepts new command token.
+.TOPIC(|DS.ILL address|)
+	DS.ILL##Place to exit on illegal command -- types 'Illegal command'.
+.TOPIC(|DS.ERR address|)
+	DS.ERR##Place to exit on command error -- types " type '\'".
+Then examines all input, looking for '\';  when successful, exits to DSTART.
+.TOPIC(|DS.EXI ROUTINE|)
+	DS.EXI##Place to exit machine.
+.TOPIC(|DS.QUI ROUTINE|)
+	DS.QUI##Place to exit back to DDT.
+.TOPIC(|DS.GCH ROUTINE|)
+	DS.GCH##Get a character...Link on R1, char (with high-order bit forced)
+in R0...normal return if detected ^W, skip-4 if detect
+^A, aborts back to DSTART if detects ESC.
+.TOPIC(|DS.DEL ROUTINE|)
+	DS.DEL##Check for delimiter...Link on R2, char in R0...normal
+return if delimiter detected, else skip-4 return.
+.TOPIC(|DS.CUC ROUTINE|)
+	DS.CUC##Convert to upper case.  Link on R1, Character in R0.
+.TOPIC(|DS.TOK ROUTINE|)
+	DS.TOK##Get a string token.  Link on R4, TOKEN returned in R3.
+Inputs up to 4 characters, returns them (in uppercase) left justified,
+with 0 fill.
+.TOPIC(|DS.NUM ROUTINE|)
+	DS.NUM##Get a number.  Link on R5, expects Radix in R4.
+Number returned in R0.  May ABORT if any character is
+input other than valid digit or delimiter.
+.END
+	There are two built-in commands:
+.BEGIN BOX
+Q or QUIT	exit back to DDT.
+EXI or EXIT	exit machine.
+.END
+	Additional commands may be defined via the DS.CMD macro:
+.SKIP
+.ONCE CENTER
+ DS.CMD(TEXT,ADDR)
+.BEGIN BOX
+	Where:
+	TEXT	The (UPPERCASE) target command string.
+	ADDR	The virtual address to transfer to, to service that
+	command.
+.END
+	DS.CMD generates a 12-byte discriptor for this command, at the point
+assembly where it is invoked.  This discriptor is on a WORD boundary.
+
+.SSS(|DARRAY.LIB|)
+	This package provides a pair of routines to display logical half-word
+(unsigned 16-bit elements) arrays on the DDT control terminal.
+They are intended to provide the commonly-used function of displaying
+arrays of statistical data collected by user-supplied
+processes.
+	Storage is allocated in segment A.CODE.
+	Various arguments are in the form of pointers to "descriptors", of
+format:
+.BEGIN BLOX
+.BEGIN BOX
+	DISCR	WC	START
+		HC	SVCDSC
+		HC	NUMBER
+
+	Where:
+.END
+	DISCR#-#The start value (or pointer).
+	SVCDSC#-#Print discriptor (as per SVC SYS<0D>,14d).  Flexability is
+provided by requiring the user to specify this discriptor; this precludes
+fixed assignment of radix, field-width, and other special properties which
+the user might want to select.  (Note -- the value 62A generates a 6-character
+unsigned decimal number, right-justified with blank-fill.  This will be
+convenient for many purposes.)
+	NUMBER#-#Either increment Or number of elements.
+.END
+	One kind of descriptor required is a "label" descriptor, used to label
+each line printed (no label will be printed if SVCDSC = 0).  For this
+descriptor, the first descriptor word (START) contains the value used to label
+the first line;  NUMBER is used to increment this value for successive lines.
+	The second kind of descriptor is the "array" descriptor;  here, START
+is a pointer to the beginning of the array, and NUMBER is the number of
+array elements (half-words).
+	The routines are:
+.BEGIN BLOX
+	LIST####Subroutine to display a half-word array in text form.  Register
+usage:
+.BEGIN BOX
+		R0-R4 - Scratch registers
+		R5 -    Label-descriptor pointer
+		R6 -	Array-descriptor pointer
+		R7 -	Link register
+			all other registers preserved.
+.END
+.SKIP
+	PROFIL##Subroutine to display a half-word array in the form of a
+histogram.  The histogram consists of one line for each array element -
+each line consists of a Label, followed by a line of asterisks ("*"), the
+length of which is proportional (scaled) to the element value.
+The histogram may be Full (all elements displayed) or Truncated
+(multiple zero-elements suppressed).  Register usage:
+.BEGIN BOX
+		R0-R6 -	destroyed (scratch registers)
+		R6 -	Scaling Factor
+		R7 -	Label-descriptor pointer
+		R8 -	Array-descriptor pointer
+		R9 -	Mode (Full or Truncated) flag
+		R10 -	Link register.
+			all other registers preserved.
+
+	where:
+.END
+	Scale###The maximum value for a full-line histogram element;  Used to
+compute the scale-factor used to fix the line-length for each line
+printed -- default is one "event" per column (if SCALE=0).
+	Mode####Truncated histogram if negative, else Full histogram.
+	NOTE####The SVCDSC field of the Array descriptor is not referenced.
+.END
+
+
+.SS(|Development Tools|)
+	The following set of library packages are intended for use in
+the development of applications, rather than for permanent inclusion into
+those applications.  Thus, they fall into the catagory of development
+tools!
+
+.SSS(INSTAT.LIB)
+	This package is controlled by ?STAT commands, and collects statistics
+on the ISIS-Dispatcher input-ring traffic.  It's operation is completely
+transparent to the application, except for the extra load imposed upon
+the machine by it's use.
+	However, transparancy is provided by imposing certain restrictions
+upon the sequence of library references used to create the application:
+INSTAT.LIB  must be assembled before FRING.LIB!!
+	INSTAT requires STATUS.LIB, and also calls upon <DATIME.LIB>DATIME.
+	Implementation of statistic gathering is performed by defining a
+LOOK routine layered between the application and the ring handler, which
+intercepts all messages and records statistics.
+	?STAT commands implemented are:
+.BEGIN BLOX
+	Q or QUIT##Exit back to DDT.
+	EXI or EXIT##Exit (log out).
+	IS.?####Help.  Brief resume of commands.
+	IS.I####Initialize INSTAT, start statistics gathering.
+	IS.H####Halt INSTAT, Stop statistics gathering.  Exits via IS.C.
+	IS.C####Check INSTAT status.  Status may be:
+.BEGIN BOX
+INSTAT Not Used.
+	- or -
+NSTAT started DDMMYY HH:MM:SS (GMT).
+	- and -
+Running for HH:MM:SS
+	- or -
+Ran for HH:MM:SS
+Input NNNNN user messages, NNNNN system messages
+Input a total of NNNNNN user data characters.
+.END
+	IS.L####Length statistics.  Outputs the message code (in HEX) and
+the number of occurances of each message (in decimal), both for user and
+system messages.
+	IS.D####Data statistics.  Outputs the character code (in HEX) and
+the number of occurances of each data character.
+	IS.S####String statistics.  Outputs the string length and number of
+occurances of strings of that length (both decimal).
+.END
+
+.SSS(|SPY.LIB|)
+.TOPIC(|SPY LIBRARY|)
+	This package is controlled by ?STAT commands, and collects statistics
+on slot execution.  It's operation is completely transparent to the
+application, except for the extra load imposed upon the machine by it's use.
+	SPY requires STATUS.LIB.
+	Implementation of statistic gathering is performed by invoking the
+ISIS SPY logic, which periodically (based upon interrupts) determines
+the current execution location, and collects statistics based thereon.
+	Special symbols may be defined to direct the SPY.LIB package to
+initialize certain parameters;  default values are provided if these are
+not defined.  The symbols (and defaults) are:
+.BEGIN BLOX
+	SP.FAD##First Address (default = beginning of Segment A.CODE).
+	SP.SIZ##The size of a spy Bin (default = 80 bytes).
+	SP.RNG##The range of spy execution (default = range between SP.FAD
+and beginning of SPY.LIB code).
+	SP.NBIN#The number of bins to allocate (default = SP.RNG/SP.SIZ).
+.END
+.SKIP
+	?STAT commands implemented are:
+.BEGIN BLOX
+	Q or QUIT#-#Exit back to DDT.
+	EXI or EXIT#-#Exit (log out).
+	SP.?#-##Help.  Brief resume of commands.
+	SP.I#-##Initialize SPY, start statistics gathering.
+	SP.H#-##Halt SPY, Stop statistics gathering.  Exits via SP.C.
+	SP.C#-##Check SPY status.  Status may be:
+.SKIP
+.BEGIN CENTER
+SPY Not Used.
+- or -
+SPY in progress.
+- or -
+SPY completed.
+.END
+	SP.L#-##List statistics.  Outputs the first bin start address and the
+number of occurances in each bin (in decimal), up to 8 bins/line.
+	SP.P#-##Profile statistics.  Outputs the start address of each channel
+and a line of "*"s, whose length is dependent upon the number of occurances.
+Automatic scaling of output takes place, such that no line will overflow.
+The exact form of output may be either "truncated" (multiple empty bins
+print as a single blank line), or "full" (each bin is printed).  The default
+mode is "truncated".
+	SP.T#-##Set histogram to "truncated" mode.
+	SP.F#-##Set histogram to "full" mode.
+	SP.D#-##Display the parameters used:
+.BEGIN BOX
+Start Addr. = 10000x
+Range =        2000x (end addr. = 12000x)
+Bin size =      100x
+No. Bins = 32
+.END
+	SP.N#-##Specify number of bins (decimal).  Exit via SP.D.
+	SP.R#-##Specify new range (hexidecimal).  Exit via SP.D.
+	SP.S#-##Specify new start address (hexidecimal).  Exit via SP.D.
+	SP.B#-##Specify new bin size (hexidecimal).  Exit via SP.D.
+.END
+.BEGIN INDENT 10,10,10
+.SKIP 2
+.ONCE CENTER
+NOTES:
+.SKIP
+	SPY records ALL occurances of execution within the specified area of
+memory, and cannot distinguish between foreground, background, and DDT
+usage.
+	N (number of bins) * B (bin size) = R (range).  A change in
+either B or R will be reflected in both parameters being changed.  A change
+in N will be reflected in a corresponding change in B.
+	B is internally constrained to be even, a reasonable constraint
+since all instructions start on half-words.  The same constraint applies
+to S (start address).
+	Each of N, B, and R must be entered greater than 0, to avoid a
+diagnostic.
+	Furthermore, N is internally forced to the value specified
+by SP.NBIN (or it's default) if an attempt is made to exceed this value.
+.SKIP
+	Until such time as the new SPY SVC is fully deployed, this package
+will operate in a "kludgy" fashion:  SP.H and SP.C give meaningless
+results;  SP.I will output a command list, which you must enter to DDT
+to perform the SPY connection.
+.END
+    &Ä
