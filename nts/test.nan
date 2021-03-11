@@ -1,0 +1,164 @@
+                PICO ENGINE FUNCTIONAL LAB TESTING
+                           23-MAR-88
+
+  I.  DOWN-LINE-LOAD (Channels 0-3)
+    
+    A.  Channels 0-1 (Clocking provided externally)
+        1.  CCITT  V.35 @ 19.2K to 64K
+        2.  CCITT  V.24 @ 4.8K to 9.6K
+
+    B.  Channels 2-3 (Clocking provided externally/internally)
+        1.  CCITT  V.24 @ 4.8K to 9.6K
+        2.  EIA RS-232C @ 4.8K to 9.6K
+
+    C.  Multifunction Local TTY
+        1.  NON-FUNCTIONAL
+
+ II.  COMM PORT CONFIGURATION (Channels 0-7 + Local TTY)
+
+    A.  Channel Command Programs (Control SCC WR0-WR7)
+        1.  Execution of CCWs to microcode which ultimately issues
+            Command Pairs to IOC F/W which sets up Z8530 SCCs via
+            translated Z80 commands
+
+        2.  ISIS environment -- Node Code, X.25, SDLC, CONSAT, TYMCOMM
+            and various Slot exercisers
+
+    B.  ENGbug Console
+        1.  Manual SCC set-up and reconfiguration
+        
+        2.  SD (SCC DUMP) command to modify/monitor I/O channels
+
+    C.  Channel 0 Command Driver
+        1.  ISIS construction of I/O Control Block and Config Array
+        
+        2.  7 Configuration Fields per PROTOCOL, 4 PROTOCOLs per COMM
+            PORT, 8 COMM PORTS
+
+                             EXAMPLE
+                      -----------------------
+                      CHANNEL 0,1  PARAMETERS
+
+CHANNEL TYPE | BAUD RATE | RxC SOURCE | TxC SOURCE | TxC LINE | TxC LINE SOURCE
+------------   ---------   ----------   ----------   --------   ---------------
+
+    HDL      |    56K    |    RTC     |    TRC     |    IN    |       TRC
+    HDL      |    19K    |    RTC     |    TRC     |    IN    |       TRC
+    HDL      |    9600   |    RTC     |    TRC     |    IN    |       TRC
+    HDL      |    4800   |    RTC     |    TRC     |    IN    |       TRC
+    HDL      |    2400   |    RTC     |    TRC     |    IN    |       TRC
+
+ |       MODIFIED NON-DEFAULT SCC VALUES SPECIFIED!!!
+ |       NAN.M = TYMFILE MACRO TO OVERRIDE DEFAULT SCC VALUES (VALUE FIELD = 7)
+ |       VALUE 0 = CHANNEL #, 1 = CHANNEL TYPE, 2 = BAUD RATE, 3 = RECEIVE CLOCK
+ |       SOURCE, 4 = TRANSMIT CLOCK SOURCE, 5 = TRANSMIT CLOCK LINE INT/EXT,
+ |       6 = TRANSMIT CLOCK LINE SOURCE
+
+
+      *** These are extracted samples from actual test parameters tested ***
+
+        NAN.M(0,HDL,56K,RTC,TRC,IN,TRC)
+        NAN.M(1,HDL,56K,RTC,TRC,IN,TRC)
+ |        NAN.M(2,HDL,9600,RTC,TRC,IN,TRC)
+        NAN.M(2,ESY,4800,BRG,BRG,OUT,,)
+ |        NAN.M(3,HDL,19K,RTC,TRC,IN,TRC)
+        NAN.M(3,ESY,4800,RTC,TRC,IN,TRC)
+ |        NAN.M(4,HDL,9600,RTC,TRC,IN,TRC)
+        NAN.M(4,ESY,4800,RTC,TRC,IN,TRC)
+ |        NAN.M(5,HDL,4800,RTC,TRC,IN,TRC)
+        NAN.M(5,ESY,4800,RTC,TRC,IN,TRC)
+ |        NAN.M(6,HDL,2400,BRG,BRG,OUT,,)
+        NAN.M(6,ESY,2400,BRG,BRG,OUT,,)
+        
+
+
+------------------------------------------------------------------------------
+
+     All 8 ports have been brought up into the Network environment in CCITT
+V.24 mode.  Channels 0-1 always have an external clock provided.  All other
+channels have been brought up with both TxC and RxC provided externally, TxC
+only provided externally, TxC output internally and TxC + RxC output.  
+Channels 0-1 have been brought up into the Network also in the CCITT V.35
+mode.  The local TTY port has been tested at the default 4800 baud and the
+optional 1200 baud.
+
+     Functional strapping of the associated H/W jumpers/switches available
+for each of the channels is of course required to reflect the appropriate
+selcted modes.
+
+     Channels 2-7 have been brought up into the Network environment also in
+the EIA RS-232C (ESYNC) mode at the same line speeds as under V.24 (HDLC) mode.
+
+     All clock and data signals have been scoped during testing and found
+to be comparable with existing Tymnet engine devices, the edges of the signals
+showing no greater than 4% roll off at any line speed in either the HDLC or
+the ESYNC mode which appears to be equal to our existing V.24 cards and
+superior to Sync cards sampled.  EIA control signals have been strapped
+and used for bisync handshake control and still need to tested with modems
+(sync and async).
+
+     Bandwidth utilization measurements have been performed on each individual
+channel for line speeds of up to 64K for Channels 0-1 and up to 9.6 for 2-7 in
+the HDLC modes.  Packet sizes = 64, 128, 256, 512 bytes with an average 
+overhead of 5 to 7 bytes per packet.  For all practical purposes, any one
+channel will utilize nearly 100% of the available bandwidth.  Data through-
+put can be seen to become more efficient as packet sizes increase reducing
+the header, control, checksum and trailer fields overhead.  This can be
+plotted as a graph of a function with a limit as regards the bandwidth.  
+Letting the unutilized bandwidth = a variable x, we can produce a graph
+that shows that as packet size increases, x tends to zero.  Futhermore, this
+function can be implicitly differentiated to express a derivative which 
+reflects variances in available bandwidths.  The point of this "tangent" is
+that it seems to be one of the more positive indicators of the performance
+of the IOC to be able to provide such a classic and predictable graph.  The
+down side of this is that the bandwidth utilization does not hold true
+when all channels are operating concurrently (esp 2-7 the interrupt driven
+channels) with 4 or more channels operating at 9.6K.  In fact what is seen
+is that as channels start exhibiting TX underruns and/or Rx overruns a
+graph of I/O performance becomes nearly too randomized to serve any purpose.
+Please note that this excludes the DMA channels 0-1.  Channels 0-1 seem to
+have little impact on the NON-DMA channels and conversely are effected
+little by the other channels.  By further comparison a worst case single
+byte packet was evaluated.  Interestingly for the single data byte transaction
+the NON-DMA INT channel in HDLC mode serviced the character in and out in
+an average time of 0.2163 sec compared with the DMA channel in HDLC modes
+average time of 0.2030 sec (both @ 9.6K).  Also, at comparable line speeds
+the NON-DMA channels as described above supported comparable throughput
+rates with the DMA channels in a one on one evaluation.
+
+     Emulated Sync testing consist to this date of any of channels 2-7
+being configured for TYMSYNC and brought up in the Network, any of same
+assigned to ISIS slots and brought up in pairs under intra/inter-channel
+loopback testing, and of channels 2-3 assined to a UTS TIF/HIF application
+and brought up via a Chameleon Protocol Simulation written by John Burroughs
+from STS (similar to 3270) with and without control signal handshaking.
+
+     X.25 and SDLC regression tests have been performed only on channels
+1 (DMA) and 2 (INT).
+
+     ASYNC testing consist only of a modified slot exerciser test under
+the ISIS.  ASYNC is subject to evaluation at this time for channels 2-7.
+There still are no definitive ASYNC performance benchmarks.
+
+     Testing is being performed on one set of PICO boards of currently
+NTD ECO level.  
+
+     The focus of the testing is still on the PICO's ability to support
+existing slot application software packages.  It seems reasonable to
+allow NTS another week to continue evaluating the current Firmware -
+Hardware - Software prior to releasing to manufacturing at which time
+NTS will provide direct support to Pilot Engineering to continue their
+PICO engine effort.
+
+     An INSTALLATION/BRING-UP guide is being produced to coincide with 
+the release of the PICO to Betatest (ie sometime between April 15-May1).
+The guide does have an overview of the PICO and will provide both the
+FEs and the CCs with the necessary details to present the package to their
+users including configuration constraints.  NTS will again provide direct
+support to Staging to bring-up the initial Betatest PICO engines and will
+be available to all field personnel involved in the Betatest schedule.
+A copy of the INSTALLATION/BRING-UP guide will also be forwarded to TTE
+to assist with training.
+
+
+
