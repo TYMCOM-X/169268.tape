@@ -1,0 +1,531 @@
+CFB NO.:                                                DATE : 8 AUG 1990
+
+REV LEVEL: 1.7                                  DATE CHANGED :
+
+TYPE: HARDWARE
+HARDWARE: BT DATACOMMS DATELMUX 4304X/4308X PAD
+SUBJECT: INSTALLATION AND FIELD CONFIGURATION
+==============================================================================
+BT Datacomms Datelmux 4304x/4308x
+
+I. Unit description:
+
+The 4304X and 4308X are identical, with the exception of the number of ports;
+the 4304 has 4, the 4308 has 8.  The units provide 4 or 8 asynchronous ports
+and 1 synchronous (X.25) port.  Port 'A' has a special 'Y' cable (Datel Inter-
+face 4088X) that provides the X.25 on the 'M' side of the 'Y' and normal
+async port 'A' on the side marked 'A' (the 'M' stands for Modem).  Each port
+is a female DB25.  Pin assignments are given below.
+
+The case has an integral power supply and shelves for two cards; the top card
+is the 4308/4304 card, and the bottom is for either an interface card (4086X)
+or one of a variety of available DATEL synchronous modems.  The modems are 
+described in a separate CFB. The cards are fastened to each other and simply 
+pull out.
+
+The async ports are by default configured as DCE, meaning terminals may be 
+connected without the use of a crossover cable.  Reversible DIP plugs located
+near the rear of the PAD PC board, marked with an arrow, indicate each port's
+physical DTE or DCE appearance.
+
+The X.25 port is configured as physical DTE, meaning it may be connected 
+directly to a synchronous modem with no crossover cable.  For direct 
+connection to a Tymnet Engine port or other DTE device a crossover cable 
+is required.  Logical DTE/DCE appearance should be preconfigured by the CS.
+Remember that physical DTE/DCE appearance is accomplished with cables that
+determine which pin signals are present, and logical X.25 DTE/DCE appearance
+pertains to which device is the primary (01) or secondary (03) device on the
+link level.
+
+There is no power on/off switch.  Disconnect the power cord to turn off the 
+unit.
+
+Front panel indicators will all illuminate briefly upon power-up.  The
+indicators are labeled as follows:
+
+PSTN = Public Switched Telephone Network - the redirection/autodial
+       function is in effect
+X25  = The X.25 trunk link level is up
+LD   = Link Data; data is currently being passed on th link
+O/F  = Buffer overflow 
+SUPY = A user has entered local supervisory mode
+TEST = Diagnostic in effect
+REMOTE = A user has entered the remote supervisory mode
+
+X.25 port pin assignments:
+
+The X.25 port is the half of the 'Y' connector (part 4088X) marked 'M'.  The
+other half is marked 'A' (for Asynchronous or user port 'A'?).  The cables 
+are available from BT Datacomms as:
+
+  Straight cable for connection to DCE: 403X5
+  Crossover cable with clocks jumpered as below: 403X4
+
+        External clocking, to DCE     Internal clocking, to DCE
+         PAD            MODEM          PAD             MODEM
+                 CABLE                          CABLE
+          2  TD    --->                 2  TD    --->
+          3  RD    <---                 3  RD    <---
+          4  RTS   --->                 4  RTS   --->
+          5  CTS   <---                 5  CTS   <---
+          6  DSR   <---                 6  DSR   <---    Cable must jump 24
+          7  GND   <-->                 7  GND   <-->    to 15 and 17 for PAD
+          8  CD    <---                 8  CD    <---    internal clocking
+          15 TXC   <---                 15 TXC            <---|--->
+          17 RXC   <---                 17 RXC            <---|--->
+          20 DTR   --->                 20 DTR   --->         |
+          25 TEST  <---                 24 EXC   ---> --------|
+                                        25 TEST  <---
+
+
+       External clocking, to DTE      Internal clocking, to DTE
+        PAD             DTE
+               XOVER
+         2 TD  ----> RD  3             Same as at left, but add
+         3 RD  <---- TD  2             jumper from 24 to 15 and 17
+         5 CTS |                           15 TXC --|-> RXC 17
+         6 DSR |                           17 RXC <-|-- TXC 15
+         8 CD  |<--> DTR 20                24 EXC___|
+        20 DTR <-->| CTS 5
+                   | DSR 6
+                   | CD  8
+        15 TXC ----> RXC 17
+        17 RXC <---- TXC 15
+         7 GND <---> GND 7
+
+A note about clock signals:
+Clocking can be provided by the PAD, however the signal occurs on pin 24
+of the X.25 port.  Pin 24 must be jumpered to pins 15 and 17 for the PAD 
+to provide clocking to the external device via a hardwire connection.  Most
+modems expect external clocking to occur on pin 24 so no jumper would be
+necessary.  When configuring the devices for the PAD to provide internal 
+clocking, be certain that the external device (modem or DTE) has NO signal 
+on pins 15 and 17 before connecting to the PAD.
+
+Async port pin assignments:
+
+As described above, the async ports' physical appearance is determined by the
+direction of the individual header plugs on the PAD PCB.
+  
+            AS DCE                      AS DTE
+
+      PAD      Peripheral         PAD     Peripheral
+       2  TXD  <-----              2   TXD  ----->
+       3  RXD  ----->              3   RXD  <-----
+       4  RTS  <-----              4   RTS  ----->
+       5  CTS  ----->              5   CTS  <-----
+       6  DSR  ----->              6   DSR  <-----
+       7  GND  <---->              7   GND  <---->
+       8  CD   ----->              8   CD   <-----
+       20 DTR  <-----              20  DTR  ----->
+
+
+II.  Field setup
+
+A. Software setup
+
+The PAD should be pre-configured by a Tymnet Communications Specialist.  All
+software configuration should be complete.  The unit will retain its con-
+figuration when disconnected from its power supply.
+
+Typically the PAD should have been tested in a Tymnet office lab environment
+and configured to match the anticipated customer environment.  Especially
+important in this pre-configuration are the X.121 address, link speed,
+SVC/PVC/AVC (Switched, Permanent or Automatic Virtual Circuit for port)
+configuration, number and type of logical channels, internal or external 
+link clocking, DTE/DCE X.25 logical appearance, link parameters T1 and N2, 
+subaddress length, and CCITT compliance date.  All of the settings just 
+listed are adjustable only through entering 'installer' mode, and install 
+mode is not obtainable via the remote manager.  Any changes to those 
+parameters must be made with a locally attached terminal, or through a dialup
+asynchronous modem attached to one of the async ports.  See below for a list
+of the most basic and common software settings.
+
+B. Operating environment, equipment
+
+   1. Temperature   +5 to +40 degrees Celsius, external to housing
+   2. Humidity      20% to 90% non-condensing, external to housing
+   3. Power         110V AC, within 3 meters of proposed location
+   4. Cabling
+      a) Async: 25 pin, V.24 interface cables with DB25/RS232
+                connectors.  Minimum pins/circuits are those listed
+                in pin assignment section above.
+      b) Xover: if needed, standard ASC-140-20JP or JJ.  Remember
+                that all PAD ports are female.
+      c) X.25 : 25 pin, V.24 with DB25/RS232 connectors, of a length
+                sufficient to reach from the modem to the proposed
+                location.  If the PAD is to provide clocking for the
+                link, pin 24 needs to be jumpered to both pins 15 and 17
+                on the PAD end, for non-modem links.
+   5. Switch settings - Port A and Factory mode
+      There is an 8-position DIP switch near the fron of the PAD PC Board.  Its
+      switches affect async port A.  When switch 8 is set to on, port A will
+      return to all factory default settings, allowing access to manager or 
+      installer mode, even if port A is not configured to do so.
+
+      It should not be necessary for the Field Engineer to adjust any switch
+      settings, however their function is listed here:
+
+       Switch     Function      Setting    Value
+        123       Port A speed    000       110 bps
+                  when switch 8   001       300
+                  is on           010       600
+                                  011      1200
+                                  100      1800
+                                  101      2400
+                                  110      4800
+                                  111      9600
+        4         Unused
+        56        port A parity    00      none
+                                   01      none
+                                   10      odd
+                                   11      even
+        7         factory test     off
+        8         Port A mode      0       normal
+                                   1       re-initialize
+
+C.  Hints and suggestions
+
+The PC Boards should never be removed from the case when any of the V.24 
+cables or power cord are connected.  Surges from either could damage them.
+
+Again the CS should have all software settings in the PAD set to best
+fit the customer's desired configuration.  When power is applied and the
+PAD is connected to the leased-line modem with a straight DB-25 M-M cable
+(assuming the modem's port is female as is the PAD's) the link should come 
+up, as tested in the CS's lab environment. Any dialup configuration should be 
+pre-cabled, tested, and documented by the CS before the units (PAD and modem) 
+are shipped to the customer site or FSC office.
+
+One component the CS cannot configure and pre-test in the lab is the
+customer DTE devices.  It may be necessary to experiment with crossover
+cables and the DTE/DCE headers on the PAD PCB before a workable config-
+uration is found, however, for the standard configuration, an async terminal
+will communicate with the PAD via a straight cable with the PAD header in
+its default DCE position.  Refer to the async port pin assignments listed
+above for help in troubleshooting async port signalling problems.
+
+III. Basic Software Setup
+
+Once again, the Communications Specialist should have pre-configured
+the PAD.  The anticipated usage (host, terminal interface, AVC's, etc.)
+should be discussed with the user before the PAD is shipped to the field.
+The following is a list of software settings and commands that are basic
+to the configuration of the PAD.  It is not intended to replace the user's
+manual.
+
+A.  Access to the MANAGER and INSTALLER modes
+
+If the PAD has not been configured at all, connection to an async port will
+cause the PAD to ask for a 'logon:'.  A default logon and password are the
+characters 'SP':
+
+The autobaud sequence of ..<CR> may be required before the port prompts for
+logon.  The port will autobaud to a terminal in a range of speeds from
+300bps to 19.2kbps.
+
+Example:
+
+User types '..<CR>'  (2 periods followed by the Enter key)
+   logon:SP
+   Password:SP
+
+   Welcome...
+
+   U]>
+
+When an async terminal is connected to one of the async ports, if configured
+to do so the port will send the terminal a banner and a 'U]>' prompt.  The
+'U' signifies that the terminal is currently in 'user' mode.  To enter the
+next level of license, enter 'MANAGER' (or abbreviate) at the 'U]>' prompt.
+The default password is 'BT DATACOMMS PAD'.  Change the password with the
+'password' command to maintain system security.
+
+   Example:
+
+   U]>MANAGER
+   Password:BT DATACOMMS PAD (if not modified)
+
+   M]>
+
+The 'M' signifies 'manager' mode and the associated license.
+
+To enter 'installer' mode (the highest license mode), enter 'INSTALL' (or
+abbreviate).  Password again is 'BT DATCOMMS PAD', if not modified.  Password
+is independent of changes made to manager mode password.  Installer mode 
+may only be entered from 'manager' mode.
+
+To exit 'install' mode, type 'powerup'.  The PAD will restart.
+
+To exit 'manager' mode, type 'leave'.  The terminal will return to user mode.
+
+To exit user mode, type 'bye'.  The port will be freed from that session.
+
+Only one user may be in any superisory mode, including remote manager mode:
+
+Access to remote manager mode (manager mode via the X.25 trunk) is accomplished
+by sending a call request to the PAD with a subaddress of '99'.  The PAD will
+prompt for password, which is the 'manager' password.
+
+Troubleshooting -  Problems accessing remote manager mode:
+
+  1.The Tymnet X.25 host must be in an 'answered' state; link level active.
+  2.The calling address (CLDADR field) must match that of the PAD's 'address'
+    field.
+  3.SPID must be enabled, that is the CLDADR macro, parameter 2, must be '00'
+    AND the username (set up by Validations Dept.) must end with the digits 99.
+    Example: CLDADR(3106005230,00)
+    please log in: PAD99
+  OR
+  4.The 'subhst.403' (if XCOM v4.03) patch must be assembled in the slot, and
+    the username colon-optioned with .99 following the host number in the 
+    login.
+    Example: please log in: XRAY:5230.99;
+  5.The XCOM PSIZE and MAXPSIZE macros should not exceed 128.
+  6.+NEGOTIATION should be set for TCLASS, PWIND, and PSIZE macros in XCOM.
+  7.PAD lcn's must have been defined.  Set 'bothlcn x-y', where x and y
+    correspond to XCOM's TCNL(x,y) or x=1,DPORTS(y).
+  8.No other user or port may be in manager or install mode.
+  9.The PAD's 'sublen' field must be set to '2' so that subaddress 99 will
+    be recognized by the PAD.
+
+B. Installer-mode only commands:
+
+Some commands may be issued only when in 'install' mode.  Install mode
+has different license than that of the remote manager, and cannot be reached
+from the remote mode.  Therefore it is necessary to physically connect to
+the unit to set the following parameters:
+
+A 'help' facility is present for all commands.  To list all commands, type
+'help all'.  For a specific command, type 'help xxx', where xxx is the command.
+
+address :   The PAD's X.121 address
+            Example : I]> address 3106005230
+
+avc     :   Maps ports to Automatic Virtual Calls.
+            Parameter is an entry in the ctable, seen by typing
+            'ctable'.
+                      I]> circuit d avc   - see 'circuit' below
+            Example : I]> avc d 1  -would set port d to autocall entry 1
+                      of the ctable.
+
+bothlcn  :  Sets the range of two-way logical channels.  Remember that the
+            remote manager requires a logical channel.  Should correspond to
+            TCNL() or 1,DPORTS() in XCOM.
+            Example : I]> bothlcn 1-9
+
+ccitt    :  Sets the CCITT compliance version of the PAD.
+            Example : I]> ccitt 1984
+
+circuit  :  Sets port mode to svc, avc, or pvc.
+            Example : I]> circuit d avc  - see avc above
+
+clock    :  Sets X.25 link clocking on/off.
+            Example : I]> clock off
+
+deprog   :  Wipes out (irretrievably) the entire configuration.  Careful!
+            Example : I]> deprog   -all prior configuration erased permanently
+
+iface    :  Sets PAD's X.25 logical primary/secondary appearance.  Has nothing
+            to do with physical DTE/DCE appearance.
+            Example : I]> iface dte
+
+inlcn    :  Defines a range of logical channels for in-only calls.  See
+            'bothlcn'.
+
+lcnpvc   :  Assigns a port to a logical channel for a PVC.  The cparas display
+            will show which ports and channels are defined as PVCs.
+            Example : I]> lcnpvc d 31
+
+ldtr     :  Selects the function of pin 20 of the X.25 link.  Should be set
+            to ON unless the link redirection facility (autodial backup) is
+            configured.  See 'redir' in the manual.
+            Example : I]> ldtr on
+
+lspeed   :  Sets the speed of the PAD's internal clocking on the X.25
+            link.
+            Example : I]> lspeed 19.2
+
+modcon   :  Enter modem configuration mode.
+            Example : I]> modcon
+
+n2       :  Sets the N2 frame retransmission counter.  Should match the 
+            setting of the XCOM.
+            Example : I]> n2 10
+
+netid    :  Sets the form of the calling address sent by the PAD.  Should be
+            set to 'both' to send both address and subaddress in a call
+            request.
+            Example : I]> netid both
+
+outlcn   :  Sets range of out-only logical channel numbers.  See inlcn nd
+            bothlcn.
+
+packet   :  Sets packet size for PVC calls.
+            Example : I]> packet 128
+
+sublen   :  Sets length of SPID or subaddress.
+            Example : I]> sublen 2
+
+t1       :  Sets X.25 frame retransmission timer T1.  Should match that of 
+            the XCOM slot.
+
+window   :  Sets the window size for PVC calls.
+
+
+C. Notes:
+
+1. Autobaud and use as a host interface:
+The speed field for the async ports must be set to the true speed when
+the PAD is configured as a host interface.  When set to autobaud, the
+ports are expecting a CR from the async (host) side before 'waking up'
+and therefore will not accept a call from the X.25 side.
+
+2. Parity and stop bits:
+The parity field for each port should be set to 'even'.  This forces
+even parity checking, but no action is taken to change the parity bit
+as long as the pbit field is set to 'none' for the port.  The parity
+and sbits fields can be seen in the tparas table, and the pbits field
+can be found in the xparas table.  Sbits should be set to 2 (not 1),
+even if the terminal thinks it has 1 stop bit (those crazy Brits!).
+A setting of even parity, 2 sbits, and pbit none in combination with
+a terminal setting of 8 data, no parity, and 1 stop bit will allow 8-bit
+data to flow through the PAD without the high-order bit being altered.
+
+3.  The BT Datacomms Datelmux 4304X/4308X User and Installation Guide
+(Publication #D2389, Issue #1, 6/88) has no reference index.  Please note
+the following index to reference specifics in the manual as no other
+exists:
+
+Command Mode Where?   Summary                                        Page
+------- ---- ------   -----------------                              ----
+access  imr  sparas   Define port username                           24.2
+address i    nparas   Define PAD's X.121                        24.2
+active  imr  sparas   Enable/disable a port                          24.2
+avc     i    cparas   Ties port to Auto Virtual Circ in ctable       24.3
+banner  im   sparas   User login message                             24.3
+boot    imr  na       Apply current parameters to port               24.4
+bothlcn i    nparas   Define 2-way logical channel range             24.4
+break   imru xparas   Response to 'break' key                        24.5
+brklen  imr  tparas   Break duration in 10ms units                   24.5
+bye     mu   na       Drop DSR, clear calls, log out of PAD          24.6
+caddr   imr  ctable   Set address for mnemonic call                  24.6
+call    u    na       Call specified address or mnemonic             24.6
+ccitt   i    nparas   Set CCITT recommendation compatability date    24.7
+cfacs   im   ctable   Set facilities for mnemonic call               24.8
+circuit i    cparas   Set port for avc/svc                           24.8
+cleared imr  cparas   Set action of async port upon being cleared    24.9
+clock   i    nparas   Set link clocking on/off                       24.9
+clr     mru  na       Clear call for port                            24.9
+cmmds   imr  utable   Set username for X.28 or editor mode           24.10
+cname   imr  ctable   Set mnemonic call name                         24.10
+cparas  imr  na       Show current call parameters for each port     24.11
+crpad   imru xparas   Null padding after carriage return             24.11
+ctable  imru na       Display table of mnemonic calls available      24.12
+ctrlns  imr  na       Display state of RS232 signals on async ports  24.12
+date    imr  stat     Set date and time                              24.13
+dbit    i    cparas   Set dbit on/off for PVCs                       24.13
+dchar   imru xparas   Set delete character for edit mode             24.14
+deprog  i    na       Sets all parameters to factory default         24.14
+deusr   imr  sparas   Set async port's default profile number        24.14
+dialstr imr  sparas   Set dial string for modem on X25 port          24.15
+discpar imr  tparas   Set # of parity errors on port before disc     24.15
+dline   imru xparas   Set character for line delete in edit mode     24.15
+dtype   imru xparas   Set output form during edit mode               24.16
+dump    imru xparas   Discard all output for port                    24.16
+echo    imru xparas   Set echo on/off for async port                 24.17
+ed      u    na       Move from X28 to Datelmux editor mode          24.17
+ed_data imru xparas   Set edit mode on/off                           24.17
+enaman  imr  sparas   Enable/disable manager mode for a port         24.18
+enrx    imr  tparas   Set flow control type and mode from PAD        24.18
+entx    imr  tparas   Set flow control type and mode to PAD          24.19
+forward imru xparas   Set PAD forward character                      24.20
+help    imru na       Help                                           24.20
+hunt    imr  nparas   Set up to 5 port hunt groups                   24.21
+icaddr  imr  ictable  Direct or bar incoming calls via calling addr  24.21
+icdata  imr  ictable  Direct calls based on CUD                      24.22
+icrev   imr  ictable  Enable/disable reverse charge acceptance       24.22
+ictable imr  na       Table of incoming call restrictions            24.23
+idle    imru xparas   Set PAD idle forwarding timer                  24.23
+iface   i    nparas   Set PAD as logical DTE/DCE (primary-secondary) 24.23
+inactv  imr  sparas   Set port inactivity timer                      24.24
+incall  imr  cparas   Set port action on receipt of incoming call    24.24
+inform  imr  na       Manager broadcast message                      24.24
+inlcn   i    nparas   Set range of in-only logical channels          24.25
+install m    na       Enter install mode                             24.25
+int     u    na       Issue an interrupt packet                      24.26
+lcall   u    na       Issue a local call (to another async port)     24.26
+lcnpvc  i    cparas   Assign an lcn to a pvc                         24.26
+ldtr    i    nparas   Set function of DTR on X25 link                24.27
+leave   m    na       Leave manager mode, go to user mode            24.27
+lfadd   imru xparas   Set sending of linefeed following CR           24.27
+lfpad   imru xparas   Set padding of linefeeds with null characters  24.28
+log     imr  na       Display statistics                             24.28
+lprint  imr  sparas   Set async port (1) to be a printer port        24.28
+lspeed  i    nparas   Set X25 link speed                             24.29
+manager u    na       Enter PAD manager mode                         24.29
+modcon  i    na       Enter modem configuration mode                 24.29
+mode    imr  na       Change port mode for testing                   24.29
+monctrl imr  tparas   RS232 action for terminal connection           24.30
+msgcall imr  sparas   Set port message for incoming call             24.30
+msgclr  imr  sparas   Set port message for cleared call              24.31
+n2      i    nparas   Set N2 frame retransmission counter            24.31
+netid   i    nparas   Set form of calling address sent by PAD        24.31
+newpage imr  tparas   Set page cancellation char if page enabled     24.32
+nocall  imr  na       Prevent further calls to/from PAD              24.32
+nparas  imr  na       Display node parameter table                   24.32
+outlcn  i    nparas   Define out-only logical channel range          24.32
+packet  i    cparas   Set PVC packet size                            24.33
+page    imru xparas   Set page wait length                           24.33
+par?    u    na       Query current X.3 parameters                   24.34
+parity  imr  tparas   Set port's parity (see pbit)                   24.34
+passwd  imru na       Set user, manager, or install mode password    24.35
+pbit    imru xparas   Set action to take upon parity checking        24.36
+pline   imru xparas   Set char to display line during edit mode      24.36
+pname   imr  xparas   Set name of 1-30 profiles                      24.36
+powerup imr  na       Reset PAD (doesn't change any parameters)      24.36
+print   mu   na       Send user data to port set by 'lprint'         24.37
+prof    u    na       Select a CCITT X.3 parameter set               24.37
+profile imru na       Select/assign  a profile by name or number     24.37
+prompt  imr  na       Set editor mode prompt                         24.38
+rdyctrl imr  tparas   Set action of PAD's DTR signals                24.38
+recall  imru xparas   Select PAD recall character                    24.38
+redir   imr  nparas   Set auto-dial action on link failure           24.39
+remprof imr  cparas   Set inbound call remote profile using X.29     24.39
+reset   u    na       Send a reset character to the network          24.39
+retrans i    nparas   Set packet retransmission facility             24.40
+return  u    na       Return to current call from recall mode        24.40
+rpar?   u    na       Query remote PAD's X.3 set                     24.40
+rset    u    na       Set remote parameter                           24.41
+sbits   imr  tparas   Set number of stop bits on async port          24.41
+segsize i    nparas   Set # of chars in an accounting segment        24.41
+service imru xparas   Set X.28 service signals on/off                24.42
+set     u    na       Set and report X.3 values                      24.42
+sparas  imr  na       Display system parameters                      24.42
+speed   imr  tparas   Set async port baud rate                       24.43
+stat    u    na       Display current port state                     24.43
+status  imr  na       Display port or link status                    24.44
+sublen  i    nparas   Set number of digits in a subaddress           24.45
+t1      i    nparas   Set T1 frame retransmission timer              24.46
+tabs    imr  tparas   Set tab expansion                              24.46
+tparas  imr  na       Display terminal hardware paramters            24.46
+uname   imr  utable   Set username in utable                         24.47
+uprof   imr  utable   Set profile for entry in utable                24.47
+usr     imru na       Display current port status and profile        24.48
+utable  imru na       Display the user table                         24.48
+version i    na       Display current software version               24.49
+window  i    cparas   Set window size for PVC                        24.49
+wrap    imru xparas   Set line folding                               24.49
+x28     u    na       Enter X.28 mode from Datacomms edit mode       24.49
+xecho   imru xparas   Set echo mask                                  24.49
+xonxoff imru xparas   Set flow control on/off                        24.50
+xparas  imru na       Display current X.3 parameters                 24.50
+xstart  imr  tparas   Set XON character                              24.53
+xstop   imr  tparas   Set XOFF character                             24.53
+ 
+ i = installer mode
+ m = manager mode
+ r = remote manager mode
+ u = user mode
+
+ @I…
