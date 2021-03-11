@@ -1,0 +1,3826 @@
+
+
+
+
+
+
+
+
+
+
+
+
+                    UTS-4000 Host and Terminal Interfaces
+
+
+
+
+
+                              Version  5.0
+
+
+
+                            System Generation
+
+
+
+
+
+
+
+                                12/11/87
+
+
+
+                               MDS-TYMNET
+
+
+                      Network Technology Development
+
+
+                      Tymnet Interconnection System
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+PREFACE
+
+
+This system generation reference manual provides the
+information necessary to define and generate TYMNET UTS4000
+Host and Terminal Interfaces to provide access between
+UTS4000  protocol  terminals and  hosts utilizing the
+packet-switching transmission facilities of TYMNET.
+
+This  manual  is  directed  to  network  analysts   and
+network programmers  for defining TYMNET UTS4000 Interfaces.
+This manual is divided into twelve main sections.
+
+The first main section is the overview section.
+
+The second section covers the concept of statement levels.
+
+The third section describes  directives  which  can  be
+used  to control the system configuration print-out.
+
+The fourth through eighth sections define each statement and
+its parameters.
+
+The ninth section is fully devoted to Host Signoff.
+
+The tenth section describes some simple parameters
+pertinent  to sysgen.
+
+The eleventh section present examples of  sample  Tym  files
+and Command files.
+
+The twelvth section briefly describes error and warning
+messages printed out during assembly.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 1
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+                        1.  OVERVIEW
+
+
+TYMNET  UTS4000  Host  and  Terminal  Interfaces  provide
+access between  UTS4000  protocol  terminals  and  hosts
+utilizing  the packet-switching data transmission services
+of TYMNET.
+
+Application of this service requires generation of  UTS4000
+Host and  Terminal  Interfaces.   This  involves creation of
+a Tymfile containing configuration data and a CMD file to
+generate  object code.  The end result of the generation
+process is a NIB (Network Image Binary) file which contains
+the object code for a  specific configuration.
+
+Prerequisites to using this manual are a basic
+understanding  of teleprocessing,  a  general  knowledge of
+UTS4000 protocol, and a general knowledge of the purpose of
+the TYMNET UTS4000 Interface.  These may be obtained from
+the following documents:
+
+TYMNET UTS4000 Interface External Reference Specification
+
+TYMNET UTS4000 Multi-drop Project General External Design
+
+SPERRY UNIVAC, UTS40 System Reference Manual, UP9143
+
+SPERRY UNIVAC, UTS4000 Programmer Reference Manual, UP8359
+
+TYMNET Network Specifications
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 2
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+                    2.  STATEMENT LEVELS
+
+
+For UTS4000, the SYSGEN parameters are all stated in the
+Tymfile (or "TYM file") and this file, specified separately
+from the main body of the code, is preceded by the BEGINTYM
+statement.
+
+In order to insure an orderly system  generation  the
+statements used  to  configure  a UTS Terminal or Host
+Interface are divided into six levels.  In addition, some
+values are predefined in  the Tymfile.
+
+Slot level statements define parameters affecting the slot
+as  a whole.
+
+Line  level  statements  define  parameters  associated
+with   a particular  physical  line,  like  speed,  polling
+frequency  or definition of poll groups.  This level is
+forced  whenever  LINE statement is used.
+
+RID  level  statements  define  paramemeters  associated
+with  a particular   poll   group  on  the  line,  mainly
+definition  of individual stations and peripheral devices.
+This level is forced whenever ARID statement is used.
+
+SID  level  statements  define  parameters  associated
+with   a particular  station,  namely exceptions to
+previously defined (at RID level) peripheral devices,
+definition  of  Permanent  Virtual Circuit  (PVC)  and
+Program  Function Key.  This level is forced whenever ASID
+statement is used.
+
+There are two  more  statement  levels  assosiated  with
+Network Service  Screens (NSS).  NSS.MENU statement starts
+the definition of every new menu screen and forces the  MENU
+level.   NSS.ENTRY starts  the  definition  of every new
+line in the menu and forces the ENTRY level.  The definition
+of different  function  keys  on the keyboard is done at the
+ENTRY level.
+
+Normally, a statement to be correctly executed must be used
+only at  its  proper  level,  however there are statements
+that may be ferent levels in which case their meaning may
+be different.   A  few  values  are  simple  variables
+which do not require inclusion in specialized level
+statements.   For  these, reference  to  the  Cross-
+Reference  listings  and to the code is advisable.  On
+occasion, new symbols may be added to this  group.
+Otherwise,  statements  which  are defined incorrectly
+within the levelling are considered to  be  in  error  and
+
+
+
+                          Page 3
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+will  cause  the assembly to fail.
+
+There are two control directives, PRINT and  NOPRINT,  which
+are valid at any statement level.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 4
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+                   3.  CONTROL DIRECTIVES
+
+
+This section describes statements which control the print-
+out  of the  statement  expansion  listing  and
+configuration  parameter listing,  the  listing  of  all
+the  resulting   functions   and characteristics   of  an
+UTS4000  interface  in  a  summary  and easily-readable form
+on the user's ASCII terminal.
+
+PRINT/NOPRINT
+
+
+Syntax:    PRINT/NOPRINT
+
+
+Description: The PRINT and NOPRINT control directives  turn
+           the configuration   parameter  listing  switch
+           on  and  off respectively.  The user can insert
+           these statements  any places in a Tymfile.  Note
+           that these statements have no affect on the
+           regular assembly listing.
+
+Default:   If neither PRINT or NOPRINT have appeared, the
+           default until  one  shall  appear  is  PRINT.
+           If the user sets DSPGEN=0ADEE prior to executing
+           the compilation  command file, then NOPRINT is
+           (pre-)disabled.
+
+*** -Currently (08-APR-86), NOPRINT appears as  if  within
+           BEGINTYM's definition. ***
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 5
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+                 4.  SLOT level Statements
+
+
+
+4.1  SYSTEM
+
+Syntax:    SYSTEM(arg)
+
+           where arg = TYMNT1 or TYMNT2
+
+
+Description: This  statement  specifies  the  internal
+           network technology  employeed in handling network
+           services.  the UTS4000 Interface can be
+           compatible with either TYMNET-I or TYMNET-II.
+
+
+Default:   This statement may be  omitted,  then  the
+           default  is TYMNT2.
+
+
+4.2  FREEZE
+
+Syntax:    FREEZE(arg)
+
+           where arg = YES, or NO
+
+
+Description: This statement specifies whether a UTS Terminal
+           or Host  Interface will "freeze", or stop
+           running, should a crash occur.  A "crash" is a
+           mechanism  implemented  in the   UTS4000
+           interface  to  trap  either  hardware  or
+           software problems.  An interface which is
+           "frozen"  can be  examined  to  determine  the
+           cause  of  the  crash.  Specifying  NO  allows
+           the   interface   to   re-start immediately
+           after  a  crash,  but  does  not allow full
+           examination of the crash cause.
+
+
+Default:   YES
+
+
+4.3  TIMEZONE
+
+Syntax:    TIMEZONE(n)
+
+           where t = -23d to 23d
+
+
+
+
+
+                          Page 6
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+Description: This statement specifies the  necessary
+           correction value  which  should  be the time-zone
+           correction factor from the GMT.  For  example,
+           the  time-zone  correction value for PACIFIC
+           SAVING TIME is -8d.
+
+
+Default:   0 (GMT time)"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 7
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+4.4  ISISRING
+
+Syntax:    ISISRING(n1,n2)
+
+           where n1 is IRSIZE, and n2 is ORSIZE
+
+
+Description: IRSIZE and ORSIZE are the sizes of input  ring
+           and output  ring  for  the  internal  ISIS
+           dispatcher logic respectively.  These values
+           should  be  a  multiple  of four.   The
+           recommended ring size is the total number of
+           input or output characters that may be  expected
+           to  be received  from  or transmitted to the
+           network in any one second period.
+
+Default:   The default values  for  IRSIZE  and  ORSIZE  are
+           both 4092d.
+
+
+4.5  BUFSIZE
+
+Syntax:    BUFSIZE(n)
+
+           where n is value in bytes and must be greater
+           than 8d
+
+
+Description: This statement defines the buffer size for
+           internal buffers.   The  size of the buffer
+           should be selected to best utilize the available
+           memory spaces.
+
+
+Default:   If this statement is omitted, then the default
+           size  is 128d bytes.
+
+
+4.6  PVCTIMER
+
+
+
+Syntax:    PVCTIMER(t)
+
+           where t is time in seconds
+
+
+Description: This statement specifies the waiting time
+           required before  the  terminal  interface  starts
+           to  build  the circuit again after a circuit is
+           cleared due to  various reasons.  Since certain
+
+
+
+                          Page 8
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+           internal clean-up procedures are needed to be
+           performed  before  a  new  circuit  can  be re-
+           built,  the value specified should be greater
+           than 30 seconds.  Applicable to terminal
+           interface only.
+
+
+Default:   If this statement is omitted, then the default
+           value is 60d seconds.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 9
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+4.7  HNGTIM
+
+Syntax:    HNGTIM(..,x,..)
+
+           where up to  16  lines  (x=unsigned  decimal  0-
+           15)  are entered  in such form as
+           HNGTIM(,,2,,11,,) is valid (any order).
+
+
+Description: Select any line(s)  in  the  range  0-15  for
+           hang timing  as  is  otherwise  valid.  The
+           values correspond with bit posititons in the
+           halfword tagged DHNGBT.   The line number should
+           not exceed configuration.
+
+
+Default:   If omitted or empty list,  no  line  has  hang
+           timing.  This  statement  is  meaningless since
+           line signaling is not currently supported in the
+           code.
+
+
+4.8  PSEUDO.HOST
+
+Syntax:    PSEUDO.HOST(h)
+
+           where h is an Accounting Host number
+
+
+Description: This statement specifies the Accounting Host
+           number used by the UTS Terminal Interface in
+           building a circuit through the network.  This
+           number is  written  into  the accounting  record
+           for  the  session.   Applicable  for terminal
+           interface only.
+
+
+Default:   none
+
+
+4.9  TMIACT
+
+Syntax:    TMIACT(t1,t2)
+
+           where t1, t2 are timeouts in minutes
+
+
+Description: This statement sets up the user inactivity
+           timeuts.  If  user  does  not generate any
+           traffic at his terminal within t1 min.  he will
+           be  disconnected  (if  t2=0)  or first   warned
+
+
+
+                          Page 10
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+           about  inactivity  (if  t20)  and  then
+           disconnected after another t2 min.  if he still
+           fails to produce  any  traffic.   It is important
+           that t1 must be greater than t2.  Used in TIF
+           only.
+
+
+Default:   None, if omitted inactivity will be disabled.
+
+
+Example:   TMIACT(15,4) - warn after 15 min, then zap after
+           4 min, TMIACT(10) - zap after 10 min of
+           inactivity.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 11
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+4.10  EDFON
+
+Syntax:    EDFON(n)
+
+           where n is decimal number of bytes per one
+           transmission
+
+
+Description: This statement enables the  Early  Data
+           Forwarding mode  in the UTS Host Interface.  Data
+           arriving from the Host will be immediately queued
+           to  the  background  as soon  as  "n"  bytes are
+           accumulated without waiting for the  end-of-
+           message.   This  way   throughput   can   be
+           increased.
+
+
+Default:   If "n" falls out of the allowed  range  (16-
+           2000)d  the default  value  of  480d  will be
+           used.  If statement is omitted, EDF will be
+           disabled.
+
+
+Example:   EDFON(20) - n = 20 hex = 32 decimal EDFON  -  n
+           =  480 decimal
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 12
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+       |------------------------------------------------|
+       |          Syntax            Default      Note   |
+       |------------------------------------------------|
+       |       SYSTEM(arg)           TYMNT2     Note 1  |
+       |  arg = TYMNT1 or TYMNT2                        |
+       |------------------------------------------------|
+       |       FREEZE(arg)            YES       Note 1  |
+       |     arg = YES or NO                            |
+       |------------------------------------------------|
+       |       TIMEZONE(n)             0        Note 1  |
+       |      n = -23 to 23                             |
+       |------------------------------------------------|
+       |     ISISRING(n1,n2)        n1=4092d    Note 1  |
+       | n1, n2 positive integer    n2=4092d            |
+       |------------------------------------------------|
+       |        BUFSIZE(n)           n=128d     Note 1  |
+       |    n positive integer                          |
+       |------------------------------------------------|
+       |       PVCTIMER(t)           t=60d     Note 1,2 |
+       |     t = time in sec.                           |
+       |------------------------------------------------|
+       |      PSEUDO.HOST(h)          none      Note 2  |
+       |     h = host number                            |
+       |------------------------------------------------|
+       |     HNGTIM(..,x,..)          none      Note 1  |
+       |     x = decimal line                           |
+       |------------------------------------------------|
+       |      TMIACT(t1,t2)           none     Note 1,2 |
+       | t1,t2 = time in minutes                        |
+       |------------------------------------------------|
+       |         EDFON(n)             none     Note 1,3 |
+       |    n positive integer                          |
+       |------------------------------------------------|
+
+
+
+
+
+
+
+
+
+
+            Note 1. This statement may be omitted.
+            Note 2. Applies to TIF only.
+            Note 3. Applies to HIF only.
+
+            Figure 1.0 Summary of Network and ISIS Statements
+
+
+
+
+
+
+
+
+
+                          Page 13
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+4.11  ESCVTM
+
+Syntax:    ESCVTM(f)
+
+           where 'f' is a function key number.
+
+
+Description: where the user, in where the user, in Virtual
+           Terminal Mode, enters function key 'f' and an
+           ESCAPE character is delivered to the asynchronous
+           host.
+
+
+Default:   PF3
+
+
+4.12  TRSPFK and NETKEY
+
+TRSPFK and NETKEY statements are defiened for the TIF only.
+They are strictly related; the following is a description of
+their syntax and function:
+
+
+TRSPFK Syntax: TRSPFK(arg)
+
+           where arg = YES or NO
+
+
+Default:   NO
+
+
+NETKEY Syntax: NETKEY(f)
+
+           where 'f' is a function key which is a decimal
+           number (1 to 22).
+
+
+Default:   PF4
+
+
+Description: when TRSPFK is set to NO the user, in order to
+           obtain the menu, has to enter the Network Service
+           Screen Key (NSS key). Therefore since the NSS Key
+           is interpreted as 'menu request' it cannot be
+           delivered to the host.  When TRSPFK is set to
+           YES, a NETKEY can be defined by using the macro
+           NETKEY(f) (if there is no call to NETKEY, the
+           default value is PF4).
+
+           NETKEY must be different from NSS key and is
+           used, when user is in session mode, in the
+
+
+
+                          Page 14
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+           following way:
+
+
+           1. when TIF receives NETKEY, NETKEY then NETKEY
+              is sent to the host.
+
+           2. when the TIF receives NETKEY, NSSKEY then the
+              menu is displayed.
+
+           3. when the TIF recieives KEY, if the key is
+              different from NETKEY, then KEY will be sent
+              to the host.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        e 15
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+                 5.  LINE Level Statements
+
+
+This section describes the statements which define the
+physical, addressing,  and protocol characteristics of a
+line attached to a UTS Terminal or Host Interface.  The
+appearance of LINE statement in  a Tymfile forces the LINE
+level.  Refer to sect.  7.0 for the descriptions   of
+PVC.USERNAME,   PVC.HOST   and   PVC.PASSWORD statements
+that can be used at both Line and SID level.
+
+
+5.1  LINE
+
+Syntax:    LINE(n,t)
+
+           where  n  =  line  number,  t  =  line  type
+           (mplx   = multiplexer, or drop = multi-drop
+           line).
+
+
+Description: This statement specifies a line and assigns  to
+           it an  ISIS  Sync port.  The line number must be
+           set to the ISIS Logical Unit Number (LUN) as
+           defined  in  the  Node Tymfile.   Lines  must be
+           numbered sequentially starting from line 0.
+
+
+Default:   There is no default for  this  statement.   Each
+           line, whether   terminal  or  host,  must  have
+           have  a  LINE statment.
+
+
+Example:   LINE(2,drop) - line 2 is multi-drop.
+
+
+5.2  HOST
+
+Syntax:    HOST(host )
+
+
+Description: This statement specifies that this line is
+           attached to a UTS4000 host and assigns the
+           network host number to that line.  This statement
+           is  used  for  UTS4000  host lines  only.  Note
+           that a UTS Interface cannot support a mix of
+           terminal and host lines.
+
+
+Default:   None, must be specified for host lines.
+
+
+
+
+                          Page 16
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+5.3  SPEED
+
+Syntax:    SPEED(n)
+
+           where n = 1200, 2400, 4800, 9600
+
+
+Description: This statement specifies the transmission speed
+           of this line.  Note that the Engine can supply
+           only 4800 or 9600 bps clocks.
+
+
+Default:   9600
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 17
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+5.4  DTRDSR
+
+Syntax:    DTRDSR(arg)
+
+           where arg = YES, or NO
+
+
+Description: This statement specifies whether this link
+           requires the   DTR/DSR   handshaking   procedure.
+           If   DTR/DSR signalling is used on a host line
+           then the status of DSR will  be  reported to the
+           Supervisor to indicate whether or not  that  host
+           is  available.   Note  that  DTR/DSR signalling
+           is  only  available  on  Sync port with full
+           modem signals.
+
+
+Default:   The default is 'YES'.  This  statement  is
+           meaningless since  line  signaling is not
+           currently supported in the code.
+
+
+5.5  RTSCTS
+
+Syntax:    RTSCTS(arg)
+
+           where arg = YES, or NO
+
+
+Description: This  statement  specifies  whether  the
+           RTS/CTS handshaking  sequences  should  be
+           performed during the transmissions  of  link
+           frames.   Note   that   RTS/CTS signalling  is
+           available  only  on Sync ports with full modem
+           signals.
+
+
+Default:   The default is 'NO'.   This  statement  is
+           meaningless since  line  signaling is not
+           currently supported in the code.
+
+
+5.6  REPLYTO
+
+Syntax:    REPLYTO(t)
+
+           where t = time in seconds
+
+
+Description: This statment specifies the maximum time  the
+           sync board  will  "listen" for any incoming data
+
+
+
+                          Page 18
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+           on this line before returning the timeout rcv
+           code  to  the  protocol manager.
+
+
+Default:   The default is 1/2 second.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 19
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+5.7  RETRIES
+
+Syntax:    RETRIES(m)
+
+           where m = number
+
+
+Description: This statement specifies the number of attempts
+           HIF or  TIF will try to retransmit the same block
+           of data to recover  from  bad  parity,  BCC,  or
+           "lost"   protocol sequences.  Maximum value for
+           "m" is 255.
+
+
+Default:   The default is m = 3.
+
+
+5.8  FASTPOLL
+
+Syntax:    FASTPOLL(t)
+
+           where t = time in seconds
+
+
+Description: This statement defines the fast  poll  rate
+           for  a Terminal  Interface line (if used at line
+           level) or poll group  (if  used  at  RID  level).
+           For  the  multidrop configuration,  where  each
+           pollgroup  must  be  polled independently, the
+           effective poll rate for  a  group  is either  one
+           selected  by FASTPOLL for this group or (if
+           undefined) the poll rate for the line multiplied
+           by  the number of poll groups on the line.
+
+
+Default:   The default is 1/4 second for a line.
+
+
+5.9  INACTIVEPOLL
+
+Syntax:    INACTIVEPOLL(t,m)
+
+           where t = time in seconds, m = number
+
+
+Description: This statement defines the inactive poll rate
+           for a Terminal  Interface line (if used at line
+           level) or poll group  (if  used  at  RID  level).
+           For  the  multidrop configuration,  where  each
+           poll  group  must be polled independently, the
+           effective poll rate for  a  group  is either  one
+
+
+
+                          Page 20
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+           selected  by INACTIVEPOLL for this group or (if
+           undefined) the inactive poll rate for the line.
+           "m" is   the   number  of  consecutive  no-
+           traffic  messages received before switching from
+           fast to inactive rate.
+
+
+Default:   none, poll rate will remain fast.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 21
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+5.10  SLOWPOLL
+
+Syntax:    SLOWPOLL(t,m)
+
+           where t = time in seconds, m = number
+
+
+Description: This statement defines the slow  poll  rate
+           for  a Terminal  Interface line (if used at line
+           level) or poll group  (if  used  at  RID  level).
+           For  the  multidrop configuration,  where  each
+           pollgroup  must  be  polled independently, the
+           effective poll rate for  a  group  is either  one
+           selected  by SLOWPOLL for this group or (if
+           undefined) the slow poll rate for the line.  "m"
+           is  the number    of   consecutive   bad
+           responses   (timeout, unrecognized traffic, bad
+           CRCs, etc.)  before  switching to slow poll from
+           either a fast or inactive poll.
+
+
+Default:   t = 30 seconds, m = 30.
+
+
+5.11  ARID
+
+Syntax:    ARID(address)
+
+           where address = octal RID address
+
+
+Description: This statement specifies the Remote ID address
+           used on  the line.  Up to 47 different RIDs may
+           be defined on every line.  It also forces the RID
+           level.
+
+
+Default:   None, must be specified.
+
+
+5.12  LN.MSGW
+
+Syntax:    LN.MSGW(proc)
+
+           where proc = TI.EDIT else TI.SEND
+
+
+Description: Normally present, LN.MSGW makes host-related
+           values to  send  to  TIF  (in  "call  accept"
+           frame) specifying whether  dependancy
+           considerations   apply   to   data following
+
+
+
+                          Page 22
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+           message-wait  (from  a  device) to this host.
+           TIF process is defined separately.  If TI.SEND
+           is  used the  TIF  is  expected  to omit all
+           inspection following "MSG.WAIT" and treat the
+           function  as  pure  data.   HIF will not inspect
+           any related host replies.
+
+           TI.EDIT causes TIF to send MSG.WAIT if  followed
+           by  an "@@..."  format and HIF to await preset
+           host response(s) similarly to processing for
+           LN.LOGOFF(x).  Omission  for a host will set up
+           a) not-TI.EDIT in TIF, b) not-TI.SEND in HIF and
+           c) transfer of neither index from HIF to  TIF
+           during logon.
+
+           Currently, with  the  release  of  multidrop
+           code  this function   lost   its  importance  due
+           to  a  different backpressure mechanism.  Should
+           not be used.   The  code has been left for
+           historical reasons.
+
+
+Default:   TI.SEND.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 23
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+       |-----------------------------------------------|
+       |         Syntax            Default      Note   |
+       |-----------------------------------------------|
+       |       SYSTEM(arg)          TYMNT2     Note 1  |
+       | arg = TYMNT1 or TYMNT2                        |
+       |-----------------------------------------------|
+       |       FREEZE(arg)           YES       Note 1  |
+       |     arg = YES or NO                           |
+       |-----------------------------------------------|
+       |       TIMEZONE(n)            0        Note 1  |
+       |      n = -23 to 23                            |
+       |-----------------------------------------------|
+       |     ISISRING(n1,n2)       n1=4092d    Note 1  |
+       | n1, n2 positive integer   n2=4092d            |
+       |-----------------------------------------------|
+       |       BUFSIZE(n)           n=128d     Note 1  |
+       |   n positive integer                          |
+       |-----------------------------------------------|
+       |       PVCTIMER(t)          t=60d     Note 1,2 |
+       |    t = time in sec.                           |
+       |-----------------------------------------------|
+       |     PSEUDO.HOST(h)          none      Note 2  |
+       |     h = host number                           |
+       |-----------------------------------------------|
+       |     HNGTIM(..,x,..)         none      Note 1  |
+       |      x = dec. line                            |
+       |-----------------------------------------------|
+       |      TMIACT(t1,t2)          none     Note 1,2 |
+       |          t1,t2                                |
+       |     time in minutes                           |
+       |-----------------------------------------------|
+       |        EDFON(n)             none     Note 1,3 |
+       |   n positive integer                          |
+       |-----------------------------------------------|
+
+
+
+
+
+
+
+
+
+
+            Note 1. This statement may be omitted.
+            Note 2. Applies to TIF only.
+            Note 3. Applies to HIF only.
+
+            Figure 1.0 Summary of Network and ISIS Statements
+
+
+
+
+
+                          Page 24
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+                  6.  RID Level Statements
+
+
+This  section  describes  statements  which   define
+parameters associated  with  poll  groups.  The appearance
+of ARID statement forces the RID level.  Refer to sect.  5.0
+for  the  descriptions of  FASTPOLL,  INACTIVEPOLL  and
+SLOWPOLL statements that can be used at both Line and RID
+level.
+
+
+6.1  ADID
+
+Syntax:    ADID(d1,d2)
+
+           where d1, d2 octal adresses
+
+
+Description: This  statement  defines  the  range   of
+           device addresses  assosiated  with  the poll
+           group d1 being the the lowest and d2 the heighest
+           address.  If  d2  is  not present  the  statement
+           defines only one device address.  Up to 92
+           different adresses can be specified for a  poll
+           group.
+
+
+Default:   There is no default for this statement.
+
+
+Example:   ADID(165,175) -  DID  addresses  165  through
+           175  are supported or,
+           ADID(170) - the single DID address supported is
+           170.
+
+
+6.2  ASID
+
+Syntax:    ASID(a1,a2)
+
+           where a1, a2 = octal SID adresses
+
+
+Description: This statement specifies a  range  of  station
+           SID addresses,  or  just  a  single  station  if
+           a2  is not present.  A  maximum  of  31  SIDs
+           per  poll  group  is allowed.   The  appearance
+           of this statement forces the SID level.
+
+
+
+
+
+
+                          Page 25
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+Default:   None, must be specified.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 26
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+        |---------------------------------------------|
+        |      Syntax            Default        Note  |
+        |---------------------------------------------|
+        |    ADID(d1,d2)           N/A         Note 1 |
+        | d1,d2=octal addr.                           |
+        |---------------------------------------------|
+        |    ASID(addr)            N/A                |
+        | addr = octal SID                            |
+        |---------------------------------------------|
+        |    FASTPOLL(t)      see Figure 2.0          |
+        |---------------------------------------------|
+        | INACTIVEPOLL(t,m)   see Figure 2.0          |
+        |---------------------------------------------|
+        |   SLOWPOLL(t,m)     see Figure 2.0          |
+        |---------------------------------------------|
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            Note 1. Can be used at both RID and SID level.
+
+            Figure 3.0 Summary of RID Statements
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 27
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+                  7.  SID Level Statements
+
+
+This  section  describes  statements  which   define
+parameters associated with addressing, network virtual
+circuits, and address mapping.  Note that the UTS4000
+Interfaces use a  single  network virtual circuit per SID.
+The appearance of ASID statement forces the SID level.
+
+
+7.1  ADID
+
+Syntax:    ADID(d1,d2) Syntax 2:  ADID(-d1,-d2,-d3,...)
+
+           where d1, d2 octal adresses
+
+
+Description: When Syntax 1 is used it has the  same  meaning
+           as described  in 6.1, namely to specify the range
+           of device addresses associated with the station.
+           If Syntax  1  is used twice in the poll group (at
+           RID and then SID level) the supported devices for
+           the station are logical OR  of the two
+           definitions.  Syntax 2 however, specifies the
+           exceptions  by  putting the  negative  sign  in
+           front of those device addresses which, defined by
+           at the RID level, are  not  associated with this
+           station.
+
+
+Default:   None
+
+
+Example:   assuming there was ADID(170,177) statement at
+           the  RID level,
+           ADID(165,171)  -  DID  addresses  165  through
+           177  are assosiated with this station or,
+           ADID(-172,-173) - DID addresses 170 through  177
+           except 172 and 173 are associated with this
+           station.
+
+
+7.2  PFKEY
+
+Syntax:    PFKEY(num)
+
+           where "num" is 1-22d (range of "program attention
+           keys")
+
+
+
+
+
+
+                          Page 28
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+Description: The value "num" specifies the program attention
+           key for  this station.  The NSS.PFKEYs (discussed
+           below) set up various options from NSS "mode".
+           The key given  here is the one to enter NSS mode.
+
+
+Default:   PF5 is the default attention key.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 29
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+7.3  PVC Statements
+
+
+
+7.3.1  CIRCUIT
+
+Syntax:    CIRCUIT(arg)
+
+           where arg = PVC or SVC (Network Services Screen)
+
+
+Description: This statement defines the circuit  type  for
+           this particular  SID.   Applicable  to the
+           Terminal Interface only.
+
+
+Default:   SVC
+
+
+7.3.2  PVC.USERNAME
+
+Syntax:    PVC.USERNAME(string)
+
+           where string = string of characters
+
+
+Description: This statment specifies the network  username
+           used in  the  building  of a PVC, and applies to
+           UTS Terminal lines only.  If used at the Line
+           level the username will be  common  to  all
+           stations on the line.  Usage at SID level
+           overrides any Line level definition.
+
+
+Default:   None, username must be specified.
+
+
+7.3.3  PVC.HOST
+
+Syntax:    PVC.HOST(host )
+
+           where host  = network host number
+
+
+Description: This statement specifies  the  target  host
+           number used  in building PVCs, and applies only
+           to UTS Terminal lines.   Selection  of
+           destination   host   number   is equivalent to
+           requesting a particular line number on the host
+           side.  This statement is optional  and  depends
+           on the  validation  of the username specified in
+
+
+
+                          Page 30
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+           7.3.2.  If used at the Line level the host number
+           will be common to all  stations on the line.
+           Usage at SID level overrides any Line level
+           definition.
+
+
+Default:   None, may be left unspecified
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 31
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+7.3.4  PVC.PASSWORD
+
+Syntax:    PVC.PASSWORD(string)
+
+           where string = string of characters
+
+
+Description: This  statement  specifies  the  password  used
+           in building network PVCs, and applies to UTS
+           Terminal lines only.  This statement is optional
+           and  depends  on  the validation  of the username
+           specified in 7.3.2.  If used at the Line level
+           the password will  be  common  to  all stations
+           on the line.  Usage at SID level overrides any
+           Line level definition.
+
+
+Default:   None, may be left unspecified.
+
+
+7.3.5  PVC.GATEWAY
+
+Syntax:    PVC.GATEWAY(string,n)
+
+           where string = string of  characters  and  n  =
+           gateway level
+
+
+Description: This statement is only required for a UTS
+           Terminal line which is required to go through
+           network gateways to reach  the  destination
+           UTS4000  Interface  host.    It provides the
+           necessary logon record for a gateway logon, and
+           also indicates when this gateway logon record
+           should be  utilized.   The gateway logon record
+           has the similar format as that of a regular
+           network logon record  except that  the  [;] after
+           the gateway host should be coded as ["BB].  Here
+           [BB hex] is  the  NAD/ASCII  code  for  the
+           character [;].
+
+
+Default:   There is no default for this statement.   If
+           logon  on through gateway feature is desired,
+           proper gateway logon record(s) must be provided.
+
+
+
+
+
+
+
+
+
+                          Page 32
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+7.4  PVC Mapping Statements
+
+
+
+7.4.1  PVC.MRID
+
+Syntax:    PVC.MRID(address)
+
+           where address = octal mapping RID address
+
+
+Description: This  statement  specifies  the  destination
+           RID address  for  a  PVC at the Host Interface.
+           The desired address will be forwarded to the Host
+           Interface  in  the Call User Data.
+
+           The UTS Terminal Interface  transforms  the
+           actual  RID address  used  on the terminal line
+           and specified by the ARID statement into the
+           mapping RID address.
+
+           The UTS Host Interface  does  a  reverse
+           transformation when sending data to the Terminal
+           Interface.
+
+
+Default:   None, this statement must be specified.
+
+
+7.4.2  PVC.MSID
+
+Syntax:    PVC.MSID(address)
+
+           where address = mapping octal SID address
+
+
+Description: This  statement  specifies  the  destination
+           SID address  for  a  PVC at the Host Interface.
+           The desired address will be forwarded to the Host
+           Interface  in  the Call User Data.
+
+           The UTS Terminal Interface  transforms  the
+           actual  SID address  used on the terminal line
+           which is specified in the  ASID  statement  into
+           the  mapping   SID   address specified in the
+           PVC.MSID statement.
+
+           The UTS Host Interface  does  a  reverse
+           transformation when sending data to the Terminal
+           Interface.
+
+
+
+
+                          Page 33
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+Default:   None, must be specified.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 34
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+        |----------------------------------------------|
+        |        Syntax           Default      Note    |
+        |----------------------------------------------|
+        |      ADID(d1,d2)          N/A       Note 6   |
+        |----------------------------------------------|
+        |   ADID(-d1,-d2,..)                           |
+        |   d1,d2=octal addr.                          |
+        |----------------------------------------------|
+        |     CIRCUIT(arg)          SVC       Note 2   |
+        |      arg=PVC/SVC                             |
+        |----------------------------------------------|
+        |      PFKEY(num)            5       Note 2,5  |
+        |     num=1 to 22d                             |
+        |----------------------------------------------|
+        | PVC.USERNAME(string)      N/A     Note 1,2,4 |
+        |----------------------------------------------|
+        |    PVC.HOST(host )        N/A     Note 1,2,4 |
+        |----------------------------------------------|
+        | PVC.PASSWORD(string)      N/A     Note 1,2,4 |
+        |----------------------------------------------|
+        | PVC.GATEWAY(string,n)     N/A     Note 2,3,4 |
+        |   n = gateway level                          |
+        |----------------------------------------------|
+        |   PVC.MRID(address)       N/A      Note 2,4  |
+        |  address = octal RID                         |
+        |----------------------------------------------|
+        |   PVC.MSID(address)       N/A      Note 2,4  |
+        |  address = octal SID                         |
+        |----------------------------------------------|
+
+
+
+
+
+
+
+
+
+
+            Note 1. Can be used at both Line and SID level
+            Note 2. This statement is applicable to TIF
+            only.
+            Note 3. Mandatory for logon through gateway.
+            Note 4. This statement is used for PVC only.
+            Note 5. This statement is used for SVC only.
+            Note 6. Can be used at both RID and SID level.
+
+            Figure 4.0 Summary of SID Statements
+
+
+
+
+
+
+                          Page 35
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+           8.  Network Service Screen Statements
+
+
+This  section  describes  statements  which  define  the
+network service   screen   user-friendly   display  menu,
+the  usage  of user-selected PF key, the login string for
+the user-desired  host and  some  other  functions  which
+are related to network service screen mode.
+
+Every NSS menu  screen  consists  of  seperate  entries
+(display lines).   NSS.STRING defines the actual graphic
+appearance of the line, NSS.FUNCTION defines the functional
+purpose  of  the  line like  heading,  return  to  session,
+logoff, etc.  If function is anything but heading a PF key
+must be assigned to that  entry  so user can execute the
+function.  If the function is logon, further definition of
+logon parameters must follow.
+
+Note that only UTS  Terminal  Interfaces  which  support
+Network Service Screen mode require the statements in this
+section.
+
+
+8.1  NSS.MENU
+
+Syntax:    NSS.MENU(Lin,Rid,Sid)
+
+           where Lin = decimal logical line number or  ALL
+           if  for all  lines,  Rid  =  octal rid address or
+           ALL if for all rids, Sid = octal sid address or
+           ALL if for all sids.
+
+
+Description: This statement establishes the NSS (Network
+           Service Screen)  definition  for  all devices and
+           may be used to redefine the screen for various
+           devices.  The  following combinations are
+           allowed:
+
+
+           1. (ALL,ALL,ALL)  -   Initial   definition   for
+              all Lines/RIDs/SIDs.
+
+           2. (Lin,ALL,ALL) - Update for all RIDs and SIDs
+              on line Lin.
+
+           3. (Lin,Rid,ALL) - Update for all SIDs on line
+              Lin  and RID Rid.
+
+           4. (Lin,Rid,Sid) - Update for a specific  Lin
+              Rid  and Sid.
+
+
+
+                          Page 36
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+           It is important to think of cases 2.,3.,4.   as
+           updates (exceptions) to a general definition in
+           1.  which always must be the first statement in
+           the NSS  section  of  the Tymfile.    When  NSS
+           screen  for  a  device  is  being redefined by
+           numerous NSS.MENU statements the  following two
+           rules  apply (based on the "current" screen and
+           new NSS.MENU statement):
+
+           1. any new entry number not  existing  in  the
+              current screen will be added to that screen.
+
+
+           2. any new definitions of already existing
+              entries will override previous definitions.
+
+
+Default:   none, explicit coding is required.  The
+           definition  of every  new  menu  screen/update
+           must  begin  with  this statement.
+
+
+8.2  NSS.ENTRY
+
+Syntax:    NSS.ENTRY(entryno)
+
+           where entryno = decimal entry number (0 to 23)
+           for  the NSS screen line
+
+
+Description: This  statement  establishes  the  particular
+           line display   in   the  NSS  menu  display.
+           The  parameter (entryno)  begins  with  zero
+           (0),  and  the  usage  is straightforward as a
+           sequencer.
+
+
+Default:   None.  The definition of every new line  of  menu
+           must begin with this statement.
+
+
+8.3  NSS.STRING
+
+Syntax:    NSS.STRING(screen-string) where screen-string is
+           any explicit string.
+
+
+Description: This statement sets up the screen display  for
+           the statement   NSS.ENTRY(entryno)  at  the
+           terminal.   The screen display is exactly  the
+           same  as  the  parameter screen-string.
+
+
+
+                          Page 37
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+Default:   none, must be defined for every NSS.ENTRY.
+
+
+8.4  NSS.PFKEY
+
+Syntax:    NSS.PFKEY(keycode)
+
+           where keycode = decimal value for the  program
+           function key  on  the  keyboard (such as F20 key
+           on the UTS40,the keycode=20).
+
+
+Description: This  statement  links  program  function  key
+           to current  ENTRY(i)  in  NSS  definitions.   The
+           (decimal) range is 1 to 22 (except the key which
+           was selected  for the  NSS  screen  itself).
+           Usually, the key number for this NSS.ENTRY is
+           placed for display as  content  within the
+           concurrent NSS.STRING.
+
+
+Default:   None.  This is required for every entry (line
+           display) with  a  function  defined  as anything
+           but HEADING (see NSS.FUNCTION).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 38
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+8.5  NSS.FUNCTION
+
+Syntax:    NSS.FUNCTION(functiontype)
+
+           where functiontype must be one of the undelimited
+           values listed below.
+
+           HEADING - establishes the NSS.MENU banner
+           PRESETLOGON - supports pre-set logon for user
+           LOGON - establishes the logon manual display for
+           user
+           RETURNTOSESSION - exit from NSS display mode to
+           previous session
+           LOGOFF - disconnect the current session
+
+
+Description: This statement establishes the  function  type
+           for the  NSS.STRING  statement  which  supports
+           the various selections for the users.
+
+
+Default:   when omitted, HEADING is assumed.
+
+
+8.6  NSS.LOGON
+
+Syntax:    NSS.LOGON(logonstring)
+
+           where   logonstring   corresponds    to    the
+           Tymnet username:host;password convention.
+
+
+Description: Defines the logon string the interface will use
+           in building  a  virtual  circuit.   In  use,  the
+           semicolon should be replaced by ( "BB ), without
+           the  parenthesis, though.   Thus,  (  ;   )  is (
+           "BB ), so DOE:100"BBCLUE replaces
+           DOE:100;CLUE(per  keyboard  usage).   Use  only
+           when PRESETLOGON has been designated in
+           NSS.FUNCTION.
+
+
+Default:   No default is applicable.  NSS.LOGON must
+           accompany the statement
+           NSS.FUNCTION(PRESETLOGON).
+
+
+
+
+
+
+
+
+
+                          Page 39
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+8.7  NSS.GATEWAY
+
+Syntax:    NSS.GATEWAY(gatestring,level)
+
+           where gatestring = gateway logong string, level=
+           gateway level
+
+
+Description: This statement is used to build a  virtual
+           circuit through a Tymnet gateway.  The level
+           argument is used to specify more  than  one
+           gateway.   The  format  of  the gateway  logon
+           string  is  similar  to the logon string
+           described in 8.6.
+
+
+Default:   None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 40
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+8.8  NSS Mapping Statements
+
+
+
+8.8.1  NSS.MRID
+
+Syntax:    NSS.MRID(octarg)
+
+           where octarg = a valid  RID  of  logon  host,  in
+           octal notation
+
+
+Description: Selects a target RID address at  the  HIF  for
+           the current screen entry.
+
+
+Default:   If omitted, no specific RID is targeted at the
+           HIF.  As a  result  the  first  available  SID
+           belonging  to the targeted host number (line)
+           will be assigned.
+
+
+8.8.2  NSS.MSID
+
+Syntax:    NSS.MSID(octarg)
+
+           where octarg = a valid  SID  of  logon  host,  in
+           octal notation
+
+
+Description: Selects a target SID address at  the  HIF  for
+           the current screen entry.
+
+
+Default:   If omitted, no specific SID is targeted at the
+           HIF.  As a  result  the  first available one
+           belonging to the RID specified  by  NSS.MRID
+           will  be  assigned.   Usage  of NSS.MSID  must
+           always be preceeded by NSS.MRID statement (It is
+           not possible to select  destination  SID  without
+           selecting destination RID first).
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 41
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+8.9  Sample NSS Code Usage
+
+
+     NSS.MENU(ALL,ALL,ALL)
+             NSS.ENTRY(0)
+                     NSS.STRING(TYMNET UTS4000 INTERFACE VERSION 1.00)
+                     NSS.FUNCTION(HEADING)
+             NSS.ENTRY(1)
+                     NSS.STRING(ENTER PF KEY FOR CHOICE:)
+                     NSS.FUNCTION(HEADING)
+             NSS.ENTRY(2)
+                     NSS.STRING(F1  SYSTEM 39)
+                     NSS.PFKEY(1)
+                     NSS.FUNCTION(PRESETLOGON)
+                     NSS.GATEWAY(C,0)
+                     NSS.LOGON("08UTSDEV:39"BBXXYZZ)
+             NSS.ENTRY(3)
+                     NSS.STRING(F2  TRANSACTION HOST 1)
+                     NSS.PFKEY(2)
+                     NSS.FUNCTION(PRESETLOGON)
+                     NSS.LOGON(NELSONSU:835"BB......)
+                     NSS.MRID(52)
+                     NSS.MSID(122)
+             NSS.ENTRY(4)
+                     NSS.STRING(F20 LOGON SCREEN)
+                     NSS.PFKEY(20)
+                     NSS.FUNCTION(LOGON)
+             NSS.ENTRY(5)
+                     NSS.STRING(F21 RETURN TO SESSION)
+                     NSS.PFKEY(21)
+                     NSS.FUNCTION(RETURNTOSESSION)
+             NSS.ENTRY(6)
+                     NSS.STRING(F22 LOGOFF)
+                     NSS.PFKEY(22)
+                     NSS.FUNCTION(LOGOFF)
+
+     :       REDEFINE SOME NSS PARAMETERS
+
+     NSS.MENU(1,ALL,ALL)
+             NSS.ENTRY(6)
+                     NSS.STRING(F19 LOGOFF)
+                     NSS.PFKEY(19)
+                     NSS.FUNCTION(LOGOFF)
+     NSS.MENU(1,41,ALL)
+             NSS.ENTRY(6)
+                     NSS.STRING(F18 LOGOFF)
+                     NSS.PFKEY(18)
+                     NSS.FUNCTION(LOGOFF)
+     NSS.MENU(1,43,121)
+             NSS.ENTRY(7)
+                     NSS.STRING(F7  ONTYME)
+
+
+
+                          Page 42
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+                     NSS.PFKEY(7)
+                     NSS.FUNCTION(PRESETLOGON)
+                     NSS.LOGON(EMSTYM)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 43
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+                      9.  Host Signoff
+
+
+This section is concerned with  the  UTS4000  Host  Signoff.
+The  Host  Signoff  is  a predifined exchange of messages
+between Univac host computer and host interface at the end
+of a  session.  The  purpose  is  to  enhance security
+especially in the event of abnormal network conditions.
+
+This section is applicable to the Host Interface only.
+
+
+9.1  Types of Signoff
+
+
+The following types of multi-step signoffs will be
+supported:
+
+A) SEND
+B) SEND--RECEIVE
+C) SEND--RECEIVE--SEND
+
+In (A) host interface initiates and completes signoff by
+sending a  single message to the host computer, in (B) some
+response from the host is  expected  to  complete  the
+signoff,  in  (C)  host interface  must  send the final
+message to the host which usually will depend on the host's
+preceding  response.   In  fact  it  is possible  for a user
+to define a whole array of various "receive" and "send"
+strings so case (C) could look for example:
+
+SEND0--
+    RECEIVE1--SEND1
+    RECEIVE2--SEND2
+    RECEIVE3--SEND3...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 44
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+Another signoff feature is timeouts.  It is possible  to
+specify how  long host interface is prepared to wait for
+host's "receive" string as well as for how  long  HIF
+should  delay  sending  the response  message.  In case when
+host fails to respond within the prescribed time or arrived
+message does  not  match  any  of  the specified  strings
+for  this line the signoff will be considered failed.  In
+such a case the involved SID will either be freed  or hung
+depending on the tymfile-defined alternative.
+
+Signoff statements can be used at both slot  and  line
+level  to define  the signoff for the whole slot or just a
+particular line.  Line  level  definition,  when  present,
+obsoletes  slot   level definition  for  this  line.   Due
+to  the  importance  of  well functioning SID-freeing
+mechanism, security and  possible  system generation errors
+the following rules are strictly adhered to:
+
+o The default signoff is no-signoff (if none error-free
+exists).
+o Any ill defined signoff statement or other related error
+in the
+  tymfile invalidates (no-signoff) signoff at this level.
+o A line will end up sysgened no-signoff if:
+
+
+  *  there was an error in line level  definition  for  this
+     line irrespective of the state of slot level
+     definition, or
+
+  *  there  is  no  definition  for  this  line  and  slot
+     level definition has errors, or
+
+  *  there is neither definition for this line nor for the
+     slot.
+
+Any signoff assembly error will  be  communicated  to  the
+user.  User  also  will  be  warned  of  lines with no-
+signoff procedure defined.  For more on specific errors see
+the next paragraph.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 45
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+9.2  Signoff Statements
+
+
+The  following  statements  are  provided  for  the
+pourpose  of defining the signoff mode for the line or the
+interface:
+
+SEND(string)
+MSGWAIT
+RECEIVE(string)
+RCVSND(receive timeout, send delay)
+
+"string" argument is mandatory  to  specify  and  selects  a
+HIF transmit  message  (in  SEND)  or  an awaited host's
+response (in RECEIVE).  MSGWAIT defines the transmit string
+as being  the  msg wait command so no "string" argument is
+needed.
+
+RCVSND statement sets up signoff timeouts.   The  first
+argument (in  sec.) limits the amount of time HIF will wait
+for a response from the host (if any is  due).   It  is
+important  to  allocate enough  time  here  since  the clock
+starts the moment message is queued for transmission, not
+when  it  actually  is  transmitted.  The  slow  polling
+rate may further extend the wait period.  The allowed range
+is 5 - 90 sec.  If specified value is outside  this range it
+will be truncated to 5 or 90 sec whichever is the closer
+number.  It should  be  pointed  out  the  signoff  will
+not  be considered finished until the correct response
+arrives or receive timeout expires, instead the sid will
+still be regarded  as  used during  that  transitionary
+period.   If  no  valid  response is received during this
+period the  sid  will  either  be  freed  or locked (see
+more below on locking).
+
+The second argument specifies tha amount of time  (in  sec.)
+HIF will  wait before proceeding with the second (final)
+transmission to the host (if any is due).  The valid range
+here is 0 - 20 sec.
+
+The default values (if RCVSND is not called for a line) are
+45  / 0  sec.   for  receive  and  send  delays
+respectively.   RCVSND statement can be specified at both
+slot and line level.
+
+There is another optional HANG parameter  pertinent  to
+signoff.  If  defined  as  YES  (1)  it will cause a sid to
+be hung if host signoff fails or an unsolicited message is
+received from the host when  circuit  is  gone.  Otherwise,
+the sid will be freed.  When user attempts to log into the
+hung sid,  a  message  "destination sid  has been locked"
+
+
+
+                          Page 46
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+will appear on his screen.  Hanging/locking is done for
+security reasons.  When HANG is not specified in  Tym file
+a  warning  message  will  be generated during assembly and
+default YES selected.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 47
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+9.3  Sample of Signoff definition
+
+
+
+
+    SEND(start signoff)          :start of signoff...
+      RECEIVE(ready for signoff) :host responds..
+      SEND(signoff complete)     :and HIF completes or..
+      RECEIVE($ready$$)          :if host responds differently..
+      MSGWAIT                    :msg wait is HIF's final response..
+      RECEIVE(by for now)        :or no HIF's reply to this message.
+    RCVSND(20,10)
+    OPTION(hang,no)              :select no-hang option
+
+    LINE(0)
+    RCVSND(50)                   :sets 20 / 0 sec for rec. / snd.
+    MSGWAIT                      :msg wait starts signoff...
+      RECEIVE(100 terminated)    :and this or..
+      RECEIVE(200 terminated)    :another host response completes it.
+
+    LINE(1)
+    SEND($$$QUIT-MJ$$$)          :single "send" completes signoff.
+
+
+    Possible Signoff generation errors are:
+
+    o "string" argument missing in SEND or RECEIVE.
+    o Two consecutive usages of SEND/MSGWAIT statements.
+    o RECEIVE statement preceding any SEND/MSGWAIT statement.
+    o Signoff statement at other than slot or line level.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 48
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+         10.  Simple Variables Pertinent to Sysgen
+
+
+A group of program variables exists  for  which  default  or
+nominal values have been assigned in the code.  User may
+elect to redefine those values depending on a  variety  of
+factors.   The program  variables  control  memory
+allocations, timings, special debugging  tools  and  other
+functions.   The  standard  way  of definition  in  this
+case  is  by  means  of OPTION(param,value) statement which
+is equivalent to param=value.
+
+The list below describes some of the frequently used
+variables.
+
+
+PERSID     The amount of memory  allocated  for  the
+           bufferlet area  for  every sid on the interface.
+           The default is 3000d bytes.
+
+
+POLT3      Time-out before zapping a circuit(s)  when
+           interface has  not  seen  a  single good response
+           from a station/host.  The default is 31 seconds.
+
+
+TDACT      Time-out before zapping a circuit  after  a  sid
+           has been  deactivated  by  a  UOM  command.   The
+           default is 11 seconds.  Applies to TIF only.
+
+
+
+TQUE       Time-out before clearing the transmit queue for a
+           sid when  the  queued  data  is not being dequed
+           trough a normal foreground process.  This is a
+           safety mechanism  to  prevent an  uncontrolled
+           queue  build  up.   The  default  is  661d
+           seconds.
+
+
+TZAPCT     Time-out before zapping a circuit after it has
+           been killed by UOM command by a network operator.
+           The default is 13 seconds.
+
+           is 2 seconds.
+
+
+PETIME     Variable defining a maximum  time  to  allow
+           before sending  a specific poll to a station
+           following a Wait-a-bit response to a text with
+           peripheral  initialization  command.  The default
+
+
+
+                          Page 49
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+           is 5 seconds.
+
+
+NBSPOL     Variable defining the number of  specific  polls
+           to send  before  attempting  a  peripheral  re-
+           selection when a sustained busy condition occurs.
+           The default is 10d.
+
+
+SPLINT     Variable defining  the  interval  between
+           succesive specific  polls when a sustained busy
+           condition occurs.  The default is 3 seconds.
+
+
+MAXDSZ     Variable giving the maximum  size  allowed  for
+           any message  going  to  any device.  No
+           regulation is imposed on the host.  Instead, the
+           room  for  commands  in  the  actual transmit
+           process  needs  a  limit, this value.  There is
+           no such thing as "null compaction" at this level
+           in  the  code.  Each null uses a unique byte in
+           the message and its size.  Since relatively
+           little  room  is  used  per  command,  this
+           value,  while  essential, can be overstated
+           somewhat without ill effects.  The current
+           default is 4100d for  the  maximum message size.
+
+
+BBF.D1, BBF.D2, BBF.D3 These three variables are  in  fact
+           debugging  switches  for  the  purpose  of
+           tracking the Big Bufferlet managment mechanism.
+           They can either be ON/YES or OFF/NO.   They  can
+           be  turned  ON/OFF independently.  They control
+           different aspects of  the  Bufferlet  Library
+           code.  Normally all should be OFF.  The default
+           is OFF.
+
+There is usually little justification for redifining  the
+values of  simple variables except perhaps of PERSID and
+occasional need to trace bufferlet problems.
+
+Time-out values should not be misunderstood.  They represent
+the time  interval  between  successive  runs  of respective
+time-out routines.  Since an event can happen anytime in the
+interval  the actual  "measured"  delay  can  be  anywhere
+from  one up to two intervals.
+
+
+
+
+
+
+
+
+                          Page 50
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+            11.  Sample System Generation Files
+
+
+
+11.1  Sample Command File
+
+
+UTS Terminal Interface
+
+
+
+ TITLE (UTSTRM) UTS4000 TERMINAL INTERFACE
+ ;A(BETATEST)UTST03.I00
+ ;A(BETATEST)UTST03.T00
+ ;A(BETATEST)UTST03.R00
+ ;A(BETATEST)UTST03.P00
+ 1;FUTST03.N00
+ SEG0,S0SIZE;P
+ SEG1,S1SIZE;P
+ SEG2,S2SIZE;P
+ SEG3,S3SIZE;P
+ SEG4,S4SIZE;P
+ CTA,CTASIZ;P
+ %P
+ %Q
+
+
+UTS Host Interface
+
+
+ TITLE (UTSHST) UTS4000 HOST INTERFACE
+ ;A(BETATEST)UTSH03.I00
+ ;A(BETATEST)UTSH03.T00
+ ;A(BETATEST)UTSH03.R00
+ ;A(BETATEST)UTSH03.P00
+ 1;FUTSH03.N00
+ SEG0,S0SIZE;P
+ SEG1,S1SIZE;P
+ SEG2,S2SIZE;P
+ SEG3,S3SIZE;P
+ SEG4,S4SIZE;P
+ CTA,CTASIZ;P
+ %P
+ %Q
+
+
+
+
+
+
+
+
+
+
+                          Page 51
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+11.2  Sample Tym File
+
+
+                 SUBTTL UTS4000 TERMINAL INTERFACE TYMFILE
+ :
+ PRINT                                   : See the SYSGEN
+ :
+ :       SYSTEM PARAMETERS
+ :
+ OPTION(PERSID,$A 1000)
+ OPTION(BBF.D3,YES)
+ :
+ TMIACT(25,10)
+ TIMEZONE(-8)
+ PSEUDO.HOST(839)
+ :
+ :       DEFINE UTS4000 TERMINAL LINE PARAMETERS
+ :
+ LINE(0,MPLX)
+         REPLYTO(1)
+         FASTPOLL(1/10)
+         SLOWPOLL(30,5)
+         INACTIVEPOLL(5,50)
+         SPEED(9600)                  : 9600 Bits/Sec
+         ARID(41)                   : Define the RID for this line
+                 ADID(163,167)      : Define devices for the group
+                 ASID(121)               : Local SIDs
+                         CIRCUIT(PVC)    : Define PVC
+                         PVC.USERNAME(MJASTRZ)
+                         PVC.HOST(835)
+                         PVC.PASSWORD(SECRET)
+                         PVC.MRID(52)
+                         PVC.MSID(124)
+                 ASID(122,124)
+         ARID(43)
+                 ADID(163,177)
+                 ASID(125,126)
+                 ASID(127)
+                         ADID(-165,-167)  : Exclude some devices
+                 ASID(130)
+                         ADID(160,162)
+                         PFKEY(8)
+         ARID(45)
+                 FASTPOLL(1/5)
+                 ASID(131,134)
+
+ LINE(1,DROP)
+         PVC.USERNAME(RUDMAN)
+         PVC.HOST(836)
+         PVC.PASSWORD(UTSTAR)
+         ARID(41)                   : Define the RID for this line
+
+
+
+                          Page 52
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+                 INACTIVEPOLL(6,40)
+                 ASID(121,124)      : Local SIDs
+         ARID(60)
+                 ASID(135)
+                         CIRCUIT(PVC)
+                         PVC.MRID(60)
+                         PVC.MSID(135)
+                 ASID(136)
+                         CIRCUIT(PVC)
+                         PVC.MRID(60)
+                         PVC.MSID(136)
+                 ASID(137)
+ LINE(2,MPLX)
+         .        .        .        .
+         .        .        .        .
+         .        .        .        .
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 53
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+                 SUBTTL UTS4000 HOST INTERFACE TYMFILE
+ :
+ PRINT                                   : See the SYSGEN
+ :
+ :       SYSTEM PARAMETERS
+ :
+ OPTION(PERSID,$A 500)
+ OPTION(BBF.D3,1)
+ OPTION(HANG,NO)
+ :
+ TIMEZONE(-8)
+ EDFON(74)
+ MSGWAIT
+  RECEIVE(SIGNOFF COMPLETE)
+ :
+ :       DEFINE UTS4000 HOST LINE PARAMETERS
+
+ LINE(0,MPLX)
+         REPLYTO(2)
+         HOST(835)
+         SPEED(9600)                : 9600 Bits/Sec
+         ARID(52)                   : Define the RID for this line
+                 ASID(121,124)      : Local SIDs
+         ARID(53)
+                 ASID(125,127)
+                 ASID(130)
+         ARID(54)
+                 ASID(131,133)
+                 ASID(135,140)
+
+ LINE(1,DROP)
+         HOST(836)
+         SPEED(9600)                : 9600 Bits/Sec
+         ARID(52)                   : Define the RID for this line
+                 ASID(121)          : Local SIDs
+         ARID(60)
+                 ASID(135)
+                 ASID(137)
+                 ASID(140)
+
+ LINE(2,MPLX)
+         REPLYTO(3)
+         HOST(837)
+         SPEED(9600)                : 9600 Bits/Sec
+         ARID(41)                   : Define the RID for this line
+                 ASID(121,124)      : Local SIDs
+         ARID(62)
+                 ASID(145,150)
+                 ASID(157)
+
+
+
+
+
+                          Page 54
+
+
+
+
+
+
+
+UTS-4000 System Generation, V5.0                    12/11/87
+
+
+
+             12.  Sysgen Error/Warning Messages
+
+
+The assembling of an UTS4000 Interface  may  produces
+diagnostic error   messages   or  warning  messages.   The
+errors  must  be corrected, but the warning messages may be
+just  ignored.   Some Tym file errors of nature clearly
+relating to the UTS environment will generate a fully
+descriptive  message.   Those  errors  are detected  by  the
+checks  built into the code itself.  Other may escape early
+detection and cause assembly to  fail  with  limited
+description  as  to their nature.  They will be of a more
+generic nature, and due to their  huge  number  they  are
+impossible  to account  for.   The  most  complete  list  of
+error  and warning messages is in the "INIT" file.  Since
+the code will need  to  be examined  and  altered  in some
+way, this document defers to that itemization at this
+writing.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 55
+
+
+
+
+
+
+
+
+
+
+
+                      Table of Content
+
+
+     PREFACE  ....................................................1
+
+ 1.  OVERVIEW  ...................................................2
+
+ 2.  STATEMENT
+     LEVELS  .....................................................3
+
+ 3.  CONTROL
+     DIRECTIVES  .................................................5
+
+ 4.  SLOT
+     level
+     Statements  .................................................6
+     4.1   SYSTEM  ...............................................6
+     4.2   FREEZE  ...............................................6
+     4.3   TIMEZONE  .............................................6
+     4.4   ISISRING  .............................................8
+     4.5   BUFSIZE  ..............................................8
+     4.6   PVCTIMER  .............................................8
+     4.7   HNGTIM  ..............................................10
+     4.8   PSEUDO.HOST  .........................................10
+     4.9   TMIACT  ..............................................10
+     4.10  EDFON  ...............................................12
+     4.11  ESCVTM ...............................................14
+     4.12  TRSPFK and NETKEY  ...................................14
+
+ 5.  LINE Level Statements  .....................................16
+     5.1   LINE  ................................................16
+     5.2   HOST  ................................................16
+     5.3   SPEED  ...............................................17
+     5.4   DTRDSR  ..............................................18
+     5.5   RTSCTS  ..............................................18
+     5.6   REPLYTO  .............................................18
+     5.7   RETRIES  .............................................20
+     5.8   FASTPOLL  ............................................20
+     5.9   INACTIVEPOLL  ........................................20
+     5.10  SLOWPOLL  ............................................22
+     5.11  ARID  ................................................22
+     5.12  LN.MSGW  .............................................22
+
+ 6.  RID Level Statements  ......................................25
+     6.1   ADID  ................................................25
+     6.2   ASID  ................................................25
+
+
+
+
+
+
+
+
+
+                           - i -
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 7.  SID Level Statements  .........................................28
+     7.1   ADID  ...................................................28
+     7.2   PFKEY  ..................................................28
+     7.3   PVC Statements  .........................................30
+           7.3.1  CIRCUIT  .........................................30
+           7.3.2  PVC.USERNAME  ....................................30
+           7.3.3  PVC.HOST  ........................................30
+           7.3.4  PVC.PASSWORD  ....................................32
+           7.3.5  PVC.GATEWAY  .....................................32
+     7.4   PVC Mapping Statements  .................................33
+           7.4.1  PVC.MRID  ........................................33
+           7.4.2  PVC.MSID  ........................................33
+
+ 8.  Network Service Screen Statements  ............................36
+     8.1   NSS.MENU  ...............................................36
+     8.2   NSS.ENTRY  ..............................................37
+     8.3   NSS.STRING  .............................................37
+     8.4   NSS.PFKEY  ..............................................38
+     8.5   NSS.FUNCTION  ...........................................39
+     8.6   NSS.LOGON  ..............................................39
+     8.7   NSS.GATEWAY  ............................................40
+     8.8   NSS Mapping Statements  .................................41
+           8.8.1  NSS.MRID  ........................................41
+           8.8.2  NSS.MSID  ........................................41
+     8.9   Sample NSS Code Usage  ..................................42
+
+ 9.  Host Signoff  .................................................44
+     9.1   Types of Signoff  .......................................44
+     9.2   Signoff Statements  .....................................46
+     9.3   Sample of Signoff definition  ...........................48
+
+10.  Simple Variables Pertinent to Sysgen  .........................49
+
+11.  Sample System Generation Files  ...............................51
+     11.1  Sample Command File  ....................................51
+     11.2  Sample Tym File  ........................................52
+
+12.  Sysgen Error/Warning Messages  ................................55
+
+
+
+
+
+
+
+
+
+                          - iii -
+
+
+
+
+%s `
