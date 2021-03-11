@@ -1,0 +1,4788 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              X.PC Protocol Specification
+
+                                      Version 1.0
+
+
+
+
+
+
+
+
+
+
+                                   September 8, 1983
+
+
+
+
+
+
+
+
+
+
+                                    Tymshare, Inc.
+
+                              Network Technology Division
+
+
+
+
+
+
+                  This document is the sole property and confidential
+                 information of Tymshare, Inc., and may not be copied
+                   in whole or part or disclosed to any third party
+                    without the prior written consent of Tymshare.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                      N O T I C E
+
+
+            This specification  is published by  Tymshare as a  proposal to
+            the designers and implementors of  personal computer communica-
+            tions  software  and  packet network  systems.   Tymshare  Inc.
+            reserves the right to revise this specification for any reason,
+            including conformity with standards promulgated by ANSI, CCITT,
+            ECMA, ISO, NBS, or  similar agencies; utilization of  new tech-
+            nology; or accommodation of  changes in communications systems.
+            Liability for  difficulties arising from  technical limitations
+            is disclaimed.
+
+            The  provision of  a network  service  based on  a protocol  as
+            described in this  document requires further  technical assess-
+            ment as well as certain business  decisions.  As of the date of
+            publication of this document, this technical assessment has not
+            been completed nor have the  business decisions been made.  Any
+            expenditures that may be made predicated on the possible avail-
+            ability  of this  service are  the sole  responsibility of  the
+            party authorizing such expenditures.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        PREFACE
+
+
+            This specification is  the product of Tymnet  research into the
+            market need and  potential models for a  reliable communication
+            protocol  that  provides value-added  packet  switched  network
+            services to personal computers.
+
+            Personal computers,  once used only  as dedicated  and isolated
+            systems, are increasingly being  used in applications requiring
+            reliable communication with other  personal and host computers.
+            The X.PC protocol provides reliable communication over dial-up,
+            asynchronous  communications links  between personal  computers
+            and packet switched networks.
+
+            Being a derivative of X.25, X.PC  provides the class of service
+            defined by the Open Systems  Interconnect model for the network
+            layer.
+
+            Tymnet solicits comments on this  specification from all inter-
+            ested parties.  Comments should be addressed to:
+
+
+                                    X.PC Development Group
+                                    Network Technology Division
+                                    Tymshare, Inc.
+                                    10261 Bubb Road
+                                    Cupertino, CA 95014
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+                                       CONTENTS                                       ________
+
+
+            1.0 SCOPE AND FIELD OF APPLICATION .......................... 1
+
+            2.0 REFERENCES .............................................. 2
+
+            3.0 DESIGN GOALS ............................................ 3
+
+               3.1 Reliability .......................................... 3
+
+                  3.1.1 Low Undetected Bit Error Rate ................... 3
+
+                  3.1.2 Delivery of Data in Correct Sequence ............ 3
+
+                  3.1.3 Recovery from Loss of Physical Connection ....... 4
+
+               3.2 Throughput ........................................... 4
+
+                  3.2.1 Low Protocol Overhead ........................... 4
+
+                  3.2.2 Window Algorithm ................................ 4
+
+                  3.2.3 Timely Recovery from Transmission Line Errors ... 5
+
+               3.3 Functionality ........................................ 5
+
+                  3.3.1 Multiple Logical Paths .......................... 5
+
+                  3.3.2 Operation Without a Packet Switched Network ..... 5
+
+                  3.3.3 Optimization for Batch or Interactive Traffic ... 5
+
+                  3.3.4 Different Levels of Service ..................... 6
+
+               3.4 Standards ............................................ 6
+
+               3.5 Compatibility with Personal Computer Capabilities .... 6
+
+            4.0 PACKET LAYER LOGICAL INTERFACE .......................... 7
+
+               4.1 Introduction and General Considerations .............. 7
+
+                  4.1.1 Logical Channels ................................ 8
+
+                  4.1.2 Packet Layer Entity ............................ 11
+
+                  4.1.3 Basic Packet Structure ......................... 11
+
+
+                                                                     Page i
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+                  4.1.4 Maximum Packet Size ............................ 13
+
+                  4.1.5 Determining DTE/DXE Characteristics ............ 13
+
+               4.2 Flow Control Procedures ............................. 13
+
+                  4.2.1 Numbering of Packets ........................... 13
+
+                  4.2.2 Window Description ............................. 14
+
+                  4.2.3 Data Packet Limit .............................. 14
+
+                  4.2.4 Flow Control Principles ........................ 14
+
+                  4.2.5 Receive Ready Packet ........................... 15
+
+                  4.2.6 Receive Not Ready Packet ....................... 16
+
+               4.3 Error Recovery Procedures ........................... 16
+
+                  4.3.1 T15/T25 Timer and R15/R25 Counter .............. 16
+
+                  4.3.2 T17/T27 Timer and R17/R27 Counter .............. 18
+
+                  4.3.3 Other Timers and Counters ...................... 19
+
+                  4.3.4 Out-of-Sequence Packet ......................... 19
+
+                  4.3.5 Duplicate Packets .............................. 22
+
+               4.4 Packet Format Introduction .......................... 22
+
+                  4.4.1 General Format Identifier Field ................ 23
+
+                  4.4.2 Logical Channel Identifier Field ............... 24
+
+                  4.4.3 Packet Receive Sequence Number Field ........... 24
+
+                  4.4.4 Packet Send Sequence Number Field .............. 24
+
+                  4.4.5 Packet Type Identifier Field ................... 24
+
+               4.5 Call Setup and Call Clearing Packet Formats ......... 26
+
+                  4.5.1 Call Request and Incoming Call Packets ......... 26
+
+                  4.5.2 Call Accepted and Call Connected Packets ....... 30
+
+
+
+                                                                    Page ii
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+                  4.5.3 Clear Request and Clear Indication Packets ..... 33
+
+                  4.5.4 Clear Confirmation Packet ...................... 35
+
+               4.6 Data and Interrupt Packet Formats ................... 36
+
+                  4.6.1 Data Packet .................................... 36
+
+                  4.6.2 Interrupt Packet ............................... 37
+
+                  4.6.3 Interrupt Confirmation Packet .................. 38
+
+               4.7 Flow Control Packet Formats ......................... 39
+
+                  4.7.1 Receive Ready Packet ........................... 39
+
+                  4.7.2 Receive Not Ready Packet ....................... 40
+
+               4.8 Reset Packet Formats ................................ 41
+
+                  4.8.1 Reset Request and Reset Indication Packets ..... 41
+
+                  4.8.2 Reset Confirmation Packet ...................... 43
+
+               4.9 Restart Packet Formats .............................. 44
+
+                  4.9.1 Restart Request and Restart Indication Packets . 44
+
+                  4.9.2 Restart Confirmation Packet .................... 47
+
+               4.10 Diagnostic Packet Format ........................... 47
+
+               4.11 Reject Packet Format ............................... 49
+
+               4.12 Optional User Facilities Other Than X.25 ........... 50
+
+               4.13 Optional User Facility Format ...................... 50
+
+                  4.13.1 Flow Control Parameter Packet Size ............ 51
+
+                  4.13.2 Flow Control Parameter Window Size ............ 51
+
+                  4.13.3 Reconnect Facility ............................ 52
+
+            5.0 DATA LINK LAYER SPECIFICATION .......................... 53
+
+               5.1 Framing Format ...................................... 53
+
+
+
+                                                                   Page iii
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+               5.2 Maximum Data Link Frame Size ........................ 55
+
+            Appendix A, PACKET FORMATS ................................. 56
+
+            INDEX ...................................................... 66
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                    Page iv
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            Tables            ______
+
+             1  Packet Groupings/Functions ............................. 12
+
+             2  DCE and DTE Timers and Counters ........................ 19
+
+             3  General Format Identifier .............................. 23
+
+             4  Packet Type Identifier ................................. 25
+
+             5  Coding of the Restarting Cause Field in Restart
+                Indication Packets ..................................... 46
+
+
+
+            Figures            _______
+
+             1  Logical Channel Identifier Assignment .................. 9
+
+             2  General Packet Format .............................. 11, 56
+
+             3  Timer Recovery from Lost Acknowledgment ................ 17
+
+             4  Timer Recovery from Loss of Last Packet Sent in a
+                Window with No More Packets to Send .................... 18
+
+             5  Recovery from Out-of-Sequence Packet ................... 20
+
+             6  Recovery from More Than One Lost Packet ................ 21
+
+             7  Timer Recovery from Loss of Last Packet Sent in a
+                Window with More Packets to Send ....................... 22
+
+             8  Call Request and Incoming Call Packet Format ....... 27, 57
+
+             9  Call Accepted and Call Connected Packet Format ..... 31, 58
+
+            10  Clear Request and Clear Indication Packet Format ... 34, 59
+
+            11  Clear Confirmation Packet Format ................... 36, 59
+
+            12  Data Packet Format ................................. 37, 60
+
+            13  Interrupt Packet Format ............................ 38, 60
+
+            14  Interrupt Confirmation Packet Format ............... 39, 61
+
+            15  Receive Ready Packet Format ........................ 40, 61
+
+
+                                                                     Page v
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            16  Receive Not Ready Packet Format .................... 41, 62
+
+            17  Reset Request and Reset Indication Packet Format ... 42, 62
+
+            18  Reset Confirmation Packet Format ................... 44, 63
+
+            19  Restart Request and Restart Indication Packet
+                Format.............................................. 45, 63
+
+            20  Restart Confirmation Packet Format ................. 47, 64
+
+            21  Diagnostic Packet Format ........................... 48, 64
+
+            22  Reject Packet Format ............................... 49, 65
+
+            23  X.PC Data Link Transmission Frame Format ............... 54
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                    Page vi
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+                              X.PC PROTOCOL SPECIFICATION
+
+
+            SECTION 1.0 SCOPE AND FIELD OF APPLICATION            __________________________________________
+
+            This specification defines the formats and procedures at X.PC's
+            packet and data  link layers for Data  Terminal Equipment (DTE)
+            and Data Communication Equipment  (DCE).  Both switched virtual
+            call and permanent virtual call modes of operation are defined.
+
+            This specification covers  DTE and DCE operation  when a packet
+            switched network is accessed through a circuit switched or ded-
+            icated  connection.  It  also  includes  the additional  packet
+            layer procedures necessary for two DTEs to communicate directly
+            (i.e., without an  intervening packet switched network)  over a
+            dedicated or circuit switched connection.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                   SCOPE AND FIELD OF APPLICATION    Page 1
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            SECTION 2.0 REFERENCES            ______________________
+
+            CCITT  Recommendation  X.25, Interface  between  data  terminal
+            equipment (DTE)  and data  circuit-terminating equipment  (DCE)
+            for terminals operating in the packet  mode on public data net-
+            works, X25 DR80002.
+
+            ISO Standard X.25, Packet Layer Specification for Data Terminal
+            Equipment, ISO/TC 97/SC 6.
+
+            CCITT Recommendation X.96, Call progress signals in public data
+            networks, Vol VIII, Fascicle VIII.3.
+
+            ISO Reference Model  of Open Systems Interconnection  for CCITT
+            Applications.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                       REFERENCES    Page 2
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            SECTION 3.0 DESIGN GOALS            ________________________
+
+            This section addresses  reliability, throughput, functionality,
+            compatibility with  standards, and compatibility  with personal
+            computer processing capability.
+
+
+            SECTION 3.1 Reliability            _______________________
+
+            The X.PC protocol  must provide for the  error-free exchange of
+            data between DTE and DXE, where  error-free is defined as a low
+            undetected  bit error  rate, the  delivery of  data in  correct
+            sequence, and the ability to recover  from loss of the physical
+            connection.   The term  DXE  is used  in  those contexts  where
+            either a DTE or a DCE is applicable.
+
+
+            3.1.1 Low Undetected Bit Error Rate                  _____________________________
+
+            User data  is grouped into X.PC  packets that are  protected by
+            the X.PC data link frame.  Cyclic redundancy check bits provide
+            the following level of detection:
+
+                           Single bit errors: 100%
+                           Double bit errors: 100%
+                    Odd number of error bits: 100%
+               Error burst less than 17 bits: 100%
+            Error burst greater than 17 bits: 10(-5) probability that the
+                                              burst is undetected
+
+            Assuming a fixed-length  block of 1000 bits  transmitted over a
+            1200 bit per  second dial-up telephone line with  an error rate
+            of 10(-3),  the theoretical undetected  error rate is  10(-3) x
+            10(-5) or 10(-8).   The probability is that as  many as 100,000
+            blocks can be transmitted (in  1388 hours) before an undetected
+            error occurs.   The figure  used for  the telephone  line error
+            rate, 10(-3), is pessimistic.
+
+
+            3.1.2 Delivery of Data in Correct Sequence                  ____________________________________
+
+            User data is  grouped into packets  that are  sequentially num-
+            bered using modulo 16  arithmetic.  Packets lost due  to trans-
+            mission line errors are retransmitted  using this sequence num-
+            ber, recovering the lost packet in the correct sequence.
+
+
+
+
+
+                                                     DESIGN GOALS    Page 3
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            Duplicate packets,  which may  be transmitted  to recover  from
+            transmission line  errors, are  detected by  the same  sequence
+            numbering scheme and are discarded,  thus preserving the origi-
+            nal data sequence.
+
+
+            3.1.3 Recovery from Loss of Physical Connection                  _________________________________________
+
+            X.PC reconnects  logical paths without  loss or  duplication of
+            data using its  reconnect facility.  Keys are  exchanged at the
+            time  logical paths  are established  which, in  the event  the
+            physical connection  is lost, can  be exchanged  to reestablish
+            logical connections once  the physical connection  is reestabl-
+            ished.
+
+        SECTION 3.2 Throughput            ______________________
+
+            Given the 20% overhead of  asynchronous character framing, X.PC
+            must utilize the remaining bandwidth as efficiently as possible
+            to provide good throughput and to minimize delay.  Bandwidth is
+            utilized efficiently  through low  protocol overhead,  a window
+            algorithm, and timely recovery from transmission line errors.
+
+
+            3.2.1 Low Protocol Overhead                  _____________________
+
+            Assuming a  packet containing 128  octets of user  data, X.PC's
+            protocol overhead is 8 octets,  resulting in 94% utilization of
+            the asynchronous bandwidth.
+
+            Length encoding for data transparency  minimizes protocol over-
+            head.  Unlike byte stuffing, which  incurs an increasing amount
+            of overhead dependent on data  values, length encoding incurs a
+            low constant fixed overhead independent of data values.
+
+            Eliminating  duplication of  function  between protocol  layers
+            also contributes to  the reduction of protocol  overhead.  X.PC
+            provides flow control and error  recovery at one protocol layer
+            and error detection at another.
+
+
+            3.2.2 Window Algorithm                  ________________
+
+            Through  the use  of sequence  numbers combined  with a  window
+            algorithm X.PC allows multiple packets to be transmitted before
+            acknowledgment is  required.  X.PC also  allows acknowledgments
+            to be added to data flowing in the opposite direction.
+
+
+                                                     DESIGN GOALS    Page 4
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            3.2.3 Timely Recovery from Transmission Line Errors                  _____________________________________________
+
+            X.PC's data  frame protects the  packet header,  which contains
+            the packet  sequence numbers, separately  from the rest  of the
+            packet, which contains user data.   Because the packet sequence
+            numbers are known, errors that occur  in the second part of the
+            frame result in the immediate request for retransmission of the
+            frame rather than waiting for another packet or a timeout.
+
+
+            SECTION 3.3 Functionality            _________________________
+
+            X.PC combines the capabilities and  characteristics of a packet
+            switched network and personal  computers.  This is accomplished
+            by providing multiple logical paths over a single physical con-
+            nection, operating without an intervening  packet switched net-
+            work, allowing  optimization for batch or  interactive traffic,
+            and providing different levels of service.
+
+
+            3.3.1 Multiple Logical Paths                  ______________________
+
+            The combination of X.PC's multiple logical  paths with a multi-
+            ple window  server on a personal  computer opens the door  to a
+            new generation  of networking applications nearly  unlimited in
+            scope.  X.PC is also ideally suited  to service the coming gen-
+            eration of multiple task applications.
+
+
+            3.3.2 Operation Without a Packet Switched Network                  ___________________________________________
+
+            Although X.PC is  intended for use between  a personal computer
+            and  a packet  switched network,  the protocol  does allow  for
+            direct connection between personal computers  or between a per-
+            sonal computer and a host.
+
+
+            3.3.3 Optimization for Batch or Interactive Traffic                  _____________________________________________
+
+            During call  setup, both  packet size  and window  size can  be
+            negotiated to optimize for the traffic type.
+
+
+
+
+
+
+
+
+
+                                                     DESIGN GOALS    Page 5
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            3.3.4 Different Levels of Service                  ___________________________
+
+            X.PC specifies both  a simple permanent virtual  call procedure
+            and a more powerful switched virtual call procedure.  Both pro-
+            cedures can be used simultaneously over  the same physical con-
+            nection.
+
+
+            SECTION 3.4 Standards            _____________________
+
+            X.PC is  based on CCITT  recommendation X.25 and  thus benefits
+            from  the wide  understanding of  X.25's principles.   Further,
+            because X.PC provides  nearly all  X.25 functions  to asynchro-
+            nous,  low-speed personal  computers,  it  is possible  for  an
+            intelligent  packet switched  network to  convert  X.PC into  a
+            CCITT X.25 network.
+
+            X.PC's being based upon CCITT recommendation X.25 also provides
+            a growth path for the implementation of X.28/X.29 PAD functions
+            in a personal computer.  In general, X.PC provides an excellent
+            base upon which higher level protocols may be implemented.
+
+
+            SECTION 3.5 Compatibility with Personal Computer Capabilities            _____________________________________________________________
+
+            X.PC was designed to be implemented  easily on the current gen-
+            eration of  high performance 8-bit and  16-bit microprocessors.
+            Most of the protocol fields occupy either the high order 4 bits
+            or low order 4 bits of  an octet, which are easily accommodated
+            by  both high-level  and  low-level  languages.  The  remaining
+            fields occupy full octets.
+
+            The use of length encoding  for data transparency minimizes CPU
+            overhead compared to byte stuffing, in which every data charac-
+            ter must be processed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                     DESIGN GOALS    Page 6
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            SECTION 4.0 PACKET LAYER LOGICAL INTERFACE            __________________________________________
+
+            This section contains an introduction to the packet layer logi-
+            cal interface, flow control and  error recovery procedures, and
+            discussions of  the various  packet formats  and optional  user
+            facilities other than X.25.
+
+
+            SECTION 4.1 Introduction and General Considerations            ___________________________________________________
+
+            This section  defines X.PC's  packet layer,  which governs  the
+            transfer of packets at a DTE/DCE or DTE/DTE interface, from the
+            viewpoint of both the DTE and DCE.
+
+            The packet layer in a sending DXE packetizes messages delivered
+            by a  higher level  entity in  the same  DXE before  giving the
+            information to a link layer protocol for transmission.
+
+            The packet layer  in a receiving DXE receives  packets from the
+            link  layer, checks  the packets  for  correctness, strips  off
+            packet layer  headers, generates  messages from  the packetized
+            user data, and passes them to a higher level entity in the same
+            DXE.
+
+            X.PC's packet  layer logical  interface provides  the following
+            capabilities that facilitate reliable and efficient data commu-
+            nication:
+
+              o  Multiplexing: The ability to support multiple data streams
+
+              o  Flow  control:  The  ability to  control,  for  each  data
+                 stream, the flow of data  between transmitting and receiv-
+                 ing DTEs and DXEs
+
+              o  Error control: The ability to  detect errors at the packet
+                 layer and to correct errors indicated by the link layer
+
+              o  Reset and restart: The ability  to reinitialize communica-
+                 tion paths at the packet layer if serious errors occur
+
+            These functions are made possible through the use of:
+
+              o  Logical channel numbers
+
+              o  Send and receive sequence numbers
+
+              o  Data packets
+
+
+
+                                   PACKET LAYER LOGICAL INTERFACE    Page 7
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+              o  Control packets that regulate information flow
+
+              o  Control packets that request retransmission of data packets
+
+              o  Control packets that reinitialize communication
+
+
+            4.1.1 Logical Channels                  ________________
+
+            To permit simultaneous switched virtual calls, logical channels
+            are used.  Each call is  assigned a logical channel identifier,
+            which is  a number  in the range  1 - 15.  The  logical channel
+            identifier is assigned during the call setup phase from a range
+            of previously agreed upon logical channel identifiers.  Logical
+            channel identifier 0 is reserved and may not be assigned.
+
+            A DTE's use of particular logical channels is agreed upon for a
+            period with the DXE.  Figure 1 shows  the structure for assign-
+            ing logical  channels.  No  more than  15 simultaneous  virtual
+            calls may be established at any one time.
+
+            Logical channel 1 is used for  a single logical channel DTE/DXE
+            interface.  The logical channels shown in Figure 1 are used for
+            a multiple logical channel DTE/DXE interface.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                   PACKET LAYER LOGICAL INTERFACE    Page 8
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+                                 LCI
+                          -----------------
+                                0 |
+                                1 |
+                                  //
+                              LIC |  --.
+                                  |    | One-way incoming
+                                  |    |
+                              HIC |  --:
+                                 //
+                              LTC |  --.
+                                  |    |
+                                  |    | Two-way
+                                  |    |
+                              HTC |  --:
+                                 //
+                              LOC |  --.
+                                  |    |
+                                  |    | One-way outgoing
+                                  |    |
+                                  |    |
+                              HOC |  --:
+                                 //
+                               15 |
+                          -----------------
+
+                          LCI: Logical channel identifier
+            LIC: Lowest incoming channel    HIC: Highest incoming channel
+            LTC: Lowest two-way channel     HTC: Highest two-way channel
+            LOC: Lowest outgoing channel    HOC: Highest outgoing channel
+
+                    Figure 1  Logical Channel Identifier Assignment                    _______________________________________________
+
+
+            The following comments apply to Figure 1.
+
+            Logical channels are assigned for a period with the DXE as fol-
+            lows:
+
+            Logical channels LIC to HIC: The range of logical channels that
+            are assigned to  one-way incoming logical channels  for virtual
+            calls (see Note 4).
+
+            Logical channels LTC to HTC: The range of logical channels that
+            are assigned to two-way logical channels for virtual calls.
+
+
+
+
+
+                                   PACKET LAYER LOGICAL INTERFACE    Page 9
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            Logical channels LOC to HOC: The range of logical channels that
+            are assigned to  one-way outgoing logical channels  for virtual
+            calls (see Note 4).
+
+            Logical channels outside the ranges LIC to HIC, LTC to HTC, and
+            LOC to HOC are unassigned logical channels.
+
+            Note 1: The references to logical  channel identifiers are made
+                    according to a set  of contiguous numbers from  0 (low-
+                    est) to 15 (highest) using bits 4 through 1 of octet 1.
+                    The numbering is  binary coded, where bit 1  is the low
+                    order bit.
+
+            Note 2: logical channel identifier 0 may not be assigned.
+
+            Note 3: All logical channel boundaries are agreed upon with the
+                    DXE for a specified time.
+
+            Note 4: In a  DTE/DTE environment, one  DTE views the  range of
+                    logical channel identifiers as  presented here, whereas
+                    the other DTE  views it as a DCE (e.g.,  the latter DTE
+                    views the  range from LIC  to HIC as  one-way outgoing)
+                    (see Section 4.2.5).
+
+            Note 5: In the  absence of  one-way incoming  logical channels,
+                    logical channel 1 is available  for LTC. In the absence
+                    of one-way incoming logical channels  and two-way logi-
+                    cal channels, logical channel 1 is available for LOC.
+
+            Note 6: The search algorithm of a DCE, or a DTE performing as a
+                    DCE in a DTE/DTE environment, for a logical channel for
+                    a new incoming call will be  to use the lowest numbered
+                    logical channel in the ready state (p1) in the range of
+                    LIC to HIC  and LTC to HTC.   (See CCITT recommendation
+                    X.25.)
+
+            Note 7: To minimize the risk of  call collision, the DTE search
+                    algorithm  starts  with the  highest  numbered  logical
+                    channel in the ready state  (p1) in the two-way logical
+                    channel (HTC) or one-way outgoing logical channel (HOC)
+                    ranges.
+
+
+
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 10
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            4.1.2 Packet Layer Entity                  ___________________
+
+            The concept of communication via  logical channels is native to
+            packet layer terminology.   It is conceivable, however,  that a
+            DTE may have one or more connections to one or more packet net-
+            works and/or to one or more  DTEs without an intervening packet
+            network.  Therefore, it  is necessary to introduce  the concept
+            of a  'packet layer' entity.  One  such entity exists in  a DTE
+            for each DTE/DTE (without an intervening packet network) inter-
+            face or for each DTE/DCE (packet network) interface.
+
+            Which  entity  to use  to  reach  a particular  destination  is
+            decided external  to the  protocol described  here.  The  items
+            discussed in this  section pertain to each  packet layer entity
+            in a DTE or DCE.
+
+
+            4.1.3 Basic Packet Structure                  ______________________
+
+            Each packet  transferred across the DTE/DXE  interface consists
+            of three or more octets.  The first two octets contain the gen-
+            eral  format  identifier, logical  channel  identifier,  packet
+            receive  sequence  number,  and  packet  send  sequence  number
+            fields.  The third octet contains either  the packet type iden-
+            tifier or one  octet of packet user data.   Other packet fields
+            are appended as required (see Section 4.4).  Figure 2 shows the
+            generalized packet format.
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    |                               |
+                           |---:---:---:---:---:---:---:---|
+                           |  Additional fields dependent  |
+                           //       on packet type        //
+                           |                               |
+                           |---:---:---:---:---:---:---:---|
+
+                            Figure 2  General Packet Format                            _______________________________
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 11
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            For interoperability across  all DTE/DXE interfaces,  any addi-
+            tional field appended after the first three octets must contain
+            an integral number of octets.
+
+            Packet types are given in Table 1.
+
+
+                                        Table 1
+
+                              Packet Groupings/Functions                              __________________________
+
+          |--------------.--------------------------.------------------------|
+          | Packet Group |      Function            |     Packet Type        |
+          |--------------|--------------------------|------------------------|
+          | Call setup   | Establish and terminate  | Call request           |
+          | and call     | a virtual call for       | Incoming call          |
+          | clearing     | DTE/DXE communication;   | Call accepted          |
+          | (see note)   | may convey data for      | Call connected         |
+          |              | higher-level entity      | Clear request          |
+          |              | processing               | Clear indication       |
+          |              |                          | Clear confirmation     |
+          |--------------|--------------------------|------------------------|
+          | Data and     | Convey data or           | Data                   |
+          | interrupt    | interrupt information    | Interrupt              |
+          |              | for higher-level         | Interrupt confirmation |
+          |              | entity processing        |                        |
+          |--------------|--------------------------|------------------------|
+          | Flow control | Control the flow         | Receive ready          |
+          | and reset    | of data packets          | Receive not ready      |
+          |              | across a DTE/DXE         | Reject                 |
+          |              | interface                | Reset request          |
+          |              |                          | Reset indication       |
+          |              |                          | Reset confirmation     |
+          |--------------|--------------------------|------------------------|
+          | Restart      | (Re)Initialize all       | Restart request        |
+          |              | communication between    | Restart indication     |
+          |              | a DTE and a DXE          | Restart confirmation   |
+          |--------------|--------------------------|------------------------|
+          | Diagnostic   | Pass error diagnostics   | Diagnostic             |
+          |              | to a DXE                 |                        |
+          |------------------------------------------------------------------|
+
+            Note: Call setup and call clearing packets and procedures are not
+                  required for permanent virtual circuit Services.
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 12
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            4.1.4 Maximum Packet Size                  ___________________
+
+            The  data packet  user  data field  may  contain  no more  than
+            256 octets.  The maximum  packet size,  including packet  over-
+            head, is  258 octets.  The maximum  number of data  packet user
+            data field octets can be negotiated (see Section 4.13).
+
+
+            4.1.5 Determining DTE/DXE Characteristics                  ___________________________________
+
+            In a DTE/DTE environment (i.e.,  no intervening packet switched
+            network), the restart procedure determines  which DTE acts as a
+            DCE with  respect to logical  channel selection  during virtual
+            call establishment and  the resolution  of virtual  call colli-
+            sion.
+
+            This procedure  is defined  in the  ISO X.25  DTE packet  layer
+            specification.  In  essence, the restart-cause  code determines
+            the appropriate  mode of  operation.  A  restart-cause code  of
+            zero in a  restart indication packet identifies  the originator
+            as a DTE.
+
+            A restart-cause  code other than  zero in a  restart indication
+            packet identifies  the originator as a  DCE.  Refer to  the ISO
+            X.25 DTE  packet layer  specification for  full details  on the
+            restart procedure.
+
+
+            SECTION 4.2 Flow Control Procedures            ___________________________________
+
+            At the DTE/DXE interface of a logical channel, the transmission
+            of data packets is controlled separately for each direction and
+            is based on authorization from the receiver.
+
+
+            4.2.1 Numbering of Packets                  ____________________
+
+            With  the exception  of the  reset request/indication,  restart
+            request/indication, receive ready (RR), receive not ready (RNR)
+            and reject packets, all packets  transmitted across the DTE/DXE
+            interface in  each direction  are sequentially  numbered.  This
+            number is  called the  packet send  sequence number  P(S).  The
+            sequence numbers  are modulo 16.   The packet  sequence numbers
+            cycle through the range 0 - 15.
+
+            The  restart request,  restart indication,  reset request,  and
+            reset indication  packets reset both the  DTE and DXE  P(S) and
+            P(R) to zero.  Subsequent packets are numbered consecutively.
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 13
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            4.2.2 Window Description                  __________________
+
+            At the  DTE/DXE interface  of a  logical channel,  a window  is
+            defined as the modulo 16 ordered set of P(W) consecutive packet
+            send sequence numbers  P(S) of all packets  authorized to cross
+            the interface.
+
+            The P(S)  of the  first of the  P(W) packets  in the  window is
+            referred to as the lower window edge.  The upper window edge is
+            the P(S)  of the last of  the P(W) packets authorized  to cross
+            the interface.
+
+            The P(S) of the first packet not authorized to cross the inter-
+            face is  the value of the  lower window edge plus  P(W) (modulo
+            16).  The standard window size P(W)  is 8 for each direction of
+            packet transmission at the DTE/DXE interface.  The minimum win-
+            dow size P(W) is 4.
+
+
+            4.2.3 Data Packet Limit                  _________________
+
+            The data packet limit is the number of data packets that may be
+            transmitted in a window.  The data  packet limit is one half of
+            P(W) for  each direction  of data  transmission at  the DTE/DXE
+            interface.  The standard default data packet limit is 4.
+
+            The DXE uses D(S) to count transmitted data packets and D(R) to
+            count received data packets.
+
+
+            4.2.4 Flow Control Principles                  _______________________
+
+            When the  send sequence number  P(S) of  the next packet  to be
+            transmitted by  a DXE other  than a  data packet is  within the
+            window, the DXE is authorized to transmit the packet.
+
+            When P(S) of the next data packet to be transmitted by a DXE is
+            within the  window and D(S)  is greater  than zero, the  DXE is
+            authorized to  transmit the data  packet.  On  transmitting the
+            data packet the DXE decrements its D(S).
+
+            When P(S)  of the packet  received by a  DXE other than  a data
+            packet is  next in sequence  and is  within P(W), the  DXE will
+            accept the packet.
+
+            When P(S)  of the  data packet  received by  a DXE  is next  in
+            sequence and the DXE's D(R) is  greater than zero, the DXE will
+            accept the packet and decrement its D(R).
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 14
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            The  modulo 16  packet  receive  sequence number  P(R)  conveys
+            across the DTE/DXE interface information  from the receiver for
+            the  transmission  of  packets.  When  transmitted  across  the
+            DTE/DXE interface, a valid P(R)  (as defined below) becomes the
+            lower P(W) window edge.  In this way, additional packets may be
+            authorized by the receiver to cross the DTE/DXE interface.
+
+            The packet  receive sequence number  P(R) is conveyed  in data,
+            RR, RNR, and reject packets.
+
+            The value of a  received P(R) must be greater than  or equal to
+            the last P(R)  received and less than  or equal to the  P(S) of
+            the next packet to be transmitted  by that DXE.  Otherwise, the
+            DXE will  consider the receipt of  this P(R) a  procedure error
+            and will  reset the logical channel.   A DCE will  indicate the
+            cause  as 'Local  Procedure Error.'   A DTE  will indicate  the
+            cause as 'DTE Originated.'  In either case, the diagnostic will
+            be 'Invalid P(R).'
+
+            The P(R) returned in any of the above mentioned packets is less
+            than or  equal to  the P(S)  of the  next packet  expected.  It
+            implies that the DXE transmitting P(R) has accepted all packets
+            up to  and including  the packet  number P(R)-1.   If any  data
+            packets were acknowledged  by the transmitted P(R),  the number
+            of data packets acknowledged is added to D(R).
+
+            If the received P(R) acknowledges  any data packets, the number
+            of data packets acknowledged is added  to D(S).  As acknowledg-
+            ments for  data packets  are sent, the  number of  data packets
+            acknowledged is added to the DXE's D(R).
+
+
+            4.2.5 Receive Ready Packet                  ____________________
+
+            A DXE  uses receive ready (RR)  packets to indicate that  it is
+            ready to receive  P(W) packets within the  window starting with
+            P(R), where P(R) is indicated in the RR packet.
+
+            The transmission of  an RR packet with a  particular P(R) value
+            is not  to be taken as  a demand for retransmission  of packets
+            that have already been transmitted and are still in the window.
+
+            For further  information   see  Receive   Ready  Packet   (Sec-
+            tion 4.7.1).
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 15
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            4.2.6 Receive Not Ready Packet                  ________________________
+
+            A DXE uses receive not ready (RNR) packets to indicate a tempo-
+            rary inability  to accept additional  data packets for  a given
+            virtual call.  A DXE receiving an RNR packet stops transmitting
+            data packets on the indicated  logical channel but updates P(W)
+            by the P(R) value of the RNR  packet if the P(R) is valid.  The
+            receive not ready situation indicated by the transmission of an
+            RNR packet is cleared by the transmission in the same direction
+            of a receive ready packet or by the initiation of a clear (vir-
+            tual calls only), reset, or restart procedure.
+
+            The transmission of  an RR packet after the  transmission of an
+            RNR packet is not to be taken as a demand for retransmission of
+            data packets that have already been transmitted.
+
+            The RNR packet may be used to  convey across the DTE/DXE inter-
+            face the P(R) value corresponding to a data packet that had the
+            D bit set to 1 if additional data packets cannot be accepted.
+
+            For further  information see  Receive  Not  Ready Packet  (Sec-
+            tion 4.7.2) and Receive Ready Packet (Section 4.7.1).
+
+
+            SECTION 4.3 Error Recovery Procedures            _____________________________________
+
+            Lost or corrupted  packets are recovered by  the retransmission
+            of  packets based  on  packet  sequence numbers.   Packets  are
+            retransmitted whenever an out-of-sequence packet is detected or
+            a timer expires.
+
+
+            4.3.1 T15/T25 Timer and R15/R25 Counter                  _________________________________
+
+            Timer T15 is used by a DCE and timer T25 by a DTE in recovering
+            from errors involving sequenced packets.   The default value is
+            4 seconds.
+
+            Timer  T25 is  started  when the  first  packet is  transmitted
+            across the DTE/DXE  interface.  If T25 is still  running at the
+            time of the transmission of succeeding packets, it implies that
+            previously transmitted packets are awaiting acknowledgment, and
+            no further action is taken.
+
+            When a P(R)  is received acknowledging some  of the outstanding
+            packets, T25 is restarted.  If  all the outstanding packets are
+            acknowledged, T25 is stopped.
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 16
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            When T25 expires,  the DXE retransmits the  last unacknowledged
+            packet, as many as R15 times for a DCE and R25 times for a DTE.
+            The default value of R15/R25 is 4.  See Figures 3 and 4.
+
+            If the DCE R15 count is exceeded, the DCE will transmit a reset
+            indication.  If  the DTE  R25 count is  exceeded, the  DTE will
+            transmit a reset request.
+
+            DCE timer  T15 is  stopped when  a restart  request or  a reset
+            request is received.   DTE timer T25 is stopped  when a restart
+            indication or a reset indication is received.
+
+
+                          DXE                     DXE
+                          ---                     ---
+                           |                       |
+            T25 started    | Data 1,2              |
+                           |---------------------->|
+                           | Data 1,3              |
+                           |---------------------->|
+                           | Data 1,4              |
+                           |---------------------->|
+                           | Data 1,5              |
+                           |---------------------->|
+                           |                       |
+            RR packet      |            RR 6       | Acknowledges packets
+            is lost        |<----- X --------------| 2 through 5
+                           |                       |
+                           |                       |
+            T25 expires,   | Data 1,5              |
+            last packet    |---------------------->|
+            is resent and  |                       |
+            T25 restarted  |                       | Duplicate packet is
+                           |                       | discarded and reject
+                           |           REJ 6       | is issued
+            T25 stopped    |<----------------------|
+                           |                       |
+            T25 started,   | Data 1,6              |
+            transmission   |---------------------->|
+            continues      |                       |
+                           |                       |
+                           |                       |
+
+                   Figure 3  Timer Recovery from Lost Acknowledgment                   _________________________________________________
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 17
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+                          DXE                     DXE
+                          ---                     ---
+                           |                       |
+            T25 started    | Data 1,2              |
+                           |---------------------->|
+                           | Data 1,3              |
+                           |---------------------->|
+                           | Data 1,4              |
+                           |---------------------->|
+                           | Data 1,5              |
+                           |------------- X ------>|
+                           |                       |
+                           |            RR 5       | Acknowledges packets
+            T25 restarted  |<----------------------| 2 through 4
+                           |                       |
+                           |                       |
+            T25 expires,   | Data 1,5              |
+            last packet    |---------------------->|
+            is resent and  |                       |
+            T25 restarted  |                       |
+                           |            RR 6       | Acknowledges packet 5
+            T25 stopped    |<----------------------|
+                           |                       |
+                           |                       |
+
+                Figure 4  Timer Recovery from Loss of Last Packet Sent
+                __________in a Window with No More Packets to Send____                          ________________________________________
+
+
+            4.3.2 T17/T27 Timer and R17/R27 Counter                  _________________________________
+
+            DCE timer T17  and DTE timer T27 are started  whenever a reject
+            packet is transmitted.   The T17/T27 timer is  stopped when the
+            first retransmitted packet is received.
+
+            The DXE retransmits a reject packet  no more than R17/R27 times
+            if no response is received.
+
+            DCE timer  T17 is  stopped when  a restart  request or  a reset
+            request is received.   DTE timer T27 is stopped  when a restart
+            indication or a reset indication packet is received.
+
+
+
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 18
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            4.3.3 Other Timers and Counters                  _________________________
+
+            In addition to  the T15/T25 and T17/T27 timers  and the R15/R25
+            and R17/R27 counters,  other X.25 timers and  counters are used
+            as specified.  These are shown in Table 2.
+
+
+                                        Table 2
+
+                            DCE and DTE Timers and Counters                            _______________________________
+
+                     DCE Timers and Counters                     _______________________
+
+                     Timer  Default Value  Counter  Default Value                     _____  _____________  _______  _____________
+
+                      T10    60 seconds
+                      T11   180 seconds
+                      T12    60 seconds
+                      T13    60 seconds
+                      T15     4 seconds     R15      4
+                      T17     4 seconds     R17      4
+
+                     DTE Timers and Counters                     _______________________
+
+                     Timer  Default Value  Counter  Default Value                     _____  _____________  _______  _____________
+
+                      T20   180 seconds    R20      1
+                      T21   200 seconds
+                      T22   180 seconds    R22      1
+                      T23   180 seconds    R23      1
+                      T24    60 seconds
+                      T25     4 seconds    R25      4
+                      T26   180 seconds
+                      T27     4 seconds    R27      4
+
+
+            4.3.4 Out-of-Sequence Packet                  ______________________
+
+            A lost packet is indicated when a  P(S) is received that is not
+            consecutive (modulo 16) with the previous P(S).  See Figures 5,
+            6, and 7.  Where this happens the  DXE sends a reject packet to
+            request retransmission of the missing packet.
+
+            Restart request,  restart indication, reset request,  and reset
+            indication packets  have a  P(S) of  zero.  Reception  of these
+            packets out of sequence is not considered an error; these pack-
+            ets have the effect of resetting P(S) and P(R) to zero.
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 19
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+
+
+                          DXE                     DXE
+                          ---                     ---
+                           |                       |
+            T25 started    | Data 1,2              |
+                           |---------------------->|
+                           | Data 1,3              |
+                           |---------------------->|
+                           | Data 1,4              |
+                           |------------ X ------->| Packet lost
+                           | Data 1,5              |
+                           |---------------------->| Packet is out of
+                           |                       | sequence, reject
+                           |           REJ 4       | is issued for
+            T25 stopped    |<----------------------| missing packet 4
+                           |                       |
+                           |                       |
+            T25 started,   | Data 1,4              |
+            retransmission |---------------------->|
+            starts with    | Data 1,5              |
+            packet 4       |---------------------->|
+                           |                       |
+                           |                       |
+
+                    Figure 5  Recovery from Out-of-Sequence Packet                    ______________________________________________
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 20
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+                          DXE                     DXE
+                          ---                     ---
+                           |                       |
+            T25 started    | Data 1,2              |
+                           |---------------------->|
+                           | Data 1,3              |
+                           |---------------------->|
+                           | Data 1,4              |
+                           |------------ X ------->|
+                           | Data 1,5              |
+                           |------------ X ------->|
+                           |                       |
+                           |            RR 4       | Acknowledges packets
+            T25 restarted  |<----------------------| 2 through 3
+                           |                       |
+                           |                       |
+            T25 expires,   | Data 1,5              |
+            last packet    |---------------------->|
+            is resent and  |                       | Packet is out of
+            T25 restarted  |                       | sequence, reject
+                           |                       | is issued for
+                           |           REJ 4       | packet 4
+                           |<----------------------|
+                           |                       |
+            T25 started,   | Data 1,4              |
+            retransmission |---------------------->|
+            starts with    | Data 1,5              |
+            packet 4       |---------------------->|
+                           |                       |
+
+                   Figure 6  Recovery from More Than One Lost Packet                   _________________________________________________
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 21
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+                          DXE                     DXE
+                          ---                     ---
+                           |                       |
+            T25 started    | Data 1,2              |
+                           |---------------------->|
+                           | Data 1,3              |
+                           |---------------------->|
+                           | Data 1,4              |
+                           |---------------------->|
+                           | Data 1,5              |
+                           |------------- X ------>|
+                           |                       |
+            T25 restarted  |            RR 5       | Acknowledges packets
+                           |<----------------------| 2 through 4
+                           |                       |
+                           |                       |
+            Window rotates,| Data 1,6              |
+            packet 6 sent  |---------------------->| Packet received
+            T25 restarted  |                       | out of sequence,
+                           |           REJ 5       | and reject issued
+            T25 stopped    |<----------------------|
+                           |                       |
+            T25 started,   | Data 1,5              |
+            retransmission |---------------------->|
+            starts with    | Data 1,6              |
+            packet 5       |---------------------->|
+                           |                       |
+                           |                       |
+
+                Figure 7  Timer Recovery from Loss of Last Packet Sent
+                __________in a Window with More Packets to Send_______                          _____________________________________
+
+
+            4.3.5 Duplicate Packets                  _________________
+
+            Duplicate  packets are  discarded and  the DXE  sends a  reject
+            packet to indicate the next P(S) expected.  See Figure 3.
+
+
+            SECTION 4.4 Packet Format Introduction            ______________________________________
+
+            A packet always  includes the general format  identifier field,
+            the logical channel identifier field,  the packet sequence num-
+            ber(s), and the packet type identifier field.  Depending on the
+            particular packet type, other fields may also be defined.  (See
+            Section 4.1.3.)
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 22
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            The possible extension of packet formats by the addition of new
+            fields  requires  further  study.   Any  such  field  would  be
+            included  only  as  an addition  that  follows  all  previously
+            defined fields and not as an insertion  between any of the pre-
+            viously defined fields.  It would be  transmitted to a DTE only
+            when the interfacing  DXE has been informed  that the receiving
+            DTE is able  to interpret this field  and act  upon it  or when
+            the  receiving  DTE  can ignore  the  field  without  adversely
+            affecting the operation  of the interfacing DXE.   It would not
+            contain any information pertaining to  a user facility to which
+            the DTE has not subscribed.
+
+            The bits of  an octet are numbered 8  to 1, where bit  1 is the
+            low order bit and is transmitted first.  Octets of a packet are
+            consecutively numbered from 1 and are transmitted in order.
+
+
+            4.4.1 General Format Identifier Field                  _______________________________
+
+            The general  format identifier field  is a 4-bit,  binary coded
+            field that  indicates the  general format  of the  rest of  the
+            header.  The general format identifier  field comprises bits 8,
+            7, 6, and 5  of octet 1, where bit 5 is the  low order bit (see
+            Table 3).
+
+            Bit 8 of the general format identifier  is set to 0 to indicate
+            a data packet; it  is set to 1 for all  other packets.  Bits 7,
+            6, and 5 of the data packet  are used for the D bit, Q bit, and
+            M bit respectively (see Section 4.6.1).
+
+            Bits 7, 6, and 5 of all other packets are set to 1.
+
+
+                                        Table 3
+
+                               General Format Identifier                               _________________________
+
+                        |-------------------------------------|
+                        |                     |    Octet 1    |
+                        |                     |     Bits      |
+                        |                     | 8   7   6   5 |
+                        |---------------------|---------------|
+                        |  Data packets       | 0   D   Q   M |
+                        |---------------------|---------------|
+                        |  All other packets  | 1   0   0   0 |
+                        |-------------------------------------|
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 23
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            4.4.2 Logical Channel Identifier Field                  ________________________________
+
+            The logical channel identifier field appears in every packet in
+            bit positions 4, 3,  2, and 1 of octet 1.   The field is binary
+            coded, and bit 1 is the low order bit.
+
+            For each logical channel, this number has local significance at
+            the DTE/DCE interface.
+
+            In restart  and diagnostic packets all  bits in this  field are
+            set to 0's.
+
+
+            4.4.3 Packet Receive Sequence Number Field                  ____________________________________
+
+            The  packet receive  sequence  number  field appears  in  every
+            packet in bit positions  8, 7, 6, and 5 of  octet 2.  The field
+            is binary coded, and bit 5 is the low order bit.
+
+            In the restart request and  restart indication packets all bits
+            in this field are set to 0.
+
+
+            4.4.4 Packet Send Sequence Number Field                  _________________________________
+
+            The packet send  sequence number field appears  in every packet
+            in bit  positions 4,  3, 2,  and 1  of octet  2.  The  field is
+            binary coded, and bit 1 is the low order bit.
+
+            In the  restart request, restart  indication, RR, RNR,  and REJ
+            packets all bits in this field are set to 0.
+
+
+            4.4.5 Packet Type Identifier Field                  ____________________________
+
+            Packets with bit  8 of the general format identifier  set to 1,
+            i.e., all  packets other than  data packets, are  identified in
+            octet 3 as specified in Table 4.
+
+
+
+
+
+
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 24
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+                                        Table 4
+
+                                Packet Type Identifier                                ______________________
+
+          |------------------------------------------------------------------|
+          |                   Packet Type                  |     Octet 3     |                      ____________________________
+          |                                                |      Bits       |
+          | From DXE to DTE         From DTE to DXE        | 8 7 6 5 4 3 2 1 |
+          |------------------------------------------------|-----------------|
+          |           Call Setup and Call Clearing         |                 |                      ____________________________
+          |                                                |                 |
+          | Incoming call           Call request           | 0 0 0 0 1 0 1 1 |
+          | Call connected          Call accepted          | 0 0 0 0 1 1 1 1 |
+          | Clear indication        Clear request          | 0 0 0 1 0 0 1 1 |
+          | Clear confirmation      Clear confirmation     | 0 0 0 1 0 1 1 1 |
+          |                                                |                 |
+          |                DATA and Interrupt              |                 |                      ____________________________
+          |                                                |        (Note 2) |
+          | Data (Note 1)           Data                   | X X X X X X X X |
+          | Interrupt               Interrupt              | 0 0 1 0 0 0 1 1 |
+          | Interrupt confirmation  Interrupt confirmation | 0 0 1 0 0 1 1 1 |
+          |                                                |                 |
+          |              Flow Control and Reset            |                 |                      ____________________________
+          |                                                |                 |
+          | Receive ready           Receive ready          | 0 0 0 0 0 0 0 1 |
+          | Receive not ready       Receive not ready      | 0 0 0 0 0 1 0 1 |
+          | Reject                  Reject                 | 0 0 0 0 1 0 0 1 |
+          | Reset indication        Reset request          | 0 0 0 1 1 0 1 1 |
+          | Reset confirmation      Reset confirmation     | 0 0 0 1 1 1 1 1 |
+          |                                                |                 |
+          |                     Restart                    |                 |                      ____________________________
+          |                                                |                 |
+          | Restart indication      Restart request        | 1 1 1 1 1 0 1 1 |
+          | Restart confirmation    Restart confirmation   | 1 1 1 1 1 1 1 1 |
+          |                                                |                 |
+          |                    Diagnostic                  |                 |                      ____________________________
+          |                                                |                 |
+          | Diagnostic              Diagnostic             | 1 1 1 1 0 0 0 1 |
+          | (Notes 3,4)             (Note 4)               |                 |
+          |------------------------------------------------------------------|
+          Note 1: Octet 3 of the data packet contains one octet of user data.
+          Note 2: An X  bit may be set  either to 0  or to 1, as  discussed in
+                  subsequent sections.
+          Note 3: DCE to DTE, if implemented by the network.
+          Note 4: A DTE  may originate a diagnostic  packet only in  a DTE/DTE
+                  environment and only if it  can be suppressed when connected
+                  to a network.
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 25
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            SECTION 4.5 Call Setup and Call Clearing Packet Formats            _______________________________________________________
+
+            The packets described in  this section set up and  clear a vir-
+            tual call.
+
+
+            4.5.1 Call Request and Incoming Call Packets                  ______________________________________
+
+            Figure 8 illustrates  the format of  call request  and incoming
+            call packets.
+
+            In a DTE/DCE environment, call request  and incoming call pack-
+            ets are  separate packets because  of the  intervening network.
+            However, in a DTE/DTE environment, the call request packet sent
+            by one DTE is the same as  the incoming call packet received by
+            the other DTE.
+
+            The first three  octets consist of  the general  format identi-
+            fier,  the  logical  channel  identifier,  the  packet  receive
+            sequence  number, the  packet  send  sequence number,  and  the
+            packet  type  identifier  fields  (see  Sections 4.4.1  through
+            4.4.5).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 26
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   0   0   1   0   1   1 |
+                           |---:---:---:---:---:---:---:---|
+                           |  Calling DTE  :  Called DTE   |
+                      4    | address length: address length|
+                           |---:---:---:---:---:---:---:---|
+                           |        DTE address(es)        |
+                           //          (Note 2)           //
+                           |               :---:---:---:---|
+                           |               | 0   0   0   0 |
+                           |---:---:---:---:---:---:---:---|
+                           | 0   0 |   Facility length     |
+                           |       |                       |
+                           |---:---:---:---:---:---:---:---|
+                           |          Facilities           |
+                           //          (Note 3)           //
+                           |                               |
+                           :---:---:---:---:---:---:---:---:
+                           |       Call user data          |
+                           //      (Notes 4 and 5)        //
+                           |                               |
+                           :---:---:---:---:---:---:---:---:
+
+            Note 1: Coded 1000
+            Note 2: The  figure  is  drawn assuming  the  total  number  of
+                    address digits present is odd.
+            Note 3: The  maximum  length  of the  facilities  field  is  63
+                    octets.
+            Note 4: Bits 8 and 7  of the first octet of call  user data may
+                    have particular significance (see Section 4.5.1).
+            Note 5: The maximum  length of the call  user data field  is 16
+                    octets.
+
+                Figure 8  Call Request and Incoming Call Packet Format                ______________________________________________________
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 27
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            Address Lengths Field            _____________________
+
+            Octet 4 consists of field length  indicators for the called and
+            calling DTE addresses.  Bits 4, 3, 2, and 1 indicate the length
+            of the  called DTE address  in quartets.  Bits  8, 7, 6,  and 5
+            indicate the  length of  the calling  DTE address  in quartets.
+            Each address length  indicator is binary coded, and bit  1 or 5
+            is the low order bit of the indicator.
+
+
+            Address Field            _____________
+
+            Octet 5 and subsequent octets consist of the called DTE address
+            when present, then the calling DTE address when present.
+
+            Each digit of an address is coded  in a quartet in binary coded
+            decimal, when bit 5 or 1 is the low order bit of the digit.
+
+            Starting from  the high  order digit, the  address is  coded in
+            octet 5 and consecutive octets, with  two digits per octet.  In
+            each octet, the  higher order digit is  coded in bits 8,  7, 6,
+            and 5.
+
+            The field will be rounded up to an integral number of octets by
+            inserting 0's in bits  4, 3, 2, and 1 of the  last octet of the
+            field.
+
+            This field may be used  for optional addressing facilities such
+            as abbreviated addressing.  The  optional addressing facilities
+            employed and  the coding  of those  facilities require  further
+            study.
+
+
+            Facility Length Field            _____________________
+
+            Bits 6, 5,  4, 3, 2, and  1 of the octet  following the calling
+            DTE address field  (or calling DTE address field  length if the
+            calling DTE address  field length is zero)  indicate the length
+            of the facility fields, in octets.  The facility-length indica-
+            tor is binary  coded, where bit 1  is the low order  bit of the
+            indicator.
+
+            Bits 8 and 7 of this octet are unassigned and are set to 0.
+
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 28
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            Facility Field            ______________
+
+            The facility field is  present only if the DTE or  DXE is using
+            an optional user facility requiring some indication in the call
+            request packet or the incoming call packet.
+
+            The facility field contains an  integral number of octets.  The
+            maximum length of this field depends on the facilities that are
+            supported at the DTE/DXE interface.  However, this maximum can-
+            not exceed 63 octets.
+
+            For further information see Sections 4.12 and 4.13.
+
+
+            Call User Data Field            ____________________
+
+            Following the facility  field, the call user data  field may be
+            present.  It  has a  maximum length of  16 octets.   This field
+            must contain an integral number of octets (see Section 4.1.3).
+
+            If the call user  data field is present, the use  and format of
+            the field are determined by bits 8  and 7 of the first octet of
+            this field.  When  a virtual call is  being established between
+            two packet mode DTEs,  the network does not act on  any part of
+            the call user data field unless required  to do so by an appro-
+            priate  request for  an optional  user facility  on a  per-call
+            basis.  Such a facility requires further study.
+
+            If bits 8 and 7 of the first  octet of the call user data field
+            are 00, a portion of the call user  data field is used for pro-
+            tocol identification in accordance with other CCITT recommenda-
+            tions such as X.29.
+
+            If bits 8 and 7 of the first  octet of the call user data field
+            are 01, a portion  of the call user data field  may be used for
+            protocol identification  in accordance  with specifications  of
+            public network administrations.
+
+            If bits 8 and 7 of the first  octet of the call user data field
+            are 10, a portion  of the call user data field  may be used for
+            protocol identification  in accordance with  the specifications
+            of international user bodies.
+
+            If bits 8 and 7 of the first  octet of the call user data field
+            are 11, no constraints are placed  on the DTE regarding the use
+            of the remainder of the call user data field.
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 29
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            If bits 8 and 7 of the first  octet of the call user data field
+            have any value other than 11, a protocol may be identified that
+            is implemented in public data networks.
+
+
+            4.5.2 Call Accepted and Call Connected Packets                  ________________________________________
+
+            Figure 9 illustrates the format of call  accepted and call con-
+            nected packets.
+
+            In  a DTE/DCE  environment, call  accepted  and call  connected
+            packets are separate  packets because  of the  intervening net-
+            work.  However,  in a  DTE/DTE environment,  the call  accepted
+            packet sent by one DTE is the same as the call connected packet
+            received by the other DTE.
+
+            The first three  octets consist of  the general  format identi-
+            fier,  the  logical  channel  identifier,  the  packet  receive
+            sequence  number, the  packet  send  sequence number,  and  the
+            packet  type  identifier  fields  (see  Sections 4.4.1  through
+            4.4.5).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 30
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   0   0   1   1   1   1 |
+                           |---:---:---:---:---:---:---:---|
+                           |  Calling DTE  :  Called DTE   |
+                      4    | address length: address length|
+                           |---:---:---:---:---:---:---:---|
+                           |        DTE address(es)        |
+                           //          (Note 2)           //
+                           |               :---:---:---:---|
+                           |               | 0   0   0   0 |
+                           |---:---:---:---:---:---:---:---|
+                           | 0   0 |   Facility length     |
+                           |       |                       |
+                           |---:---:---:---:---:---:---:---|
+                           |          Facilities           |
+                           //          (Note 3)           //
+                           |                               |
+                           :---:---:---:---:---:---:---:---:
+                           |       Call user data          |
+                           //      (Notes 4 and 5)        //
+                           |                               |
+                           :---:---:---:---:---:---:---:---:
+
+            Note 1: Coded 1000
+            Note 2: The  figure  is  drawn assuming  the  total  number  of
+                    address digits present is odd.
+            Note 3: The  maximum  length  of the  facilities  field  is  63
+                    octets.
+            Note 4: Bits 8 and 7  of the first octet of call  user data may
+                    have particular significance (see Section 4.5.1).
+            Note 5: The maximum  length of the call  user data field  is 16
+                    octets.
+
+               Figure 9  Call Accepted and Call Connected Packet Format               ________________________________________________________
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 31
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            Address Lengths Field            _____________________
+
+            Octet 4 consists of field length  indicators for the called and
+            calling DTE addresses.  Bits 4, 3, 2, and 1 indicate the length
+            of the  called DTE address  in quartets.  Bits  8, 7, 6,  and 5
+            indicate the  length of  the calling  DTE address  in quartets.
+            Each address length  indicator is binary coded, and bit  1 or 5
+            is the low order bit of the indicator.
+
+
+            Address Field            _____________
+
+            Octet 5 and subsequent octets consist of the called DTE address
+            when present, then the calling DTE address when present.
+
+            Each digit of an address is coded  in a quartet in binary coded
+            decimal, when bit 5 or 1 is the low order bit of the digit.
+
+            Starting from  the high  order digit, the  address is  coded in
+            octet 5 and consecutive octets, with  two digits per octet.  In
+            each octet, the  higher order digit is  coded in bits 8,  7, 6,
+            and 5.
+
+            The field will be rounded up to an integral number of octets by
+            inserting 0's in bits  4, 3, 2, and 1 of the  last octet of the
+            field.
+
+            This field may be used  for optional addressing facilities such
+            as abbreviated addressing.  The  optional addressing facilities
+            employed and  the coding  of those  facilities require  further
+            study.
+
+
+            Facility Length Field            _____________________
+
+            Bits 6, 5,  4, 3, 2, and  1 of the octet  following the calling
+            DTE address field  (or calling DTE address field  length if the
+            calling DTE address  field length is zero)  indicate the length
+            of the facility fields, in octets.  The facility-length indica-
+            tor is binary  coded, where bit 1  is the low order  bit of the
+            indicator.
+
+            Bits 8 and 7 of this octet are unassigned and are set to 0.
+
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 32
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            Facility Field            ______________
+
+            The facility field is  present only if the DTE or  DXE is using
+            an optional user facility requiring some indication in the call
+            request packet or the incoming call packet.
+
+            The facility field contains an  integral number of octets.  The
+            maximum length of this field depends on the facilities that are
+            supported at the DTE/DXE interface.  However, this maximum can-
+            not exceed 63 octets.
+
+            For further information, see Sections 4.12 and 4.13.
+
+
+            4.5.3 Clear Request and Clear Indication Packets                  __________________________________________
+
+            Figure 10 illustrates  the format  of clear  request and  clear
+            indication packets.
+
+            In a  DTE/DCE environment, clear  request and  clear indication
+            packets are separate  packets because  of the  intervening net-
+            work.  However, in  a DTE/DTE  environment,  the clear  request
+            packet sent  by one  DTE is  the same  as the  clear indication
+            packet received by the other DTE.
+
+            The first three  octets consist of  the general  format identi-
+            fier,  the  logical  channel  identifier,  the  packet  receive
+            sequence  number, the  packet  send  sequence number,  and  the
+            packet  type  identifier  fields  (see  Sections 4.4.1  through
+            4.4.5).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 33
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   0   1   0   0   1   1 |
+                           |---:---:---:---:---:---:---:---|
+                           |      Clearing cause           |
+                      4    |                               |
+                           |---:---:---:---:---:---:---:---|
+                           |      Diagnostic code          |
+                      5    |          (Note 3)             |
+                           |---:---:---:---:---:---:---:---|
+
+            Note 1: Coded 1000
+            Note 2: Address format default is CCITT X.121.
+            Note 3: Diagnostic code is optional
+
+              Figure 10  Clear Request and Clear Indication Packet Format              ___________________________________________________________
+
+
+            Clearing Cause Field            ____________________
+
+            Octet 4 is the clearing cause field; it contains the reason for
+            the clearing of the call.
+
+            The bits of the clearing cause  field in a clear request packet
+            must be set to 0 by a DTE.  Further study is required to deter-
+            mine whether other  values of these  bits are ignored  or proc-
+            essed by the DCE in a DTE/DCE environment.
+
+            The coding  of the clearing cause  field in a  clear indication
+            packet is defined  in CCITT recommendation X.96.   In a DTE/DCE
+            environment, a DTE,  to allow for possible  later extensions of
+            the defined values of the clearing cause field, must be able to
+            accept any  value in  the clearing cause  field.  In  a DTE/DTE
+            environment, a  DTE may either  accommodate a  nonzero clearing
+            cause field as it does in  a DTE/DCE environment (i.e., process
+            the packet  normally) or treat it  as an error.  In  the latter
+            case, the packet layer transmits a  clear request packet with a
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 34
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            cause indicating  'DTE Originated' and the  diagnostic 'Nonzero
+            Cause Field from DTE.'
+
+
+            Diagnostic Code Field            _____________________
+
+            Octet 5  is the diagnostic  code field; it  contains additional
+            information regarding the reason for  the clearing of the call.
+            The coding of the diagnostic code field follows CCITT X.25 rec-
+            ommendations.
+
+            In  a  clear  request  packet, the  diagnostic  code  field  is
+            required, even if it indicates no additional information.
+
+            In a clear indication packet, if the clearing cause field indi-
+            cates  'DTE Originated,'  the diagnostic  code  field has  been
+            passed unchanged from the remote DTE  as a result of its having
+            initiated either a clearing procedure or, in a DTE/DCE environ-
+            ment, a restarting procedure.  In a clear indication packet, if
+            the clearing  cause field does  not indicate  'DTE Originated,'
+            the diagnostic code field is network generated.
+
+            The contents  of the  diagnostic code  field do  not alter  the
+            meaning of the clearing cause field.   A DTE is not required to
+            undertake any  action on  the contents  of the  diagnostic code
+            field.  The clearing  cause field must be accepted  even if the
+            diagnostic code field contains an unspecified code combination.
+
+
+            4.5.4 Clear Confirmation Packet                  _________________________
+
+            Figure 11  illustrates the  format  of  the clear  confirmation
+            packet transmitted by a DTE and the format of the clear confir-
+            mation packet received by a DTE.
+
+            The first three  octets consist of  the general  format identi-
+            fier,  the  logical  channel  identifier,  the  packet  receive
+            sequence  number, the  packet  send  sequence number,  and  the
+            packet  type  identifier  fields  (see  Sections 4.4.1  through
+            4.4.5).
+
+
+
+
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 35
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   0   1   0   1   1   1 |
+                           |---:---:---:---:---:---:---:---|
+
+                           Note 1: Coded 1000
+
+                      Figure 11  Clear Confirmation Packet Format                      ___________________________________________
+
+
+            SECTION 4.6 Data and Interrupt Packet Formats            _____________________________________________
+
+            The data, interrupt, and interrupt  confirmation packets trans-
+            mit data or are used with the interrupt procedure.
+
+
+            4.6.1 Data Packet                  ___________
+
+            Figure 12 illustrates the format of the data packet transmitted
+            by a DXE and the format of the data packet received by a DXE.
+
+            The first three  octets consist of  the general  format identi-
+            fier,  the  logical  channel  identifier,  the  packet  receive
+            sequence number,  and the  packet send  sequence number  fields
+            (see Sections 4.4.1 through 4.4.5).  The 0 in bit 8 of the gen-
+            eral format identifier distinguishes the data packet from other
+            packet types;  the remainder of  the general  format identifier
+            field is used as noted below.
+
+            Bit  7  of  octet  1 is  the  delivery  confirmation  (D)  bit.
+            Although the D bit  is specified, D bit procedures  are not yet
+            specified.  The procedures require further study.
+
+            Bit 6 of octet 1 is the  more data mark (M bit).  A 0 indicates
+            no more data; a 1 indicates more data.
+
+            Bit 5 of octet 1 is the qualifier (Q) bit.
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 36
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            Octets following  octet 2 contain  user data.  This  field must
+            contain an  integral number  of octets,  to the  stated maximum
+            (see Section 4.1.3).  The field must contain at least one octet
+            of user data.
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |          User data            |
+                           //                             //
+                           |                               |
+                           |---:---:---:---:---:---:---:---|
+
+            Note 1: Coded 0DQM, where D = D bit, Q = Q bit, and M = M bit
+
+                             Figure 12  Data Packet Format                             _____________________________
+
+
+            4.6.2 Interrupt Packet                  ________________
+
+            Figure 13 illustrates the format of the interrupt packet trans-
+            mitted by a DXE and the format of the interrupt packet received
+            by a DXE.
+
+            The first three  octets consist of  the general  format identi-
+            fier,  the  logical  channel  identifier,  the  packet  receive
+            sequence  number, the  packet  send  sequence number,  and  the
+            packet  type  identifier  fields  (see  Sections 4.4.1  through
+            4.4.5).
+
+            Octet 4 contains the one octet of interrupt user data.
+
+
+
+
+
+
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 37
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   1   0   0   0   1   1 |
+                           |---:---:---:---:---:---:---:---|
+                           |      Interrupt user data      |
+                      4    |                               |
+                           |---:---:---:---:---:---:---:---|
+
+                           Note 1: Coded 1000
+
+                          Figure 13  Interrupt Packet Format                          __________________________________
+
+
+            4.6.3 Interrupt Confirmation Packet                  _____________________________
+
+            Figure 14 illustrates the format  of the interrupt confirmation
+            packet transmitted  by a  DXE and the  format of  the interrupt
+            confirmation packet received by a DXE.
+
+            The first three  octets consist of  the general  format identi-
+            fier,  the  logical  channel  identifier,  the  packet  receive
+            sequence  number, the  packet  send  sequence number,  and  the
+            packet  type  identifier  fields  (see  Sections 4.4.1  through
+            4.4.5).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 38
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   1   0   0   1   1   1 |
+                           |---:---:---:---:---:---:---:---|
+                      4    |      Interrupt user data      |
+                           |---:---:---:---:---:---:---:---|
+
+                           Note 1: Coded 1000
+
+                    Figure 14  Interrupt Confirmation Packet Format                    _______________________________________________
+
+
+            SECTION 4.7 Flow Control Packet Formats            _______________________________________
+
+            The receive  ready and  receive not  ready packets  control the
+            flow of data packets (The data and reject packets, described in
+            Sections 4.6.1 and 4.11 respectively, also  control the flow of
+            data packets.)
+
+
+            4.7.1 Receive Ready Packet                  ____________________
+
+            Figure 15 illustrates  the format of  the receive  ready packet
+            transmitted by a DXE and the format of the receive ready packet
+            received by a DXE.
+
+            The first three  octets consist of  the general  format identi-
+            fier,  the  logical  channel  identifier,  the  packet  receive
+            sequence  number, the  packet  send  sequence number,  and  the
+            packet  type  identifier  fields  (see  Sections 4.4.1  through
+            4.4.5).
+
+            Bits 8,  7, 6,  and 5 of  octet 2  indicate the  packet receive
+            sequence number P(R).  P(R) is binary coded, where bit 5 is the
+            low order bit.
+
+            Bits 4, 3, 2, and 1 of octet 2 are set to 0.
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 39
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |   Reserved    |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   0   0   0   0   0   1 |
+                           |---:---:---:---:---:---:---:---|
+
+                           Note 1: Coded 1000
+
+                        Figure 15  Receive Ready Packet Format                        ______________________________________
+
+
+            4.7.2 Receive Not Ready Packet                  ________________________
+
+            Figure 16  illustrates the  format  of  the receive  not  ready
+            packet transmitted by  a DXE and the format of  the receive not
+            ready packet received by a DXE.
+
+            The first three  octets consist of  the general  format identi-
+            fier,  the  logical  channel  identifier,  the  packet  receive
+            sequence  number, the  packet  send  sequence number,  and  the
+            packet  type  identifier  fields  (see  Sections 4.4.1  through
+            4.4.5).
+
+            Bits 8,  7, 6,  and 5 of  octet 2  indicate the  packet receive
+            sequence number P(R).  P(R) is binary coded, where bit 5 is the
+            low order bit.
+
+            Bits 4, 3, 2, and 1 of octet 2 are set to 0.
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 40
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |   Reserved    |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   0   0   0   1   0   1 |
+                           |---:---:---:---:---:---:---:---|
+
+                           Note 1: Coded 1000
+
+                      Figure 16  Receive Not Ready Packet Format                      __________________________________________
+
+
+            SECTION 4.8 Reset Packet Formats            ________________________________
+
+            The  reset request,  reset indication,  and reset  confirmation
+            packets  (re)initialize the  flow of  both  data and  interrupt
+            packets.
+
+
+            4.8.1 Reset Request and Reset Indication Packets                  __________________________________________
+
+            Figure 17 illustrates  the format  of reset  request and  reset
+            indication packets.
+
+            In a  DTE/DCE environment, reset  request and  reset indication
+            packets are separate  packets because  of the  intervening net-
+            work.  However, in  a DTE/DTE  environment,  the reset  request
+            packet sent  by one  DTE is  the same  as the  reset indication
+            packet received by the other DTE.
+
+            The first three  octets consist of  the general  format identi-
+            fier,  the  logical  channel  identifier,  the  packet  receive
+            sequence  number, the  packet  send  sequence number,  and  the
+            packet  type  identifier  fields  (see  Sections 4.4.1  through
+            4.4.5).  However, the packet receive sequence number and packet
+            send sequence number fields are set to zero.
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 41
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           | 0   0   0   0   0   0   0   0 |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   0   1   1   0   1   1 |
+                           |---:---:---:---:---:---:---:---|
+                           |      Resetting cause          |
+                      4    |                               |
+                           |---:---:---:---:---:---:---:---|
+                           |      Diagnostic code          |
+                      5    |         (Note 2)              |
+                           |---:---:---:---:---:---:---:---|
+
+                           Note 1: Coded 1000
+                           Note 2: Diagnostic code is optional.
+
+              Figure 17  Reset Request and Reset Indication Packet Format              ___________________________________________________________
+
+
+            Resetting Cause Field            _____________________
+
+            Octet 4  is the resetting cause  field; it contains  the reason
+            for the reset.
+
+            The bits of the resetting cause field in a reset request packet
+            must be set to 0 by a DTE.  Further study is required to deter-
+            mine whether other  values of these  bits are ignored  or proc-
+            essed by the DCE in a DTE/DCE environment.
+
+            The coding of  the resetting cause field in  a reset indication
+            packet  follows CCITT  recommendations  X.25  and X.96.   In  a
+            DTE/DCE environment, a DTE, to allow  for possible later exten-
+            sions of the  defined value of the resetting  cause field, must
+            be able to accept any value in the resetting cause field.  In a
+            DTE/DTE environment,  a DTE  may either  accommodate a  nonzero
+            resetting  cause field  as  it does  in  a DTE/DCE  environment
+            (i.e., process  the packet normally) or  treat it as  an error.
+            In the latter case, the packet  layer transmits a reset request
+            packet with a cause  indicating 'DTE Originated' and  the diag-
+            nostic 'Nonzero Cause Field from DTE.'
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 42
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            Diagnostic Code Field            _____________________
+
+            Octet 5  is the diagnostic  code field; it  contains additional
+            information regarding the reason for  the reset.  The coding of
+            the diagnostic code field follows CCITT X.25 recommendations.
+
+            In  a  reset  request  packet, the  diagnostic  code  field  is
+            required, even if it indicates no additional information.
+
+            In  a reset  indication packet,  if the  resetting cause  field
+            indicates 'DTE Originated,' the diagnostic  code field has been
+            passed unchanged from the remote DTE  as a result of its having
+            initiated either a resetting  procedure or, in a  DTE/DCE envi-
+            ronment, a restarting procedure.  In a reset indication packet,
+            if the clearing cause field does not indicate 'DTE Originated,'
+            the diagnostic code field is network generated.
+
+            The contents  of the  diagnostic code  field do  not alter  the
+            meaning of the resetting cause field.  A DTE is not required to
+            undertake any  action on  the contents  of the  diagnostic code
+            field. The resetting  cause field must be accepted  even if the
+            diagnostic code field contains an unspecified code combination.
+
+
+            4.8.2 Reset Confirmation Packet                  _________________________
+
+            Figure 18  illustrates the  format  of  the reset  confirmation
+            packet transmitted by a DTE and the format of the reset confir-
+            mation packet received by a DTE.
+
+            The first three  octets consist of  the general  format identi-
+            fier,  the  logical  channel  identifier,  the  packet  receive
+            sequence  number, the  packet  send  sequence number,  and  the
+            packet  type  identifier  fields  (see  Sections 4.4.1  through
+            4.4.5).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 43
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   0   1   1   1   1   1 |
+                           |---:---:---:---:---:---:---:---|
+
+                           Note 1: Coded 1000
+
+                      Figure 18  Reset Confirmation Packet Format                      ___________________________________________
+
+
+            SECTION 4.9 Restart Packet Formats            __________________________________
+
+            The restart request, restart indication,  and restart confirma-
+            tion packets (re)initialize the DTE/DXE packet layer interface.
+
+
+            4.9.1 Restart Request and Restart Indication Packets                  ______________________________________________
+
+            Figure 19 illustrates the format of restart request and restart
+            indication packets.
+
+            In a DTE/DCE  environment, restart request and  restart indica-
+            tion packets  are separate packets  because of  the intervening
+            network. However, in a DTE/DTE environment, the restart request
+            packet sent  by one DTE is  the same as the  restart indication
+            packet received by the other DTE.
+
+            The first three  octets consist of  the general  format identi-
+            fier,  the  logical  channel  identifier,  the  packet  receive
+            sequence  number, the  packet  send  sequence number,  and  the
+            packet  type  identifier  fields  (see  Sections 4.4.1  through
+            4.4.5).   However,  the  logical   channel  identifier,  packet
+            receive sequence number, and packet send sequence number fields
+            are set to zero.
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 44
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     | 0   0   0   0 |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           | 0   0   0   0   0   0   0   0 |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 1   1   1   1   1   0   1   1 |
+                           |---:---:---:---:---:---:---:---|
+                           |      Restarting cause         |
+                      4    |                               |
+                           |---:---:---:---:---:---:---:---|
+                           |      Diagnostic code          |
+                      5    |         (Note 2)              |
+                           |---:---:---:---:---:---:---:---|
+
+                           Note 1: Coded 1000
+                           Note 2: Diagnostic code is optional.
+
+            Figure 19  Restart Request and Restart Indication Packet Format            _______________________________________________________________
+
+
+            Restarting Cause Field            ______________________
+
+            Octet 4 is  the restarting cause field; it  contains the reason
+            for the restarting of the call.
+
+            The bits  of the  restarting cause field  in a  restart request
+            packet must be set to 0 by a DTE.  Further study is required to
+            determine whether  other values  of these  bits are  ignored or
+            processed by the DCE in a DTE/DCE environment.
+
+            The coding of the  restarting cause field in  a restart indica-
+            tion packet is given in Table 5  (the definition of each clear-
+            ing cause  code is given in  CCITT recommendation X.96).   In a
+            DTE/DCE environment, a DTE, to allow  for possible later exten-
+            sions of the defined values of the restarting cause field, must
+            be able to accept any value  in the restarting cause field.  In
+            a DTE/DTE environment,  a DTE may either  accommodate a nonzero
+            restarting  cause field  as it  does in  a DTE/DCE  environment
+            (i.e., process  the packet normally) or  treat it as  an error.
+            In  the  latter case,  the  packet  layer transmits  a  restart
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 45
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            request packet with a cause indicating 'DTE Originated' and the
+            diagnostic 'Nonzero Cause Field from DTE.'
+
+
+                                        Table 5
+
+                         Coding of the Restarting Cause Field
+                         ____in Restart Indication Packets___                             _____________________________
+
+                     |------------------------------------------|
+                     |                        |     Octet 3     |
+                     |                        |      Bits       |
+                     |                        | 8 7 6 5 4 3 2 1 |
+                     |------------------------|-----------------|
+                     | DTE originated         | 0 0 0 0 0 0 0 0 |
+                     |------------------------|-----------------|
+                     | Local procedure error  | 0 0 0 0 0 0 0 1 |
+                     |------------------------|-----------------|
+                     | Network congestion     | 0 0 0 0 0 0 1 1 |
+                     | Network operational    | 0 0 0 0 0 1 1 1 |
+                     |------------------------|-----------------|
+
+            Note: Other than  the 'DTE  Originated' restarting  cause code,
+                  the remaining codes in the table  apply only to a DTE/DCE
+                  environment.
+
+
+            Diagnostic Code Field            _____________________
+
+            Octet 5  is the diagnostic  code field; it  contains additional
+            information regarding the  reason for the restart.   The coding
+            of the  diagnostic code  field follows  CCITT X.25  recommenda-
+            tions.
+
+            In  a restart  request  packet, the  diagnostic  code field  is
+            required, even if it indicates no additional information.
+
+            In network applications, the diagnostic code field is passed to
+            the corresponding DTEs as the diagnostic  code field of a reset
+            indication packet.
+
+            The contents  of the  diagnostic code  field do  not alter  the
+            meaning of the  restarting cause field.  A DTE  is not required
+            to undertake any action on the  contents of the diagnostic code
+            field.  The restarting cause field must be accepted even if the
+            diagnostic code field contains an unspecified code combination.
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 46
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            4.9.2 Restart Confirmation Packet                  ___________________________
+
+            Figure 20 illustrates  the format  of the  restart confirmation
+            packet transmitted by a DTE and the  format of the restart con-
+            firmation packet received by a DTE.
+
+            The first three  octets consist of  the general  format identi-
+            fier,  the  logical  channel  identifier,  the  packet  receive
+            sequence  number, the  packet  send  sequence number,  and  the
+            packet  type  identifier  fields  (see  Sections 4.4.1  through
+            4.4.5).
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     | 0   0   0   0 |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |   P(R)        |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 1   1   1   1   1   1   1   1 |
+                           |---:---:---:---:---:---:---:---|
+
+                           Note 1: Coded 1000
+
+                     Figure 20  Restart Confirmation Packet Format                     _____________________________________________
+
+
+            SECTION 4.10 Diagnostic Packet Format            _____________________________________
+
+            Figure 21 illustrates the format of the diagnostic Packet.
+
+            All DTEs  must be  able to  receive a  diagnostic packet.   The
+            diagnostic packet  may be  used in  a DTE/DCE  environment, and
+            then only to be sent by a  DCE to a DTE.  The diagnostic packet
+            may be originated by  a DTE only in a  DTE/DTE environment pro-
+            vided its generation can be suppressed when connected to a net-
+            work.
+
+            The first three  octets consist of  the general  format identi-
+            fier,  the  logical  channel  identifier,  the  packet  receive
+            sequence  number, the  packet  send  sequence number,  and  the
+            packet  type  identifier  fields  (see  Sections 4.4.1  through
+            4.4.5).  However, the logical channel identifier is set to 0.
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 47
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 1   1   1   1   0   0   0   1 |
+                           |---:---:---:---:---:---:---:---|
+                           |      Diagnostic code          |
+                      4    |                               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Diagnostic explanation     |
+                      5    |          (Note 2)             |
+                           //                             //
+                           |                               |
+                           |---:---:---:---:---:---:---:---|
+
+            Note 1: Coded 1000
+            Note 2: The maximum length of  the diagnostic explanation field
+                    is three octets.  Its actual length depends on the rea-
+                    son the diagnostic packet was issued.
+
+                          Figure 21  Diagnostic Packet Format                          ___________________________________
+
+
+            Diagnostic Code Field            _____________________
+
+            Octet 4 is  the diagnostic code field;  it contains information
+            regarding the error condition that resulted in the transmission
+            of the  diagnostic packet.  The  coding of the  diagnostic code
+            field follows CCITT X.25 recommendations.
+
+
+            Diagnostic Explanation Field            ____________________________
+
+            When the diagnostic packet is issued as  a result of the recep-
+            tion  of an  erroneous packet,  this field  contains the  first
+            three octets of  header information from the  erroneous packet.
+            If the erroneous packet contained  less than three octets, this
+            field  contains only  the integral  octets, if  any, that  were
+            received by a DTE.
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 48
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            When the diagnostic packet is issued  as a result of a timeout,
+            the diagnostic explanation field contains two octets.
+
+            Bits 8, 7, 6, and 5 of the first octet contain the general for-
+            mat identifier of the interface.
+
+            Bits 4 through 1 of the first octet and bits 8 through 1 of the
+            second octet are set to 0 if  the restart timer expired (T10 or
+            T20 for DTE/DCE or DTE/DTE  environments respectively) and give
+            the number of the logical channel on which the timeout occurred
+            if the reset timer (T12 or T22  for DTE/DCE or DTE/DTE environ-
+            ments respectively) or the clear timer  (T13 or T23 for DTE/DCE
+            or DTE/DTE environments respectively) expired.
+
+
+            SECTION 4.11 Reject Packet Format            _________________________________
+
+            Figure 22 illustrates the format of the reject packet.
+
+            The first three  octets consist of  the general  format identi-
+            fier,  the  logical  channel  identifier,  the  packet  receive
+            sequence  number, the  packet  send  sequence number,  and  the
+            packet  type  identifier  fields  (see  Sections 4.4.1  through
+            4.4.5).
+
+            Bits 8,  7, 6,  and 5  of octet  2 contain  the packet  receive
+            sequence number P(R).  P(R) is binary coded, where bit 5 is the
+            low order bit.
+
+            Bits 4, 3, 2, and 1 of octet 2 are set to 0.
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |   Reserved    |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   0   0   1   0   0   1 |
+                           |---:---:---:---:---:---:---:---|
+
+                           Note 1: Coded 1000
+
+                            Figure 22  Reject Packet Format                            _______________________________
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 49
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            SECTION 4.12 Optional User Facilities Other Than X.25            _____________________________________________________
+
+            These facilities  are agreed upon for  a period by the  DTE and
+            DXE.
+
+            The reconnect facility allows virtual calls to be maintained if
+            the physical connection between the DTE and DXE is lost.  It is
+            applied on a per-virtual-call basis.
+
+            A  DTE requests  this  facility by  including  the request  for
+            reconnect facility code and parameter  in the facility field of
+            the call request packet, along with the  DTE part of the recon-
+            nect key.
+
+            A DCE  indicates acceptance  of this  request by  including the
+            request for reconnect facility code and parameter in the facil-
+            ity field of the call accepted  packet, along with the DCE part
+            of the reconnect key.
+
+            If the  physical connection is  lost, the DTE  will reestablish
+            the physical connection, perform the  packet layer restart pro-
+            cedure, and  issue a  call request packet  on the  same logical
+            channel.  Included  in the facility  field of the  call request
+            packet  is the  reconnect facility  code  and parameters.   The
+            parameters include both the DTE and DCE reconnect key.
+
+            The DCE  will match  these keys  against the  keys for  virtual
+            calls being  maintained and will  respond with a  call accepted
+            packet with the reconnect key in  the reconnect facility param-
+            eters in the facility field.
+
+            At this  point the DTE and  DCE exchange RR  packets indicating
+            the P(R) of the next packet  expected.  This allows recovery of
+            any packets lost when the physical connection failed.
+
+            The DCE will maintain virtual calls for a specified time agreed
+            upon between the DTE and DCE.
+
+
+            SECTION 4.13 Optional User Facility Format            __________________________________________
+
+            The formats  described in this  section apply only  to optional
+            user facilities that may be present  in the call setup and call
+            clearing packets used in conjunction with virtual call service.
+            Only formats for X.25 user facilities that differ from standard
+            X.25 formats  and for  a number of  user facilities  other than
+            X.25 are described.
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 50
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            The facility  field is present  only when  the DXE is  using an
+            optional user  facility requiring some  indication in  the call
+            request, incoming  call, call  accepted, call  connected, clear
+            request, or clear indication packets.
+
+            A facility marker  consisting of two octets  separates requests
+            for X.25 facilities, as specified in CCITT recommendation X.25,
+            from requests for  facilities other than X.25 that  may also be
+            offered.  The  first octet is a  facility code field,  which is
+            set to  zero, and  the second octet  is the  facility parameter
+            field.  The facility  parameter field is set to  either all 0's
+            or all 1's, depending on whether  the facility requests follow-
+            ing the  marker refer to facilities  offered by the  calling or
+            the called network respectively.  For  virtual calls within the
+            network and for DTE/DTE operation, the facility parameter field
+            is set to all 0's.
+
+            Requests for facilities other than  X.25 offered by the calling
+            and called  networks may be  present simultaneously  within the
+            facility field  and, in  such cases,  two facility  markers are
+            required with the facility parameter  fields coded as described
+            above.
+
+            Within the facility field, requests for X.25 facilities precede
+            requests for facilities other than X.25.  Facility markers need
+            be included only  when requests for facilities  other than X.25
+            are present.
+
+
+            4.13.1 Flow Control Parameter Packet Size                   __________________________________
+
+            Values from  4 to 8, corresponding  to packet sizes of  16, 32,
+            64, 128, and 256, or a continuous subset of these values may be
+            offered.  A packet  size of 128 must always  be available.  The
+            maximum X.25 packet size is 1024 octets.
+
+
+            4.13.2 Flow Control Parameter Window Size                   __________________________________
+
+            Window sizes from 2  to 15 are valid.  A window  size of 2 must
+            always  be  available.   The maximum  number  of  data  packets
+            allowed within the window is the window size divided by two.
+
+
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 51
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            4.13.3 Reconnect Facility                   __________________
+
+            This section covers the  facility code and the  facility param-
+            eter fields of the reconnect facility.
+
+            Facility Code Field            ___________________
+
+            The coding of the facility code  field for the reconnect facil-
+            ity for facilities other than X.25 is:
+
+                    Bit:  8 7 6 5 4 3 2 1
+                   Code:  0 1 0 0 0 0 0 1
+
+            Facility Parameter Field            ________________________
+
+            In  call request  packets,  the first  octet  of the  reconnect
+            facility parameter field contains the DTE part of the reconnect
+            key; the  second octet contains the  DCE part of  the reconnect
+            key, which is also supplied by the DTE.
+
+            In call accepted packets, the DCE  provides the DTE part of the
+            reconnect key in the first octet and the DCE part of the recon-
+            nect key in the second octet.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  PACKET LAYER LOGICAL INTERFACE    Page 52
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            SECTION 5.0 DATA LINK LAYER SPECIFICATION            _________________________________________
+
+            X.PC's  data link  layer  is responsible  for  the full  duplex
+            transfer of network  layer packets between the DTE  and the DCE
+            in transparent, error-protected frames.
+
+            The data link layer procedure consists  of the exchange of data
+            link frames formatted as specified in Section 5.1.
+
+            Each data link frame contains one packet.
+
+
+            SECTION 5.1 Framing Format            __________________________
+
+            Figure 23  illustrates  the  format of  the  data  link  frame.
+            Transparency is accomplished by using  a length octet following
+            the start of the frame.  The  length octet indicates the number
+            of octets following the first cyclic redundancy check (CRC).
+
+               Octet:  1
+               Field:  STX
+               Value:  0000 0010
+            Function:  Denotes the start of a  data link frame.  This octet
+                       is not included in the CRC1 calculation.
+
+               Octet:  2
+               Field:  Length
+               Value:  Variable
+            Function:  Number  of packet  data octets  following the  first
+                       CRC.  If the  value is zero, no  packet data follows
+                       CRC1, and CRC2 is not  used.  This octet is included
+                       in the CRC1 calculation.
+
+               Octet:  3 - 5
+               Field:  Packet data 1
+               Value:  Variable
+            Function:  Contains the first three bytes of packet data.  This
+                       octet is included in the CRC1 calculation.
+
+               Octet:  6, 7
+               Field:  CRC1
+               Value:  Variable
+            Function:  Two  bytes of  CRC bits  for  error detection.   The
+                       algorithm used to generate and  test check bits fol-
+                       lows CCITT  CRC-16.  The  length and  packet data  1
+                       octets are included in the CRC1 calculation.
+
+
+
+
+                                   DATA LINK LAYER SPECIFICATION    Page 53
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+               Octet:  8 to length+7
+               Field:  Packet data 2
+               Value:  Variable
+            Function:  Packets larger than three  octets are transmitted in
+                       two parts;  this field contains  packet octet  4 and
+                       succeeding  octets.  The  number of  octets in  this
+                       field is contained in the  length field.  All octets
+                       are included in the CRC2 calculation.
+
+               Octet:  Length+8, length+9
+               Field:  CRC2
+               Value:  Variable
+            Function:  Two octets  of CRC bits  for error  detection.  CRC2
+                       uses the  same algorithm as  CRC1.  CRC2  is present
+                       only if packet data  2 octets are present,  as indi-
+                       cated by the  length field being greater  than zero.
+                       Only packet  data 2 octets  are included in  the CRC
+                       calculation.
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                     Octet .---.---.---.---.---.---.---.---.
+                       1   |            STX                |
+                           |---:---:---:---:---:---:---:---|
+                       2   |           Length              |
+                           |---:---:---:---:---:---:---:---|
+                       3   |       Packet data 1           |
+                           |-                             -|
+                       4   |                               |
+                           |-                             -|
+                       5   |                               |
+                           |---:---:---:---:---:---:---:---|
+                       6   |           CRC1                |
+                           :-                             -|
+                       7   |                               |
+                           |---:---:---:---:---:---:---:---|
+                       8   |                               |
+                           //      Packet data 2          //
+                           |                               |
+                           |---:---:---:---:---:---:---:---|
+                       N   |           CRC2                |
+                           |-                             -|
+                      N+1  |                               |
+                           |---:---:---:---:---:---:---:---|
+
+                  Figure 23  X.PC Data Link Transmission Frame Format                  ___________________________________________________
+
+
+
+                                   DATA LINK LAYER SPECIFICATION    Page 54
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+            SECTION 5.2 Maximum Data Link Frame Size            ________________________________________
+
+            A data link frame can accommodate no more than 258 packet layer
+            octets.  The maximum data link  frame size, including overhead,
+            is 264 octets.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                   DATA LINK LAYER SPECIFICATION    Page 55
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+                              Appendix A, PACKET FORMATS
+
+
+            This appendix duplicates Figure 2 and Figures 8 through 22 from
+            Section 4 of the  text.  These  figures illustrate  packet for-
+            mats.  They are presented here a second time for convenience in
+            comparing the formats.
+
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    |                               |
+                           |---:---:---:---:---:---:---:---|
+                           |  Additional fields dependent  |
+                           //       on packet type        //
+                           |                               |
+                           |---:---:---:---:---:---:---:---|
+
+                            Figure 2  General Packet Format                            _______________________________
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                      Appendix A, PACKET FORMATS    Page 56
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   0   0   1   0   1   1 |
+                           |---:---:---:---:---:---:---:---|
+                           |  Calling DTE  :  Called DTE   |
+                      4    | address length: address length|
+                           |---:---:---:---:---:---:---:---|
+                           |        DTE address(es)        |
+                           //          (Note 2)           //
+                           |               :---:---:---:---|
+                           |               | 0   0   0   0 |
+                           |---:---:---:---:---:---:---:---|
+                           | 0   0 |   Facility length     |
+                           |       |                       |
+                           |---:---:---:---:---:---:---:---|
+                           |          Facilities           |
+                           //          (Note 3)           //
+                           |                               |
+                           :---:---:---:---:---:---:---:---:
+                           |       Call user data          |
+                           //      (Notes 4 and 5)        //
+                           |                               |
+                           :---:---:---:---:---:---:---:---:
+
+            Note 1: Coded 1000
+            Note 2: The  figure  is  drawn assuming  the  total  number  of
+                    address digits present is odd.
+            Note 3: The  maximum  length  of the  facilities  field  is  63
+                    octets.
+            Note 4: Bits 8 and 7  of the first octet of call  user data may
+                    have particular significance (see Section 4.5.1).
+            Note 5: The maximum  length of the call  user data field  is 16
+                    octets.
+
+                Figure 8  Call Request and Incoming Call Packet Format                ______________________________________________________
+
+
+
+
+
+
+
+                                      Appendix A, PACKET FORMATS    Page 57
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   0   0   1   1   1   1 |
+                           |---:---:---:---:---:---:---:---|
+                           |  Calling DTE  :  Called DTE   |
+                      4    | address length: address length|
+                           |---:---:---:---:---:---:---:---|
+                           |        DTE address(es)        |
+                           //          (Note 2)           //
+                           |               :---:---:---:---|
+                           |               | 0   0   0   0 |
+                           |---:---:---:---:---:---:---:---|
+                           | 0   0 |   Facility length     |
+                           |       |                       |
+                           |---:---:---:---:---:---:---:---|
+                           |          Facilities           |
+                           //          (Note 3)           //
+                           |                               |
+                           :---:---:---:---:---:---:---:---:
+                           |       Call user data          |
+                           //      (Notes 4 and 5)        //
+                           |                               |
+                           :---:---:---:---:---:---:---:---:
+
+            Note 1: Coded 1000
+            Note 2: The  figure  is  drawn assuming  the  total  number  of
+                    address digits present is odd.
+            Note 3: The  maximum  length  of the  facilities  field  is  63
+                    octets.
+            Note 4: Bits 8 and 7  of the first octet of call  user data may
+                    have particular significance (see Section 4.5.1).
+            Note 5: The maximum  length of the call  user data field  is 16
+                    octets.
+
+               Figure 9  Call Accepted and Call Connected Packet Format               ________________________________________________________
+
+
+
+
+
+
+
+                                      Appendix A, PACKET FORMATS    Page 58
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   0   1   0   0   1   1 |
+                           |---:---:---:---:---:---:---:---|
+                           |      Clearing cause           |
+                      4    |                               |
+                           |---:---:---:---:---:---:---:---|
+                           |      Diagnostic code          |
+                      5    |          (Note 3)             |
+                           |---:---:---:---:---:---:---:---|
+
+            Note 1: Coded 1000
+            Note 2: Address format default is CCITT X.121.
+            Note 3: Diagnostic code is optional
+
+              Figure 10  Clear Request and Clear Indication Packet Format              ___________________________________________________________
+
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   0   1   0   1   1   1 |
+                           |---:---:---:---:---:---:---:---|
+
+                           Note 1: Coded 1000
+
+                      Figure 11  Clear Confirmation Packet Format                      ___________________________________________
+
+
+
+
+
+
+
+                                      Appendix A, PACKET FORMATS    Page 59
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |          User data            |
+                           //                             //
+                           |                               |
+                           |---:---:---:---:---:---:---:---|
+
+            Note 1: Coded 0DQM, where D = D bit, Q = Q bit, and M = M bit
+
+                             Figure 12  Data Packet Format                             _____________________________
+
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   1   0   0   0   1   1 |
+                           |---:---:---:---:---:---:---:---|
+                           |      Interrupt user data      |
+                      4    |                               |
+                           |---:---:---:---:---:---:---:---|
+
+                           Note 1: Coded 1000
+
+                          Figure 13  Interrupt Packet Format                          __________________________________
+
+
+
+
+
+
+
+
+
+
+
+                                      Appendix A, PACKET FORMATS    Page 60
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   1   0   0   1   1   1 |
+                           |---:---:---:---:---:---:---:---|
+                      4    |      Interrupt user data      |
+                           |---:---:---:---:---:---:---:---|
+
+                           Note 1: Coded 1000
+
+                    Figure 14  Interrupt Confirmation Packet Format                    _______________________________________________
+
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |   Reserved    |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   0   0   0   0   0   1 |
+                           |---:---:---:---:---:---:---:---|
+
+                           Note 1: Coded 1000
+
+                        Figure 15  Receive Ready Packet Format                        ______________________________________
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                      Appendix A, PACKET FORMATS    Page 61
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |   Reserved    |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   0   0   0   1   0   1 |
+                           |---:---:---:---:---:---:---:---|
+
+                           Note 1: Coded 1000
+
+                      Figure 16  Receive Not Ready Packet Format                      __________________________________________
+
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           | 0   0   0   0   0   0   0   0 |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   0   1   1   0   1   1 |
+                           |---:---:---:---:---:---:---:---|
+                           |      Resetting cause          |
+                      4    |                               |
+                           |---:---:---:---:---:---:---:---|
+                           |      Diagnostic code          |
+                      5    |         (Note 2)              |
+                           |---:---:---:---:---:---:---:---|
+
+                           Note 1: Coded 1000
+                           Note 2: Diagnostic code is optional.
+
+              Figure 17  Reset Request and Reset Indication Packet Format              ___________________________________________________________
+
+
+
+
+
+
+
+
+                                      Appendix A, PACKET FORMATS    Page 62
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   0   1   1   1   1   1 |
+                           |---:---:---:---:---:---:---:---|
+
+                           Note 1: Coded 1000
+
+                      Figure 18  Reset Confirmation Packet Format                      ___________________________________________
+
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     | 0   0   0   0 |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           | 0   0   0   0   0   0   0   0 |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 1   1   1   1   1   0   1   1 |
+                           |---:---:---:---:---:---:---:---|
+                           |      Restarting cause         |
+                      4    |                               |
+                           |---:---:---:---:---:---:---:---|
+                           |      Diagnostic code          |
+                      5    |         (Note 2)              |
+                           |---:---:---:---:---:---:---:---|
+
+                           Note 1: Coded 1000
+                           Note 2: Diagnostic code is optional.
+
+            Figure 19  Restart Request and Restart Indication Packet Format            _______________________________________________________________
+
+
+
+
+
+
+
+
+                                      Appendix A, PACKET FORMATS    Page 63
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     | 0   0   0   0 |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |   P(R)        |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 1   1   1   1   1   1   1   1 |
+                           |---:---:---:---:---:---:---:---|
+
+                           Note 1: Coded 1000
+
+                     Figure 20  Restart Confirmation Packet Format                     _____________________________________________
+
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |    P(S)       |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 1   1   1   1   0   0   0   1 |
+                           |---:---:---:---:---:---:---:---|
+                           |      Diagnostic code          |
+                      4    |                               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Diagnostic explanation     |
+                      5    |          (Note 2)             |
+                           //                             //
+                           |                               |
+                           |---:---:---:---:---:---:---:---|
+
+            Note 1: Coded 1000
+            Note 2: The maximum length of  the diagnostic explanation field
+                    is three octets.  Its actual length depends on the rea-
+                    son the diagnostics packet was issued.
+
+                          Figure 21  Diagnostic Packet Format                          ___________________________________
+
+
+
+
+                                      Appendix A, PACKET FORMATS    Page 64
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+                                          Bits
+                             8   7   6   5   4   3   2   1
+                    Octet  .---.---.---.---.---.---.---.---.
+                           |     G F I     |     L C I     |
+                      1    |    (Note 1)   |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    P(R)       |   Reserved    |
+                      2    |               |               |
+                           |---:---:---:---:---:---:---:---|
+                           |    Packet type identifier     |
+                      3    | 0   0   0   0   1   0   0   1 |
+                           |---:---:---:---:---:---:---:---|
+
+                           Note 1: Coded 1000
+
+                            Figure 22  Reject Packet Format                            _______________________________
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                      Appendix A, PACKET FORMATS    Page 65
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+                                         INDEX
+
+
+
+            Bandwidth utilization ............................. 4
+            Batch traffic ..................................... 5
+            Byte stuffing ..................................... 4, 6
+
+            Call accepted packet format ....................... 30, 31, 58
+            Call collision .................................... 10, 13
+            Call connected packet format ...................... 30, 31, 58
+            Call request packet format ........................ 26, 27, 57
+            Clear confirmation packet format .................. 35, 36, 59
+            Clear indication packet format .................... 33, 34, 59
+            Clear request packet format ....................... 33, 34, 59
+            Clearing cause field .............................. 34, 35, 43
+            Control packets ................................... 8
+            Counters .......................................... 16, 18, 19
+
+            Data link frame ................................... 3
+            Data link frame format ............................ 53
+            Data link layer ................................... 53
+            Data packet format ................................ 36, 37, 60
+            Data packet limit ................................. 14
+            Delivery confirmation bit (D bit) ................. 16, 23, 36
+            Diagnostic packet format .......................... 47, 48, 64
+            Duplicate packets ................................. 3, 22
+
+            Error control ..................................... 4, 7, 16,
+             53, 54
+            Error rate ........................................ 3
+
+            Flow control ...................................... 4, 7
+
+            Incoming call packet format ....................... 26, 27, 57
+            Interactive traffic ............................... 5
+            Interrupt confirmation packet format .............. 38, 39, 61
+            Interrupt packet format ........................... 37, 38, 60
+
+            Length encoding ................................... 4, 6
+            Logical channel identifier field .................. 24
+            Logical channels .................................. 8
+            Lost packets ...................................... 3, 16, 19,
+
+
+
+
+
+
+
+                                                           INDEX    Page 66
+
+
+
+
+
+
+
+
+
+            X.PC Protocol Specification                   September 8, 1983
+
+
+             21, 50
+
+            More data mark (M bit) ............................ 23, 36
+            Multiplexing ...................................... 7
+
+            Optional addressing facilities .................... 28, 32
+            Optional user facility ............................ 50
+            Optional user facility format ..................... 50
+            Out-of-sequence packet ............................ 19
+            Overhead .......................................... 4, 6, 13,
+             55
+
+            Packet layer entity ............................... 11
+            Packet numbering .................................. 13
+            Packet receive sequence number field .............. 24
+            Packet send sequence number field ................. 24
+            Packet structure .................................. 11
+            Packet type identifier field ...................... 24
+            Protocol identification ........................... 29
+
+            Qualifier bit (Q bit) ............................. 23
+
+            Receive not ready packet .......................... 16
+            Receive not ready packet format ................... 40, 41, 62
+            Receive ready packet .............................. 15
+            Receive ready packet format ....................... 39, 40, 61
+            Reconnect facility ................................ 4, 50, 52
+            Reconnect key ..................................... 50, 52
+            Reject packet format .............................. 49, 65
+            Reset confirmation packet format .................. 43, 44, 63
+            Reset indication packet format .................... 41, 42, 62
+            Reset request packet format ....................... 41, 42, 62
+            Restart indication packet format .................. 44
+            Restart request packet format ..................... 44
+
+            Throughput ........................................ 4
+            Timers ............................................ 16, 18, 19
+            Transmission line errors .......................... 3, 5
+
+            Window algorithm .................................. 4
+            Window size ....................................... 5, 51
+
+
+
+
+
+
+
+
+
+                                                           INDEX    Page 67
+
+
+
+
+
+J@	B
