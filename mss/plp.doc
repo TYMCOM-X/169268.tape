@@ -1,0 +1,1383 @@
+
+
+
+
+
+
+         ============================================================
+
+
+
+
+
+
+                           PRIVATE LINE PRICER
+                              (Version 3.0)
+
+                               March 1989
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                             Documentation by:
+
+                              Stephanie Hamik
+
+                            Revised:  July 1989
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  TYMNET
+                            McDonnell Douglas
+
+
+
+         ============================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+       ********************************************************************
+       *                                                                  *
+       *   This is the first release of the Private Line Pricer program,  *
+       *   Version 3.0.  We realize that the field has not had a fully    *
+       *   released and fully supported private line pricer program in    *
+       *   several years.  Even though PLP, version 3.0 is not entirely   *
+       *   complete, we are fully releasing version 3.0 for internal use  *
+       *   only.                                                          *
+       *                                                                  *
+       *   The component of the PLP that is not complete is batch mode.   *
+       *   At the present, batch mode does not produce a readable report. *
+       *   We are currently working on several output reports.  These     *
+       *   reports will be completed by the second release of PLP.        *
+       *   Batch mode does not have the ability to price out a leased     *
+       *   line with conditioning.  We will be reviewing this issue at    *
+       *   a later date.                                                  *
+       *                                                                  *
+       *   This document is not fully complete.  The Batch Mode section   *
+       *   is incomplete and will not be finished until the reports are   *
+       *   written, tested and released.                                  *
+       *                                                                  *
+       *   We would appreciate any questions and feedback on the program  *
+       *   itself or the documentation.                                   *
+       *                                                                  *
+       *   Sample runs which are shown throughout the documentation are   *
+       *   missing operating system messages.  These messages are not     *
+       *   essential for learning the PLP and were left out to condense   *
+       *   the length of the documentation.                               *
+       *                                                                  *
+       ********************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    Private Line Pricer, Version 3.0
+
+
+
+
+                            TABLE OF CONTENTS
+
+
+
+
+            I.  Introduction
+
+                A.  Overview                                      2
+
+                B.  Advantages over other programs                2
+
+                C.  Support                                       2
+
+
+           II.  Determining the Nearest TSO for Leased Lines
+
+                A.  Site Availability Report                      3
+
+                B.  Network Profile Database                      4
+
+
+          III.  Private Line Pricer - Modes of Execution
+
+                A.  Interactive Mode                              7
+
+                B.  Batch Mode                                    8
+
+
+           IV.  IBM Environment
+
+                A.  Creating the Input File                      10
+
+                B.  Various CMS commands                         13
+
+
+            V.  Sample Runs
+
+                A.  Interactive Mode                             14
+
+                B.  Batch Mode                                   17
+
+
+           VI.  Interpreting the Results                         18
+
+
+          VII.  Troubleshooting and Commonly                     19
+                     Asked Questions
+
+
+
+
+
+
+
+                                     - 1 -
+
+
+
+
+    Private Line Pricer, Version 3.0
+
+-----------------------------------------------------------------------------
+
+
+       I.  INTRODUCTION
+
+           A.  OVERVIEW
+
+               The Private Line Pricer program (PLP), ver. 3.0 is a program
+               which computes the cost of a dedicated leased line between
+               two end points.  PLP may be used for pricing leased lines on
+               dedicated (Private) networks or shared (Public) network ser-
+               vices for STI, PAP, and DCF.  The program is located on an
+               internal IBM mainframe, System 43, and can be used in either
+               interactive or batch mode.
+
+               The program's tariff information is provided by CCMI McGraw
+               Hill's QTEL 9000 database which contains information on var-
+               ious voice grade and data line carriers as well as dialing
+               rates. Pricing for Intrastate - Intralata lines is based on
+               the RBOC tariffs.  Tariffs for common carriers such as AT&T
+               and MCI are provided for Intrastate - Interlata and Inter-
+               state - Interlata leased lines.                                   
+
+               The QTEL 9000 database is updated once a month with current
+               rate information and quarterly with new area code and pre-
+               fixes. The QTEL 9000 is also the source for another major
+               software sales tool program, the Direct Distance Dialing
+               program (DDD).
+
+
+
+           B.  ADVANTAGES OVER PREVIOUS PROGRAMS
+
+               PLP, ver. 3.0 is fully supported by Operations, Marketing,
+               and MIS at Tymnet Headquarters.  Other versions of this pro-
+               gram, previously provided by Tymnet, are no longer supported
+               or updated at this time.  
+
+               Tariff information for PLP, ver. 3.0 is verified on a regu-
+               lar basis by calling various Local Bell companies and common
+               carriers and pricing out random leased lines.
+
+               PLP, ver. 3.0 is easy to use and understand.  The program
+               presents information in two ways:  A summary report or in
+               detail format.
+
+               The program provides pricing information on local circuits,
+               long distance circuits and D1 conditioning for both instal-
+               lation and monthly charges.
+
+
+           C.  SUPPORT
+
+               If you have any questions or problems with either the program
+               or documentation, please contact Stephanie Hamik (Nscms.S/Hamik
+               or (408)922-7529 ).  Please read this document before you call.
+
+
+
+                                     - 2 -
+
+
+
+
+    Private Line Pricer, Version 3.0
+
+-----------------------------------------------------------------------------
+
+
+      II.  DETERMINING THE NEAREST TSO FOR LEASED LINES
+
+
+           A.  SITE AVAILABILITY REPORT
+
+               The Site Availability report is located on a PDP-10, system
+               23.   This report is very useful and easy to retrieve.
+
+               This report includes a listing of all TYMNET nodes, their
+               location (State and City), NPA/NXX, site number, class of node,
+               whether ISIS is available at that site, density of node, status
+               of site, and any site limitations.  This report will enable
+               users to determine what sites certain network connections or
+               leased lines can be engineered into.
+
+               The following is an explanation of the class restrictions:
+
+               CLASS 1     -   Can accommodate any speed of line including a
+                               56 KB
+
+               CLASS 2    -   Can accommodate a 19.2 or less
+
+               CLASS 3    -   Can accommodate a 9.6 or less
+
+               CLASS 4    -   Can accommodate a 4.8 or less
+
+               CLASS 5    -   Public Async Access ONLY
+
+
+               The following illustrates how to print the SITE AVAILABILITY
+               REPORT:
+
+
+               -----------------------------------------------
+               |                                             |
+               |     please log in:  YOURUSERNAME:23;        |
+               |                                             |
+               |     -GFD NETDB                              |
+               |                                             |
+               |     -TYPE SITEAV.RPT                        |
+               |                                             |
+               -----------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                     - 3 -
+
+
+
+
+    Private Line Pricer, Version 3.0
+
+-----------------------------------------------------------------------------
+
+
+           B.  NETWORK PROFILE DATABASE
+
+               The Network Profile Database has many useful functions.  One
+               being, the "TYMNET NODE WITHIN A MILEAGE RADIUS" Search.
+               This search used in conjunction with the site availability
+               report will assist the sales force with customer proposals
+               in determining what the closest available TYMNET site would
+               be to configure a network connection or dedicated leased
+               line into.
+
+               Given an origination point, area code and prefix (NPA/NXX)
+               by the user, this search will provide node number, site num-
+               ber, location, type of software available at the site, and
+               mileage to the nearest Tymnet nodes depending on the mileage
+               restriction provided by the user.
+
+               In order to execute the Private Line Pricer, the user must
+               have both origination and termination area code and prefix.
+               The "TYMNET NODE WITHIN A MILEAGE RADIUS" Search will pro-
+               vide the closest TSO and the Site availability report will
+               supply the site class information and the site area code and
+               prefix needed for PLP.
+
+               When using the "TYMNET NODE WITHIN A MILEAGE RADIUS" search
+               to determine actual mileage, caution should be used since
+               the mileage listed is only an estimate and is based on area
+               code and prefix and not based on actual address location.
+
+               To access the NETWORK PROFILE DATABASE and perform the TYM-
+               NET node search, simply follow the sample run below:
+
+
+               --------------------------------------------------------
+               |                                                      |
+               |     please log in:  YOUR USERNAME:23;                |
+               |     -GFD NETDB                                       |
+               |     -MAG                                             |
+               |                                                      |
+               |     =:SCHEMA NETWORK.PROFILE                         |
+               |                                                      |
+               |     Enter Database userid:                           |
+               |     (Each person should have a unique userid for     |
+               |     the Network Profile Database;  to assign         |
+               |     a userid hit a carriage return and follow the    |
+               |     steps If you currently have a userid assigned    |
+               |     for this program, enter it at this prompt.)      |
+               |                                                      |
+               |     Checking relations...   Relations OK...          |
+               |     Version 4-8                                      |
+               |     Are you using a TYMNET 425(ADM31) or 426(ADM12)  |
+               |     CRT (screen) terminal?  Enter 'Y' for YES or 'N' |
+               |     for NO, followed by a RETURN:                    |
+               |                                                      |
+
+
+
+                                     - 4 -
+
+
+
+
+    Private Line Pricer, Version 3.0
+
+-----------------------------------------------------------------------------
+
+
+               |     Network is TYMNET                                |
+               |                                                      |
+               |     NETWORK PROFILE DATABASE  (TYMNET      )         |
+               |     COMMANDS:                                        |
+               |     1.  Print                                        |
+               |     2.  List                                         |
+               |     3.  Report                                       |
+               |     4.  Search                                       |
+               |     5.  Orders                                       |
+               |     6.  Old nodes                                    |
+               |     7.  Mail to DBA                                  |
+               |     8.  Set environment                              |
+               |     9.  Instructions                                 |
+               |     10. News                                         |
+               |     11. Validation                                   |
+               |     12. Tables                                       |
+               |                                                      |
+               |     Enter selection (RETURN, Q, L): 4                |
+               |                                                      |
+               |     Search Options available:                        |
+               |     ----------------------                           |
+               |                                                      |
+               |     1. Search COMPANY Names                          |
+               |     2. Search CITY                                   |
+               |     3. Search CONTACT Names                          |
+               |     4. Search HOST and FRONT END Interface fields    |
+               |     5. Search CIRCUIT Name                           |
+               |     6. Search for TYMNET Nodes within a mileage      |
+               |        radius                                        |
+               |     7. Search for CUSTOMER Sites within a given      |
+               |        radius                                        |
+               |     8. Search for Sites by SALESREP NUMBER           |
+               |                                                      |
+               |     Enter selection number (RETURN, M, Q, L): 6      |
+               |                                                      |
+               |     **********************************************   |
+               |                                                      |
+               |     Loading TYMNET V&H Coordinates -- please wait ...|
+               |     Loading complete -- execution proceeds.          |
+               |     PROGRAM WHICH LOCATES AND DISPLAYS TYMNET        |
+               |           NODES WITHIN A MILEAGE RADIUS              |
+               |                                                      |
+               |     Enter an NPA (area code): 408                    |
+               |     Enter an NNX (exchange): 922                     |
+               |     Enter a mileage radius (1-2000) ==> 50           |
+               |     NPA & NNX entered are for VH City: SAN JOSE CA   |
+               |     Enter SOFTWARE TYPE or ALL (or 'HELP'): ISIS     |
+               |                                                      |
+               |                                                      |
+               |     Node Software  =  ISIS                           |
+               |     Mileage radius =    50                           |
+               |     V&H City & St  =  SAN JOSE   CA                  |
+               |                                                      |
+               |     Total Nodes    =          167                    |
+               |                                                      |
+
+                                     - 5 -
+
+
+
+
+    Private Line Pricer, Version 3.0
+
+-----------------------------------------------------------------------------
+
+
+               |     Display Options                                  |
+               |     ---------------                                  |
+               |                                                      |
+               |     1. Brief listing (node, site id, city&st,        |
+               |        mileage)                                      |
+               |     2. Detailed list (complete site and node         |
+               |        displays)                                     |
+               |     3. Repeat the Program (enter a new NPA & NNX)    |
+               |     4. Exit the Program                              |
+               |                                                      |
+               |     Enter option: 1                                  |
+               |                                                      |
+               |                                                      |
+               |      Node Software   SiteId City        St  Miles    |
+               |      ---- --------   ------ ----        --  -----    |
+               |                                                      |
+               |      2164  ISIS       4458  SAN JOSE    CA     0     |
+               |     10424  ISIS       4458  SAN JOSE    CA     0     |
+               |     10561  ISIS       4458  SAN JOSE    CA     0     |
+                10671  ISIS       4458  SAN JOSE    CA     0     |
+               |      2011  ISIS        153  FREMONT     CA     7     |
+               |      2102  ISIS        153  FREMONT     CA     7     |
+               |      2305  ISIS        153  FREMONT     CA     7     |
+               |      6720  ISIS        153  FREMONT     CA     7     |
+               |             .                  .                     |
+               |             .                  .                     |
+               |             .                  .                     |
+               |             .                  .                     |
+                ------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                     - 6 -
+
+
+
+
+    Private Line Pricer, Version 3.0
+
+-----------------------------------------------------------------------------
+
+
+     III.  PRIVATE LINE PRICER - MODES OF EXECUTION
+
+           The Private Line Pricer program can be executed in two modes:
+           Interactive or Batch.  When the interactive mode is executed,
+           the user manually enters the leased line information as the pro-
+           gram  requests it.  In batch mode, the user creates an input
+           file containing the leased line data.  The input file is auto-
+           matically read into the program when the PLP is executed.  There
+           is no user interaction while the program is running in batch
+           mode.
+
+
+           A.  INTERACTIVE  MODE
+
+               The PLP prompts for the information listed below.  Where it
+               is designated optional (only seen in documentation), the
+               user can either enter the information or enter a carriage
+               return.  A carriage return is necessary after each entry is
+               complete.  (Section IV contains sample runs.)
+
+               - Pricing option:  Pricing option #1, 2-PT Private Line
+                 Pricing is option for leased line pricing.        
+
+               - Origination and destination area code and prefix
+
+               - Mileage (Enter zero or is optional)
+
+               - Carrier code: (ATT, BOC, MCI, etc..)
+
+               - Service Type:  Analog, Digital, High-speed.  Analog is
+                 the only service type we currently have pricing for.
+                 Digital pricing will be available in the near future.
+
+               - Channel Types:  VG 2-wire, VG 4-wire, VG/Data 2-wire,
+                 or VG/Data 4-wire.  (Use VG/DATA 4-Wire option.)
+
+               - Effective date (optional)
+
+
+               The interactive program has default values for each prompt.
+               The default values are located in the [ ] brackets.  These
+               default values change everytime the prompt is answered with
+               anything except a carriage return.  The new default values
+               will remain in effect until the user changes them or logs
+               out of PLP.                                                       
+
+               In the mileage fields, the mileage default is always zero.         
+               If the user gives a value other than zero for mileage, this
+               value will remain the default until it is changed again or
+               the user logs out of the program and then the mileage will
+               automatically return to zero.  The default value for the
+               date field is always the current date unless the user
+               specifies differently.                 
+
+
+
+                                     - 7 -
+
+
+
+
+    Private Line Pricer, Version 3.0
+
+-----------------------------------------------------------------------------
+
+
+               Detail output is available in interactive mode only.  The
+               output provides the carrier information, total charges, and
+               optional charges in complete detail.  These total charges DO
+               NOT include Tymnet's additional 15% charge.
+
+               To execute the interactive Private Line Pricer follow the
+               simple instructions below.
+
+
+               --------------------------------------------
+               |     please log in:  YOURUSERNAME:43;     |
+               |     PROJECT CODE: <cr>                   |
+               |                                          |
+               |     43> ATTACH DDD <cr>                  |
+               |         (READ password required)         |
+               |     43> QTEL <cr>                        |
+               |                                          |
+               --------------------------------------------
+
+
+
+               B.  BATCH MODE
+
+
+               In order to run the batch mode, the user also needs the same
+               information that was requested in the interactive mode.  The
+               information is, however, written in a file on the IBM sys-
+               tem.  The output is also put to a file versus to the terminal.    
+               The input file must be of the format below:
+
+               Pricing Option              - 1 numeric character
+               Origination Area code (NPA) - 3 digits; numeric only
+               Origination Prefix (NXX)    - 3 digits; numeric only
+               Mileage (optional)          - 7 characters; numeric,
+                                              or blank
+               Destination Area code (NPA) - 3 digits; numeric only
+               Destination Prefix (NXX)    - 3 digits; numeric only
+               Mileage (optional)          - 7 characters; numeric,
+                                              or blank
+               Carrier                     - 3 alpha characters and
+                                             1 space
+               Service Type                - 1 alpha character
+               Channel Type                - 1 numeric character
+               Effective date (optional)   - date format of YYYYMMDD
+                                             or blank
+
+
+               Sample input file:
+
+                        140892200000004084320000000BOC A41988021
+               or       141577300000004156240000000BOC A4
+               or       1612543       612724       BOC A4
+
+
+
+
+                                     - 8 -
+
+
+
+
+    Private Line Pricer, Version 3.0
+
+-----------------------------------------------------------------------------
+
+
+               In order to execute the PLP in batch mode, the input file
+               must have a filetype of "INPUT".  The PLP will automatically
+               give the output file a filetype of "OUTPUT".
+
+               If blanks are used for any field, the PLP program will use
+               the either the standard program defaults or the values used
+               in the previous line or record.   The values for each entry
+               will remain in effect until the user changes them or logs
+               out of the program.
+
+               The batch mode provides a summary report only.  The summary
+               report includes the origination and destination area codes
+               and prefixes, total monthly charges and total installation
+               charges.  These total charges DO NOT include Tymnet's addi-
+               tional 15% charge for leased lines.  The batch mode output
+               also does not provide D1 conditioning charges at this time.
+
+
+               To execute batch mode, follow the instructions below:
+
+
+               ---------------------------------------------------
+               |     please log in:  YOURUSERNAME:43;            |
+               |     PROJECT CODE: <cr>                          |
+               |                                                 |
+               |     43> ATTACH DDD <cr>                         |
+               |         (READ password required)                |
+               |     43> QBATCH FILENAME1 FILENAME2              |
+               |                                                 |
+               ---------------------------------------------------
+
+               FILENAME1 = The input filename.  The filetype is not
+               needed as the program will assume a filetype of "INPUT".
+
+               FILENAME2 = The output filename.  The filetype is not
+               needed either.  The program will assign a filtype of
+               "OUTPUT".
+
+               See Section IV for further information on creating an input
+               file.
+
+
+               *  Reports will be documented further in next release. *
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                     - 9 -
+
+
+
+
+    Private Line Pricer, Version 3.0
+
+-----------------------------------------------------------------------------
+
+
+      IV.  THE IBM ENVIRONMENT
+
+
+           A.  CREATING THE INPUT FILE FOR BATCH MODE
+
+               There are several way to create your input file to run PLP
+               in batch mode.  (1)  Create your file on the IBM system.  
+               (2) Create your file on a PDP-10, system 38 for example,
+               and telecopy the file to system 43.  (3)  Create the input
+               file on a PC and upload the file to system 43.  
+
+
+               1.  The user need not be familiar with IBM or its commands
+               to create an input file on the IBM mainframe.  Listed below
+               is an example of the EDITOR program showing how to create a
+               an input file.
+
+
+                  --------------------------------------------------
+                  |   43>EDIT TEST1 INPUT A1                       |
+                  |      NEW FILE:                                 |
+                  |   E>I                                          |
+                  |   I>140892200000004084320000000BOC A419890221  |
+                  |   I>1201624       213640       ATT A2          |
+                  |   I>                                           |
+                  |   E>FILE TEST INPUT A1                         |
+                  |   R; T=0.01/0.03 20:33:16                      |
+                  |   43>                                          |
+                  --------------------------------------------------
+
+
+               To execute the IBM Editor, simply type EDIT, the filename
+               with filetype and disk address.  "E" signifies edit mode.         
+
+               In the sample above, "TEST1" is the filename with the file-
+               type "INPUT". "A1" is the address of the file.  All files
+               must have an address.  It will be less confusing if the user
+               assigns address A1 to all his/her files.
+
+               As mentioned earlier, all PLP input files must have the
+               filetype "INPUT".
+
+               "I" in edit mode, stands for input.  As long as the user has
+               the "I" prompt, everything that is being typed will be
+               included in the file.  To write the file to disk, enter a
+               carriage return at the input prompt "I" and file (write) the
+               file to disk.
+
+
+
+
+
+
+
+
+
+                                     - 10 -
+
+
+
+
+    Private Line Pricer, Version 3.0
+
+-----------------------------------------------------------------------------
+
+
+               2.  Creating a batch file on a DEC PDP-10 and telecoping the
+               file to system 43 is another option users have.  If this
+               option is used, simply create the input file on system 38 or
+               another PDP-10 and then use the "Telecopy" command to move
+               a copy of the file to system 43.  When the file is telecopied
+               to system 43, the file will be given a filetype "TELECOPY".
+               The user must rename the file and give it a filetype "INPUT".
+               The record format and record length must be changed to
+               fixed with a record length of 80 in order for the PLP
+               program to read the file.
+
+               Below, is a sample of this option with the necessary rename
+               and file format change commands:
+
+                  ---------------------------------------------------
+                  |                                                 |
+                  |   please log in:  YOURUSERNAME:38;              |
+                  |   PROJECT CODE:                                 |
+                  |                                                 |
+                  |   -R EDITOR                                     |
+                  |   *A                                            |
+                  |    140892200000004084320000000BOC A419890221    |
+                  |    1201624       213640       ATT A2            |
+                  |   *W TEST2 New File - Ok? Y                     |
+                  |   10 Chars *Q                                   |
+                  |                                                 |
+                  |   -R TELECOPY                                   |
+                  |   :(YOURUSERNAME)TEST2,:43                      |
+                  |   COPY STARTING                                 |
+                  |   (YOURUSERNAME:38)TEST2 COPIED TO              |
+                  |                      (YOURUSERNAME:43)TEST2     |
+                  |   9 (13) CHARS. TRANSMITTED                     |
+                  |   : Q                                           |
+                  |   -EXI                                          |
+                  |                                                 |
+                  |   please log in: YOURUSERNAME:43;               |
+                  |   PROJECT CODE:.                                |
+                  |                                                 |
+                  |   R; T=0.04/0.07 17:56:24                       |
+                  |   43>LIST TEST2* * (L                           |
+                  |                                                 |
+                  |   FILENAME FILETYPE FM FORMAT LRECL  RECS ...   |
+                  |   TEST2    TELECOPY A1 V      41     2          |
+                  |                                                 |
+                  |   R; T=0.01/0.01 17:56:24                       |
+                  |   43>RENAME TEST2 TELECOPY A1 TEST2 INPUT A1    |
+                  |   R; T=0.01/0.01 17:56:34                       |
+                  |   43>COPY TEST2 INPUT A1 (RECFM F LRECL 80      |
+                  |   R; T=0.01/0.01 17:56:44                       |
+                  |   43>                                           |
+                   -------------------------------------------------
+
+
+
+
+
+                                     - 11 -
+
+
+
+
+    Private Line Pricer, Version 3.0
+
+-----------------------------------------------------------------------------
+
+
+               3.  Creating an input file on a PC and uploading the file to
+               system 43 is probably the easiest method there is.   Create
+               the input file in the correct format in a word processing
+               software package and save the file in Ascii format.  Log on
+               to system 43 and by using the "COPYPC" command, upload the
+               file.  A sample of the "COPYPC" command is illustrated below.     
+               COPYPC is only available if you are using TYMCOMM.  If you
+               are using XTALK, use the "SEND" command to upload the file.
+
+
+                  ---------------------------------------------------
+                  |   please log in: YOURUSERNAME:43;               |
+                  |   PROJECT CODE:.                                |
+                  |                                                 |
+                  |   R; T=0.04/0.07 17:56:24                       |
+                  |   43>COPYPC PCfile IBMfile INPUT A1             |
+                  ---------------------------------------------------
+
+
+               WHERE: PCFILE represents the "From File".  The PC drive and
+               sub-directory needs to be specified.  If the file is on
+               drive C and sub-directory DOS, the format would be:
+
+                       COPYPC C:\DOS\FILE IBMFILE INPUT A1
+
+               COPYPC can also work in the reverse.  A user can download an
+               IBM file to the PC by switching the order of filenames.
+
+                       COPYPC IBMFILE INPUT A1 C:\DOS\FILE
+
+
+               Type "LIST  Filename Filetype  (L " to make sure the file
+               has the correct record lenght and format.  If it does not
+               use the copy command illustrated on the previous page
+               to change the record length and file format.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                     - 12 -
+
+
+
+
+    Private Line Pricer, Version 3.0
+
+-----------------------------------------------------------------------------
+
+
+           B.  VARIOUS CMS COMMANDS
+
+               The list of IBM commands below will be very helpful to users
+               who are new to the IBM environment.
+
+
+               LIST  - Is synonomous to the "DIR" command on the PDP-10s.
+                       "LIST" will display all files in the user's direc-
+                       tory. Variables of the "LIST" command include:
+
+                     - LIST TEST * A1 - Will display all files named TEST
+                       with any filetype and address A1.
+
+                     - LIST TEST INPUT A1 (L - Will list the named file as
+                       well as various information pertaining to that par-
+                       ticular file such as disk address, format, record
+                       length, number of records, number of blocks, creation
+                       date and time.                                            
+
+               ERASE - Will delete a file(s).  In order to erase a file,
+                       the filename (at least in part) needs to be speci-
+                       fied.                                                     
+
+                     - ERASE TEST * will delete all files named test with
+                       any filetype.                                             
+
+               TYPE  - Will print to a terminal any file specified.  The
+                       complete filename must be used.  Wild characters (*)
+                       will not work.                                            
+
+              RENAME - Will rename a file to another filename.
+
+                     - RENAME TEST1 DATA A1 TEST1 INPUT A1
+                       (Renamed the file TEST1 filetype DATA on the A1 disk
+                        to file TEST1 filetype INPUT on the A1 disk)
+
+              Q DISK - Will show the user how many blocks of storage and
+                       what percentage of storage has been used.
+
+                COPY - Will make a copy of the file or can be used to
+                       change record format and record length.
+
+                     - COPY TEST1 INPUT A1 (RECFM F LRECL 80
+                       In this example, the record format is changed to
+                       F for fixed and record length 80.
+
+       <ESC> <CR> HX - To log out of the program at any time during
+                       execution and return to the 43> prompt.
+
+                       DO NOT type <ESC>, instead enter the escape key.
+                       <CR> stands for carriage return.  HX is typed at
+                       the ??> prompt.
+
+               LOG -   Will log the user off the system.
+
+
+                                     - 13 -
+
+
+
+
+    Private Line Pricer, Version 3.0
+
+-----------------------------------------------------------------------------
+
+
+       V.  SAMPLE RUNS
+
+
+           A.  INTERACTIVE RUN - The following is a sample run of the Pri-
+               vate line Pricer in interactive mode.  It includes sample
+               input and output.
+
+==============================================================================
+
+
+please log in: YOURUSERNAME:43
+PROJECT CODE:.
+
+43>ATTACH DDD
+ENTER READ PASSWORD:
+
+R; T=0.04/0.07 23:14:45
+
+43>QTEL
+
+CP LINK DBTARIFF 191 111 RR QTEL9000
+ACC 111 B
+B (111) R/O
+FI SYSIN TERMINAL ( LRECL 40
+FI TERMOUT TERMINAL ( RECFM F LRECL 80
+FI RATF DISK RATF VSAM B
+FI MRCF DISK MRCF VSAM B
+PRLINQ
+                     Two-Point Private Line Pricer - Inquiry
+       Copyright (c) 1986,1987,1988 by Lynn-Arthur Associates, Inc. VERSION 3
+
+ ENTER PRIVATE LINE INFORMATION:
+ Pricing Options:
+   1. 2-pt Private Line Pricing
+   2. Interstate Special Access Pricing
+   3. Intrastate Special Access Pricing
+   4. Interstate Carrier's Access Pricing
+   5. Intrastate Carrier's Access Pricing
+ Pricing Option or Q to quit [1):
+IKF990D, AWAITING REPLY.
+>1
+
+ Origin Area Code [201):
+IKF990D, AWAITING REPLY.
+>408
+ Origin Exchange [825):
+IKF990D, AWAITING REPLY.
+>922
+ Origin CP Mileage (9999.999) [0       ):
+IKF990D, AWAITING REPLY.
+>
+ Destination Area Code [313):
+IKF990D, AWAITING REPLY.
+>408
+
+
+                                     - 14 -
+
+
+
+
+    Private Line Pricer, Version 3.0
+
+-----------------------------------------------------------------------------
+
+
+ Destination Exchange [995):
+IKF990D, AWAITING REPLY.
+>432
+
+ Destination CP Mileage (9999.999) [0       ):
+IKF990D, AWAITING REPLY.
+>
+
+ Carrier Code (ATT BOC MCI USP WU) [ATT ):
+IKF990D, AWAITING REPLY.
+>BOC
+ Service Type (A,D,H) [A):
+IKF990D, AWAITING REPLY.
+>
+ Channel Types (not all available for every carrier):
+   1. VG 2-Wire
+   2. VG 4-Wire
+   3. VG/Data 2-Wire
+   4. VG/Data 4-Wire
+   5. Alternate Use VG/Data 2-Wire
+   6. Alternate Use VG/Data 4-Wire
+ Channel Type [1):
+IKF990D, AWAITING REPLY.
+>4
+ Effective Date (YYYYMMDD) [19890223):
+IKF990D, AWAITING REPLY.
+>
+
+TWO-POINT PRIVATE LINE PRICER RESULTS:
+Origin:      408-922 SAN JOSE, CA  Lata: 0722
+Destination: 408-432 SAN JOSE, CA  Lata: 0722
+Requested Carrier: BOC
+Jurisdiction: Intrastate IntraLATA
+Effective Date:  2/23/89
+                                                       Cost/Month   One-Time
+                                                       ----------  ----------
+Total Required Charges:                                    $43.39     $614.61
+DETAIL FOLLOWS.........
+PACIFIC BELL OF CALIFORNIA INTRASTATE INTRALATA PRIVATE LINE RATE TABLE
+(Effective Date:  1/01/89)
+Description                                            Cost/Month   One-Time
+-----------                                            ----------  ----------
+Channel Charges:
+Local loop (1.00 miles)                                    $22.61     $358.00
+From: NPANXX-WC  408-922 SAN JOSE, CA (8572.00,8624.00)
+To:   CP 408-922 SAN JOSE, CA (8572.00,8624.00)
+Local loop (1.00 miles)                                    $22.61     $358.00
+
+From: NPANXX-WC  408-432 SAN JOSE, CA (8572.00,8624.00)
+To:   CP 408-432 SAN JOSE, CA (8572.00,8624.00)
+Required Additional Charges:
+0209 ADDTL CHG ITEM CODE: 0209                              $5.33
+
+
+
+
+                                     - 15 -
+
+
+
+
+    Private Line Pricer, Version 3.0
+
+-----------------------------------------------------------------------------
+
+
+Optional Additional Charges (not included in totals):
+0001 ADDTL CHG ITEM CODE: 0001                             $15.81      $99.00
+0003 ADDTL CHG ITEM CODE: 0003                             $40.05     $125.00
+0090 ADDTL CHG ITEM CODE: 0090                             $71.94     $132.00
+0091 ADDTL CHG ITEM CODE: 0091                             $77.47     $148.00
+0002 ADDTL CHG ITEM CODE: 0002                             $32.04     $104.00
+0004 ADDTL CHG ITEM CODE: 0004                             $75.89     $125.00
+0071 ADDTL CHG ITEM CODE: 0071                              $9.49     $104.00
+0078 ADDTL CHG ITEM CODE: 0078                             $21.61     $108.00
+0073 ADDTL CHG ITEM CODE: 0073                             $33.20     $132.00
+0030 ADDTL CHG ITEM CODE: 0030                                        $650.00
+Other Charges:
+State Surcharge                                             $7.16     $101.39
+                                                       ----------  ----------
+                                      Sub-total            $43.39     $614.61
+                                                       ----------  ----------
+                                      TOTAL                $43.39     $614.61
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                     - 16 -
+
+
+
+
+    Private Line Pricer, Version 3.0
+
+-----------------------------------------------------------------------------
+
+
+           B.  BATCH RUN - The following is a sample run of the Private
+               Line Pricer in batch mode.  It includes sample input and
+               sample output.  Do not be discouraged with sample below.          
+               Everything after the QBATCH command is generated by the
+               program automatically.
+
+==============================================================================
+
+please log in: YOURUSERNAME:43
+PROJECT CODE:.
+
+43>ATTACH DDD
+ENTER READ PASSWORD:
+
+R; T=0.04/0.07 23:14:45
+
+43>QBATCH TEST1 TEST1
+
+CP LINK DBTARIFF 191 111 RR QTEL9000
+ACC 111 E
+E (111) R/O
+TEMPDISK CYLS 50
+FORMATTING DISK 'D'.
+DISK 'D(192)' FORMATTED.
+FI TERMOUT TERMINAL ( RECFM F LRECL 80
+FI BATINP DISK TEST1 INPUT A ( RECFM F LRECL 80
+FI BATOUT DISK TEST1 OUTPUT D ( RECFM F LRECL 80
+FI RATF DISK RATF VSAM E
+FI MRCF DISK MRCF VSAM E
+PRLBAT
+         Two-Point Private Line Pricer - Batch Process
+         Copyright (c) 1988 by Lynn-Arthur Associates, Inc.
+        End of Two-Point Private Line Pricer - Batch Process
+COPY TEST1 OUTPUT D TEST1 OUTPUT A ( REP RECFM F LRECL 94
+L TEST1 OUTPUT A ( DAT
+FILENAME FILETYPE FM FORMAT LRECL       RECS     BLOCKS   DATE     TIME
+TEST1    OUTPUT   A1 F         94          3          1  2/23/89 23:29:00
+DASD 192  DETACHED
+DET 192
+R; T=0.15/0.55 23:29:01
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                     - 17 -
+
+
+
+
+    Private Line Pricer, Version 3.0
+
+-----------------------------------------------------------------------------
+
+
+      VI.  INTERPRETING THE RESULTS
+
+
+           A.  RESULTS FROM INTERACTIVE MODE
+
+               The results from interactive mode is very detailed.  The
+               first 5 lines is a summary.  It states the origination and
+               destination information (NPA/NXX, city, state and lata) of
+               the line based on the input.
+
+               The total required charges is the base price for the leased
+               line and does not include any optional charges.  Optional
+               charges need to be added to the total.  Optional charges
+               include:
+
+                    -  Order charges
+                    -  Visit charges
+                    -  D1 Conditioning charges only.
+
+               D1 conditioning charges are added to totals if the line
+               required is a 9.6 line or higher.  4.8 or lower does not
+               need to be conditioned.  In the detailed output, D1 charges
+               are coded:  0020, 0030, 0035, 0208, 0236, and 0334.               
+               The majority of leased lines with only contain one of these
+               codes.
+
+               Any other optional charges with codes other than the D1
+               codes, order charges and visit charges are not required.    
+
+
+           B.  RESULTS FROM BATCH MODE
+
+               * To be completed by next release *
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                     - 18 -
+
+
+
+
+    Private Line Pricer, Version 3.0
+
+-----------------------------------------------------------------------------
+
+
+     VII.  TROUBLESHOOTING PROBLEMS AND COMMONLY ASKED QUESTIONS
+
+
+           1.  I can not get into the Private Line Pricer program.
+
+               Most likely, you do not have the proper Profile exec file
+               in your directory which authorizes users to access the
+               program.  Call Stephanie Hamik for access
+
+           2.  I'm running in the Interactive mode and I can't get any
+               pricing.  What is wrong?
+
+               The problem could be:
+
+               a.  Invalid area codes or prefixes for either the origination
+                   or destination numbers.
+               b.  The area codes or prefixes are too new and have not been
+                   added to the PLP master rate file.
+
+               To check to see if either a or b is your problem, look at the
+               error message for the LATA information.  If any of the LATAs
+               are 0000, the area code and prefix you have entered is not
+               in the master rate file and your problem is either a or b.
+
+               c.  You are trying to price an Intrastate - Intralata line
+                   with ATT or and Intrastate - Intralata or and Interstate
+                   line with a BOC
+
+                Try running the program again using the other type of carrier.
+
+           3.  I am running the PLP using Batch mode and it won't work.
+               What am I doing wrong?
+
+               a.  Make sure you are entering the correct command.
+               b.  Make sure your input file has the filetype of "INPUT".
+               c.  Type  "LIST" at the 43> to ensure that you don't have
+                   an output file.  The PLP runs so quickly in Batch mode,
+                   that you might not think that it is working.
+
+           4.  I can't log into my directory.
+
+               a.  Your username is not valid for system 43 or
+               b.  A terminal is already logged into system 43 with you
+                   username.
+
+               In the IBM environment, only 1 user can use one username
+               at one time
+
+           5.  Can I get pricing from a BOC and a common carrier (ATT)
+               for comparison?
+
+               NO.  Local Bell companies handle local lines and common
+               carriers handle non-local lines.  Therefore, pricing does
+               not exist for comparisons.
+
+
+                                     - 19 -
+  O,v8h
