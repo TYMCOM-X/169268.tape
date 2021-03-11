@@ -1,0 +1,1973 @@
+                                                               December 6, 1985
+
+
+
+
+
+
+
+                      ***** *   * *   * *   * ***** *****
+                        *    * *  ** ** **  * *       *  
+                        *     *   * * * * * * ****    *  
+                        *     *   *   * *  ** *       *  
+                        *     *   *   * *   * *****   *  
+
+                   ****  ***** *   * *****  ***  *****  ****
+                   *   * *     *   *   *   *   * *     *    
+                   *   * ****  *   *   *   *     ****   *** 
+                   *   * *      * *    *   *   * *         *
+                   ****  *****   *   *****  ***  ***** **** 
+
+                               REFERENCE MANUAL
+
+                                    TYMNET
+                        NETWORK TECHNOLOGY DEVELOPMENT
+                               December 6, 1985
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+     ====================================================================
+     |   Tymnet,  Inc.'s  proprietary  rights  are  included  in  the   |
+     |   information disclosed herein.   The recipient,  by receiving   |
+     |   this document,  agrees  that neither this  document nor  the   |
+     |   information  disclosed  herein nor any part thereof shall be   |
+     |   reproduced or transferred to  other  documents  or  used  or   |
+     |   disclosed  to  others  for  manufacturing  or  for any other   |
+     |   purpose except  as  specifically authorized  in  writing  by   |
+     |   Tymnet, Inc.                                                   |
+     ====================================================================
+
+
+
+
+                                    TYMNET Devices                   DEVICE.DOC
+                                                               December 6, 1985
+
+
+
+
+
+
+
+                                   TABLE OF CONTENTS
+
+        Section                                                            Page
+
+
+             Preface                                                          1
+
+
+        1.   Mother-board Serial-Input/Output System                          2
+          1.1   THE MOTHER BOARD                                              2
+          1.2   THE DAUGHTER BOARDS                                           3
+             1.2.1    Synchronous RS232/V.24                                  3
+             1.2.2    Synchronous V.35                                        4
+             1.2.3    Synchronous Optically Isolated (Bit-Swapper)            4
+             1.2.4    Asynchronous RS232/V.24                                 4
+             1.2.5    Asynchronous Current Loop                               5
+
+          1.3   SOFTWARE INTERFACE                                            5
+             1.3.1    SENSE or READ instruction                               5
+             1.3.2    WRITE instruction                                       6
+             1.3.3    CHANNEL programs                                        8
+             1.3.4    CCW -- Channel Command Word                             8
+             1.3.5    Output CCW Commands                                     8
+             1.3.6    Input CCW Commands                                     10
+
+
+        2.   Quad Printer Interface Board [ASB 253]                          12
+          2.1   Specification                                                12
+             2.1.1    Input Commands                                         12
+             2.1.2    Output Commands                                        13
+             2.1.3    Interface Characteristics                              13
+
+
+        3.   TYMNET ENGINE Terminal Interface Card                           14
+          3.1   Introduction                                                 14
+          3.2   Installation                                                 15
+          3.3   Theory of Operation                                          16
+             3.3.1    General                                                16
+                3.3.1.1     Status Byte                                      17
+                3.3.1.2     Command Byte                                     18
+
+             3.3.2    Command Output                                         19
+             3.3.3    WRITE DATA                                             19
+             3.3.4    READ DATA                                              20
+             3.3.5    SENSE STATUS                                           21
+             3.3.6    Interrupts                                             21
+             3.3.7    Terminal Interface Logic                               22
+
+
+                                    TYMNET Devices                   DEVICE.DOC
+                                                               December 6, 1985
+
+
+          3.4   Programming and Diagnostics                                  22
+             3.4.1    Diagnostics                                            22
+             3.4.2    Programming Rules                                      23
+             3.4.3    Example Programs                                       23
+                3.4.3.1     Program 1                                        23
+                3.4.3.2     Program 2                                        24
+
+          3.5   Option Strapping                                             26
+             3.5.1    Baud rate timing selection                             26
+             3.5.2    Parity selection                                       26
+             3.5.3    Stop bit selection                                     26
+             3.5.4    Binary output option                                   26
+
+          3.6   Terms List                                                   27
+
+
+                                     APPENDICES
+                                     ==========
+
+
+        I.   DEVICE ADDRESSES FOR MULTIPLEXOR BUSS                           30
+
+
+                                      INDEX
+                                      =====                                  31
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                    TYMNET Devices                   DEVICE.DOC
+                                                               December 6, 1985
+
+
+
+
+
+
+                                        Preface
+
+
+
+             This document is one of  a family of documents related  to TYMNET,
+        and  describing  various aspects  of  the TYMNET  features  and related
+        protocols.
+
+             The various documents (and their subject) included are:
+
+         ACCT2.DOC   This document describes TYMNET accounting-II.
+
+         ACOUNT.DOC   This document describes TYMNET accounting  (superceded by
+                      ACCT2.DOC.)
+
+         CIRCUI.DOC   This   document  describes   TYMNET   circuit  protocols,
+                      including ball logic and terminal characteristics.
+
+         DEVICE.DOC   This document describes  certain TYMNET devices,  as used
+                      on the TYMNET ENGINE.
+
+         NET1.DOC     This  document   describes  nodes,   line-protocols,  and
+                      supervisor communications within TYMNET-I.
+
+         TBASE.DOC    This document describes the TYMSHARE Base-Host interface.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        1                           TYMNET Devices                   DEVICE.DOC
+        Mother-board Serial-Input/Output System                December 6, 1985
+
+
+
+
+
+
+                     1 -  Mother-board Serial-Input/Output System
+
+                                        M-BOARD
+
+
+
+
+             The M-BOARD system consists of three components:
+
+           a 15x15 inch PC board which plugs in to the main chassis,
+           a family of daughter interface boards,
+           a  card cage  which provides  mechanical support  for up  to sixteen
+               interface boards.
+
+
+
+
+
+
+                                 1.1  THE MOTHER BOARD
+
+
+             The mother board has a DMA interface, a MUX bus interface, a 2901B
+        microprocessor with associated microcode control, a 1024 word  RAM, and
+        a driver for a  ribbon cable connected to  up to eight SIO  chips.  The
+        SIO chips will be on the interface cards.  This card can read and write
+        anywhere in memory.  It can issue interrupts.  It has only one  MUX bus
+        address which is settable with thumbwheel switches.  Only the rightmost
+        eight bits  of the sixteen  bit address are  used to address  the card.
+        The remaining bits  can be used to  specify up to sixteen  channels and
+        functions supported by this one card.
+
+             The mother  board will service  from 1 to  8 daughter  boards (see
+        below) each serving  2 ports.  The ports  are numbered starting  from 0
+        and must be in  sequence.  Any combination of asynchronous,  bisync, or
+        HDLC/SDLC  can be  supported  on one  mother board.   The  maximum data
+        possible on any one port  depends on the number of daughter  boards and
+        the priority of the mother board on the DMA bus.  Note that the maximum
+        supportable data rate is reduced  by a large number of  daughter boards
+        even if most of  them are idle or  almost idle.  Assuming little  or no
+        interference  on  the DMA  bus  (which  is always  true  for  the first
+        priority DMA device) the following data rates can be sustained:
+
+
+
+
+
+
+
+
+        2                           TYMNET Devices                   DEVICE.DOC
+        Mother-board Serial-Input/Output System                December 6, 1985
+
+
+
+            Number of                        Data Rate
+        Daughter Boards                 (Kilobits per Second)
+
+                1                               160
+                2                               100
+                3                                65
+                4                                50
+                5                                40
+                6                                35
+                7                                30
+                8                                30
+
+             The  data rates  for  the synchronous  optically  coupled daughter
+        board may be up to 50 percent higher, but no more than 162 Kbits.
+
+               NOTE:   Above  numbers  assume  HDLC  mode.   For bisync,
+                       divide all numbers  by 2.  For async  baud rates,
+                       divide numbers by 3.
+
+               NOTE:   The above data  rates make assumptions  about the
+                       availability of the DMA bus.  If a high bandwidth
+                       device, such as a disk controller, should  tie up
+                       the  bus, the  data  rates supported  by  the SIO
+                       board will be reduced.
+
+
+
+
+
+
+                               1.2  THE DAUGHTER BOARDS
+
+
+             Each daughter board has  a Zilog SIO chip and  interface circuitry
+        for two channels.  Most boards will have two DB25 connectors  for cable
+        connection regardless of the type of interface.  The cards will  all be
+        the same shape to simplify interchangability.  They will connect to the
+        mother board with a ribbon cable.  There will be many types of daughter
+        cards.  Any combination can be put into the same panel and connected to
+        the same mother board(s).
+
+
+
+
+
+                    1.2.1  Synchronous RS232/V.24
+
+             This is the most complex daughter card.  It provides two input and
+        two  output control  lines  for each  channel.   A 8  K-Hertz  clock is
+        available for hard wired  applications.  A receive clock  stop detecter
+        will inject extra receive clock pulses when the receive clock  stops to
+
+
+        3                           TYMNET Devices                   DEVICE.DOC
+        Mother-board Serial-Input/Output System                December 6, 1985
+
+
+        facilitate bisync operation.  Provides status about presence  of clocks
+        and HDLC idle line condition.
+
+
+
+
+
+                    1.2.2  Synchronous V.35
+
+             Similar to above, but V.35 instead of V.24.  No local clock.
+
+
+
+
+
+                    1.2.3  Synchronous Optically Isolated (Bit-Swapper)
+
+             Strictly for hard wired connections.  Uses same coax  (or twisted-
+        pair)  cable  optically isolated  scheme  as was  developed  for memory
+        shuffler.  Runs from roughly 40 KBPS to 162 KBPS, depending  on ability
+        of mother  boards at  each end of  the line  to support  the bandwidth.
+        Will run as fast as possible without overrunning slowest  mother board.
+        Can average 100 KBPS if both mother boards have no more than 3 daughter
+        boards.   Fiber  optic  connection  also  possible,  but  currently not
+        considered because of expense.
+
+               NOTE:   For high performance cluster interconnects, it is
+                       recommended that the  mother board not  have more
+                       than  4  daughter  boards.   However,  the mother
+                       board need not have high priority on the  DMA bus
+                       if this is the only type of daughter  board used.
+                       This is because a momentary congestion on the DMA
+                       bus will  cause the daughter  board to  slow down
+                       and not cause  data errors.  Since  this daughter
+                       board can control its data rate, it can  adapt to
+                       the DMA bandwidth available.
+
+
+
+
+
+                    1.2.4  Asynchronous RS232/V.24
+
+             Provides two  output and  two input control  lines per  port.  Has
+        local  baud  rate  generator  for baud  rates  from  75  to  9600 baud,
+        selectable with thumbwheel switch.   Selected baud rate can  be divided
+        by 2 or by 4 under software control.
+
+
+
+
+
+
+
+        4                           TYMNET Devices                   DEVICE.DOC
+        Mother-board Serial-Input/Output System                December 6, 1985
+
+
+                    1.2.5  Asynchronous Current Loop
+
+             Whether  this  is one  card  or  more is  not  clear,  but several
+        varieties of current loop will be supported (20ma, 60ma,  high voltage,
+        terminal sourced, etc.).
+
+
+
+
+
+
+                                1.3  SOFTWARE INTERFACE
+
+
+             The   mother  board   is   addressed  via   both   privileged  I/O
+        instructions, and through a  command list provided by  the application.
+        All data transfers are 16-bits.
+
+
+
+
+
+                    1.3.1  SENSE or READ instruction
+
+             When addressing the board  (via a SENSE or READ  instruction), the
+        low order eight bits select the board from other IO devices on  the MUX
+        buss, and the remaining eight bits of device address are ignored.:
+
+                --------.-------+-------.--------
+                |    ignored    |       DA      |
+                ---------------------------------
+
+             When  addressing  the board,  the  field DA  must  agree  with the
+        thumbwheel  address  switches  on  the  front  of  the  board  and  are
+        considered to be the device address.
+
+             To initiate any activity  with the mother board, one  should first
+        do a  sense status instruction  to insure  that it is  ready for  a new
+        command.  A condition  code of 8 indicates  busy, or not ready  for new
+        command.  It should be ready  in a few microseconds.  A  condition code
+        of 4 indicates a nonfunctioning board (perhaps there is no such board--
+        nonexistent boards NEVER indicate busy).
+
+
+
+
+
+
+
+
+
+
+
+
+        5                           TYMNET Devices                   DEVICE.DOC
+        Mother-board Serial-Input/Output System                December 6, 1985
+
+
+
+             If  the  board has  just  issued  an interrupt,  bits  0-7  of the
+        returned  data (status)  give information  regarding the  cause  of the
+        interrupt:
+
+
+                --------.-------+-------.--------
+                | stat. | addr. |   0   |  CC   |
+                ---------------------------------
+
+             Status bits (0-3) contain a:
+
+                1 for ASYNC input command completion (see below),
+                2 for CCW error,
+                6 for overrun (lost data) of the SIO chip,
+           or   8 for IO command error.
+
+             CC is  also returned in  the condition code,  and is  as described
+        above.
+
+             Following  these  errors the  line  is idle.   No  channel command
+        sequences are running.
+
+             Bits 4-7 are the line number (port number within Mother-board).
+
+
+
+
+
+                    1.3.2  WRITE instruction
+
+             When addressing the board (via a WRITE instruction), the low order
+        eight bits select the card from other IO devices on the MUX bus and the
+        remaining eight bits of device address are used for other  things, such
+        as selecting a particular channel on that card:
+
+                --------.-------+-------.--------
+                |command| addr. |       DA      |
+                ---------------------------------
+
+             After insuring  that the  board is  not busy,  one may  output the
+        address of a channel command  word with a write data or  output command
+        instruction.  Bits 0-3 of the  "address" are a command type.   Bits 4-7
+        are the line  number.  Bits 8-15 are  the board address and  must agree
+        with the thumbwheel  switches on the front  edge of the board.   The 16
+        bits of data  output are interpreted according  to the command  type as
+        follows:
+
+
+
+           0   Start input.  Data is a quad word virtual address (high order 16
+               bits of a 20 bit addrn the user space) of a channel command
+               program for input.
+
+        6                           TYMNET Devices                   DEVICE.DOC
+        Mother-board Serial-Input/Output System                December 6, 1985
+
+
+           1   Start output.  As above, except for output.
+
+           2   Relocation.  Data is a  (real) quad word which  relocates future
+               core addresses for this port.  All core addresses are assumed to
+               be contiguous  in both  real and  virtual space.   Relocation is
+               initialized to zero.
+
+           3   Lower  limit.  Data  is the  smallest virtual  address,  in quad
+               words,  that will  be allowed.   Lower limit  is  initialized to
+               zero.
+
+           4   Window size.  Data is the number of quad words of the DMA window
+               for this  port.  Size is  initialized to 1000  hex.  It  must be
+               less than  2000 hex.  DMA  references outside the  window, which
+               begins at the lower limit, will not be allowed.
+
+           5   Read  status.   Can  be  issued  independently  of  any  channel
+               commands  programs  in  progress.  Causes  three  half  words of
+               status to be written beginning at the quad word  virtual address
+               given in the data:
+                 Byte 0:  (read) register 0 in the SIO chip,
+                 Byte 1:  (read) register 1,
+                 Byte 2:  an idle line counter (which is incremented  once when
+                  an HDLC idle line condition is detected),
+                 Byte 3:  a checksum error counter,
+                 12 bits: an abort counter (incremented once when an HDLC abort
+                  is detected -- will also be incremented when the  line begins
+                  an idle state),
+                  1 bit:  always a 1 (and may be used to tell when this command
+                  is complete if this halfword is initialized to a 0),
+                  1 bit:  a 1 for receive clock present,
+                  1 bit:  a 1  for HDLC  idle line (the  last 16  bits received
+                  were all ones, in other words, the line is marking),
+                  1 bit:  a 1 for transmit clock present.
+               The first halfword will be FFFF for nonexistent ports.
+
+           6   Board Reset.  Puts  board back to  power up state.   All channel
+               command programs  stopped.  It is  recommended to issue  a board
+               reset following a system crash.  ALL SIO chips are reset.
+
+           7   Channel  Reset.   Puts channel  back  to power  up  state.  That
+               channel's channel command  programs stopped.  It  is recommended
+               to issue a channel reset following a process crash.
+
+           8-F Not implemented.
+
+
+
+
+
+
+
+
+
+        7                           TYMNET Devices                   DEVICE.DOC
+        Mother-board Serial-Input/Output System                December 6, 1985
+
+
+                    1.3.3  CHANNEL programs
+
+             Data  transfers  are  performed  under  the  direction  of channel
+        command  sequences  (Channel  Programs).   These  sequences   are  like
+        programs which are executed interpretively by the microprocessor on the
+        mother board.   They are initiated  by giving a  write data  (or output
+        command) instruction.   Up to  32 channel programs  may be  in progress
+        simultaneously, an input and an output program for each of 16 lines.
+
+             Channel   command  programs   in  the   user  space   control  the
+        communication between the user and  the channel in the SIO  chip.  They
+        must begin  on a  quad word boundary.   They may  not cross  an address
+        divisible by  100 hex  (except by use  of a  jump command,  see below).
+        Each  Channel program  consists of  a series  of Channel  Command Words
+        (CCW).
+
+
+
+
+
+                    1.3.4  CCW -- Channel Command Word
+
+             Each Channel Command Word is 32 bits long, of format:
+
+                --------.-------+-------.--------
+                | stat. |  CMD  |  quad. addr   |
+                ---------------------------------
+
+             They may  not refer to  addresses outside the  DMA window  for the
+        port.  The first 16 bits contain the command code.  The second  16 bits
+        are interpreted according to the command type.
+
+
+
+
+
+                    1.3.5  Output CCW Commands
+
+             The commands for output programs are:
+
+
+
+           0   Stop.  Stops the channel command program.
+
+           1   Output  HDLC  record.   Outputs  the  record  beginning  at  the
+               specified quad  word address.   The first  halfword is  the byte
+               count of the record.  Upon completion of this command,  the next
+               command will  be checked.   If it  is a  stop command,  then the
+               output  record command  will be  replaced with  200 hex  and the
+               program will stop.   Otherwise, it will  be replaced with  a 100
+               hex and the program will continue.  If a user prepares a channel
+               command program in which an output block command is  followed by
+
+
+        8                           TYMNET Devices                   DEVICE.DOC
+        Mother-board Serial-Input/Output System                December 6, 1985
+
+
+               a stop command and wishes to alter the program after it has been
+               started, it is  imperative that the  first halfword of  the stop
+               command be the last part which is changed (be sure to use  a STH
+               rather than a ST to change it).  After the change, the  user can
+               monitor the first byte of the output block command to see  if he
+               was  successful.  A  code of  00 means  nothing.  A  code  of 01
+               indicates success, and  a code of  02 indicates the  program has
+               stopped and a new start output command must be issued.
+
+           2   Jump.  Jump to  the quad address specified  in the low  order 16
+               bits.
+
+           3   Output command pair.   The remaining 16  bits are issued  to the
+               SIO chip as a command pair.  This command is used for both input
+               and output initialization and must be completed before  an input
+               program is started.
+
+               NOTE:   REMEMBER THAT THE  Z80-SIO REQUIRES THAT  THE WR4
+                       PARAMETERS  MUST  BE  ISSUED  BEFORE   ANY  OTHER
+                       PARAMETERS  ARE  ISSUED  IN   THE  INITIALIZATION
+                       ROUTINE.
+
+           4   Output ASYNC record.  Like 1 above, but for ASYNC ports.
+
+           5   Set  XON/XOFF  characters for  ASYNC  port.   Requires microcode
+               level D or later.  If left-most bit of character is  1, disables
+               feature.   Command  necessary  only  if  XON/XOFF   is  invoked;
+               default state is feature disabled.
+
+           6   Output  command  pair  (enhanced).   Works  like  output-channel
+               command 3 with two exceptions:
+               1)  It does  not output  requested command  pair until  SIP chip
+                  signals that its transmit buffer is empty.
+               2)  The command  is replaced in  memory (after it  was executed)
+                  with 100 or 200 (similar to channel command 1.
+               An example of usage of  this command is in SDLC Release  7 where
+               it was necessary to disable transmitter for half-duplex  mode of
+               operation.
+
+               NOTE:   This  capability  was  added  in   SIO  Microcode
+                       version  5  (or  E).   It  is  not  available  in
+                       previous versions of the microcode!
+
+
+
+
+
+
+
+
+
+
+
+
+        9                           TYMNET Devices                   DEVICE.DOC
+        Mother-board Serial-Input/Output System                December 6, 1985
+
+
+                    1.3.6  Input CCW Commands
+
+             The channel commands for input are:
+
+
+
+           0   Stop.
+
+           1   Input records.   Starts input of  HDLC records at  the specified
+               quad  word  address.  The  first  halfword is  initialized  to a
+               negative  value  by the  software.   It will  be  replaced  by a
+               positive byte count when  a record has been  successfully input.
+               The data for the record follows.  If the byte count is  odd, the
+               last byte  of the last  halfword will be  the first byte  of the
+               checksum,  which  is  normally of  no  interest.   The following
+               halfword will  be set  to FFFF.   If there  is room  for another
+               record of maximum size (see below) it will be input  starting at
+               that point,  and when complete,  the above  procedure (preceding
+               the record with the byte count and succeeding it with FFFF) will
+               be repeated.  When there is no longer enough room in  the buffer
+               for a halfword  of byte count plus  a full size record  plus one
+               halfword for an  ending FFFF flag,  the process starts  again at
+               the beginning of the buffer.   In this case, it is  the software
+               that must put the negative  marker at the first halfword  of the
+               buffer.
+
+           2   Jump.
+
+           3   Set buffer and  record size.  The remaining  16 bits must  be at
+               least 20  hex but less  than 2000  hex.  It is  the size  of the
+               receive buffer in halfwords  plus 1.  It is initialized  to 1000
+               hex.  The maximum record size in halfwords is one less  than one
+               eighth this number.  For  instance, if a minimum buffer  size of
+               20 hex half-words is used (specified as 21 to the ISO), then the
+               largest record size  that can be received  is 3 halfwords,  or 6
+               bytes.  Records  larger than this  maximum length  are discarded
+               with no indication.
+
+           4   Input ASYNC.   Inputs from  1 to 8  characters beginning  at the
+               specified quad word address.  This command completes and gives a
+               code 1 interrupt when at  least one character has been  input by
+               this command and either a total of 8 characters have  been input
+               or roughly 20 milliseconds have elapsed since the last character
+               came in.   The idea  is to  interrupt soon  enough to  allow the
+               software to respond quickly (echo a character, for instance) yet
+               not overtax the CPU if a terminal inputs a burst  of characters,
+               as from a tape cassette.  Each character takes a  halfword.  The
+               character itself  is right  justified.  The left  8 bits  of the
+               halfword are  00 for a  normal character, 01  for a  break.  The
+               software  should prepare  the input  area with  some  other data
+               pattern (FFFF is recommended) so it can recognize how many (from
+               1 to 8) characters were input by this command.
+
+
+        10                          TYMNET Devices                   DEVICE.DOC
+        Mother-board Serial-Input/Output System                December 6, 1985
+
+
+           5   Set  record  size.   Sets  the  maximum  input  record  size (in
+               halfwords) to the value  which is contained in the  last 16-bits
+               of the command.  It must not exceed the buffer size value set by
+               command 3 or default.  This command overrides the  default value
+               of record size or the value of record size which is derived from
+               buffer  size  established by  channel  command 3.   Usage  is to
+               permit non-default frame-size--buffer-size  relationships (e.g.,
+               to permit the definition of  a buffer which will hold  less than
+               eight frames;  implemented by specifying  the buffer  size (with
+               implied frame size), and then increasing the frame size  to that
+               required for the application).
+
+               NOTE:   This  capability  was  added  in   SIO  Microcode
+                       version  5  (or  E).   It  is  not  available  in
+                       previous versions of the microcode!
+
+               WARNING:  The SIO board remembers only one interrupt at a
+                       time per  channel command  program, plus  one for
+                       the whole board.   Lost interrupts will  occur if
+                       interrupts are disabled or ignored  while several
+                       ASYNC   input  commands   are   completed.   When
+                       interrupt processing is returned to  normal, only
+                       one or two  interrupts will be received  for this
+                       CCW program.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        11                          TYMNET Devices                   DEVICE.DOC
+        Quad Printer Interface Board [ASB 253]                 December 6, 1985
+
+
+
+
+
+
+                      2 -  Quad Printer Interface Board [ASB 253]
+
+
+             The quad  printer interface simultaneously  interfaces up  to four
+        printers.  Data is sent via output instructions, and status is received
+        from the  printers via  input instructions or  status requests.   A one
+        character data buffer is provided for each printer, and data is held in
+        these buffers until the associated printer requests the data.
+
+             The interface may be assigned four consecutive device addresses in
+        the range 00-0FF, with the lowest address having 0, 4, 8, or 0C  as its
+        least significant digit.  For example, a printer interface card  may be
+        assigned 60, 61, 62, and 63.
+
+             If the interface is used  to control fewer than four  printers, it
+        may  contain  fewer than  four  daughter boards.   The  board  will not
+        respond when the processor addresses a nonexistant daughter board.
+
+
+
+
+
+
+                                  2.1  Specification
+
+
+
+
+
+
+                    2.1.1  Input Commands
+
+             Printer status may be monitored  by either a status request  or an
+        input instruction.  Input data has the following meaning:
+
+           Bit  9 -  A one indicates the printer is out of paper (OP).
+           Bit 12 -  A one indicates the printer is busy (BSY).  The printer is
+               either  printing a  line or  reading a  character into  its line
+               buffer.
+           Bit 13 -  A one indicates the printer  is out of paper (same  as bit
+               9; EX).
+           Bit 15 -  A one indicates the printer is not ready (DU).
+
+             This card allows the program to request status, at which time bits
+        12-15 become the PSW condition  codes.  The program can then  check the
+        CC  for  the  printer status.   Device  unavailable  (printer  card not
+        inserted or  daughter board not  installed) results in  the same  CC as
+        printer  out of  paper.  Device  unavailable will,  however, get  0 for
+        input, while out of paper will get 44 as input data.
+
+        12                          TYMNET Devices                   DEVICE.DOC
+        Quad Printer Interface Board [ASB 253]                 December 6, 1985
+
+
+                    2.1.2  Output Commands
+
+             Bits  0-2  of  output  data cause  the  following  in  the printer
+        addressed by the output instruction:
+
+           Bit 0 -  Print accumulated characters (CNTL).
+           Bit 1 -  Master clear (prepares interface buffer, 6 us) (MCLR).
+           Bit 2 -  Buffer  clear  (prepares interface  buffer,  6  us) (BUFFER
+               CLR).
+
+             Bits 9-15  of output  data become  data bits  7-1 for  the printer
+        addressed by the output instruction.   The data is sent to  the printer
+        when requested.
+
+
+
+
+
+                    2.1.3  Interface Characteristics
+
+             This  board  interfaces printers  using  differential  drivers and
+        receivers with the Engine through the mux-bus.  The printers may be the
+        CDC 9322  or Data  Printer CT-4964.   The Engine  and the  printers are
+        electrically isolated.
+
+             The board is powered by the 5.2V supply in the Engine.   The board
+        draws 2.3A,  nominal.  Two dc/dc  converters (one converter  serves two
+        daughter boards) supply 5V to the printer driver and receiver circuits.
+
+             The quad printer interface is a half-board, and it can  be mounted
+        with any standard  Engine half-board or  with a half-board  filler.  It
+        accepts up to  four 6-3/4 x 1-15/16  inch daughter boards.   Signals to
+        and from the printers appears at four 34-pin connectors at the front of
+        the board.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        13                          TYMNET Devices                   DEVICE.DOC
+        TYMNET ENGINE Terminal Interface Card                  December 6, 1985
+
+
+
+
+
+
+                      3 -  TYMNET ENGINE Terminal Interface Card
+
+                                     Carl Kauranen
+
+
+
+
+
+             The "old" TTY interface has these properties and characteristics.
+
+
+
+
+
+
+                                   3.1  Introduction
+
+
+             The Tymnet Engine  terminal interface is essentially  a compatible
+        Interdata TTY card for use with EIA interfaced terminals.   however, it
+        has  more  capabilities  then the  Interdata  board  it  replaces.  the
+        tymshare interface  will handle  terminals operating  at 110  baud, 300
+        baud, 1200  baud, 2400 baud,  4800 baud and  9600 baud with  the proper
+        option strapping.   (Refer to option  strapping section.)  Odd  or even
+        parity is  selected by  an option strap.   Another option  available is
+        binary  output to  enable core  dumps of  the Interdata  computer  to a
+        terminal, a cassette, or the network.  These options are  selectable by
+        a dip switch at  location I10 on the  board.  To facilitate use  of the
+        board  for  loading  diagnostics from  high  speed  cassettes  and also
+        running with low speed terminals a switch has been placed on  the front
+        of the board for easy access for baud rate selection.  Depending on the
+        internal options selected on the  board this switch will select  one of
+        the two speeds optioned.  Usually the options that will be strapped are
+        1200 baud and 300 baud.  (Note: this is switch "S1" on the front of the
+        board and  when it is  thrown to the  left the low  speed baud  rate is
+        selected and when to the  right the high speed baud rate  is selected.)
+        also even  parity will  be selected and  non-binary output.   note: all
+        option strapping changes are made  by the dip switch at  location "I10"
+        expect for the high speed baud rate and binary dump options.  These are
+        wirewrapped and can be changed only by changing the  appropriate wires.
+        Refer to prints for details.
+
+
+
+
+
+
+
+
+
+        14                          TYMNET Devices                   DEVICE.DOC
+        TYMNET ENGINE Terminal Interface Card                  December 6, 1985
+
+
+          *******************************************************************
+
+                                         NOTE:
+
+             When using this TTY card to run Interdata written  diagnostics the
+        3600 baud interrupt  logic must be disabled.   This is done  by placing
+        switch one on the dip switch at location "I10" in the off position.
+
+             Also  when  running  Interdata  diagnostics  with  the  3600  baud
+        interrupt logic disabled  an error may occur  on the first pass  of the
+        diagnostic due to the fact a  3600 baud interrupt may be queued  on the
+        card.
+
+             Disregard this first error.
+          *******************************************************************
+
+
+
+
+
+
+                                   3.2  Installation
+
+
+             The   terminal   interface   board   is   incorporated   into  the
+        multifunction card hardware.  The multifunction and  terminal interface
+        card require plus and minus 16  volts and as a result are  installed in
+        the Interdata  in a  slot where  these voltages  are available  and the
+        multiplexor bus is also available.
+
+             The  terminal interface  section  of the  multifunction  card uses
+        connector  zero side  of the  Interdata backplane  for  its RACK0/TACK0
+        logic hookup.  Therefore when  the card is installed  RACK0/TACK0 chain
+        should be broken on the connector zero side.
+
+
+
+
+
+
+                               3.3  Theory of Operation
+
+
+
+
+
+
+
+
+
+
+
+
+
+        15                          TYMNET Devices                   DEVICE.DOC
+        TYMNET ENGINE Terminal Interface Card                  December 6, 1985
+
+
+                    3.3.1  General
+
+             The interface consists of six main parts:
+
+             1.  Interdata bus interface logic
+
+             2.  Interrupt logic.
+
+             3.  Terminal interface logic.
+
+             4.  Character handling logic.
+
+             5.  Bit rate timing circuitry.
+
+             6.  Control logic.
+
+             The  interface  appears  to  the  Interdata  as  a  byte  oriented
+        peripheral device of address X'02'.  It is a half duplex device but in-
+        corporates the block/unblock feature of the Interdata card.  because of
+        this feature the terminal being  used should be in full duplex  mode to
+        run any of the available diagnostics.
+
+             The card provides for the serial/parallel conversion  required for
+        data transfers between the  Interdata parallel multiplexor bus  and the
+        serial,   eight   level   ASCII   code   terminal.    An   asynchronous
+        receiver/transmitter   chip   (UART)  is   utilized   to   provide  the
+        parallel/serial conversion of the character.
+
+             The UART requires two clocks  for it to function that  are sixteen
+        times the baud rate of the  terminal being used.  One clock is  for the
+        transmit data and  the other for the  receive.  The bit  rate generator
+        logic on page 8 of the prints supplys these clocks to the UART provided
+        the proper dip switches are closed.  (Refer to option section.)
+
+             The card runs under  program control from the Interdata.   It will
+        output parallel data from the Interdata to the terminal in ASCII format
+        with odd or even parity (option selectable) or if optioned  will output
+        binary data to  the terminal.  The card  also inputs the data  from the
+        terminal and supplys the assembled character to the Interdata.  It also
+        supplys sense information  to the Interdata  for status control  and an
+        interrupting device address of X'02' for interrupt operations.  how the
+        card does this  will be explained in  furter detail in  later sections.
+        for the card to input data  from the terminal it must be placed  in the
+        read mode.  This is done by issuing an output command  instruction from
+        the Interdata.  The same is  true for data output to the  terminal from
+        the Interdata, the card must first be placed in the write mode.
+
+             Programming of  the card  is accomplished through  the use  of the
+        following Interdata instructions:
+
+             1.  Sense status (SS or SSR)
+
+             This is used to check the status of the interface.
+
+        16                          TYMNET Devices                   DEVICE.DOC
+        TYMNET ENGINE Terminal Interface Card                  December 6, 1985
+
+
+             2.  Output command (OC or OCR)
+
+             This sends  the command byte  to the card  setting up its  mode of
+        operation.
+
+             3.  Write data (WD, WDR, WH, WHR, WB, WBR)
+
+             This is used to load the character onto the card for output to the
+        terminal.
+
+             4.  Read data (RD, RDR, RH, RHR, RB, RBR)
+
+             This is used to read the assembled character from the card.
+
+             5.  Autoload (AL)
+
+             This loads a  block of data from  the card into  successive memory
+        locations.  Used primarily for the 50 sequence loader.
+
+             Table 1  contains the terminal  interface command and  status byte
+        data.
+
+                                table 1
+                      -------------------------------------------------
+        I/O bus bit   08      09     10      11    12    13   14  15
+        status byte   OV             BRK           BSY   EX       DU
+        command byte  DISABLE ENABLE UNBLOCK BLOCK WRITE READ
+                      -------------------------------------------------
+
+             The meaning of these bits are:
+
+
+
+        3.3.1.1  Status Byte
+
+           OV      The overflow  bit is set when  a character is not  read from
+               the   card before  another  character is  assembled.   (The "OE"
+               output  from the UART is this status bit.)
+           BRK     The break  bit is set when  the character from  the terminal
+               has  no valid stop bits.  Hitting the break key on  the terminal
+               will cause this.  (The  framing error flop term "FE2"  goes true
+               when this occurs and only remains set during the time  the  line
+               from the terminal remains in the spacing state.)
+           BSY     Read mode - the  busy bit is normally set until  a character
+               has been assembled by the UART from the terminal at  which  time
+               it  is reset.    write mode  - the  busy bit  is  normally reset
+               unless the  card  is  outputting a character  at which  time the
+               busy bit  is set.    ("BUSY2" on the  card is  the term  used to
+               generarate this bit.)
+           EX      The  examine bit is  set whenever the  "BRK" or "OV"  bit is
+               set.   ("FE2" and or "OE" on the card generate this bit.)
+           DU      The device unavailable  bit is set when data  terminal ready
+
+
+        17                          TYMNET Devices                   DEVICE.DOC
+        TYMNET ENGINE Terminal Interface Card                  December 6, 1985
+
+
+               from  the  terminal  is  not true.   This  would  happen  if the
+               terminal is powered off or in local mode.
+
+
+
+        3.3.1.2  Command Byte
+
+           DISABLE  disables interrupts  from the  card but  allows them  to be
+               queued.
+           ENABLE  enables the card to generate interrupts to the Interdata.
+           (DISARM) setting both  the disable bit  and enable bit  prevents the
+               card  from both  generating interrupts  or  queueing interrupts.
+               (DISARM02 being low on the card causes this function.)
+           UNBLOCK this allows any data typed on the terminal to be echoed back
+               to the terminal by looping transmit data to receive data.  (this
+               feature allows the card to  operate as a half duplex  device but
+               appear to the terminal as a full duplex device.)
+           BLOCK   this disables the unblock feature.
+           WRITE   this puts the interface in the write mode for output  to the
+               terminal.
+           READ    this puts the interface in the read mode for input  from the
+               terminal.
+
+             The card can generate interrupts  to the Interdata for any  of the
+        following conditions:
+
+             1.  Transition from read mode to write mode.
+
+             2.  The card goes not busy.
+
+             3.  A  framing error  is detected,  in other  words the  break key
+        is pressed.
+
+             Pressing  the initialize  switch on  the Engine  front  panel will
+        cause "SCLR0" to go low  causing a master clear ("SCLRG0") to  occur on
+        the card.
+
+             [Note:  logic  signal names  follow  Interdata  terminology rules,
+        where the last numeric  digit of the name is  a "1" then the  signal is
+        true at +5v and if it is a "0" then the signal is true at 0v.   In this
+        write up logic signal names  may be given without a following  digit to
+        talk about the general term, such as "ADRS" being the signal in general
+        and "ADRS1" or "ADRS0" being the specific signal at  a logic gate.]
+
+
+
+
+
+
+
+
+
+
+
+        18                          TYMNET Devices                   DEVICE.DOC
+        TYMNET ENGINE Terminal Interface Card                  December 6, 1985
+
+
+                    3.3.2  Command Output
+
+             When  an  output  command instruction  is  executed  the Interdata
+        places  a device  address on  the MUX  bus and  raises "ADRS".   If the
+        address was X'02' the input  to "ADD02LAT" goes high (pg.1)  (note :all
+        references to page numbers are  to the logic prints of the  card.) when
+        "ADRS" goes high the device addressed flop sets, "ADD02LAT"  goes high.
+        The  card also  sends  back the  synchronize signal  to  the Interdata,
+        "SYN0".  "ADD02LAT" will enable the other control signals to  the card.
+        A return of "SYN0" causes "ADRS" to go false which drops  "SYN0".  Next
+        the Interdata places  a command byte on  the MUX bus and  raises "CMD".
+        "CMD" and  "ADD02LAT" form  the internal command  signal "CMD2"  on the
+        card.   (pg.  9)  The  command bits  will  then be  clocked  into their
+        respective flops  (pg.9 and 10).   The card again  sends "SYN0"  to the
+        Interdata which causes "CMD" to go false and the command to  be removed
+        from the bus.   (note: "CMD2" will clear  the UART out provided  it was
+        not busy outputting a character  and the framing error output  "fe" was
+        true.)
+
+
+
+
+
+                    3.3.3  WRITE DATA
+
+             Before a write data instruction is issued the card must  have been
+        placed in the  write mode by an  output command instruction.   When the
+        write data instruction is executed the Interdata again first  places an
+        address of the device on the MUX bus and raises "ADRS".  If the address
+        was X'02' the card again trys to set the device addressed flop, (it may
+        still be set since it only  clears out if a different address  had been
+        sent since it was last set or a master clear occurs) and  responds with
+        a  "SYN0".  the  Interdata then  places the  data byte  on the  bus and
+        raises the data available signal, "DA".  "DA" and "ADD02LAT" form "DA2"
+        on the card.  "DA20" causes a "SYN0" to be sent to the  Interdata.  The
+        data is applied to  the inputs of the  UART (pg.  11) and  provided the
+        UART  transmitter  holding register  is  empty ("THRE"  high)  the term
+        "THRL" goes low.  When "DA2"  goes low because of "DA" going  false due
+        to the  "SYN0" being  returned, the character  is transferred  from the
+        holding register to  the transmitter register  on the UART.   (Refer to
+        the UART specs in the appendix for more info on the UART.)
+
+             The  card now  begins  the transmission  of the  character  to the
+        terminal.  during this  time the "BUSY2" term  will be true  saying the
+        card is busy.   Another character whould not  be outputted to  the card
+        until "BUSY2" goes  false.  Should a  carriage return be  the character
+        that is being  outputted the card will  set a one-shot  of aproximately
+        1/3 of a  second.  The carriage return  detect and delay  logic handles
+        this.  (pg.  9)  the  detection of the carriage return  causes "TIMUP2"
+        to go  low.  This will  keep the "BUSY2"  term high until  the one-shot
+        times out clocking "TIMUP2" true.   This will enable "BUSY2" to  go low
+        making the card  not busy.  (Note: in  programming the card  a carriage
+
+
+        19                          TYMNET Devices                   DEVICE.DOC
+        TYMNET ENGINE Terminal Interface Card                  December 6, 1985
+
+
+        return  then  a  line  feed  should  be  issued  to  keep  from loosing
+        characters on the next line to be printed.)
+
+
+
+
+
+                    3.3.4  READ DATA
+
+             Similar to a  write operation.  The card  should be placed  in the
+        read mode before issuing the read data instruction.  (Note: the card is
+        normally left in the read  mode.  Issuing a master clear puts  the card
+        in the  read mode.)   when the  read data  instruction is  executed the
+        Interdata again places the device address on the bus and proceeds as in
+        a write  data instruction  with "ADRS".  After  the card  responds with
+        "SYN0" the Interdata  raises "DR".  "DR"  and "ADD02LAT" form  "DR2" on
+        the card   (pg. 9).  "DR2"  will enable the  outputs of the  data MUX's
+        (pg.  8)  that  correspond  to  the  UART  data  outputs  (the received
+        character)  to  the MUX  bus.   (Note: the  receive  character  was not
+        available  until "BUSY2"  went low.)   when the  card sends  "SYN0" the
+        Interdata  accepts the  data and drops "DR",  which causes "DR2"  to go
+        low.  When pin 18 of the  UART (pg.  11) goes low it will  reset output
+        pin 19 which says a character  is ready in the UART.  "DR2"  will cause
+        this but is  delayed by two  flops to allow  time for the  Interdata to
+        take the data before the UART is cleared out.
+
+             When reading data from the terminal the card inputs all eight bits
+        making up the character so the parity bit becomes part of the character
+        inputted by the Interdata.  (Note: on output only DB09-DB15  become the
+        character plus the proper parity bit generated by the UART,  unless the
+        binary   output  option  is  selected  then  all  eight  bits  from the
+        Interdata  are outputted  with  no parity  bit being  generated  by the
+        UART.)
+
+             Since the  card inputs the  full 8 bit  ASCII character on  a read
+        operation no options need be selected to input a binary tape such  as a
+        diagnostic or network code.
+
+             When a break key is pressed on the terminal the  terminal transmit
+        data line goes  to a spacing state  for more then one  characater time.
+        This causes the UART to detect  a framing error and pin 14 of  the UART
+        (pg.  11) goes high.  This  will clock the framing error  flop (E10,pg.
+        11) set  causing "FE2"  to go high.   This will  remain high  until the
+        transmit data line from the terminal goes to a marking state.   At this
+        time "FE2" will  go low.  "FE2"  is the term  sent to the  Interdata to
+        signify a break key and also set the examine status bit during  a sense
+        status operation.  (pg.  8)
+
+             If the card was in the unblock mode and the framing error flop was
+        not set any character typed on the terminal will be looped  back by the
+        logic to the terminal because of  gate G7-8 (pg. 11).  If the  card was
+        in the block mode or the  framing error flop set no characters  will be
+        looped back.
+
+        20                          TYMNET Devices                   DEVICE.DOC
+        TYMNET ENGINE Terminal Interface Card                  December 6, 1985
+
+
+                    3.3.5  SENSE STATUS
+
+             A sense status instruction is used to interrogate the card  to see
+        if is is busy and or if the break key had been pressed on the terminal.
+        For  write  operations  the card  is  not  busy when  it  can  accept a
+        character for output.  For read operations it is not busy when it has a
+        character assembled in the UART.
+
+             The sense status  instruction begins the  same as the  others with
+        the output of the device address.  Then the Interdata raises the status
+        request signal "SR"  which becomes "SR2" on  the card.  This  will gate
+        the status inputs to the data MUX's on pg.  1 to the I/O bus  and raise
+        a "SYN0" back to the Interdata.
+
+
+
+
+
+                    3.3.6  Interrupts
+
+             The interrupt logic is on  page 3 of the prints.  An  interrupt as
+        mentioned earlier can be generated in three different ways.   flip flop
+        D10 pin 5 will go high (pg.10) if a transition from read mode  to write
+        mode is made and the card was not busy outputting a character ("WRBSY0"
+        true) and  interrupts are not  disarmed.  when the  card is put  in the
+        write mode the busy term should be in the opposite state then it was in
+        the read mode where busy being true means no character available but in
+        the  write  mode  busy  being  true  means  the  card  is  outputting a
+        character.  If the  card is put  in the write  mode from the  read mode
+        while it  was outputting  a character this  flop would  set as  soon as
+        "WRBSY0" went true.  When this flop sets it will force set flop  E10 so
+        E10 pin 5 goes  high causing the card  to generate an interrupt  to the
+        Interdata.
+
+             When the card goes from busy to not busy flip flop D10 pin 5 would
+        go  high  provided  again  interrupts  were  not  disarmed.   Again  an
+        interrupt would be generated if interrupts are enabled.
+
+             Similarly flop D10 pin 5 would go high if a break key  was pressed
+        causing the  framing error flop  to set, "FE2"  high.  A  framing error
+        causes the UART to go not busy so this same logic is used that  is used
+        for the not busy interrupt.  Similarly an interrupt would  be generated
+        if not disarmed and enabled.  (Note: this interrupt would only occur if
+        the card was in the read mode at the time the break key was pressed.)
+
+             When  the  card generates  an  interrupt it  places  the attention
+        signal "ATN0" on the bus.   When the CPU acknowledges the  interrupt it
+        sends back "RACK0".  If the card had an interrupt pending, it will stop
+        the propagation of "RACK0" and "ATYS2" will go high on the  card.  This
+        will gate  the interrupting device  address onto the  MUX bus  from the
+        data MUX's  (pg.  8)  and send a  "SYN0" back  to the  Interdata.  When
+        "RACK0"  drops because  of  "SYN0", "ATYS2"  will go  low  clocking the
+
+
+        21                          TYMNET Devices                   DEVICE.DOC
+        TYMNET ENGINE Terminal Interface Card                  December 6, 1985
+
+
+        interrupt queue flop k2 pin 5 low causing "ATN0" to be removed from the
+        bus.
+
+
+
+
+
+                    3.3.7  Terminal Interface Logic
+
+             The interface to  the data terminal is  on page 11 of  the prints.
+        It consists of two receivers for data transmitted from the terminal and
+        data  terminal ready,   and  two drivers  going to  the  terminal.  One
+        driver is for data going to the terminal and the other supplys  +12v on
+        the terminals  clear to send,  data set ready  and data  carrier detect
+        leads.  Should a  terminal be connected  that needs more  signals these
+        would have to be jumpered in the cable.
+
+
+
+
+
+
+                           3.4  Programming and Diagnostics
+
+
+
+
+
+
+                    3.4.1  Diagnostics
+
+             The card was designed to be compatible with Interdata  software so
+        that all Interdata written  diagnostics can be run.   Interdata written
+        diagnostics require a terminal that  sends even parity, but as  of this
+        writting the only diagnostic  that really needs this is  processor test
+        part 2 subtests 1 and 5.  All other diagnostics from Interdata run with
+        terminals with odd or no parity without any problems.
+
+             Some of the  Interdata diagnostics will  run when the  terminal is
+        turned off  after they  are started because  of the  device unavailable
+        status  bit.   For  best   results  when  using  this  feature   it  is
+        reccommended that the  terminal be first  put in local  before powering
+        off.  This is due to the fact that the circuitry does not always detect
+        the loss  of data terminal  ready when the  terminal is powered  off in
+        online mode due to power glitches.
+
+
+
+
+
+
+
+
+
+        22                          TYMNET Devices                   DEVICE.DOC
+        TYMNET ENGINE Terminal Interface Card                  December 6, 1985
+
+
+                    3.4.2  Programming Rules
+
+             The following  programming rules should  be followed  when writing
+        programs for the card:
+
+             1.  Be sure to place the card in read mode for terminal  input and
+        write mode for terminal output.
+
+             2.  When using sense loops (interrupts not enabled) to detect when
+        the card  is not  busy in  read mode  be sure  to interrogate  the card
+        frequently enough to prevent character loss.
+
+             3.  If in read mode characters are being echoed by the  program as
+        soon as  they are inputted  and not by  the unblock feature  remember a
+        carriage return  will keep  the card  busy for  approximately 1/3  of a
+        second in the  write mode.  If characters  are being inputted  from the
+        terminal at  its maximum speed  such as a  30 cps cassette  being read,
+        characters will be lost after every carriage return.
+
+             4.  When a break key is  pressed on the terminal with the  card in
+        read mode,  the cards status  will be X'24'  signifying the  break key,
+        examine status and not busy  bits.  This status will only  be available
+        as long  as the  line from the  terminal remains  in the  spacing state
+        after  which the  status will  be X'00'.   After a  break key  has been
+        detected the card  will remain not  busy in the  read mode until  a new
+        character (not a break) is  typed on the terminal or an  output command
+        instruction is executed.
+
+             If the card was in the write mode when a break key is detected the
+        status of X'24' would  be or'ed with the  busy bit to form  the status.
+        (note:  the  card differs  in  this fashion  from  Interdata's  in that
+        Interdata's card  in this  case does not  give a  break key  status but
+        makes the card busy.)
+
+
+
+
+
+                    3.4.3  Example Programs
+
+             The following example programs  show some ways of  programming the
+        card.  These  programs can  also be  used as  short diagnostics  of the
+        interface.
+
+
+
+        3.4.3.1  Program 1
+
+             Using sense loops to echo characters.
+
+             This program uses sense loops  to echo any character typed  on the
+        terminal.  enter the program and start the program at  location X'A00'.
+        characters typed on the terminal should be echoed back.
+
+        23                          TYMNET Devices                   DEVICE.DOC
+        TYMNET ENGINE Terminal Interface Card                  December 6, 1985
+
+
+
+                                :illegal instruction psw
+                                ORG     30
+        000030  0000 8000       WC      00008000
+        000034  0000 0050       WC      00000050
+                                :machine malfuntion psw
+        000038  0000 8000       WC      00008000
+        00003C  0000 0050       WC      00000050
+
+
+                                :set up processor in full word mode
+                                ORG     0A00
+        000A00  C800 00F0 START LHI     0,00F0  :psw selecting register set F
+        00004   9510            EPSR    1,0     :exchange program status word
+                                :set up registers for data transfer
+        000A06  2412            LIS     1,2     :load device address into R2
+        000A08  C820 0094       LHI     2,94    :load read command into reg. 2
+        000A0C  C830 0098       LHI     3,98    : load write command into R3
+        000A10  9E12    IN      OCR     1,2     :put card in read mode
+        000A12  9D14    LOOP1   SSR     1,4     :sense for card to go not busy
+        000A14  2081            JTBS    08,.-2  :branch to LOOP1 if busy
+        000A16  9B15            RDR     1,5     :read character
+        000A18  9E13            OCR     1,3     :put card in write mode
+        000A1A  9A15            WDR     1,5     :echo character
+        000A1C  4300 0A10       J       In      :jump back, wait for next char.
+        000A20                  END
+
+
+
+        3.4.3.2  Program 2
+
+             Echo characters using interrupts:
+
+             This  program  puts the  card  in the  read  mode  with interrupts
+        enabled and when a character is typed on the terminal an interrupt will
+        be  generated.   The interrupt  routine  then reads  the  character and
+        places the  card in the  write mode with  interrupts disarmed.   If the
+        character was not a break  key it immediately echoes the  character and
+        puts the card  back in the read  mode with interrupts enabled  and goes
+        back to its wait loop.  If the key that was pressed was a break key the
+        program echoes a carriage return then a line feed to the  terminal, and
+        then puts  the card  back into the  read mode  and exits  the interrupt
+        routine.   Should  an  interrupt occur  from  another  device  then the
+        interface card the processor will be placed in the wait state  with the
+        location counter set at X'A74'.
+
+             Load the program  and start the  Interdata up at  location X'A00'.
+        Then  type characters  on the  terminal.  They  should be  echoed back.
+        Press the break key to test  if the card recognizes it and  outputs the
+        carriage return and line feed.
+
+                                :set up processor in full word mode
+        000A00          START   ORG     0A00
+
+        24                          TYMNET Devices                   DEVICE.DOC
+        TYMNET ENGINE Terminal Interface Card                  December 6, 1985
+
+
+        000A00  C800 00F0       LHI     0,00F0
+        000A04  9510            EPSR    1,0
+
+                                :set up interrupt table
+        000A06  0722            XR      2,2     : zero out reg. 2
+        000A08  C810 0A6C       LHI     1,error :set up illegal int. address
+        000A0C  4012 00D0 AGAIN STH     1,0D0,2
+        000A10  2622            AIS     2,2
+        000A12  C520 0300       CLHI    2,300   :is table full yet
+        000A16  4210 0A0C       JL      AGAIN   : jump back if table not full
+        000A1a  C870 0A3C       LHI     7,INT   : load int. address into reg. 7
+        000A1e  4070 00D4       STH     7,0D4   :store int. address
+
+                                :enable terminal interrupts in read mode
+        000A22  C810 0002       LHI     1,02
+        000A26  C820 0054       LHI     2,54    :read command, ints. enabled
+                                                :and blocked.
+        000A2A  9E12            LCR     1,2     :put TTY in read mode
+
+                                :enable external interrupts
+        000A2C  F810 0000 40F0 GAGAIN   LI      1,040F0 : enable interrupts and
+                                                        :reg. set F.
+        000A32  9501            EPSR    0,1
+        000A34  24FF    G3      LIS     0F,0F
+        000A36  24FF            LIS     0F,0F
+        000A38  4300 0A34       J       G3
+                                :interrupt handler
+        000A3C  C8A0 00D8 INT   LHI     0A,0D8  :load write command, interrupts
+                                                :disabled and blocked.
+        000A40  C8B0 0054       LHI     0B,54   :load read command, interrupts
+                                                :enabled and blocked.
+        000A44  9B25            RDR     2,5
+        000A46  9E2A            OCR     2,0A
+        000A48  C530 0024       CLHI    3,24    :check for break key
+        000A4C  4330 0A5A       JE      INT1    :jump if it was a break key
+        000A50  9A25    INT2    WDR     2,5     :echo character
+        000A52  9D26            SSR     2,6     :wait for card to go not busy
+        000A54  2081            JTBS    08,.-2
+        000A56  9E2B            OCR     2,0B    :put card back in read mode
+        000A58  1800            LPSWR   0,0     :load program status word
+        000A5A  C850 000D INT1  LHI     5,0D
+        000A5E  9A25            WDR     2,5     :output carriage return
+        000A60  9D26            SSR     2,6
+        000A62  2081            JTBS    08,.-2
+        000A64  C850 000A       LHI     5,0A    :load line feed
+        000A68  4300 0A50       J       INT2
+                                :illegal interrupt routine, puts proccessor
+                                :in wait state.
+        000A6C  F810 0000 80F0 ERROR LI 1,080f0
+        000A72  9501            EPSR    0,1
+        000A74          DEND    END
+
+
+
+        25                          TYMNET Devices                   DEVICE.DOC
+        TYMNET ENGINE Terminal Interface Card                  December 6, 1985
+
+
+                                 3.5  Option Strapping
+
+
+
+
+
+
+                    3.5.1  Baud rate timing selection
+
+             The baud rate timing option for the low speed source is selectable
+        by dip switches 5 and 6  on the dip switch located at "I10".   switch 5
+        on selects 300 baud; switch 6 on selects 110 baud.  Note: have only one
+        of these switches on at any time.
+
+             The high speed clock is wired up to 1200 baud on the  card.  Refer
+        to prints to make any changes of this clock.
+
+
+
+
+
+                    3.5.2  Parity selection
+
+             The selection of  odd or even parity  is also selected by  the dip
+        switch at location "I10".  Switch 4 off for even parity and on  for odd
+        parity.
+
+
+
+
+
+                    3.5.3  Stop bit selection
+
+             Like the above  options the dip switch  at loc.  "I10" is  used to
+        select this option.  Switch 3 off for two stop bits (110 baud),  on for
+        one stop bit (300 baud and above).
+
+
+
+
+
+                    3.5.4  Binary output option
+
+             Refer to page 11 of the prints for option wiring.
+
+
+
+
+
+
+
+
+
+
+        26                          TYMNET Devices                   DEVICE.DOC
+        TYMNET ENGINE Terminal Interface Card                  December 6, 1985
+
+
+                                    3.6  Terms List
+
+
+        ADRS0           : address control line
+
+        ADD02LAT        : address valid
+
+        ATN0            : attention test line
+
+        ATYS2           : interrupt acknowledged
+
+        BUSY2           : busy
+
+        CLOCK2          : baud rate timeing clock for UART
+
+        CMD0            : command control line
+
+        CMD2            : command and device addressed control line
+
+        CR0             : carriage return detected
+
+        CTS             : clear to send to terminal
+
+        D080-D150       : I/O bus bits
+
+        DA0             : data available control line
+
+        DA2             : data available and device addressed control line
+
+        DCD             : data carrier detect to terminal
+
+        ADD02LAT        : device addressed
+
+        DISABL2         : interrupts disabled
+
+        DISARM02        : interrupts disarmed
+
+        DR0             : data request control line
+
+        DR2             : data request and device addressed control line
+
+        DSR             : data set ready to terminal
+
+        DU1             : device unavailable.  no DTR from terminal
+
+        ENABL2          : interrupts enabled.
+
+        FE2             : framing error flop.  Set during time that break key 
+                    function is occurring.
+
+        HIGH            : high speed baud rate clock.
+
+        ID08-ID15       : interrupting device address.
+
+        27                          TYMNET Devices                   DEVICE.DOC
+        TYMNET ENGINE Terminal Interface Card                  December 6, 1985
+
+
+
+        INDAT0          : terminal transmit data.
+
+        LOW             : low speed baud rate clock.
+
+        SCLRG0          : master clear, caused by SCLR0.
+
+        OE              : overflow error from UART.
+
+        RACK0           : receive acknowledge for interrupts.
+
+        READ2           : read mode.
+
+        SCLR0           : system clear.
+
+        SR0             : status request.
+
+        SR2             : status request and device addressed.
+
+        SYN0            : sync response.
+
+        TACK0           : transmit acknowledge for interrupts.
+
+        THRE            : transmit holding register empty on UART.
+
+        TIMUP2          : carriage return delay time up.
+
+        UD081-UD151     : UART output data to Interdata CPU.
+
+        UNBLK1          : unblock terminal transmit data.
+
+        WRBSY0          : write busy.
+
+        WRT2            : write mode.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        28                          TYMNET Devices                   DEVICE.DOC
+                                                               December 6, 1985
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      *   ****  ****  ***** *   * ****  ***** *   *
+                     * *  *   * *   * *     **  * *   *   *    * * 
+                    ***** ****  ****  ****  * * * *   *   *     *  
+                    *   * *     *     *     *  ** *   *   *    * * 
+                    *   * *     *     ***** *   * ****  ***** *   *
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        29                          TYMNET Devices                   DEVICE.DOC
+        DEVICE ADDRESSES FOR MULTIPLEXOR BUSS                  December 6, 1985
+
+
+
+
+
+
+                  APPENDIX I.   DEVICE ADDRESSES FOR MULTIPLEXOR BUSS
+
+
+
+             The  multiplexor  buss  may  have  up  to  256  different  devices
+        attached.  These  devices are each  assigned an address;   the standard
+        address assignments are:
+
+            02      TTY board.
+            04      Temperature sensor.
+            05      Loader storage unit.
+            06      Loader storage unit control.
+            08      WWVB interface (Extinct hardware).
+            09      Super-clock.
+            20-3F   Synchronous board number 1.
+            40-5F   Synchronous board number 2.
+            BF      Used for control functions in first sync card.
+            FF      Used for control functions in second sync card.
+            70-75   3600 interrupter.
+            77      Laggard   software  receives   this  interrupt   when  3600
+                    interrupts disabled too long.
+            78-7F   Memory (Note...requires address FF78-FF7F!).
+            80-83   SIO Mother-boards.
+            60-67   CDC printer interfaces.
+            91-AF   These addresses  reserved for async  I/O.  The 2  low order
+                    bits are never both  zero.  The 1200 baud ports  use addrs.
+                    91,95 for Data  In and Out, 92,96  for DSR In and  DTR Out,
+                    93,97 Carrier In, BSY  Out on VADIC modems.  93,97  for 202
+                    modems are Reverse Channel and Request to Send.
+            F0      SELCH (selector channel).
+            B6      Disc controller.
+            C6,C7   Disc 0.
+            D6,D7   Disc 1.
+            E6,E7   Disc 2.
+            F6,F7   Disc 3.
+            C1-FF   These addresses  reserved for micro-coded  (enhanced) async
+                    I/O.  The 2 low order bits are never both zero.   The first
+                    port group uses addr. C1 for Data In and Out, C2 for DSR In
+                    and DTR Out,  C3 Carrier In, BSY  Out on VADIC  modems.  C3
+                    for 202 modems are Reverse Channel and Request to Send.
+
+
+
+
+
+
+
+
+
+
+        30                          TYMNET Devices                   DEVICE.DOC
+        INDEX                                                  December 6, 1985
+
+
+                                         INDEX
+
+        CCW  8
+        Channel Command Word  8
+        Channel Programs  8
+
+
+        daughter board  3
+        device addresses, printer  12
+
+
+        Printer  12
+        Printer device addresses  12
+
+
+        Zilog  3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        31                          TYMNET Devices                   DEVICE.DOC
+ w8^jè
