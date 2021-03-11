@@ -1,0 +1,287 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!          
+!                                                                               
+! User Program:  (SYSDAT:28)TAXTRF.DPL        Author: Jason L. Ma               
+! Documentation: (SYSDAT:28)TAXTRF.DOC        Date:   December 31, 1986         
+!                                                                               
+! This program is used to get state traffic information.  It reports            
+! mainly intra-state numbers for the state and sample date chosen by            
+! the user.  Before running this program, the user needs to make 2              
+! simple changes to the program code (this file).  These 2 changes are          
+! (1) the sample date and (2) the state abbreviation.  The change               
+! procedure is clearly outlined below.                                          
+!                                                                               
+! Please refer to the documentation for more detailed information               
+! on this state traffic reporting system.                                       
+!                                                                               
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!          
+                                                                                
+                                                                                
+!!!!!!! FIRST CHANGE:  Replace the date string YMMDD in the following           
+!!!!!!! statement with the one desired (same format).  This statement           
+!!!!!!! opens up the Daily Netstat Database chosen for processing.              
+        O (NEWPRT)hosts (NETSTAT)70414A (NETSTAT)70414B (NETSTAT)70414C.
+        define integer thedate text 2 state.                                    
+        define real ises imin icha wses wmin wcha.                              
+        init 1 taxtrf.out.                                                      
+        dpl start.                                                              
+        goto bridge.                                                            
+                                                                                
+!!!!!!! SECOND CHANGE:  Replace the 2-character state abbreviation              
+!!!!!!! (enclosed in quotes) in the following statement with the one            
+!!!!!!! desired (same format).  The following subroutine identifies             
+!!!!!!! all host records pertaining to your state of interest in the            
+!!!!!!! Ports Database.                                                         
+SUB1:   F NSTATE CT 'IL'. 
+        return.                                                                 
+                                                                                
+!!!!!!! The following subroutine finds for the specified originating            
+!!!!!!! host type all records in the Daily Netstat (traffic) database.          
+sub2:   dbs 1.                                                                  
+        map 2 host orighost.                                                    
+        dbs 1.                                                                  
+        map 3 host orighost.                                                    
+        dbs 1.                                                                  
+        map 4 host orighost.                                                    
+        return.                                                                 
+                                                                                
+!!!!!!! The following subroutine finds for the specified originating-to-        
+!!!!!!! terminating (intra-state) host type all records in the Daily            
+!!!!!!! Netstat database.  It also calculates the traffic totals and %s.        
+sub3:   dbs 1.                                                                  
+        map logical and 2 host termhost.                                        
+        ev tases eq tot 1 tamin eq tot totmin tacha eq tot totalchars.          
+        dbs 1.                                                                  
+        map logical and 3 host termhost.                                        
+        ev tbses eq tot 1 tbmin eq tot totmin tbcha eq tot totalchars.          
+        dbs 1.                                                                  
+        map logical and 4 host termhost.                                        
+        ev tcses eq tot 1 tcmin eq tot totmin tccha eq tot totalchars.          
+        let tses eq tases+tbses+tcses.                                          
+        let tmin eq tamin+tbmin+tcmin.                                          
+        let tcha eq tacha+tbcha+tccha.                                          
+        let pses eq 100.*tses/wses.                                             
+        let pmin eq 100.*tmin/wmin.                                             
+        let pcha eq 100.*tcha/wcha.                                             
+        return.                                                                 
+                                                                                
+bridge: dbs 1.                                                                  
+        Call sub1.                                                              
+        getrec dummy1.                                                          
+        let state eq nstate.                                                    
+        f last.                                                                 
+                                                                                
+dummy1: dbs 2.                                                                  
+        f sysid le 500.                                                         
+        sea endtime ge 10 and enddate ge 860000 and le 900101.                  
+        ev thedate eq max enddate.                                              
+                                                                                
+type format / 'LOOKING FOR TOTAL INTO TRAFFIC...' / end.                        
+        dbs 1.                                                                  
+        map 2 host termhost.                                                    
+        ev tases eq tot 1 tamin eq tot totmin tacha eq tot totalchars.          
+        dbs 1.                                                                  
+        map 3 host termhost.                                                    
+        ev tbses eq tot 1 tbmin eq tot totmin tbcha eq tot totalchars.          
+        dbs 1.                                                                  
+        map 4 host termhost.                                                    
+        ev tcses eq tot 1 tcmin eq tot totmin tccha eq tot totalchars.          
+        let ises eq tases+tbses+tcses.                                          
+        let imin eq tamin+tbmin+tcmin.                                          
+        let icha eq tacha+tbcha+tccha.                                          
+P on 1 state format 21x 'Traffic Analysis for State ' A2 end.                   
+P on 1 thedate format 21x '     Sample Date: ' I6 /// end.                      
+P on 1 format 22x ' SESSIONS        MINUTES     CHARACTERS' end.                
+P on 1 format 22x ' --------        -------     ----------' / end.              
+P on 1 ises imin icha format 'TOTAL INTO STATE' 3(5X F9.0) /  end.              
+                                                                                
+Type format / 'LOOKING FOR TOTAL FROM TRAFFIC...' / end.                        
+        dbs 1.                                                                  
+        map 2 host orighost.                                                    
+        ev tases eq tot 1 tamin eq tot totmin tacha eq tot totalchars.          
+        dbs 1.                                                                  
+        map 3 host orighost.                                                    
+        ev tbses eq tot 1 tbmin eq tot totmin tbcha eq tot totalchars.          
+        dbs 1.                                                                  
+        map 4 host orighost.                                                    
+        ev tcses eq tot 1 tcmin eq tot totmin tccha eq tot totalchars.          
+        let tses eq tases+tbses+tcses.                                          
+        let tmin eq tamin+tbmin+tcmin.                                          
+        let tcha eq tacha+tbcha+tccha.                                          
+P on 1 tses tmin tcha format 'TOTAL FROM STATE' 3(5X F9.0) end.                 
+                                                                                
+Type format / 'LOOKING FOR TOTAL W/I THE LATA AND ITS %...' / end.              
+        dbs 1.                                                                  
+        map logical and 2 host termhost.                                        
+        ev wases eq tot 1 wamin eq tot totmin wacha eq tot totalchars.          
+        dbs 1.                                                                  
+        map logical and 3 host termhost.                                        
+        ev wbses eq tot 1 wbmin eq tot totmin wbcha eq tot totalchars.          
+        dbs 1.                                                                  
+        map logical and 4 host termhost.                                        
+        ev wcses eq tot 1 wcmin eq tot totmin wccha eq tot totalchars.          
+        let wses eq wases+wbses+wcses.                                          
+        let wmin eq wamin+wbmin+wcmin.                                          
+        let wcha eq wacha+wbcha+wccha.                                          
+        let pses eq 100.*wses/tses.                                             
+        let pmin eq 100.*wmin/tmin.                                             
+        let pcha eq 100.*wcha/tcha.                                             
+P on 1 wses wmin wcha format 'WITHIN THE STATE' 3(5X F9.0) end.                 
+P on 1 pses pmin pcha format 'PERCENTAGE   (%)' 3(9X F3.1 '%') / end.           
+                                                                                
+P on 1 format / 'Intra-State Totals' / 'by Traffic Sectors:' / end.             
+                                                                                
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!          
+                                                                                
+Type format / 'LOOKING FOR ASYNCH TO ASYNCH TRAFFIC...' / end.                  
+        dbs 1.                                                                  
+        Call sub1.                                                              
+        f last and nhcode 12 14 16 20 25 30 32.                                 
+        Call sub2.                                                              
+        Call sub3.                                                              
+P on 1 tses tmin tcha format 'ASYNCH TO ASYNCH' 3(5X F9.0) end.                 
+P on 1 pses pmin pcha format '% W/IN THE STATE' 3(9X F3.1 '%') / end.           
+                                                                                
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!          
+                                                                                
+Type format / 'LOOKING FOR ASYNCH TO X25/75 TRAFFIC...' end.                    
+        dbs 1.                                                                  
+        Call sub1.                                                              
+        f last and nhcode 12 14 16 20 25 30 32.                                 
+        Call sub2.                                                              
+        dbs 1.                                                                  
+        Call sub1.                                                              
+        f last and nhcode 67 68 75 21 22 23 24 64.                              
+        Call sub3.                                                              
+P on 1 tses tmin tcha format 'ASYNCH TO X25/75' 3(5X F9.0) end.                 
+P on 1 pses pmin pcha format '% W/IN THE STATE' 3(9X F3.1 '%') / end.           
+                                                                                
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!          
+                                                                                
+Type format / 'LOOKING FOR X25/75 TO X25/75 TRAFFIC...' / end.                  
+        dbs 1.                                                                  
+        Call sub1.                                                              
+        f last and nhcode 67 68 75 21 22 23 24 64.                              
+        Call sub2.                                                              
+        Call sub3.                                                              
+P on 1 tses tmin tcha format 'X25/75 TO X25/75' 3(5X F9.0) end.                 
+P on 1 pses pmin pcha format '% W/IN THE STATE' 3(9X F3.1 '%') / end.           
+                                                                                
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!          
+                                                                                
+Type format / 'LOOKING FOR ASYNCH TO 3270 TRAFFIC...' / end.                    
+        dbs 1.                                                                  
+        Call sub1.                                                              
+        f last and nhcode 12 14 16 20 25 30 32.                                 
+        Call sub2.                                                              
+        dbs 1.                                                                  
+        Call sub1.                                                              
+        f last and nhcode 44 54 55.                                             
+        Call sub3.                                                              
+P on 1 tses tmin tcha format 'ASYNCH  TO  3270' 3(5X F9.0) end.                 
+P on 1 pses pmin pcha format '% W/IN THE STATE' 3(9X F3.1 '%') / end.           
+                                                                                
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!          
+                                                                                
+Type format / 'LOOKING FOR 3270 TO 3270 TRAFFIC...' / end.                      
+        dbs 1.                                                                  
+        Call sub1.                                                              
+        f last and nhcode 44 54 55.                                             
+        Call sub2.                                                              
+        Call sub3.                                                              
+P on 1 tses tmin tcha format '3270   TO   3270' 3(5X F9.0) end.                 
+P on 1 pses pmin pcha format '% W/IN THE STATE' 3(9X F3.1 '%') / end.           
+                                                                                
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!          
+                                                                                
+Type format / 'LOOKING FOR TYMNET INTERNAL TRAFFIC...' / end.                   
+        dbs 1.                                                                  
+        Call sub1.                                                              
+        f last and nhcode 80.                                                   
+        Call sub2.                                                              
+        Call sub3.                                                              
+P on 1 tses tmin tcha format 'TYMNET  INTERNAL' 3(5X F9.0) end.                 
+P on 1 pses pmin pcha format '% W/IN THE STATE' 3(9X F3.1 '%') //// end.        
+                                                                                
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!          
+                                                                                
+Type format / 'other types of traffic ' / end.
+        dbs 1.
+        call sub1.
+        f last and nhcode 0.
+        call sub2.
+        call sub3.
+P tmin tcha format 'NODE CODE 0' 3(5X F9.0) END.
+P on 1 pses pmin pcha format '% W/IN THE STATE' 3(9X F3.1 '%') / end.
+        dbs 1.
+        call sub1.
+        f last and nhcode 3.
+        call sub2.
+        call sub3.
+P tmin tcha format 'NODE CODE 3' 3(5X F9.0) END.
+P on 1 pses pmin pcha format '% W/IN THE STATE' 3(9X F3.1 '%') / end.
+        dbs 1.
+        call sub1.
+        f last and nhcode 45.
+        call sub2.
+        call sub3.
+P tmin tcha format 'NODE CODE 45' 3(5X F9.0) END.
+P on 1 pses pmin pcha format '% W/IN THE STATE' 3(9X F3.1 '%') / end.
+        dbs 1.
+        call sub1.
+        f last and nhcode 46.
+        call sub2.
+        call sub3.
+P tmin tcha format 'NODE CODE 46' 3(5X F9.0) END.
+P on 1 pses pmin pcha format '% W/IN THE STATE' 3(9X F3.1 '%') / end.
+        dbs 1.
+        call sub1.
+        f last and nhcode 56.
+        call sub2.
+        call sub3.
+P tmin tcha format 'NODE CODE 56' 3(5X F9.0) END.
+P on 1 pses pmin pcha format '% W/IN THE STATE' 3(9X F3.1 '%') / end.
+        dbs 1.
+        call sub1.
+        f last and nhcode 57.
+        call sub2.
+        call sub3.
+P tmin tcha format 'NODE CODE 57' 3(5X F9.0) END.
+P on 1 pses pmin pcha format '% W/IN THE STATE' 3(9X F3.1 '%') / end.
+        dbs 1.
+        call sub1.
+        f last and nhcode 58.
+        call sub2.
+        call sub3.
+P tmin tcha forNODE CODE 58' 3(5X F9.0) END.
+P on 1 pses pmin pcha format '% W/IN THE STATE' 3(9X F3.1 '%') / end.
+        dbs 1.
+        call sub1.
+        f last and nhcode 61.
+        call sub2.
+        call sub3.
+P tmin tcha format 'NODE CODE 61' 3(5X F9.0) END.
+P on 1 pses pmin pcha format '% W/IN THE STATE' 3(9X F3.1 '%') / end.
+        dbs 1.
+        call sub1.
+        f last and nhcode 76.
+        call sub2.
+        call sub3.
+P tmin tcha format 'NODE CODE 76' 3(5X F9.0) END.
+P on 1 pses pmin pcha format '% W/IN THE STATE' 3(9X F3.1 '%') / end.
+
+P on 1 fmt 'Note:  The above numbers reflect host-to-host traffic.  Host' end.  
+P on 1 fmt 'information is obtained from the Ports Database, and traffic' end.  
+P on 1 fmt 'information is subsequently obtained from the Daily Netstat' end.   
+P on 1 fmt 'Database.  The host types are presumably determined by their' end.  
+P on 1 fmt 'Node-Host Codes as follows:'  / end.                                
+P on 1 fmt '     Host Type            Node-Host Codes' end.                     
+P on 1 fmt '     ---------            ---------------' end.                     
+P on 1 fmt '     Asynchronous         12, 14, 16, 20, 25, 30, & 32' end.        
+P on 1 fmt '     X.25/X.75            21, 22, 23, 24, 64, 67, 68, & 75' end.    
+P on 1 fmt '     3270                 44, 54, & 55' end.                        
+P on 1 fmt '     Tymnet internal      80' / end.                                
+                                                                                
+        Release 1.                                                              
+        dpl stop.                                                               
+        dpl end.                                                                
+   i KO
