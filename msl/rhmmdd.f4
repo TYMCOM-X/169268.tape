@@ -1,0 +1,369 @@
+***********************************************************************
+*                                                                     *
+*       RHMMDD.F4       VER.1.     J.JOELS          AUGUST,1979       *
+*                                                                     *
+*       THIS PROGRAM IS USED TO PRODUCE THE CHANGE RECORDS FOR A&IS   *
+*       WHENEVER THE INFORMATION ON A DEDICATED REMOTE OR HOST NEEDS  *
+*       TO BE ADDED , DELETED, OR CHANGED IN THE A&IS DEDICATED       *
+*       REMOTE/HOST DATA BASE.                                        *
+*       THE CHANGES ARE PLACED INTO A FILE: RHMMDD.DED. WHRE MM =     *
+*       MONTH, AND DD = DAY.                                          *
+*                                                                     *
+***********************************************************************
+
+        INTEGER HSTFLE(2),HOSTS(100),IDATE(2),MONTBL(12),L(2),SCR(6),
+     X          OHFLAG,DAYS(12),RHDAY(2),ITEMP(10)
+
+        DATA DAYS/31,28,31,30,31,30,31,31,30,31,30,31/
+
+        COMMON/A4/DAYS
+
+        MONTBL(1)="453035600000
+        MONTBL(2)="433134200000
+        MONTBL(3)="467036200000
+        MONTBL(4)="407416200000
+        MONTBL(5)="467037100000
+        MONTBL(6)="453535600000
+        MONTBL(7)="453535400000
+        MONTBL(8)="407534700000
+        MONTBL(9)="517136000000
+        MONTBL(10)="477076400000
+        MONTBL(11)="473376600000
+        MONTBL(12)="423134300000
+
+        OHFLAG=0
+        ITYPE='N'
+
+*       ** GET TODAY'S DATE.
+
+        CALL DATE(IDATE)
+
+*       ** CONVERT DAY AND YEAR TO INTEGER VARIABLES
+
+        CALL RTC (ICHAR,IDATE,1)
+        DECODE (1,110,ICHAR)SCR(5)
+110     FORMAT (I1)
+        CALL RTC (ICHAR,IDATE,2)
+        DECODE (1,110,ICHAR)SCR(6)
+        CALL RTC (ICHAR,IDATE,8)
+        DECODE (1,110,ICHAR)SCR(1)
+        CALL RTC (ICHAR,IDATE,9)
+        DECODE (1,110,ICHAR)SCR(2)
+
+*       ** CONVERT MONTH TO AN INTEGER VARIABLE
+        K=1
+        DO 120 I=4,6
+        CALL RTC (ICHAR,IDATE,I)
+        CALL STC (ICHAR,IMNTH,K)
+        K=K+1
+120     CONTINUE
+
+        DO 125 I=1,12
+        IF (IMNTH.EQ.MONTBL(I)) GO TO 130
+125     CONTINUE
+
+        TYPE 127,IMNTH
+127     FORMAT (5X,'ERROR!! SYSTEM RETURNED UNRECOGNIZALE MONTH NAME: '
+     X         ,A5,/)
+
+*       ** PLACE MONTH INTO SCRATCH ARRAY
+
+130     ENCODE (2,132,IMO)I
+132     FORMAT (I2)
+        DECODE (2,135,IMO)(SCR(J),J=3,4)
+135     FORMAT (2I1)
+
+
+*       ** BUILD OUTPUT FILE NAME
+
+        ENCODE (10,150,RHDAY)(SCR(I),I=3,6)
+150     FORMAT ('RH',4I1,'.DED')
+
+*       ** OPEN THE FILE AND SET UP FOR APPEND ONLY
+
+160     OPEN (3,RHDAY,RANDIO)
+        IPOS=SIZE(3)+1
+
+*       ** INPUT NODE NUMBER
+
+195     TYPE 200
+200     FORMAT (/,1X,'* NODE: (C.R. TO STOP): ',$)
+        ACCEPT 205,(ITEMP(I),I=1,10)
+205     FORMAT (10A1)
+        CALL INTCK(ITEMP,4,INODE,IERR)
+        IF (IERR.NE.0) GO TO 195
+        IF (INODE.EQ.0) GO TO 999
+
+*       ** IF NODE IS ISIS PROMPT FOR ORIGHOST
+
+        IF (INODE.GE.1000.AND.INODE.LE.1777) GO TO 225
+210     TYPE 215
+215     FORMAT (1X,'* ORIGHOST: ',$)
+        ACCEPT 205,(ITEMP(I),I=1,10)
+        CALL INTCK(ITEMP,5,IHOST,IERR)
+        IF (IERR.NE.0) GO TO 210
+
+        ITYPE='H'
+
+*       ** INPUT TERMINATING HOSTS
+
+225     TYPE 230
+230     FORMAT (1X,'* INPUT TERMINATING HOSTS FROM: ',$)
+        ACCEPT 235,(HSTFLE(I),I=1,2)
+235     FORMAT (2A5)
+        IF (HSTFLE(1).EQ.' ') GO TO 225
+        IF (HSTFLE(1).NE.'T') GO TO 240
+        GO TO 275
+
+*       ** OPEN INPUT FILE
+
+240     OPEN (22,HSTFLE,INPUT,ERR=245)
+        GO TO 250
+
+245     TYPE 246,(HSTFLE(I),I=1,2)
+246     FORMAT (5X,'UNABLE TO OPEN FILE: ',2A5)
+        GO TO 225
+
+*       ** READ TERMINATING HOST NUMBERS
+
+250     IHCNT=1
+255     READ (22,256,END=270)HOSTS(IHCNT)
+256     FORMAT (I)
+        IHCNT=IHCNT+1
+        IF (IHCNT.LE.100) GO TO 255
+        TYPE 260
+260     FORMAT (5X,'ERROR!! EXCEEDED MAX NUMBER OF HOSTS PROGRAM CAN'
+     X         ' HANDLE')
+        GO TO 999
+
+*       ** FINISHED READING HOSTS
+
+270     CLOSE (22)
+        IHCNT=IHCNT-1
+        GO TO 285
+
+*       ** INPUT HOSTS FROM TERMINAL
+
+275     IHCNT=1
+        TYPE 276
+276     FORMAT (1X,'* ENTER TERMINATING HOSTS (C.R. TO STOP): ')
+277     TYPE 278
+278     FORMAT (1X,'? ',$)
+        ACCEPT 205,(ITEMP(I),I=1,10)
+        CALL INTCK(ITEMP,5,HOSTS(IHCNT),IERR)
+        IF (IERR.NE.0) GO TO 277
+        IF (HOSTS(IHCNT).EQ.0) GO TO 280
+        IHCNT=IHCNT+1
+        GO TO 277
+
+280     IHCNT=IHCNT-1
+
+
+*       ** INPUT TYPE OF PROCESSING TO DO
+
+285     TYPE 290
+290     FORMAT (1X,'* ADD,DELETE, OR CHANGE? (A,D,C): ',$)
+        ACCEPT 295,ICOMND
+295     FORMAT (A1)
+
+        IF (ICOMND.NE.'A'.AND.ICOMND.NE.'D'.AND.ICOMND.NE.'C')
+     X  GO TO 285
+
+        IF (ICOMND.EQ.'A') ICOMND='N'
+        IF (ICOMND.EQ.'D') ICOMND='S'
+
+*       ** INPUT EFFECTIVE DATE
+
+        CALL INDAT(IEDAT)
+
+*       ** IF APPLICABLE INPUT PRICING OPTION
+
+        IF (ICOMND.EQ.'S') GO TO 400
+300     TYPE 305
+305     FORMAT (1X,'* PRICING OPTION:',/
+     X          3X,'1 = $.50/HR',/
+     X          3X,'2 = $.50/SESS',/
+     X          3X,'OPTION? ',$)
+        ACCEPT 205,(ITEMP(I),I=1,10)
+        CALL INTCK(ITEMP,1,IOPT,IERR)
+        IF (IERR.NE.0) GO TO 300
+310     FORMAT (I)
+        IF (IOPT.NE.1.AND.IOPT.NE.2) GO TO 300
+
+*       ** OUTPUT CHANGE RECORDS FOR ADD OR CHANGE COMMAND
+
+        DO 350 I=1,IHCNT
+        IF (ITYPE.EQ.'H') GO TO 325
+        WRITE (3#IPOS,315)ICOMND,ITYPE,INODE,HOSTS(I),IOPT,IEDAT
+315     FORMAT (2A1,',',I4,',',I3,',',I1,',',I6)
+        IPOS=IPOS+22
+        GO TO 350
+
+325     WRITE (3#IPOS,330)ICOMND,ITYPE,IHOST,HOSTS(I),IOPT,IEDAT
+330     FORMAT (2A1,',',I5,',',I3,',',I1,',',I6)
+        IPOS=IPOS+23
+
+350     CONTINUE
+
+*       ** FINISHED
+
+        GO TO 450
+
+*       ** OUTPUT CHANGE RECORDS FOR DELETE COMMAND
+
+400     DO 425 I=1,IHCNT
+        IF (ITYPE.EQ.'H') GO TO 415
+        WRITE (3#IPOS,410)ICOMND,ITYPE,INODE,HOSTS(I),IEDAT
+410     FORMAT (2A1,',',I4,',',I3,',',I6)
+        IPOS=IPOS+20
+        GO TO 425
+
+415     WRITE (3#IPOS,420)ICOMND,ITYPE,IHOST,HOSTS(I),IEDAT
+420     FORMAT (2A1,',',I5,',',I3,',',I6)
+        IPOS=IPOS+21
+
+425     CONTINUE
+
+*       ** CLOSE FILE AND OUTPUT END MESSAGE
+
+450     CLOSE(3)
+        TYPE 455,IHCNT,(RHDAY(I),I=1,2)
+455     FORMAT (//,1X,I4,1X,'CHANGE RECORDS OUTPUT TO ',2A5,/)
+        OHFLAG=0
+        ITYPE='N'
+        ITFLAG=0
+
+        GO TO 160
+
+999     END
+
+***********************************************************************
+*                                                                     *
+*                         SUBROUTINE: INDAT                           *
+*                                                                     *
+*       THIS SUBROUTINE INPUTS A DATE IN FORMAT YYMMDD.               *
+*       WHERE YY = 2 DIGIY YEAR  NUMBER. MM = 2 DIGIT MONTH NUMBER,   *
+*       AND DD = 2 DIGIT DAY NUMBER.                                  *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL INDAT(INHDAT)                                           *
+*       WHERE THE RETURNED VALUE IS:                                  *
+*                IDATE = VALID DATE                                   *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE INDAT(IDATE)
+
+        INTEGER DAYS(12),ITEMP(10)
+
+        COMMON/A4/DAYS
+*       ** INPUT DATE
+
+1080    TYPE 1085
+1085    FORMAT (/,1X,'* EFFECTIVE DATE (YYMMDD): ',$)
+        ACCEPT 1090,(ITEMP(I),I=1,10)
+1090    FORMAT (10A1)
+
+*       ** CONVERT VALUE JUST INPUT INTO AN INTEGER
+
+        CALL INTCK(ITEMP,6,IDATE,IERR)
+        IF (IERR.NE.0) GO TO 1080
+
+*       ** BREAK DATE INTO YEAR, MONTH, AND DAT
+
+        IYR=IDATE/10000
+        IMO=(MOD(IDATE,10000))/100
+        IDAY=MOD(IDATE,100)
+
+*       ** CHECK VALIDITY OF DATE
+
+        IF (IYR.GT.70) GO TO 1100
+        TYPE 1095
+1095    FORMAT (5X,'YEAR MUST BE AT LEAST 70')
+        GO TO 1080
+
+1100    IF (IMO.GE.1.AND.IMO.LE.12) GO TO 1110
+        TYPE 1105
+1105    FORMAT (5X,'INVALID MONTH')
+        GO TO 1080
+
+1110    IF (IDAY.GE.1.AND.IDAY.LE.DAYS(IMO)) GO TO 1120
+        TYPE 1115
+1115    FORMAT (5X,'INVALID DATE')
+        GO TO 1080
+
+
+*       ** DATE IS OK. RETURN
+
+1120    RETURN
+        END
+
+**********************************************************************
+*                                                                     *
+*                         SUBROUTINE: INTCK                           *
+*                                                                     *
+*       THIS SUBROUTINE CHECKS THAT EACH ELEMENT IN AN ARRAY          *
+*       IS AN INTEGER. THEN COMBINES ALL EMEMENTS IN THE ARRAY INTO   *
+*       ONE INTEGER NUMBER.                                           *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL INTCK(IARR,MAXELM,INUM,IERR)                            *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                IARR   = ARRAY CONTAINING NUMBER TO BE CHECKED       *
+*                MAXELM = NUMBER OF ELEMENTS IN ARRAY: IARR           *
+*       WHERE THE RETURNED VALUES ARE:                                *
+*                INUM   = INTEGER CREATED FROM THE ELEMENTS OF IARR   *
+*                IERR   = ERROR FLAG.  SET IF ANY ELEMENT IS NOT AN   *
+*                         INTEGER.                                    *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE INTCK(IARR,MAXELM,INUM,IERR)
+
+        INTEGER IARR(10),ELEMNT
+
+        IERR=0
+
+*       ** FIND NUMBER OF NON-BLANK ELEMENTS IN ARRAY: IARR
+
+        ELEMNT=0
+        INUM=0
+
+        DO 50 I=1,MAXELM
+        IF (IARR(I).EQ.' ') GO TO 75
+        ELEMNT=I
+50      CONTINUE
+
+75      IF (ELEMNT.EQ.0) RETURN
+        IERR=0
+        IEXP=ELEMNT-1
+
+*       ** GO THROUGH THE ARRAY AND CHECK THAT EACH ELEMENT IS INTEGER.
+
+        DO 100 I=1,ELEMNT
+
+        IF (IARR(I).NE.'0'.AND.IARR(I).NE.'1'.AND.IARR(I).NE.'2'.AND.
+     X      IARR(I).NE.'3'.AND.IARR(I).NE.'4'.AND.IARR(I).NE.'5'.AND.
+     X      IARR(I).NE.'6'.AND.IARR(I).NE.'7'.AND.IARR(I).NE.'8'.AND.
+     X      IARR(I).NE.'9') GO TO 150
+
+*       ** NUMBER IS INTEGER, ADD IT TO THE NUMBER BEING CREATED
+
+        DECODE (1,80,IARR(I)) I1
+80      FORMAT (I1)
+        INUM=INUM+(I1*10**IEXP)
+        IEXP=IEXP-1
+
+100     CONTINUE
+
+*       ** NUMBER IS OK.  RETURN
+
+        RETURN
+
+*       ** NUMBER IS BAD.
+
+150     TYPE 155
+155     FORMAT (5X,'?')
+        IERR=1
+        RETURN
+
+        END
+   
