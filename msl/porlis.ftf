@@ -1,0 +1,301 @@
+***********************************************************************
+*                                                                     *
+*       PORLIS.FTF      VER. 1.1     J.JOELS          NOVENBER,1979   *
+*                                                                     *
+*       THIS PROGRAM CREATES  A 'SNAPSHOT FILE' FOR USE IN THE PAR    *
+*       PROGRAM.  THE SNAPSHOT IS A LISTING OF (ACCG1)PORTS.DMS.      *
+*       THIS LISTING SHOULD BE CREATED ON THE LAST DAY OF THE DATE    *
+*       RANGE OVER WHICH PAR IS TO BE RUN.  THE SNAPSHOT PROVIDES     *
+*       THE NODE AND PORT CODES, PHONE NUMBER AND MODEM TYPES FOR     *
+*       EACH PORT IN THE NETWORK.                                     *
+*                                                                     *
+***********************************************************************
+
+        CALL DBSTRT(1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0)
+
+        INTEGER TYPE(20,2),IPHONE(3),IDATE(2),LISFLE(2),MONTBL(12),
+     X          SCR(6),L(2),PCITY
+
+        MAXTYP=20
+
+        MONTBL(1)="453035600000
+        MONTBL(2)="433134200000
+        MONTBL(3)="467036200000
+        MONTBL(4)="407416200000
+        MONTBL(5)="467037100000
+        MONTBL(6)="453535600000
+        MONTBL(7)="453535400000
+        MONTBL(8)="407534700000
+        MONTBL(9)="517136000000
+        MONTBL(10)="477076400000
+        MONTBL(11)="473376600000
+        MONTBL(12)="423134300000
+
+        DO 40 I=1,3
+        IPHONE(I)='     '
+40      CONTINUE
+
+*       ** GET PASSWORD
+
+        CALL USCRAM(IPASS)
+
+*       ** OUTPUT TODAYS DATE AND TIME
+
+        CALL DATE(IDATE)
+        CALL TIME(ITIME)
+        TYPE 50,(IDATE(I),I=1,2),ITIME
+50      FORMAT (//,5X,'VERSION 1.1',/
+     X            5X,2A5,2X,A5)
+
+
+*       ** CONVERT DAY AND YEAR TO INTEGER VARIABLES
+
+        CALL RTC (ICHAR,IDATE,1)
+        DECODE (1,110,ICHAR)ID1
+110     FORMAT  (I1)
+        CALL RTC (ICHAR,IDATE,2)
+        DECODE (1,110,ICHAR)ID2
+        CALL RTC (ICHAR,IDATE,8)
+        DECODE (1,110,ICHAR)ID3
+        CALL RTC (ICHAR,IDATE,9)
+        DECODE (1,110,ICHAR)ID4
+
+*       ** CONVERT MONTH TO AN INTEGER VARIABLE
+        K=1
+        DO 120 I=4,6
+        CALL RTC (ICHAR,IDATE,I)
+        CALL STC (ICHAR,IMNTH,K)
+        K=K+1
+120     CONTINUE
+
+        DO 125 I=1,12
+        IF (IMNTH.EQ.MONTBL(I)) GO TO 130
+125     CONTINUE
+
+        TYPE 127,IMNTH
+127     FORMAT (5X,'ERROR!! SYSTEM RETURNED UNRECOGNIZABLE MONTH NAME: '
+     X,A5,/)
+        GO TO 999
+
+*       ** FINALLY PUT SYSTEM DATE INTO YYMMDD FORMAT.
+
+130     ITODAY=ID3*100000+ID4*10000+I*100+ID1*10+ID2
+
+*       ** BUILD FILE NAME
+
+        ENCODE (6,150,L)ITODAY
+        DECODE (6,151,L)(SCR(I),I=1,6)
+150     FORMAT (I6)
+151     FORMAT (6I1)
+        ENCODE (9,152,LISFLE)(SCR(I),I=3,6)
+152     FORMAT ('P',4I1,'.LIS')
+
+*       ** READ VALID NODE TYPES AND MAX NUMBER OF PORTS
+
+        CALL INDOC2('!TYPE',MAXTYP,TYPE,NUMTYP,IERR)
+        IF (IERR.NE.0) GO TO 999
+
+*       ** FIND NODE TYPE = ISI
+
+        DO 160 I=1,NUMTYP
+        IF (TYPE(I,1).EQ.'ISI') GO TO 170
+160     CONTINUE
+
+*       ** ERROR
+
+        TYPE 165
+165     FORMAT (1X,'?? DID NOT FIND NODE TYPE OF ISI IN (ACCG1)PORTS.'
+     X  ,'DOC ??')
+        GO TO 999
+
+*       ** SET MAX PORT FOR ISI TO 256
+
+170     TYPE (I,2)=256
+
+*       ** OPEN INPUT AND OUTPUT FILES
+
+        CALL DBOPEN ('(ACCG1)PORTS.DMS','PASSWORD',IPASS)
+        OPEN (21,LISFLE,OUTPUT,ERR=800)
+
+*       ** GET ALL RECORDS FORM PORTS DATA BASE
+
+        CALL DBFIND('ALL')
+
+*       *********** PROCESS EACH RECORD **********
+
+200     CALL DBGREC($300)
+
+*       ** GET NECESSRY INFO
+
+        CALL DBVAL('NODE',INODE,'NHCODE',INCODE,'PORT',IPORT,'PCODE',
+     X  IPCODE,'PHONE',IPHONE,'MODEM',IMODEM,'NTYPE',INTYPE,'SYSID',
+     X  ID,'PCITY',PCITY)
+
+*       ** FIND MAX NUMBER OF PORTS FOR CURRENT NODE
+
+        DO 215 I=1,MAXTYP
+        IF (TYPE(I,1).EQ.INTYPE) GO TO 230
+215     CONTINUE
+
+*       ** ERROR
+
+C       TYPE 220,INTYPE,INODE,ID
+220     FORMAT (1X,'?? INVALID NODE TYPE OF ',A3,1X,'ON NODE ',I4,
+     X  ' ??'/,1X,'ERROR IN RECORD: ',I8,1X,'OF (ACCG1)PORTS.DMS')
+        IMAX=256
+        GO TO 232
+
+
+*       ** SET MAX PORT
+
+230     IMAX=TYPE(I,2)
+
+*        IF PORT IS NOT FX STAY HERE
+
+        IF (IPCODE.EQ.2) GO TO 240
+
+*       ** WRITE RECORD TO OUTPUT FILE
+
+232     WRITE (21,235)INODE,INCODE,IMAX,IPORT,IPCODE,(IPHONE(I),I=1,3),
+     X  IMODEM
+235     FORMAT (I4,I2,I3,I3,I2,2A5,A4,A5)
+        GO TO 250
+
+*        PORT IS FX. IF 1200 BAUD LINE, SET BAUD FLAG
+
+240     IF (IMODEM.EQ.'212A') IBAUD='*'
+
+*       ** WRITE RECORD PLACING PORT CITY IN MODEM FILED
+
+        WRITE (21,245)INODE,INCODE,IMAX,IPORT,IPCODE,(IPHONE(I),I=1,3),
+     X  PCITY,IBAUD
+245     FORMAT (I4,I2,I3,I3,I2,2A5,A4,A4,A1)
+
+*       ** GO PROCESS NEXT RECORD
+
+250     DO 255 I=1,3
+        IPHONE(I)='     '
+255     CONTINUE
+
+        IMODEM='     '
+        PCITY='     '
+        IBAUD='    '
+
+        GO TO 200
+
+*       ** FINISHED PROCESSING ALL RECORDS. CLOSE DATA BASES
+
+300     CALL DBCLOS
+        CLOSE (21)
+
+*       ** OUTPUT DATE AND TIME
+
+        CALL DATE(IDATE)
+        CALL TIME(ITIME)
+        TYPE 310,(LISFLE(I),I=1,2),(IDATE(I),I=1,2),ITIME
+310     FORMAT (//,5X,'OUTPUT FILE: ',2A5,//,5X,2A5,2X,A5,///)
+        GO TO 999
+
+*       ** ERROR
+
+800     TYPE 805,(LISFLE(I),I=1,2)
+805     FORMAT (/,5X,'?? UNABLE TO OPEN: ',2A5,' ??',/)
+
+999     CALL DBEND
+
+        END
+
+***********************************************************************
+*                                                                     *
+*                SUBROUTINE: INDOC2                                   *
+*                                                                     *
+*       THIS SUBROUTINE LOOKS FOR A SPECIFIED LABEL IN THE (ACCG1)    *
+*       PORTS.DOC FILE. UPON FINDING THE CORRECT LABEL THE SUBROUTINE *
+*       READS IN ALL VALID TYPES (NODE,MACHINE,ETC) UNTIL IT REACHES  *
+*       THE NEXT LABEL. THE LABEL MUST BE IN FORMAT: !CCCC. (AN       *
+*       EXCLAIMATION POINT FOLLOWED BY 4 CHARS. I.E. !MACH )          *
+*                                                                     *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL INDOC2(ILOOK,ILIMIT,IARRAY,INUM,IERR)                   *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                ILOOK = LABEL TO LOOK FOR                            *
+*                ILIMIT = MAXIMUM NUMBER OF WORDS IN 'IARRAY'         *
+*                IARRAY = NAME OF ARRAY THE TYPES ARE TO BE           *
+*                         PLACED IN.                                  *
+*       WHERE THE RETURNED VALUES ARE:                                *
+*                IARRAY = CONTAINS ALL VALID TYPES UNDER GIVEN LABEL  *
+*                INUM   = NUMBER OF TYPES PLACED IN 'IARRAY'          *
+*                IERR   = ERROR FLAG. SET IF ANY ERROR CONDITIONS     *
+*                         OCCURR.                                     *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE INDOC2(ILOOK,ILIMIT,IARRAY,INUM,IERR)
+
+        INTEGER IARRAY
+
+        DIMENSION IARRAY(ILIMIT,2)
+
+        INUM=1
+        OPEN (3,'(ACCG1)PORTS.DOC',INPUT,ERR=250)
+
+*       ** READ FIRST 5 CHARS OF EACH LINE LOOKING FOR CORRECT
+*         SECTION
+
+90      READ (3,100,END=200)IWORD
+100     FORMAT (A5)
+        IF (ILOOK.EQ.IWORD) GO TO 110
+        GO TO 90
+
+*       ** FOUND CORRECT SECTION. SKIP 3 LINES
+
+110     READ (3,115,END=200)IOUT
+115     FORMAT (//,A1)
+
+*       ** READ CHARS 18-22. INPUT TYPES INTO ARRAY: IARRAY UNTIL
+*          REACH LINE WITH '!!!' AS A TYPE.
+
+119     READ (3,120,END=200)IARRAY(INUM,1),IARRAY(INUM,2)
+120     FORMAT (17X,A5,3X,I3)
+        IF (IARRAY(INUM,1).EQ.'!!!') GO TO 150
+        IF (IARRAY(INUM,1).EQ.' ') GO TO 119
+        INUM=INUM+1
+
+*       **  CHECK TO SEE IF EXCEEDING SIZE OF ARRAY
+
+        IF (INUM.GT.ILIMIT) GO TO 125
+        GO TO 119
+
+125     TYPE 126,ILIMIT,IWORD
+126     FORMAT (5X,'LIMIT OF : ',I4,' EXCEEDED FOR ARRAY WHILE',
+     X' INPUTTING; ',2X,A5)
+        IERR=1
+        CLOSE (3)
+        RETURN
+
+*       ** FINISHED!! RETURN
+
+150     IARRAY(INUM,1)='     '
+        IARRAY(INUM,2)=0
+        INUM=INUM-1
+        CLOSE(3)
+        RETURN
+
+*       ** ERROR
+
+200     TYPE 210
+210     FORMAT (5X,'REACHED END OF FILE. ERROR IN PORTS.DOC.')
+        IERR=1
+        CLOSE(3)
+        RETURN
+
+*       ** FILE ERROR
+
+250     TYPE 255
+255     FORMAT (5X,'UNABLE TO OPEN : PORTS.DOC')
+        IERR=1
+        CLOSE(3)
+        RETURN
+
+        END
+ 
