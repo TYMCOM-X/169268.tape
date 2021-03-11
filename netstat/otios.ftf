@@ -1,0 +1,956 @@
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                     C
+C       PROGRAM: OTIOS (ORIGNODE - TERMHOST I/O  SAMPLING)            C
+C       AUTHOR: JO ANN JOELS, MANAGEMENT SCIENCES                     C
+C       CREATED: FEBRUARY, 1983                                       C
+C       VERSION: 2.1                                                  C
+C       LAST UPDATED: NOV, 1990                                       C
+C       UPDATED BY MIKE AGNE: FOR THE 'F' NETSTAT FILE                C
+C       LAST UPDATED: SEP, 1989                                       C
+C       UPDATED BY MIKE AGNE: FOR THE 'E' NETSTAT FILE                C
+C       LAST UPDATED: JAN., 1987                                      C
+C       UPDATED BY MIKE AGNE: FOR THE "D" NETSTAT FILE                C
+C       LAST UPDATED: FEB., 1984                                      C
+C       UPDATED BY ROY ROSKILLY: FOR THE "C" NETSTAT FILE             C
+C       LAST UPDATED: FEB., 1983                                      C
+C       UPDATED BY: JO ANN JOELS                                      C
+C       TABS: 9,12,15,18,60,71                                        C
+C                                                                     C
+C       THIS PROGRAM SUMMARIZES ONE DAYS WORTH OF NETWORK TRAFFIC     C
+C       BETWEEN ORIGINATING NODE AND TERMINATING HOST PAIRS.          C
+C       A SAMPLING RATE , DATE TO PROCESS AND HOUR RANGE TO PROCESS   C
+C       IS OBTAINED FROM A CONTROL FILE.  THE SESSIONS SELECTED FOR   C
+C       THE SAMPLE ARE ADDED TO A MONTHLY OTIOS DATA BASE.  FOR       C
+C       COMPLETE DOCUMENTATION ON THE PROGRAM SEE FILE                C
+C       (NETSTAT:28)OTIOS.DOC                                         C
+C                                                                     C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                     C
+C       STARTUP:                                           PAGE 1.0   C
+C                                                          --------   C
+C       1) INITIALIZE 1022-FORTRAN INTERFACE                          C
+C       2) DECLARE ALL VARIABLES                                      C
+C       3) INITIALIZE SOME VARIABLES                                  C
+C       4) OUTPUT VERSION, DATE, AND TIME                             C
+C                                                                     C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+
+C***
+C 1) INITIALIZE 1022-FORTRAN INTERFACE
+C*****
+
+        CALL DBSTRT(1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0)
+
+C*****
+C 2) DECLARE ALL VARIABLES
+C*****
+
+        INTEGER IDATE(2),ITIME,SRATE,INDMS(5),OUTDEV,DAYNAM(2),
+     +          PDATE,L(2),SCR(6),ERROR,STATUS,TOTSEL,SELECT,INDEV,
+     +          X22ARR(5),BFLAG,PHASE,SHOUR,EHOUR,CTLDEV,OTIODB(2),
+     +          DOM,CRUFLE(2)
+
+C       C*****
+C       C VARIABLE DEFINITIONS:
+C       C----------------------
+C       C BFLAG  - FLAG USED TO INDICATE WHETHER OR NOT THE NETSTAT
+C       C          'B' FILE HAS BEEN PROCESSED.
+C       C          0 = FILE NOT PROCESSED
+C       C          1 = FILE PROCESSED
+C       C          2 = C FILE PROCESSED
+C       C          3 = D FILE PROCESSED
+C       C          4 = E FILE PROCESSED
+C       C          5 = F FILE PROCESSED
+C       C CTLDEV - DEVICE NUMBER FOR ALL I/O TO CONTROL FILE
+C       C CRUFLE - ARRAY CONTAINING "CRUNCH" FILE NAME
+C       C DAYNAM - 2 WORD ARRAY CONTAINING NAME OF DAILY OTIOS FILE
+C       C          (SAMPLE IS PLACED INTO THIS FILE)
+C       C DOM    - THE 2 DIGIT DAY NUMBER OBTAINED FROM THE DATE-T0-
+C       C          PROCESS
+C       C EHOUR  - END HOUR. A HOUR RANGE FOR THE SAMPLE IS READ  FROM
+C       C          THE CONTROL FILE. EHOUR IS THE ENDING HOUR OF THE RANGE.
+C       C ERROR  - ERROR FLAG USED TO RETURN ERROR CONDITIONS
+C       C          FROM DIFFERENT SUBROUTINES
+C       C IDATE  - CURRENT DATE
+C       C INDEV  - INPUT DEVICE NUMBER
+C       C INDMS  - ARRAY CONTAINING THE NETSTAT DMS FILE NAME 
+C       C          CURRENTLY BEING PROCESSED (INITIALLY  = 'A' FILE)
+C       C ITIME  - CURRENT TIME
+C       C L      - 2 WORD SCRATCH ARRAY USED IN ENCODE-DECODE
+C       C          STATEMENTS
+C       C OTIODB - OTIOS DATA BASE NAME.  THIS DATA BASE CONTAINS THE
+C       C          ACCUMULATIVE SAMPLE INFO FOR THE WHOLE MONTH UP
+C       C          TO CURRENT PROCESSING DATE.
+C       C OUTDEV - OUTPUT DEVICE NUMBER
+C       C PDATE  - DATE OF NETSTAT FILES TO BE PROCESSED. READ FROM THE
+C       C          CONTROL FILE.
+C       C PHASE  - THE PHASE OF THE PROGRAM TO PROCESS
+C       C SCR    - 6 WORD SCRATCH ARRAY USED TO HOLD DATE TO
+C       C          PROCESS - ONE DIGIT PER WORD.
+C       C SELECT - NUMBER OF RECORDS SELECTED BY SAMPLE SUBROUTINE
+C       C SRATE  - SAMPLING RATE SPECIFIED BY USER. READ FROM THE
+C                  CONTROL FILE.
+C       C SHOUR  - START HOUR. AN HOUR RANGE FOR THE SAMPLE IS READ FROM
+C       C          THE CONTROL FILE. SHOUR IS THE STARTING HOUR OF THE
+C       C          RANGE.
+C       C STATUS - STATUS FLAG - USED TO RETURN DIFFERENT INFORMATION
+C       C          FROM VARIOUS SUBROUTINES
+C       C TOTSEL - TOTAL NUMBER OF RECORDS SELECTED BY ALL CALLS TO THE
+C       C          SAMPLE SUBROUTINE
+C       C X22ARR - 5 WORD ARRY USED TO PASS COMMANDS TO 1022
+C       C*****
+
+
+C*****
+C 3) INITALIZE SOME VARIABLES
+C*****
+
+        CTLDEV=3
+        OUTDEV=21
+        INDEV=22
+        BFLAG=0
+
+
+C*****
+C 4) OUTPUT VERSION, DATE, AND TIME
+C*****
+
+C       C*****
+C       C GET DATE AND TIME
+C       C*****
+
+           CALL DATE(IDATE)
+           CALL TIME(ITIME)
+
+C       C*****
+C       C OUTPUT INFORMATION
+C       C*****
+
+           TYPE 100,IDATE,ITIME
+100        FORMAT (//,1X,'OTIO SAMPLING PROGRAM     VERSION 2.1',5X,
+     +             2A5,2X,A5,//)
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                     C
+C       PROCESS CONTROL FILE:                              PAGE 2.0   C
+C                                                          --------   C
+C                                                                     C
+C       1) READ CONTROL FILE                                          C
+C             . OPEN CONTROL FILE                                     C
+C             . READ PHASE TO PROCESS, DATE AND HOUR RANGE TO PROCESS C
+C               AND SAMPLING RATE                                     C
+C             . CLOSE CONTROL FILE                                    C
+C       2) BUILD NETSTAT AND OTIOS FILE NAMES FROM DATE-TO-PROCESS    C
+C       3) OUTPUT DATE TO BE PROCESSED                                C
+C       4) CK IF DAILY NETSTAT FILE IS AVAILABLE                      C
+C             . IF READY, CONTINUE                                    C
+C             . IF NOT READY, QUIT                                    C
+C       5) BRANCH ON PHASE TO PROCESS                                 C
+C                                                                     C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+
+C*****
+C 1) READ CONTROL FILE
+C*****
+
+C       C*****
+C       C OPEN CONTROL FILE
+C       C*****
+
+200        OPEN (CTLDEV,'OTIOS.CTL',INPUT,ERR=210)
+
+C          C*****
+C          C SUCCESSFUL OPEN, CONTINUE
+C          C*****
+
+              GO TO 215
+
+C          C*****
+C          C UNSUCCESSFUL OPEN, OUTPUT MESSAGE AND QUIT
+C          C*****
+
+210           TYPE 211
+211           FORMAT (1X,'UNABLE TO OPEN CONTROL FILE: OTIOS.CTL',//)
+              GO TO 9000
+
+C       C*****
+C       C READ PHASE-TO-PROCESS,DATE-TO-PROCESS, HOUR RANGE-TO-PROCESS,
+C       C AND SAMPLING RATE FROM CONTROL FILE
+C       C*****
+
+215        READ (CTLDEV,220)PHASE,PDATE,SHOUR,EHOUR,SRATE
+220        FORMAT (I1,1X,I6,1X,I4,1X,I4,1X,I6)
+
+
+C       C*****
+C       C CLOSE CONTROL FILE
+C       C*****
+
+225        CLOSE(CTLDEV)
+
+C*****
+C 2) BUILD NETSTAT AND OTIOS FILE NAMES FROM DATE-TO-PROCESS
+C*****
+C       C*****
+C       C PLACE DATE-TO-PROCESS IN A SCRATCH ARRAY 1 DIGIT PER WORD
+C       C*****
+
+230        ENCODE (6,231,L)PDATE
+           DECODE (6,232,L)(SCR(I),I=1,6)
+231        FORMAT (I6)
+232        FORMAT (6I1)
+
+C       C*****
+C       C BUILD DAILY NETSTAT 'A' FILE NAME
+C       C*****
+
+235        ENCODE (10,236,INDMS)(SCR(I),I=2,6)
+236        FORMAT (5I1,5HA.DMS)
+
+C       C*****
+C       C BUILD THE DAILY OTIOS FILE NAME. THE SAMPLE WILL BE
+C       C PLACED INTO THIS FILE
+C       C****
+
+240        ENCODE(10,241,DAYNAM)(SCR(I),I=3,6)
+241        FORMAT (4HOTIO,2I1,2H.0,2I1)
+
+
+C*****
+C 3) OUTPUT DATE BEING PROCESSED
+C*****
+
+245     TYPE 246,PDATE
+246     FORMAT (//,11X,'***** ',I6,' *****',//)
+
+C*****
+C 4) CK IF DAILY NETSTAT FILE IS AVAILABLE
+C*****
+
+250     CALL CKIN(INDEV,INDMS,ERROR)
+
+C       C*****
+C       C IF FILE IS AVAILABLE CONTINUE
+C       C*****
+
+255        IF (ERROR.EQ.0) GO TO 275
+
+C       C*****
+C       C FILE IS NOT AVAILABLE. QUIT
+C       C*****
+
+           GO TO 9000
+
+
+C*****
+C 5) BRANCH ON PHASE TO PROCESS
+C*****
+
+275     GOTO (300,400,500,600),PHASE
+
+C       C*****
+C       C FALL THROUGH TO HERE ON ILLEGAL PHASE NUMBER. OUTPUT MESSAGE
+C       C AND QUIT
+C       C*****
+
+280        TYPE 285,PHASE
+285        FORMAT (1X,'ILLEGAL PHASE NUMBER: ',I2,//)
+           GO TO 9000
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                     C
+C       ***** PHASE 1 *****                                PAGE 3.0   C
+C       TAKE THE SAMPLE                                    --------   C
+C                                                                     C
+C       1) OUTPUT PHASE MESSAGE                                       C
+C       2) OPEN THE DAILY OTIOS FILE                                  C
+C          THE SAMPLE WILL BE OUTPUT TO THIS FILE.                    C
+C       3) LOOP THROUGH ALL NETSTAT FILES FOR THE DAY                 C
+C          TAKING THE SAMPLE                                          C
+C       4) UPDATE CONTROL FILE                                        C
+C       5) OUTPUT END-OF-PHASE MESSAGE                                C
+C                                                                     C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+
+C*****
+C 1) OUTPUT PHASE MESSAGE
+C*****
+
+300     TYPE 305
+305     FORMAT (//,1X,'***** PHASE 1 *****',/
+     +               ,'  TAKE THE SAMPLE  ',//)
+
+C*****
+C 2) OPEN THE DAILY OTIOS FILE
+C*****
+
+310     OPEN (OUTDEV,DAYNAM,OUTPUT,ERR=315)
+
+C       C*****
+C       C SUCCESSFUL OPEN, CONTINUE
+C       C*****
+
+                GO TO 325
+
+C       C*****
+C       C UNSUCCESSFUL OPEN. 
+C       C*****
+
+C          C*****
+C          C OUTPUT ERROR MESSAGE
+C          C*****
+
+315           TYPE 320,DAYNAM
+320           FORMAT (/,1X,'UNABLE TO OPEN: ',2A5,1X,'FOR OUTPUT',//)
+
+C          C*****
+C          C EXIT
+C          C*****
+
+              GO TO 9000
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                     C
+C       ***** PHASE 1 CONT'D *****                         PAGE 3.1   C
+C                                                          --------   C
+C                                                                     C
+C       3) LOOP THROUGH ALL NETSTAT FILES FOR THE DAY                 C
+C          TAKING THE SAMPLE                                          C
+C                                                                     C
+C       3.1) OPEN THE CURRENT NETSTAT FILE                            C
+C       3.2) SELECT ALL OF THE RECORDS IN THE FILE                    C
+C       3.3) CALL THE SAMPLE SUBROUTINE TO TAKE THE SAMPLE            C
+C             . IF ERROR - EXIT                                       C
+C             . IF NO ERROR, ADD NUMBER OF RECORDS SELECTED TO TOTAL  C
+C       3.4) CK IF THERE IS ANOTHER NETSTAT FILE TO PROCESS           C
+C             . BUILD 'B' FILE NAME                                   C
+C             . IF 'B' FILE, GO BACK TO 1                             C
+C             . IF NO 'B', OR WHEN 'B' HAS BEEN PROCESSED, CLOSE      C
+C               DAILY OTIOS FILE AND OUTPUT NUMBER OF SESSIONS        C
+C               SELECTED FOR THE SAMPLE                               C
+C                                                                     C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+
+
+C*****
+C 3.1) OPEN THE CURRENT NETSTAT FILE
+C*****
+
+325     CALL DBOPEN (INDMS)
+
+
+
+C*****
+C 3.2) SELECT ALL OF THE RECORDS IN THE FILE
+C*****
+
+330     CALL DBFIND ('ALL')
+
+
+C*****
+C 3.3) CALL THE SAMPLE ROUTINE TO TAKE THE SAMPLE
+C*****
+
+340     CALL SAMPLE(OUTDEV,SHOUR,EHOUR,SRATE,SELECT,ERROR)
+
+C       C*****
+C       C IF NO ERROR CONTINUE
+C       C*****
+
+           IF (ERROR.EQ.0) GO TO 350
+
+C       C*****
+C       C ERROR WHILE TAKING SAMPLE. CLOSE THE DAILY OTIO FILE
+C       C AND EXIT
+C       C*****
+
+345        CLOSE(OUTDEV)
+           GO TO 9000
+
+C       C*****
+C       C ADD NUMBER OF RECORDS SELECTED FROM THIS CALL OF THE SAMPLE
+C       C ROUTINE TO THE TOTAL SELECTED SO FAR.
+C       C*****
+
+350        TOTSEL=TOTSEL+SELECT
+
+
+
+C*****
+C 3.4) CK IF THERE IS ANOTHER NETSTAT FILE TO PROCESS
+C*****
+
+C       C*****
+C       C BUILD 'B' NETSTAT FILE NAME
+C       C*****
+
+360        ENCODE (10,365,INDMS) (SCR(I),I=2,6)
+365        FORMAT (5I1,5HB.DMS)
+
+C       C*****
+C       C CK IF 'B' FILE IS AVAILABLE
+C       C*****
+
+370        CALL CKIN(INDEV,INDMS,ERROR)
+
+C          C*****
+C          C IF NOT AVAILABLE, CONTINUE
+C          C*****
+
+              IF (ERROR.NE.0) GO TO 375
+
+C          C*****
+C          C THERE IS A 'B' FILE, IF IT HAS ALREADY BEEN PROCESSED,
+C          C CONTINUE
+C          C*****
+
+              IF (BFLAG.EQ.1) GO TO 371
+              IF (BFLAG.EQ.2) GO TO 373
+              IF (BFLAG.EQ.3) GO TO 374
+              IF (BFLAG.EQ.4) GO TO 376
+              IF (BFLAG.EQ.5) GO TO 375
+
+C             C******
+C             C 'B' FILE HAS NOT BEEN PROCESSED. SET BFLAG TO INDICATE
+C             C THAT IT IS BEING PROCESSED AND GO DO THAT.
+C             C*****
+
+                 BFLAG=1
+                 GO TO 325
+
+C 3.45) CK IF THERE IS A "C"   NETSTAT FILE TO PROCESS
+C*****
+
+C       C*****
+C       C BUILD 'C' NETSTAT FILE NAME
+C       C*****
+
+371        ENCODE (10,3650,INDMS) (SCR(I),I=2,6)
+3650       FORMAT (5I1,5HC.DMS)
+
+C       C*****
+C       C CK IF 'C' FILE IS AVAILABLE
+C       C*****
+
+3700       CALL CKIN(INDEV,INDMS,ERROR)
+
+C          C*****
+C          C IF NOT AVAILABLE, CONTINUE
+C          C*****
+
+              IF (ERROR.NE.0) GO TO 375
+
+C          C*****
+C          C THERE IS A 'C' FILE, IF IT HAS ALREADY BEEN PROCESSED,
+C          C CONTINUE
+C          C*****
+
+              IF (BFLAG.EQ.2) GO TO 373
+              IF (BFLAG.EQ.3) GO TO 374
+              IF (BFLAG.EQ.4) GO TO 376
+              IF (BFLAG.EQ.5) GO TO 375
+
+C             C******
+C             C 'C' FILE HAS NOT BEEN PROCESSED. SET BFLAG TO INDICATE
+C             C THAT IT IS BEING PROCESSED AND GO DO THAT.
+C             C*****
+
+                 BFLAG=2
+                 GO TO 325
+
+C 3.47) CK IF THERE IS A "D"   NETSTAT FILE TO PROCESS
+C*****
+
+C       C*****
+C       C BUILD 'D' NETSTAT FILE NAME
+C       C*****
+
+373        ENCODE (10,36500,INDMS) (SCR(I),I=2,6)
+36500      FORMAT (5I1,5HD.DMS)
+
+C       C*****
+C       C CK IF 'D' FILE IS AVAILABLE
+C       C*****
+
+37000      CALL CKIN(INDEV,INDMS,ERROR)
+
+C          C*****
+C          C IF NOT AVAILABLE, CONTINUE
+C          C*****
+
+              IF (ERROR.NE.0) GO TO 375
+
+C          C*****
+C          C THERE IS A 'D' FILE, IF IT HAS ALREADY BEEN PROCESSED,
+C          C CONTINUE
+C          C*****
+
+              IF (BFLAG.EQ.3) GO TO 374
+              IF (BFLAG.EQ.4) GO TO 376
+              IF (BFLAG.EQ.5) GO TO 375
+
+C             C******
+C             C 'D' FILE HAS NOT BEEN PROCESSED. SET BFLAG TO INDICATE
+C             C THAT IT IS BEING PROCESSED AND GO DO THAT.
+C             C*****
+
+                 BFLAG=3
+                 GO TO 325
+
+C 3.47) CK IF THERE IS A "E"   NETSTAT FILE TO PROCESS
+C*****
+
+C       C*****
+C       C BUILD 'E' NETSTAT FILE NAME
+C       C*****
+
+374        ENCODE (10,36500,INDMS) (SCR(I),I=2,6)
+37500      FORMAT (5I1,5HE.DMS)
+
+C       C*****
+C       C CK IF 'E' FILE IS AVAILABLE
+C       C*****
+
+38000      CALL CKIN(INDEV,INDMS,ERROR)
+
+C          C*****
+C          C IF NOT AVAILABLE, CONTINUE
+C          C*****
+
+              IF (ERROR.NE.0) GO TO 375
+
+C          C*****
+C          C THERE IS A 'E' FILE, IF IT HAS ALREADY BEEN PROCESSED,
+C          C CONTINUE
+C          C*****
+
+              IF (BFLAG.EQ.4) GO TO 376
+              IF (BFLAG.EQ.5) GO TO 375
+
+C             C******
+C             C 'E' FILE HAS NOT BEEN PROCESSED. SET BFLAG TO INDICATE
+C             C THAT IT IS BEING PROCESSED AND GO DO THAT.
+C             C*****
+
+                 BFLAG=4
+                 GO TO 325
+
+C 3.48) CK IF THERE IS A "F"   NETSTAT FILE TO PROCESS
+C*****
+
+C       C*****
+C       C BUILD 'F' NETSTAT FILE NAME
+C       C*****
+
+376        ENCODE (10,36500,INDMS) (SCR(I),I=2,6)
+37600      FORMAT (5I1,5HF.DMS)
+
+C       C*****
+C       C CK IF 'F' FILE IS AVAILABLE
+C       C*****
+
+39000     CALL CKIN(INDEV,INDMS,ERROR)
+
+C          C*****
+C          C IF NOT AVAILABLE, CONTINUE
+C          C*****
+
+              IF (ERROR.NE.0) GO TO 375
+
+C          C*****
+C          C THERE IS A 'F' FILE, IF IT HAS ALREADY BEEN PROCESSED,
+C          C CONTINUE
+C          C*****
+
+              IF (BFLAG.EQ.5) GO TO 375
+
+C        C******
+C             C 'F' FILE HAS NOT BEEN PROCESSED. SET BFLAG TO INDICATE
+C             C THAT IT IS BEING PROCESSED AND GO DO THAT.
+C             C*****
+
+                 BFLAG=5
+                 GO TO 325
+
+C*****
+C 3.5) FINSIHED WITH ALL FILES FOR THE DAY
+C*****
+
+C       C*****
+C       C CLOSE THE DAILY OTIO FILE
+C       C*****
+
+375        CLOSE(OUTDEV)
+
+C       C*****
+C       C OUTPUT NUMBER OF SESSIONS SELECTED FOR THE SAMPLE
+C       C*****
+
+377        TYPE 378,TOTSEL
+378        FORMAT (//,1X,'NUMBER OF SESSIONS IN SAMPLE = ',I7,///)
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                     C
+C       ***** PHASE 1 CONT'D *****                         PAGE 3.2   C
+C                                                          --------   C
+C                                                                     C
+C       4) UPDATE CONTROL FILE                                        C
+C             . OPEN CONTROL FILE                                     C
+C             . INCREMENT PHASE NUMBER                                C
+C             . WRITE NEW PHASE NUMBER TO CONTROL FILE                C
+C             . CLOSE CONTROL FILE                                    C
+C       5) OUPUT END-OF-PHASE MESSAGE                                 C
+C                                                                     C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+C*****
+C 4) UPDATE CONTROL FILE
+C*****
+
+380     CALL UPDCTL(OUTDEV,PHASE,PDATE)
+
+C*****
+C 5) OUTPUT END-OF-PHASE MESSAGE
+C****
+
+390     TYPE 395
+395     FORMAT (//,1X,'***** PHASE 1 COMPLETED *****',//)
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                     C
+C       ***** PHASE 2 *****                                PAGE 4.0   C
+C       ADD SAMPLE TO MONTHLY OTIO DATA BASE               --------   C
+C                                                                     C
+C       1) OUTPUT PHASE MESSAGE                                       C
+C       2) BRANCH ON DAY-OF-MONTH                                     C
+C             . ON 1ST DAY, LOAD SAMPLE TO CREATE NEW MONTHLY D.B.    C
+C             . NOT 1ST DAY, APPEND SAMPLE TO EXISTING MONTLY D.B.    C
+C       3) UPDATE CONTROL FILE                                        C
+C       4) OUTPUT END-OF PHASE MESSAGE                                C
+C                                                                     C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+C*****
+C 1) OUTPUT PHASE MESSAGE
+C*****
+
+400     TYPE 405
+405     FORMAT (//,1X,'***** PHASE 2 *****',/
+     +               '   ADD SAMPLE TO    ',/
+     +               ' MONTHLY OTIO D.B.  ',//)
+
+C*****
+C 2) BRANCH ON DAY OF MONTH
+C*****
+
+C       C*****
+C       C FIRST, GET THE DAY-OF-MONTH
+C       C*****
+
+410             DOM=SCR(5)*10+SCR(6)
+
+C       C*****
+C       C IF FIRST DAY OF MONTH, STAY HERE
+C       C*****
+
+           IF (DOM.NE.1) GO TO 430
+
+C          C*****
+C          C UPDATE THE OTIO DMD FILE.  MAKE THE INPUT FILE = DAILY 
+C          C OTIO SAMPLE FILE.  MAKE THE OUTPUT FILE =  THE NAME OF
+C          C OTIO MONTLY DATA BASE FOR THE NEW MONTH
+C          C*****
+
+415           OPEN (OUTDEV,'OTIOS.DMD',RANDIO)
+              WRITE (OUTDEV#29,416) (SCR(I),I=3,6)
+416           FORMAT (2I1,2H.0,2I1,$)
+              WRITE (OUTDEV#49,417) (SCR(I),I=3,4)
+417           FORMAT (2I1,$)
+              CLOSE (OUTDEV)
+
+C          C*****
+C          C NOW LOAD THE SAMPLE FILE (THE DAILY OTIO FILE) INTO 1022
+C          C TO CREATE THE THE NEW MONTHLY OTIOS DATA BASE
+C          C*****
+
+420           CALL DBEXEC ('LOAD OTIOS.DMD')
+
+C          C*****
+C          C FINISHED WITH LOAD. GO UPDATE CONTROL FILE
+C          C*****
+
+              GO TO 470
+
+C       C*****
+C       C THIS IS NOT THE 1ST DAY OF THE MONTH.
+C       C*****
+
+C          C*****
+C          C BUILD THE MONTHLY DATA BASE NAME
+C          C*****
+
+430           ENCODE (10,431,OTIODB) (SCR(I),I=3,4)
+431           FORMAT (4HOTIO,2I1,4H.DMS)
+
+C          C*****
+C          C OPEN THE OTIO DATA BASE
+C          C*****
+
+              TYPE 432
+432           FORMAT(/,1X,'HERE')
+435           CALL DBOPEN (OTIODB)
+              TYPE 436
+436           FORMAT(/,1X,'H1')
+
+C          C*****
+C          C IT'S TIME TO APPEND THE DAILY SAMPLE ONTO THE MONTHLY
+C          C OTIO DATA BASE.  PLACE THE APPEND COMMAND INTO ARRAY:
+C          C X22ARR.                                       
+C          C*****
+
+440           X22ARR(1)='APP  '
+              X22ARR(2)=DAYNAM(1)
+              X22ARR(3)=DAYNAM(2)
+              X22ARR(4)=0
+
+C          C*****
+C          C EXECUTE THE APPEND COMMAND
+C          C****
+
+450           CALL DBEXEC(X22ARR)
+
+C          C*****
+C          C CLOSE THE OTIO DATA BASE
+C          C****
+
+455           CALL DBCLOS
+
+
+C*****
+C 3) UPDATE THE CONTROL FILE
+C*****
+
+470     CALL UPDCTL(CTLDEV,PHASE,PDATE)
+
+C*****
+C 4) OUTPUT END OF PHASE MESSAGE
+C*****
+
+480     TYPE 495
+495     FORMAT (//,1X,'***** PHASE 2 COMPLETED *****',//)
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                     C
+C       ***** PHASE 3 *****                                PAGE 5.0   C
+C       "CRUNCH" THE OTIO DATA BASE TO GET                 --------   C
+C       ONLY ONE ENTRY FOR EACH ORINODE-TERMHOST                      C
+C       PAIR.                                                         C
+C                                                                     C
+C       1) OUTPUT PHASE MESSAGE                                       C
+C       2) OPEN THE OTIOS DATA BASE                                   C
+C       3) INITIALIZE THE 1022 OUTPUT CHANNEL                         C
+C             . BUILD "CRUNCH" FILE NAME                              C
+C             . PUT INIT COMMAND INTO ARRAY                           C
+C             . EXECUTE THE INIT COMMAND                              C
+C       4) DO THE CRUNCHING - EXECUTE A 1022 COMMANDS FILE            C
+C       5) RELEASE THE 1022 CHANNEL                                   C
+C       6) UPDATE THE CONTROL FILE                                    C
+C       7) OUTPUT END OF PHASE MESSAGE                                C
+C                                                                     C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+C*****
+C 1) OUTPUT PHASE MESSAGE
+C*****
+
+500     TYPE 505
+505     FORMAT (//,1X,'***** PHASE 3 *****',/
+     +            ,1X,'  CRUNCH DATA BASE ',//)
+
+C*****
+C 2) OPEN THE OTIOS DATA BASE
+C*****
+
+C       C*****
+C       C FIRST BUILD DATA BASE NAME
+C       C*****
+
+510        ENCODE(10,511,OTIODB) (SCR(I),I=3,4)
+511        FORMAT (4HOTIO,2I1,4H.DMS)
+
+C       C*****
+C       C NOW OPEN THE DATA BASE
+C       C*****
+
+515        CALL DBOPEN(OTIODB)
+
+C*****
+C 3) INITIALIZE THE 1022 OUTPUT CHANNEL
+C*****
+
+C       C*****
+C       C BUILD THE "CRUNCH" FILE NAME
+C       C*****
+
+520        ENCODE(10,521,CRUFLE) (SCR(I),I=3,4)
+521        FORMAT (4HOTIO,2I1,4H.CRU)
+
+C       C*****
+C       C PUT INIT COMMAND INTO ARRAY: X22ARR
+C       C*****
+
+525        X22ARR(1)='INIT '
+           X22ARR(2)='1     '
+           X22ARR(3)=CRUFLE(1)
+           X22ARR(4)=CRUFLE(2)
+           X22ARR(5)=0
+
+C       C*****
+C       C EXECUTE THE INIT COMMAND
+C       C*****
+
+530        CALL DBEXEC(X22ARR)
+
+
+C*****
+C 4) DO THE CRUNCHING
+C*****
+
+545     CALL DBEXEC('USE OTIOS.DMC')
+
+
+C*****
+C 5) RELEASE THE 1022 OUTPUT CHANNEL
+C*****
+
+550     CALL DBEXEC ('RELEASE')
+
+
+C*****
+C 6) UPDATE THE CONTROL FILE
+C*****
+
+560     CALL UPDCTL(CTLDEV,PHASE,PDATE)
+
+
+C*****
+C 7) OUTPUT END OF PHASE MESSAGE
+C*****
+
+575     TYPE 576
+576     FORMAT (//,1X,'***** PHASE 3 COMPLETED *****',//)
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                     C
+C       ***** PHASE 4 *****                                PAGE 6.0   C
+C       CREATE NEW OTIOS DATA BASE FROM                    --------   C
+C       THE CRUNCH FILE                                               C
+C                                                                     C
+C       1) OUTPUT PHASE MESSAGE
+C       2) UPDATE DMD FILE WITH APPROPRIATE FILE NAMES                C
+C       3) EXECUTE LOAD COMMAND                                       C
+C       4) UPDATE CONTROL FILE                                        C
+C       5) OUTPUT END OF PHASE MESSAGE                                C
+C                                                                     C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+C*****
+C 1) OUTPUT PHASE MESSAGE
+C*****
+
+600     TYPE 605
+605     FORMAT (//,1X,'***** PHASE 4 *****',/
+     +            ,1X,'  CREATE NEW OTIOS ',/
+     +            ,1X,'  D.B. FROM CRUNCH ',/
+     +            ,1X,'  FILE.            ',//)
+
+C*****
+C 2) UPDATE OTIOS.DMD WITH APPROPRIATE FILE NAMES
+C    INPUT = OTIOMM.CRU, WHERE MM = 2 DIGIT MONTH NUMBER
+C    OUTPUT = OTIOMM.DMS
+C*****
+
+610     OPEN (OUTDEV,'OTIOS.DMD',RANDIO)
+        WRITE(OUTDEV#25,616) (SCR(I),I=3,4)
+616     FORMAT (4HOTIO,2I1,4H.CRU)
+        WRITE(OUTDEV#45,617) (SCR(I),I=3,4)
+617     FORMAT (4HOTIO,2I1,4H.DMS)
+        CLOSE(OUTDEV)
+
+C*****
+C 3) EXECTURE THE LOAD
+C*****
+
+630     CALL DBEXEC('LOAD OTIOS.DMD')
+
+C*****
+C 4) THE LOAD HAS COMPLETED, UPDATE THE CONTROL FILE. 
+C    THIS TIME THE PHASE WILL BE SET TO ONE AND THE DATE WILL
+C    ALSO BE INCREMENTED TO THE NEXT DAY OF THE MONTH. THUS, THE NEXT
+C    TIME THE PROGRAM IS RUN THE WHOLE PROCESS WILL START OVER FOR THE
+C    NEXT DAY.
+C*****
+
+650     CALL UPDCTL(CTLDEV,PHASE,PDATE)
+
+C*****
+C 5) OUPUT END OF PHASE MESSAGE
+C****
+
+660     TYPE 665
+665     FORMAT (//,1X,'***** PHASE 4 COMPLETED *****',//)
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                     C
+C       FINISHED.                                          PAGE 7.0   C
+C                                                          --------   C
+C                                                                     C
+C       1) OUTPUT DATE AND TIME                                       C
+C       2) TERMINATE 1022 PROCESSING                                  C
+C       3) QUIT                                                       C
+C                                                                     C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+
+C*****
+C 1) OUTPUT CURRENT DATE AND TIME
+C*****
+
+C       C*****
+C       C FIRST GET CURRENT DATE AND TIME
+C       C*****
+
+700        CALL DATE(IDATE)
+           CALL TIME(ITIME)
+
+C       C*****
+C       C NOW OUTPUT THE INFORMATION
+C       C****
+720        TYPE 725,IDATE,ITIME
+725        FORMAT (1X,2A5,5X,A5,//)
+
+
+C*****
+C 2) TERMINATE 1022 PROCESSING
+C*****
+
+9000    CALL DBEND
+
+
+C*****
+C 3) QUIT
+C*****
+
+        END
+   P@	6x
