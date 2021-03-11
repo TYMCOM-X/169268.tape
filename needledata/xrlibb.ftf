@@ -1,0 +1,566 @@
+C                     (MSREPORT) XRLIB.FTF
+C    A LIBRARY FILE OF ROUTINES FOR EXTRACTING DATA FROM XRAY WITH AUX.
+C    CKTS. AND WRITING THE XRAY OUTPUT TO A LOG FILE OR (IN THE CASE OF
+C    A 'KS' COMMAND) TO A 1022 DATA BASE.
+C
+C    SUBROUTINES:
+C        XRCIR -- BUILDS THE AUX. CKT. TO XRAY;
+C        XRFOUT -- WRITES THE XRAY OUTPUT TO A FILE;
+C        XRGLIN -- GETS ONE LINE OF XRAY OUTPUT, PASSES IT TO XRFOUT;
+C
+C  IN ORDER TO RUN THE MAIN PROGRAM IN DETACHED MODE, ALL TERMINAL-TYPE
+C  OUTPUT IS WRITTEN TO A MONITOR LOG FILE (DEVICE NO. 22).  THIS FILE
+C  MUST BE IN RANDOM-ACCESS OUTPUT MODE.
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                    C
+C                       SUBROUTINE: XRCIR                            C
+C                                                                    C
+C    BUILDS AN AUX CKT TO XRAY.  PLACES PORT NUMBER IN COMMON:       C
+C                   /AUX/PORT                                        C
+C                                                                    C
+C       FORMAT:     CALL XRCIR(KERNEL,IERR)                          C
+C       ARGUMENTS:                                                   C
+C          KERNEL : VARIABLE CONTAINING THE KERNEL NUMBER TO         C
+C                   LOGIN TO.                                        C
+C          IERR   : ERROR FLAG.                                      C
+C                   IERR =  0:  NO ERROR. CIRCUIT BUILT.             C
+C                   IERR >  0:  UNABLE TO BUILD CIRCUIT.  VALUE =    C
+C                               CREAUX ERROR CODE:  < 10 = SUP ERROR C
+C                               CODE; > 10 = XEXEC ERROR CODE + 50   C
+C                   IERR = -1:  BAD RESPONSE FROM XRAY DURING LOGIN  C
+C                                                                    C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        SUBROUTINE XRCIR(KERNEL,IERR)
+
+        INTEGER KERNEL, IERR, XRAY(2), NOECHO(4), PORT, PROMPT, IERR2,
+     +    RESLT1, RESLT2
+
+C PLACE THE PORT NUMBER INTO COMMON.  INITIALIZE 'PROMPT' AS A
+C RIGHT-ARROW.  INITIALIZE 'NOECHO' AS 'LE', FOR XRAY COMMAND.
+C INITIALIZE 'IERR' AND 'IERR2' AS 0 FOR EACH CALL TO THIS SUBROUTINE.
+
+        COMMON /AUX/ PORT
+        DATA PROMPT /62/
+        DATA NOECHO/3,76,69,13/
+        IERR = 0
+        IERR2 = 0
+
+C BUILD THE XRAY LOGIN STRING USING THE KERNEL NUMBER FROM THE CALLER.1
+C BUILD THE AUXILIARY CIRCUIT TO XRAY.  IF ERROR RETURN IS NON ZERO, 
+C SKIP TO ERROR PROCESSING.
+
+        ENCODE (10,5000,XRAY)KERNEL
+ 5000      FORMAT ('XRAY:', I4, ';')
+
+        CALL FBCIR(XRAY,PORT,IERR2)
+
+        IF (IERR2 .NE. 0) GOTO 200
+
+C XRAY SHOULD GIVE THE NODE AND KERNEL NUMBER, THE DATE AND THEN
+C THE PROMPT.  IF NO PROMPT, PROBABLY WRONG HOST:  RETURN ERROR TO
+C CALLER.   RESULT1:  1 = FOUND; 2 = NOT FOUND.
+
+        CALL SCAN(PROMPT,RESLT1)   
+        IF (RESLT1 .NE. 1) GOTO 150
+
+C TURN OFF ECHO, THEN LOOK FOR THE PROMPT.  IF PROMPT IS THERE, DO A
+C SIMPLE RETURN.
+
+        CALL SEND(NOECHO)
+        CALL SCAN(PROMPT,RESLT2)
+        IF (RESLT2.EQ.1) RETURN
+
+C ERROR. BAD RESPONSE FROM HOST (RIGHT-ARROW NOT FOUND); PROBABLY NOT
+C XRAY, OR HOST DOWN.
+
+  150   IERR = -1
+        RETURN
+
+C ERROR.  NO LOGIN.  RETURN TO CALLER A CODED VERSION OF THE ERROR
+C NUMBER RECEIVED FROM XEXEC:  IF ERROR CODE IS IN THE RIGHT HALF-WORD,
+C MASK OUT THE LEFT HALF-WORD.  IF ERROR CODE IS IN LEFT HALF-WORD, EXTRACT
+C ERROR VALUE AND ADD 50 TO IT, TO DISTINGUISH FROM ERROR CODES FROM
+C RIGHT HALF-WORD.
+
+  200   IF (IERR2 .LT. "777777) IERR = IAND (IERR2, "777777)
+        IF (IERR2 .GT. "777777) IERR = (IERR2 / (2**18)) + 50
+
+        RETURN
+        END
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                    C
+C                       SUBROUTINE: XRFOUT                           C
+C                                                                    C
+C       WRITES THE OUTPUT FROM AN AUXILIARY CIRCUIT ONTO THE         C
+C        SPECIFIED FILE.                                             C
+C                                                                    C
+C       FORMAT:     CALL XRFOUT(PROMPT,FILNUM,LOGPOS)                C
+C       ARGUMENTS:                                                   C
+C          PROMPT : VARIABLE CONTAINING PROMPT CHARACTER, FLAGGING   C
+C                   END OF XRAY OUTPUT.                              C
+C          FILNUM : THE VARIABLE CONTAINING THE DISC DEVICE NUMBER   C
+C                   TO WHICH THE OUTPUT IS TO BE WRITTEN.            C
+C          LOGPOS : VARIABLE CONTAINING THE NUMBER OF THE FIRST LINE C
+C                   TO WRITE TO IN THE OUTPUT LOG FILE.              C
+C                                                                    C
+C       ACCESSES:  COMMON /AUX/ PORT, /OUTPOS/ MTRPOS                C
+C                                                                    C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        SUBROUTINE XRFOUT(PROMPT, FILNUM, LOGPOS)
+
+        INTEGER PROMPT, FILNUM, LOGPOS, PORT, MTRPOS, ARRAY(50,80),
+     +    LARRAY(80), ERR, LINCNT, LINNO
+
+C GET AUX. CKT'S. PORT NUMBER AND LINE ON MONITOR FILE TO WRITE ON.
+C INITIALIZE 'ARRAY' TO BLANKS, 'LINCNT' TO 0, AND 'LINNO' TO THE
+C NUMBER OF THE FIRST LINE ON THE OUTPUT FILE FOR WRITING ON:  IF THE
+C OUTPUT FILE IS THE RANDOM-ACCESS UNIVERSAL FILE, 'LINNO' IS SET TO
+C THE NUMBER OF THE LAST LINE OF THE FILE, PLUS 1; IF THE OUTPUT FILE
+C IS A SEQUENTIAL FILE THAT IS LOADED INTO A 1022 DATA-BASE BY THIS
+C PROGRAM, 'LINNO' IS SET TO 1.
+
+        COMMON /AUX/ PORT
+        COMMON /OUTPOS/ MTRPOS
+
+        DATA ARRAY /4000*'     '/
+        LINCNT = 0
+
+        LINNO = LOGPOS
+        IF (FILNUM .EQ. 23) LINNO = 1
+C RESET 'LARRAY' TO BLANKS, READ EACH LINE OF OUTPUT FROM XRAY INTO 'LARRAY'.
+C WRITE IT TO 'ARRAY' (FOR WRITING TO OUTPUT LOG FILE).
+C*******************************************************
+
+        DO 100 I = 1,50
+
+C RE-INITIALIZE 'LARRAY' TO BLANKS.
+
+        DO 30 J = 1,80
+        LARRAY(J) = '     '
+   30   CONTINUE
+
+C GET ONE LINE OF XRAY OUTPUT.
+
+        CALL XRGLIN (PROMPT, LARRAY, ERR)
+
+
+C ERROR:  0 = NORMAL, LOAD INTO 'ARRAY';  1 = TRUNCATED LINE, PRINT
+C WARNING ON MONITOR FILE AND LOAD INTO 'ARRAY';  2 = XRAY FINISHED,
+C WRITE OUTPUT TO LOG FILE;  3 = CKT. ZAPPED OR 60 SEC. TIMEOUT,
+C RETURN WITHOUT WRITING TO FILE.
+
+        IF (ERR .EQ. 0) GOTO  50
+        IF (ERR .EQ. 2) GOTO 200
+        IF (ERR .EQ. 3) RETURN
+
+        WRITE (22#MTRPOS, 5000) LINNO
+ 5000      FORMAT ('BAD LINE.  #', I5, ' TOO LONG!  TRUNCATED.  ', 
+     +     'POSSIBLE DATA LOSS!')
+        MTRPOS = SIZE (22) + 1
+
+C INCREMENT LINE COUNTERS: NUMBER OF LINES TO WRITE TO LOG FILE, AND
+C THE NUMBER OF THE LOG FILE LINE WHERE TRUNCATION OCCURRED.
+C LOAD LINE INTO OUTPUT ARRAY.
+
+   50   LINCNT = LINCNT + 1
+        LINNO = LINNO + I
+
+        DO 100 J = 1,80
+        ARRAY (I,J) = LARRAY (J)
+  100   CONTINUE
+
+C END LOOP.
+C*******************************************************
+
+C TRUNCATED OUTPUT.  PRINT WARNING ON MONITOR FILE.
+
+        WRITE (22#MTRPOS, 5005) LINNO
+ 5005      FORMAT ('BAD OUTPUT FROM XRAY.  .GE. 50 LINES, ',
+     +     'AT LINE', I6, '.  POSSIBLE LINES LOST!')
+        MTRPOS = SIZE (22) + 1
+
+C WRITE OUTPUT TO LOG FILE.
+C**********************
+
+  200   DO 300 I = 1, LINCNT
+        WRITE(FILNUM#LOGPOS,5010)(ARRAY(I,J),J=1,80)
+ 5010      FORMAT (80A1)
+        LOGPOS = LOGPOS + 1
+  300   CONTINUE
+
+
+  900   RETURN
+        END
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                    C
+C                       SUBROUTINE: XRGLIN                           C
+C                                                                    C
+C   GETS ONE LINE (MAX 78 CHARS) OF OUTPUT FROM AN AUX CKT TO XRAY.  C
+C                                                                    C
+C       FORMAT:     CALL XRGLIN (PROMPT, LARRAY, ERR)                C
+C       ARGUMENTS:                                                   C
+C          PROMPT : VARIABLE WITH THE PROMPT CHARACTER FOR TESTING   C
+C                   FOR END OF OUTPUT.                               C
+C          LARRAY : ARRAY CONTAINING THE OUTPUT LINE FROM XRAY       C
+C          ERR    : VARIABLE CONTAINING ERROR FLAG.                  C
+C                   O = NO ERROR.                                    C
+C                   1 = OVER-LONG LINE ( > 78 CHARACTERS).           C
+C                   2 = END OF OUTPUT FROM XRAY.                     C
+C                   3 = ERROR:  CKT ZAPPED OR 1 MIN. TIMEOUT.        C
+C                                                                    C
+C       ACCESSES:   COMMON/AUX/PORT                                  C
+C                                                                    C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        SUBROUTINE XRGLIN (PROMPT, LARRAY, ERR)
+
+        INTEGER PROMPT, LARRAY (79), ERR, PORT, CHAR, WTCNT, CR, LF
+        INTEGER WAIT
+
+C GET THE AUX. CKT'S. PORT NUMBER FOR EXTRACTING DATA, AND INITIALIZE
+C CONSTANTS FOR TESTING FOR END OF LINE, AND INITIALIZE ERROR CODE.
+
+        COMMON /AUX/ PORT
+        DATA CR /13/, LF /10/, WAIT /1.0/
+        ERR = 0
+
+C READ EACH CHAR. IN LINE OF XRAY OUTPUT, AND LOAD THEM INTO AN ARRAY
+C FOR PASSING BACK TO THE CALLING SUBROUTINE (XRFOUT).
+C*******************************************************
+
+        DO 100 I = 1,80
+   25   WAIT=60
+        CALL GTCHAR (PORT, CHAR, WAIT)
+
+C TEST FOR ERROR RETURNS: -1 = TIMEOUT; -2 = AUX. CKT. ZAPPED.
+
+        IF (CHAR.EQ.-1) GOTO  50
+        IF (CHAR.EQ.-2) GOTO 600
+
+C MASK FOR ONLY THE LAST 7 BITS.
+
+        CHAR=IAND(CHAR,"177)
+
+C TEST FOR END OF LINE AND FOR END OF OUTPUT FROM HOST.  IGNORE
+C CARRIAGE RETURN THEN END READING DATA AT LINE FEED, AND SEND LINE OF
+C DATA (WITHOUT CR/LF PAIR) TO CALLING ROUTINE AND RETURN TO CALLER.
+C DO NOT SEND THE PROMPT AT END OF OUTPUT, BUT SET END-OF-OUTPUT FLAG
+C AND RETURN TO CALLER.
+
+        IF (CHAR .EQ. CR) GOTO 25
+        IF (CHAR .EQ. LF) RETURN
+        IF (CHAR .EQ. PROMPT) GOTO 500
+
+C MOVE THE CHAR TO THE LEFTMOST 8 BITS AND PAD THE WORD WITH BLANKS.
+C LOAD THE CHARACTER INTO THE PROPER ARRAY ELEMENT.
+
+        CHAR=LSH(CHAR,29)
+        CHAR=IOR(CHAR,"1004020100)
+
+        LARRAY(I)=CHAR
+        GOTO 100
+
+C TIMEOUT HAS OCCURRED.  IF 60 SEC. WITH NO CHAR., DO ERROR RETURN.
+
+   50   WTCNT = WTCNT + 1
+        IF (WTCNT .GE. 60) GOTO 600
+  100   CONTINUE
+
+C END OF LOOP.
+C*******************************************************
+
+C MORE THAN 80 CHARS. IN LINE.
+
+        ERR = 1
+        RETURN
+
+C END OF OUTPUT FROM XRAY:  PROMPT WAS RECEIVED.
+
+  500   ERR = 2
+        RETURN
+
+C CKT. ZAPPED OR 60 SEC. TIMOUT.
+
+  600   ERR = 3
+        RETURN
+
+        END
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                    C
+C                       SUBROUTINE: GXRCIR                           C
+C                                                                    C
+C    BUILDS AN AUX CKT TO XRAY THROUGH A GATEWAY.  PLACES PORT        C
+C    NUMBER IN COMMON: /AUX/PORT                                     C
+C                                                                    C
+C       FORMAT:     CALL GXRCIR(KERNEL,IERR)                         C
+C       ARGUMENTS:                                                   C
+C          KERNEL : VARIABLE CONTAINING THE KERNEL NUMBER TO         C
+C                   LOGIN TO.                                        C
+C          IERR   : ERROR FLAG.                                      C
+C                   IERR =  0:  NO ERROR. CIRCUIT BUILT.             C
+C                   IERR >  0:  UNABLE TO BUILD CIRCUIT.  VALUE =    C
+C                               CREAUX ERROR CODE:  < 10 = SUP ERROR C
+C                               CODE; > 10 = XEXEC ERROR CODE + 50   C
+C                   IERR = -1:  BAD RESPONSE FROM XRAY DURING LOGIN  C
+C                   ierr = -2:  Trouble establishing connection to   C
+C                               private network
+C                                                                    C 
+C                                                                    C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        SUBROUTINE GXRCIR(KERNEL,IERR)
+
+        INTEGER KERNEL, IERR,NOECHO(4), PORT, PROMPT, IERR2
+        integer RESLT1, RESLT2, NERR,comand(44),ncomm(44),gname(4),ghost
+        integer xname(4),xpass(3),ipwd(3),gway(9),gpass(3)
+	INTEGER colon
+
+C PLACE THE PORT NUMBER INTO COMMON.  INITIALIZE 'PROMPT' AS A
+C RIGHT-ARROW.  INITIALIZE 'NOECHO' AS 'LE', FOR XRAY COMMAND.
+C INITIALIZE 'IERR' AND 'IERR2' AS 0 FOR EACH CALL TO THIS SUBROUTINE.
+
+        COMMON /AUX/ PORT
+	common /gate/gname,ghost,gpass
+	common /xray/xname,xpass
+        DATA PROMPT /62/,colon /58/
+        DATA NOECHO/3,76,69,13/
+	NERR = 0
+        IERR = 0
+	ihost = '    '
+
+C BUILD THE XRAY LOGIN STRING USING THE KERNEL NUMBER FROM THE CALLER.1
+C BUILD THE AUXILIARY CIRCUIT TO XRAY.  IF ERROR RETURN IS NON ZERO, 
+C SKIP TO ERROR PROCESSING.
+*	type 999
+999	format(' xrcir')
+
+15      CALL CONSTR(GNAME,GHOST,GPASS,COMAND)
+        DO 20 I=2,43
+20      NCOMM(I)=LSH(COMAND(I),29)
+        ENCODE(42,25,GWAY)(NCOMM(I),I=2,43)
+25	format(42a1)
+	ierr2 = 0
+
+40      CALL FBCIR(gway,PORT,IERR2)
+        IF (IERR2 .NE. 0) GOTO 200
+
+*	At this stage a circuit should have been established to the private
+*	network. Scan for colon and issue xray log-in down aux. circuit.
+
+	call scan(colon,reslt1)
+	if (reslt1 .ne. 1) goto 175
+
+50	encode(5,55,ikernl)kernel
+55	format(i5)
+**	type 60,ikernl,port
+60	format(' kernel: ',a5,'  port: ',i5)
+	call constr(xname,ikernl,xpass,comand)
+	call send(comand)
+
+C XRAY SHOULD GIVE THE NODE AND KERNEL NUMBER, THE DATE AND THEN
+C THE PROMPT.  IF NO PROMPT, PROBABLY WRONG HOST:  RETURN ERROR TO
+C CALLER.   RESULT1:  1 = FOUND; 2 = NOT FOUND.
+
+        CALL SCAN(PROMPT,RESLT1)   
+	IF (RESLT1 .NE. 1) GOTO 150
+
+C TURN OFF ECHO, THEN LOOK FOR THE PROMPT.  IF PROMPT IS THERE, DO A
+C SIMPLE RETURN.
+
+        CALL SEND(NOECHO)
+        CALL SCAN(PROMPT,RESLT2)
+        IF (RESLT2.EQ.1) RETURN         
+
+C ERROR. BAD RESPONSE FROM HOST (RIGHT-ARROW NOT FOUND); PROBABLY NOT
+C XRAY, OR HOST DOWN.
+
+150	IERR = -1
+	goto 180
+175	ierr = -2
+180     RETURN
+
+C ERROR.  NO LOGIN.  RETURN TO CALLER A CODED VERSION OF THE ERROR
+C NUMBER RECEIVED FROM XEXEC:  IF ERROR CODE IS IN THE RIGHT HALF-WORD,
+C MASK OUT THE LEFT HALF-WORD.  IF ERROR CODE IS IN LEFT HALF-WORD, EXTRACT
+C ERROR VALUE AND ADD 50 TO IT, TO DISTINGUISH FROM ERROR CODES FROM
+C RIGHT HALF-WORD.
+
+  200   IF (IERR2 .LT. "777777) IERR = IAND (IERR2, "777777)
+        IF (IERR2 .GT. "777777) IERR = (IERR2 / (2**18)) + 50
+
+        RETURN
+        END
+
+*********************************************************************
+*                                                                   *
+*	subroutine  :  constr                                       *
+*                                                                   *
+*	This is a utility subroutine that builds a array used by    *
+*	the 'send' routine to send characters down an auxiliary     *
+*       circuit.                                                    *
+*                                                                   *
+*	format  :  call constr (name,ihost,pwd,comand)              *
+*                                                                   *
+*	arguments :                                                 *
+*	name  :  20 character array containing the name of user     *
+*		 (for log-in) or command string to send down the    *
+*		 the auxiliary circuit                              *
+*	ihost :  4 character array containing host # the user       *
+*		 wishes to log into                                 *
+*	pwd   :  user password                                      *
+*	comand : 43 word array in which the built command string    *
+*		 or log-in stream is returned                       *
+*                                                                   *
+********************************************************************* 
+ 
+
+	subroutine constr(name,ihost,pwd,comand)
+
+	integer comand(44),name(4),pwd(3),comm(9),char,cr,IFLAG
+	data cr /13/,comm /9*5h     /
+
+        IFLAG=0
+	do 5 i=1,44
+5	comand(i) = 0
+	do 7 i=1,9
+7	comm(i) = '     '
+
+	if (ihost .ne. '    ') goto 25
+	if (pwd(1) .ne. '     ') goto 20
+
+	encode(20,10,comm)name
+10	format(4a5)
+	goto 50
+
+20	encode (36,22,comm)name,pwd
+22	format(4a5,';',3a5)
+	goto 50
+
+25	encode (42,30,comm)name,ihost,pwd
+30	format(4a5,':',a5,';',3a5)
+
+50	j=1
+*	type 55,comm
+55	format(1x,9a5)
+
+*	look a character ahead and remove strings of embedded blanks
+*	which are more than 1 blank in length.
+
+	do 75 i=2,43
+		call rtc(char,comm,i-1)
+		if (i .ne. 43) call rtc(nchar,comm,i)
+		if (i .eq. 43) nchar = ' '
+                IF (IFLAG.EQ.0) GO TO 60
+                        IF (CHAR.EQ.' ') GOTO 75
+                        IF (CHAR.NE.' ') IFLAG=0
+                        GOTO 65
+60              if (char .eq. ' ' .and. nchar .eq. ' ') goto 75
+		if (char .eq. ' ' .and. nchar .eq. ':') goto 75
+		if (char .eq. ' ' .and. nchar .eq. ';') goto 75
+                IF (CHAR .EQ. ':' ) IFLAG=1
+
+65            j = j+1
+*	
+*       RIGHT JUSTIFY CHARACTER
+*
+                CHAR = LSH(CHAR,-29)
+		comand(j) = char
+75	continue
+
+*	include length of command string in first word and a 'cr' in the last
+
+	comand(1) = j
+	j = j+1
+	comand(j) = cr
+
+	return
+	end
+
+********************************************************************
+*                                                                  *
+*                 	subroutine  :  gpwd                   *
+*                                                                  *
+*	this subroutine obtains the following usernames and        *
+*	passwords and places them in a common area for access      *
+*	by the 'xprobe' and 'xrcir' routines.                      *
+*                                                                  *
+*	1. Gateway username                                        *
+*	2. Gateway host number (optional)                          *
+*	3. Private network XRAY username                           *
+*	4. Private network XRAY password                           *
+*	5. Private network TMCS password (optional)                *
+*	6. Valid username on private network TMCS host             *
+*	7. Valid password on private network TMCS host             *
+*                                                                  *
+********************************************************************
+      
+        SUBROUTINE GPWD
+
+	integer gname(4),ghost,xname(4),xpass(3)
+
+	common /gate/gname,ghost
+	common /xray/xname,xpass
+
+	type 10
+10	format(' gateway username: ',$)
+	accept 15,gname
+15	format(4a5)
+
+	type 20
+20	format(' gateway host: ',$)
+	accept 25, ghost
+25	format(a5)
+
+	type 30
+30	format(' xray username: ',$)
+	accept 35,xname
+35	format(4a5)
+
+	call echo(0)
+	type 40
+40	format(' xray password: ',$)
+	accept 45,xpass
+45	format(3a5)
+
+	call echo(1)
+
+
+
+	return
+	end
+
+************************************************************************
+*                                                                      *
+*              subroutine  :  sofzap                                   *
+*                                                                      *
+*       This subroutine sends a control-Z(^Z) down the auxiliary       *
+*       circuit to tear down the XRAY xircuit in the private network   *
+*                                                                      *
+************************************************************************
+
+	subroutine sofzap(ierr)
+
+        INTEGER CNTRLZ(3),COLON,PORT
+
+	common /aux/ port
+	data cntrlz /2,26,13/,COLON /58/
+
+	call send(cntrlz)
+	call scan(colon,ierr)
+*	type 999,ierr
+999	format(' result from sofzap: ',i4)
+
+        IX=PORT
+	return
+	end
+
+    e@C’
