@@ -1,0 +1,123 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!  Do you understand the procedure to run this program?  If so, great!
+!!!  If not, please refer to its documentation, (WHOEVER:28)XPCTRF.DOC.
+!!!  Please do not hesitate to contact Jason Ma (X5010) if you have 
+!!!  further questions.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+	O (NETSTAT)60802A.
+	LET N EQ 3.
+
+
+!!!!!!!!!!!!!!!
+!!!  Initialization.
+!!!!!!!!!!!!!!!
+
+	INIT 1 XPCTRF.DMI.
+	DPL START.
+	DEFINE INTEGER DAT S M C TS TM TC TOS TOM TOC FILE.
+	DEFINE TEXT 25 USER.
+
+	F SYSID LE 100.
+	EV DAT EQ MAX ENDDATE.
+	LET FILE EQ 1.
+	GOTO H4463.
+
+
+!!!!!!!!!!!!!!!
+!!!  Host 4463....
+!!!!!!!!!!!!!!!
+
+H4463: 	F TERMHOST EQ 4463 AND ORIGHOST NEQ 4463.
+	IF SYSNREC EQ 0 THEN H4463B.
+	EV TS EQ TOT 1 TM EQ TOT TOTMIN TC EQ TOT TOTALCHARS.
+	SOR USRNAM.
+	GETR START1.
+	LET USER EQ USRNAM.
+	LET S EQ 1 M EQ TOTMIN C EQ TOTALCHARS.
+
+START1:	GETR END1.
+ 		IF USER EQ USRNAM THEN RESUME1.
+		GOTO PRINT1.
+RESUME1:	LET USER EQ USRNAM.
+		LET S EQ S + 1 M EQ M + TOTMIN C EQ C + TOTALCHARS.
+	GOTO START1.
+
+PRINT1:		P ON 1 DAT USER S M C FORMAT I6 1X ' 4463' 1X A25 &
+		3(1X I10) 3(1X '        -1') END.
+		LET S EQ 0 M EQ 0 C EQ 0.
+		GOTO RESUME1.
+
+END1:		P ON 1 DAT USER S M C FORMAT I6 1X ' 4463' 1X A25 &
+		3(1X I10) 3(1X '        -1') END.
+
+
+H4463B:	F ORIGHOST EQ 4463 AND TERMHOST NEQ 4463.
+	IF SYSNREC EQ 0 THEN H7132.
+	EV TOS EQ TOT 1 TOM EQ TOT TOTMIN TOC EQ TOT TOTALCHARS.
+	P ON 1 DAT TS TM TC TOS TOM TOC FORMAT I6 1X ' 4463' 1X &
+	'WHOLEDAY                 ' 6(1X I10) END.
+	GOTO H7132.
+
+
+!!!!!!!!!!!!!!!
+!!!  Host 7132....
+!!!!!!!!!!!!!!!
+
+H7132:	F TERMHOST EQ 7132 AND ORIGHOST NEQ 7132.
+	IF SYSNREC EQ 0 THEN H7132B.
+	EV TS EQ TOT 1 TM EQ TOT TOTMIN TC EQ TOT TOTALCHARS.
+	SOR USRNAM.
+	GETR START2.
+	LET USER EQ USRNAM.
+	LET S EQ 1 M EQ TOTMIN C EQ TOTALCHARS.
+
+START2:	GETR END2.
+		IF USER EQ USRNAM THEN RESUME2.
+		GOTO PRINT2.
+RESUME2:	LET USER EQ USRNAM.
+		LET S EQ S + 1 M EQ M + TOTMIN C EQ C + TOTALCHARS.
+	GOTO START2.
+
+PRINT2:		P ON 1 DAT USER S M C FORMAT I6 1X ' 7132' 1X A25 &
+		3(1X I10) 3(1X '        -1') END.
+		LET S EQ 0 M EQ 0 C EQ 0.
+		GOTO RESUME2.
+
+END2:		P ON 1 DAT USER S M C FORMAT I6 1X ' 7132' 1X A25 &
+		3(1X I10) 3(1X '        -1') END.
+
+
+H7132B:	F ORIGHOST EQ 7132 AND TERMHOST NEQ 7132.
+	IF SYSNREC EQ 0 THEN FILE.
+	EV TOS EQ TOT 1 TOM EQ TOT TOTMIN TOC EQ TOT TOTALCHARS.
+	P ON 1 DAT TS TM TC TOS TOM TOC FORMAT I6 1X ' 7132' 1X &
+	'WHOLEDAY                 ' 6(1X I10) END.
+	GOTO FILE.
+
+
+!!!!!!!!!!!!!!!
+!!!  Determine which database is to be used.
+!!!!!!!!!!!!!!!
+
+FILE:	LET FILE EQ FILE + 1.
+	IF FILE EQ 2 THEN FILE2.
+	IF FILE EQ 3 THEN FILE3.
+	GOTO FINISH.
+
+FILE2:	IF N EQ 1 THEN FINISH.
+	O (NETSTAT)60802B.
+	GOTO H4463.
+FILE3:	IF N EQ 2 THEN FINISH.
+	O (NETSTAT)60802C.
+	GOTO H4463.
+
+
+!!!!!!!!!!!!!!!
+!!!  Turn it loose.
+!!!!!!!!!!!!!!!
+
+FINISH:	RELEASE 1.
+	DPL STOP.
+	DPL END.
