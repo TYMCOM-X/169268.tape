@@ -1,0 +1,579 @@
+
+
+
+ 
+
+
+
+
+
+
+                              MLIB
+
+                          BSO Librarian
+
+      (to run on a DECsystem 10 or 20 under TOPS-10 or 20)
+
+                          for use with
+
+                BSO's Cross-Linkage Editor, MLINK
+
+                               on
+
+                         TYMSHARE, INC.
+
+
+
+
+
+
+
+
+          This user's manual is intended as a  thorough
+          product  description.   It is, to the best of
+          our knowledge, complete and accurate.
+
+          The Boston Systems Office does not,  however,
+          warrant  this  document's accuracy, nor shall
+          it be held responsible for errors of  content
+          or   omission.   The  Boston  Systems  Office
+          reserves the right to  update  this  document
+          without prior notification.
+
+
+
+
+         Copyright, The Boston Systems Office, Inc. 1979
+                        469 Moody Street
+                       Waltham, MA  02154
+                         (617) 894-7800
+
+
+
+
+                    Updated February 20, 1981
+
+
+
+                    TABLE OF CONTENTS        
+        Section                                         Page
+        1.0     Introduction to MLIB                       3
+        2.0     Running the Librarian program              4
+                   Command summary
+        3.0     library name specification                 5
+                   Creating a new library
+                   Changing an existing library
+                   Using an existing library name
+        4.0     Module specification                       6
+                   INSERT command
+                   DELETE command
+                   EXTRACT command
+                   REPLACE command
+                   
+        5.0     Miscellaneous commands                     7
+                   LIST command
+                   RESET command
+                   EXIT command
+                   OUTPUT command
+        6.0     Creation of the library                    8
+                   GO command
+        7.0     Indirect commands                          9
+        8.0     Error messages                            10
+                                                           Page 3
+
+
+1.0 Introduction to MLIB
+
+
+MLIB is BSO's Librarian program.  It  enables  the  creation  and
+maintenance  of  libraries consisting of object modules which may
+be frequently used in various programs.
+
+MLIB takes files containing one or more  BSO  format  modules  as
+input,  storing  them  in a specified library.  When a library is
+called with BSO's Cross Linkage  Editor  "LIBRARY"  command,  all
+modules  within  the  specified  library  are  quickly scanned to
+determine if they resolve currently unresolved global references.
+Those  modules  which  do  resolve  globals  are  included in the
+linkage process.
+
+MLIB uses full  word  commands,  which  may  be  abbreviated,  if
+desired,  as  long as the abbreviated forms are unique, i.e.  can
+stand for only one possible command.
+
+The steps in setting up a library are as follows:
+
+     1.  Run the MLIB Librarian program.
+
+     2.  Specify the name of an existing or new library.
+
+     3.  Specify which files should be inserted into  or  modules
+         deleted from the library.
+
+     4.  Execute the  "GO"  command  which  creates  the  new  or
+         changed library.
+
+                                                           Page 4
+
+
+2.0 Running the Librarian program
+
+
+At the monitor level, type:
+
+          _R MLIB
+
+MLIB will respond with a header message:
+
+          Librarian 
+          Copyright, The Boston Systems Office Inc. 1979
+          For help type "/HELP"
+          Library?
+
+At this point MLIB is waiting for the user to specify the name of
+the library which is to be created or altered.
+
+
+2.1 Command summary
+
+A summary of all MLIB commands will  be  printed  on  the  user's
+terminal  if  "/HELP"  is  typed  in  response  to the "Library?"
+question.  The command "HELP" (with no "/") may be typed  at  any
+time  that  MLIB is at command level to receive a listing of MLIB
+commands.
+                                                           Page 5
+
+
+3.0 library name specification
+
+
+3.1 Creating a new library
+
+If a new library is to be created, the user types  in  a  library
+name  in  response  to  "Library?", using the standard "filespec"
+format:
+
+          dev:filename.ext[directory]
+
+where "dev" is a device name (e.g.  "DTA0:" for Dectape Unit  0),
+and  can  be  omitted  to  use  the user's default system device;
+"[directory]" is the User File Directory (UFD) and can be omitted
+to  use the user's default directory area;  and "filename.ext" is
+the 1  to  6  character  filename  and  1  to  3  character  file
+extension.  
+
+The default extension for a  library  filename,  if  one  is  not
+supplied, is .LIB.  
+
+MLIB will print "%LIBCNL Creating new library" to  indicate  that
+the filename specified does not already exist, and then will give
+the "/" prompt.  
+
+Any insertions made to this library will  become  effective  upon
+execution of the "GO" command (Section 6.0).
+
+
+3.2 Changing an existing library
+
+If the user  wishes  to  make  changes  in  an  already  existing
+library,  he  types  the  filename  of  the  existing  library in
+response  to  "Library?".   MLIB  will  print  the  "/"   prompt,
+indicating that it is ready to accept insertions to and deletions
+from the specified existing library.
+
+Any changes made to  this  library  will  become  effective  upon
+execution  of the "GO" command, and the original library will not
+exist (no backup file).  The user may retain the original library
+by  renaming  the new library before the "GO" command is executed
+(see "OUTPUT" command.)
+
+
+3.3 Using an existing library name
+
+If the user wishes to use the name of an already existing library
+but  not  the  contents,  he  may  follow  the  library name with
+"/CREATE".  This will result in the loss of the contents  of  the
+old  library,  and the creation of a new library with the name of
+the old library.  MLIB will print "%LIBCNL Creating new  library"
+followed by the "/" prompt.
+                                                           Page 6
+
+
+4.0 Module specification
+
+
+4.1 INSERT command
+
+To add a module to a library, the user types:
+
+          INSERT filespec[,filespec,...]
+
+where "filespec" is the name of an existing file  containing  one
+or  more relocatable BSO format object modules.  The default file
+extension,  when  one  is  not  supplied,  is  .ROB.   Note  that
+filespecs  are  not  "sticky", i.e.  device names and directories
+must be repeated with each filename (where the default device  or
+directory    is    not    wanted).     For    example:    "INSERT
+DTA0:A,DTA0:B,DTA0:C" ensures that the device name of  all  three
+files will be "DTA0", where "INSERT DTA0:A,B,C" does not.
+
+The contents of one library may be inserted into another  by  the
+INSERT command.
+
+
+4.2 DELETE command
+
+To delete a module from a library, the user types:
+
+          DELETE module[,module,...]
+
+where "module" is the name of the module to be removed.
+
+
+4.3 EXTRACT command
+
+To copy single modules from a library into  separate  files,  the
+user types:
+
+          EXTRACT filespec=module[,filespec=module,...]
+
+The default extension for the filespec is .ROB.
+
+The "EXTRACT" command leaves the specified module in the library,
+creating  a  copy  in  the  specified  file.   NOTE:  When the GO
+command is given, the library is actually created.  Therefore  if
+the  "filespec" named in the "EXTRACT" command is the same as one
+used previously in another command, for example, an  "INSERT"  or
+"REPLACE"  command,  the  most  recent  rather  than the original
+content of the file will be INSERTed or REPLACEd.
+
+
+                                                           Page 7
+
+
+4.4 REPLACE command
+
+To add a module to a library, when a  module  by  the  same  name
+already exists in the library, the user types:
+
+          REPLACE filespec[,filespec,...] 
+
+Again, the default extension is .ROB.  The "REPLACE"  command  is
+identical  to  the  "INSERT"  command,  except that the module(s)
+being inserted will replace any already existing  one(s)  of  the
+same name.
+
+
+
+
+
+
+5.0 Miscellaneous commands
+
+
+5.1 LIST command
+
+Current information about  the  contents  of  the  library  being
+created  or  edited  may be printed on the user's terminal by the
+command:
+
+          LIST[/switches][module,module,...]
+
+If module names are omitted,  information  is  listed  about  all
+modules in the library.
+
+If no switches are given, the names of  modules  in  the  library
+plus creation and insertion dates are listed.
+
+If the "/SYMBOLS" switch is typed, a listing of symbols  in  each
+module is included.
+
+If the "/OUT:filespec" switch is typed, the listing is copied  to
+the  specified file.  NOTE:  "filespec" should not be the name of
+a file used in any other command (for  example,  in  an  "INSERT"
+command) or results will be unpredictable.  
+
+
+5.2 RESET command
+
+At any point before the command "GO" is executed,  the  Librarian
+may be restored to its initial state by typing:
+
+          RESET
+
+MLIB will cause all  commands  made  since  the  last  "Library?"
+prompt to be completely invalidated.  The "Library?" message will
+print, and the editing process may begin again from scratch.  
+
+
+5.3 EXIT command
+                                                           Page 8
+
+
+It is possible to leave the Librarian by typing either:
+
+          EXIT, <Control-Z> or <Control-C>.
+
+All changes made since the last "Library?"  prompt  will  not  be
+implemented.  
+
+
+5.4 OUTPUT command
+
+If the user desires to retain both the original  and  the  edited
+library, he may type the following command:
+
+          OUTPUT filespec
+
+where "filespec" is a library name to  be  given  to  the  edited
+library.   Both the changed and the original libraries will exist
+after the execution of the "GO" command.
+
+
+
+
+
+
+6.0 Creation of the library
+
+
+When the required changes to the  library  have  been  specified,
+these changes are implemented by the following command:
+
+          GO
+
+This command creates  a  library  under  the  name  specified  in
+response  to  the "Library?" question, OR under the name given in
+the last OUTPUT command if such a command has  been  made.   MLIB
+then returns to monitor level.
+                                                           Page 9
+
+
+7.0 Indirect Commands
+
+A user of MLIB may  frequently  find  himself  linking  the  same
+sequence  of  modules together to produce the same output file(s)
+with the same set of parameters very frequently.  In  cases  like
+these,  it  often  becomes  cumbersome  to  have to type the same
+sequence of commands over and over for each usage of the program.
+
+In order to make  the  process  easier,  MLIB  supports  indirect
+(batch)  command files, which allow the user to put a sequence of
+commonly-used MLIB commands in a file, which MLIB can  then  read
+in lien of terminal input at linkage time.
+
+A command file, which can be created and/or edited using standard
+system  editor  utilities,  may  be  executed by MLIB by typing a
+command of the form
+
+         /@filespec
+
+This causes the file named in "filespec" (which has in this  case
+a  default  extension  of  ".CMD")  to  be  read  by MLIB and the
+commands contained therein to be processed as if they  came  from
+the  user's  terminal.   When the command file has been executed,
+the user once again has control over  MLIB,  and  may  type  more
+commands  from  his terminal, if desired.  Indirect command files
+may not currently be nested;  that is, no indirect  command  file
+may contain an "@" command.
+                                                          Page 10
+
+
+8.0 Error messages
+
+
+                    ***** Fatal errors *****
+
+Unsupported block type,  Illegal block type was encountered
+file <filespec>          in an input file.
+
+File <filespec> not in   Input file does not conform to 
+proper format            specification, usually due to improper
+                         delimiter.
+
+File <filespec> is in    File has a serious error, such as a
+bad format               carriage return but no linefeed.
+
+Wrong micro type,        Micro type in a module does not conform
+file <filespec>          to type from prior modules.
+
+Internal error           Internal bug.  Please report this to
+                         BSO at your earliest convenience.
+
+Error on input           I/O error on input file.
+
+Error on object file     I/O error on writing the object file.
+
+Error on extract_list    I/O error on writing the extract or
+file                     list file.
+
+No more core available   An unsuccessful attempt was made to 
+                         expand MLIB's table space.
+
+
+                   ***** Command errors *****
+
+Illegal argument         Improper argument given as part of a
+                         command.
+
+Illegal switch           Self-explanatory
+
+Device <device_name>     Device does not exist or channel cannot
+not available            be opened for specified device.
+
+Filename not specified   Filename was not given for a directory
+                         device.
+
+Enter error              Couldn't create the named file.
+
+No such module           User-specified module doesn't exist.
+
+No modules to output     User wants output but didn't specify any
+                         input (given during "GO" command).
+
+Illegal command          Self-explanatory
+
+Parameters required      User gave a command (such as OUTPUT) and
+                         didn't supply necessary parameters.
+                                                          Page 11
+
+
+No spaces allowed in     Self-explanatory
+filespecs
+
+Multiple extensions      More than one dot in a filespec.
+illegal
+
+Multiple filenames       Self-explanatory
+illegal
+
+Multiple devices         More than one colon in a filespec.
+illegal
+
+Multiple paths illegal   More than one directory in a filespec.
+
+Illegal PPN              Self-explanatory
+
+Lookup error for         Couldn't open an input file.
+<filespec>
+
+Command files too        Command files cannot be nested at all.
+deep
+
+
+                  ***** Warning messages *****
+
+Multiply defined         User can only have one module of a
+module <module_name>     given name (first is kept; 
+                         subsequent modules cause an error).
+
+Multiply defined         If more than one internal of a given
+symbol in module         name is encountered, the first is kept
+                         and all successive occurrences are
+                         ignored.
+
+Creating new library     Self-explanatory
+
+Checksum error           Checksum error on an input file.
+
+Master checksum error    Self explanatory
+
+
+
+        HOW TO REPORT DOCUMENTATION AND SOFTWARE PROBLEMS
+
+
+Documentation:
+
+At BSO we are constantly striving to improve the quality  of  our
+documentation.    If  you  have  had  any  trouble  locating  the
+information you need, or have found parts of this  manual  to  be
+unclear  or  inaccurate,  we  would  appreciate hearing from you.
+Please use the general purpose form on the following page.
+
+
+Software:
+
+In the event you  encounter  a  problem  with  your  use  of  BSO
+software,  please  report  the difficulty to us by mailing in the
+following three items:
+
+     1.  The PROBLEM AND SUGGESTION  REPORT  on  the  next  page,
+         giving  a  description  of the software problem.  Please
+         fill in all requested information.
+
+     2.  A small SAMPLE PROGRAM which illustrates the problem you
+         encountered.   We  need  the  source code of your sample
+         program ON WHATEVER  MEDIUM  (tape  or  disk)  YOUR  BSO
+         SOFTWARE ARRIVED.  If an updated version of the software
+         becomes necessary, we will send it to you on the tape or
+         disk  you  have  provided  (assuming  you  are currently
+         covered under a  new  product  warranty  or  a  software
+         maintenance contract).
+
+     3.  TERMINAL SESSIONS and/or LISTINGS of your sample program
+         with  arrows  and comments to indicate where the problem
+         occurred.
+
+This information has proven to be  essential  for  the  effective
+processing  of  any  software  problems.   Your  co-operation  in
+sending the above three items, plus  any  additional  information
+that  might  prove  helpful, such as command files, object files,
+listing files, relocatable binary (ROB) files, etc., will  result
+in the speediest possible handling of your problem.
+
+
+
+                 THE BOSTON SYSTEMS OFFICE, INC.
+                  PROBLEM AND SUGGESTION REPORT
+
+
+NOTE:  If you are reporting a software problem, DO  NOT  send  in
+this  form  alone.   Please  see the previous page for additional
+required information.
+
+
+Product:                                    Version:
+-----------------------------------------------------------------
+Distribution medium (mag tape, floppy, RK-05, etc.):
+-----------------------------------------------------------------
+Reported by:                                Date:
+-----------------------------------------------------------------
+Company:                                    Phone:
+-----------------------------------------------------------------
+Address:
+-----------------------------------------------------------------
+Host computer/operating system:
+-----------------------------------------------------------------
+
+Comments regarding software or documentation:
+-----------------------------------------------------------------      
+
+-----------------------------------------------------------------
+
+-----------------------------------------------------------------
+
+-----------------------------------------------------------------
+
+-----------------------------------------------------------------
+
+-----------------------------------------------------------------
+
+-----------------------------------------------------------------
+
+-----------------------------------------------------------------
+
+-------------------------------------------------------------
+
+-----------------------------------------------------------------
+
+-----------------------------------------------------------------
+
+
+Please  mail  this   form,   along   with   additional   required
+information, to:  
+
+                 The Boston Systems Office, Inc.
+                        469 Moody Street
+                       Waltham, MA  02154
+   z x
