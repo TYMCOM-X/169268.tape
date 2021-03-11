@@ -1,0 +1,298 @@
+***********************************************************************
+*       DAILY.F4      J.JOELS     VERS. 1      AUGUST,1979            *
+*                                                                     *
+*       THIS PROGRAM BUILDS ALL DAILY FILES TO BE TELECOPIED TO C30   *
+*       FOR A&IS.  IT BUILDS THE FOLLOWING DAILY FILES:               *
+*       1.  NODE/PORT-PRICING DAILY FILE (NPMMDD.NET)                 *
+*       2.  DEDICATED REMOTE DAILY FILE (RHMMDD.DED)                  *
+*       3.  GATEWAY DAILY FILE (GTMMDD.WAY)                           *
+*                                                                     *
+***********************************************************************
+
+        CALL DBSTRT (1,0,1,0,1,0,1,0,1,0,1,0,1,0)
+
+        INTEGER NPDAY(2),RHDAY(2),GTDAY(2),NPCTL(2),L(2),
+     X          SCR(6),JOBFLE(2),SCR2(3),DATA(11),MONTBL(12),IFILE(2),
+     X          PRTDMP(3),IARR(4),SCR3(2)
+
+        DATA MONTBL/31,29,31,30,31,30,31,31,30,31,30,31/
+        NPFLAG=0
+
+*       ** GET PASSWORD
+
+        CALL USCRAM(IPASS,IPASS2)
+
+*       ** OPEN CONTROL FILE AND GET DATE TO PROCESS
+
+        OPEN (3,'DAILY.CTL',INPUT,ERR=500)
+        READ (3,100)IYR,IMO,IDAY
+        CLOSE(3)
+100     FORMAT (3I2)
+
+        IDATE = IYR*10000+IMO*100+IDAY
+
+*       OUTPUT DATE TO TERMINAL
+
+        TYPE 101
+101     FORMAT (///,5X,'VERSION 1.0')
+
+        TYPE 105,IDATE
+105     FORMAT (//,10X,10('-'),1X,I6,1X,10('-'),//)
+
+*       ** BUILD FILE NAMES
+
+        ENCODE (6,107,L)IDATE
+107     FORMAT (I6)
+        DECODE (6,110,L)(SCR(I),I=1,6)
+110     FORMAT (6I1)
+        ENCODE (10,115,NPDAY)(SCR(I),I=3,6)
+115     FORMAT ('NP',4I1,'.NET')
+        ENCODE (10,120,RHDAY)(SCR(I),I=3,6)
+        ENCODE (10,125,GTDAY)(SCR(I),I=3,6)
+        ENCODE (10,135,NPCTL)(SCR(I),I=1,6)
+120     FORMAT ('RH',4I1,'.DED')
+125     FORMAT ('GT',4I1,'.WAY')
+135     FORMAT (6I1,'.CTL')
+
+*       ** IF 1ST DAY OF MONTH CREATE MONTHY DUMP FILE OF PORTS.DMS
+
+        IF (IDAY.NE.1) GO TO 138
+        IMO2=IMO-1
+        IF (IMO2.NE.0) GO TO 90
+        IMO2=12
+90      ENCODE (2,95,L)IMO2
+95      FORMAT (I2)
+        DECODE (2,96,L)(SCR3(I),I=1,2)
+96      FORMAT (2I1)
+        ENCODE (10,136,PRTDMP)(SCR3(I),I=1,2)
+136     FORMAT ('PORT',2I1,'.DMP')
+
+        TYPE 137,(PRTDMP(I),I=1,2)
+137     FORMAT (//,10X,'----- CREATING ',2A5,' -----',//)
+
+        IARR(1)='DUMP '
+        IARR(2)=PRTDMP(1)
+        IARR(3)=PRTDMP(2)
+        IARR(4)=0
+
+        CALL DBOPEN('(NEWPRT)PORTS.DMS','PASSWORD',IPASS)
+        CALL DBFIND('ALL')
+        CALL DBEXEC(IARR)
+        CALL DBCLOS
+        CALL DBOPEN(PRTDMP)
+        CALL DBEXEC('KEY NODE HOST PORT')
+        CALL DBCLOS
+
+*       ** OPEN NODE PORT OUTPUT FILE
+
+138     OPEN (21,NPDAY,OUTPUT,ERR=510)
+        TYPE 139,(NPDAY(I),I=1,2)
+139     FORMAT (/,10X,'----- PROCESSING ',2A5,' -----',/)
+
+*       ** OPEN NODE PORT CONTROL FILE. GET NEXT JOB NUMBER.
+*          JOB NUMBER -1 = NUMBER OF FILES FOR THIS DAY.  IF
+*          CONTROL FILE IS EMPTY PUT AN 'X' INTO DAILY FILE.
+
+        OPEN (3,NPCTL,RANDIO)
+        ISIZE=SIZE(3)
+        IF (ISIZE.NE.0) GO TO 150
+
+        WRITE(21,140)
+140     FORMAT ('X')
+        CLOSE (21)
+        CLOSE (3)
+
+        TYPE 145,(NPDAY(I),I=1,2)
+145      FORMAT (/,10X,'NO CHANGE RECORDS FOR: ',2A5,/)
+
+*       ** GO CREATE DEDICATED REMOTE DAILY OUTPUT FILE
+
+        GO TO 250
+
+*       ** PROCESS EACH JOB FILE
+
+150     READ (3,155)NUMJOB
+155     FORMAT (I3)
+        CLOSE(3)
+        NUMJOB=NUMJOB-1
+
+        DO 200 I=1,NUMJOB
+
+*       ** BUILD JOB FILE NAME, OPEN FILE. IF FILE IS EMPTY IGNORE
+*          IT.
+
+        ENCODE (3,155,L)I
+        DECODE (3,156,L)(SCR2(J),J=1,3)
+156     FORMAT (3I1)
+        ENCODE (10,160,JOBFLE)(SCR(JJ),JJ=1,6),(SCR2(J),J=1,3)
+160     FORMAT (6I1,'.',3I1)
+
+        OPEN (3,JOBFLE,RANDIO)
+        ISIZE=SIZE(3)
+        CLOSE(3)
+
+        IF (ISIZE.NE.0) GO TO 175
+        TYPE 165,(JOBFLE(J),J=1,2)
+165     FORMAT (10X,2A5,':',2X,'NO CHANGE RECORDS')
+        GO TO 200
+
+*       ** READ CHANGE RECORDS FROM JOB FILE AND WRITE TO DAILY FILE
+
+175     NUMREC=0
+        OPEN (3,JOBFLE,INPUT,ERR=520)
+180     READ (3,185,END=190)(DATA(J),J=1,11)
+        NUMREC=NUMREC+1
+185     FORMAT (16A5)
+        WRITE (21,185) (DATA(J),J=1,11)
+        GO TO 180
+
+190     NPFLAG=1
+        CLOSE (3)
+        TYPE 195,(JOBFLE(J),J=1,2),NUMREC
+195     FORMAT (10X,2A5,':',I3,' CHANGE RECORDS')
+
+200     CONTINUE
+
+*       ** THE CODE FROM HERE TO 235 WAS INCLUDED TO TRY AND FIND
+*          A BUG.  SOMETIMES A MYSTERIOUS FILE IN FORMAT: YYMMDD.0
+*          SHOWS UP.  THE CHANGE RECORDS (IF ANY) MUST BE INCLUDED
+*          IN THE DAILY FILE.
+
+        NUMREC=0
+        JOBFLE(1)='     '
+        JOBFLE(2)='     '
+        ENCODE (8,220,JOBFLE)(SCR(JJ),JJ=1,6)
+220     FORMAT (6I1,'.0')
+
+210     OPEN (3,JOBFLE,INPUT,ERR=235)
+221     READ (3,185,END=230)(DATA(J),J=1,11)
+        NUMREC=NUMREC+1
+        WRITE (21,185)(DATA(J),J=1,11)
+        GO TO 221
+
+230     IF (NUMREC.NE.0) NPFLAG=1
+        CLOSE(3)
+231     TYPE 232,(JOBFLE(J),J=1,2),NUMREC
+232     FORMAT (///,5X,'?? PROBLEM FILE: ',2A5,' HAS SHOWN UP AGAIN',/
+     X              5X,'PLEASE CONTACT JO ANN JOELS',/
+     X              5X,I3,' CHANGE RECORDS HAVE BEEN APPENDED TO ',
+     X              'NPYYMM.NET',/)
+
+*       ** FINISHED WITH ALL JOB FILES. IF ALL JOB FILES WERE EMPTY
+*          PLACE A 'X' INTO DAILY FILE. CLOSE FILE.
+
+235     IF (NPFLAG.NE.0) GO TO 240
+        WRITE (21,140)
+
+240     CLOSE (21)
+
+*       ** PROCESS DEDICATED REMOTE DAILY FILE
+
+250     TYPE 137,(RHDAY(I),I=1,2)
+        IFILE(1)=RHDAY(1)
+        IFILE(2)=RHDAY(2)
+        CALL CKFILE(IFILE)
+
+*       ** PROCESS GATEWAY DAILY FILE
+
+        TYPE 137,(GTDAY(I),I=1,2)
+        IFILE(1)=GTDAY(1)
+        IFILE(2)=GTDAY(2)
+        CALL CKFILE(IFILE)
+
+
+*       ** BUILD TELECOPY COMMANDS FILES
+
+        OPEN (3,'DAILY.NET',OUTPUT)
+        WRITE (3,300)
+300     FORMAT ('R FTCOPY')
+        WRITE (3,305)
+305     FORMAT ('REPLACE')
+        WRITE (3,310)(NPDAY(I),I=1,2)
+310     FORMAT ('(ACCG1:28)',2A5,',:30')
+        WRITE (3,315)
+315     FORMAT ('Q')
+        CLOSE(3)
+
+        OPEN (3,'DAILY.DED',OUTPUT)
+        WRITE (3,300)
+        WRITE (3,305)
+        WRITE (3,310)(RHDAY(I),I=1,2)
+        WRITE (3,315)
+        CLOSE(3)
+
+        OPEN (3,'DAILY.WAY',OUTPUT)
+        WRITE (3,300)
+        WRITE (3,305)
+        WRITE (3,310)(GTDAY(I),I=1,2)
+        WRITE (3,315)
+        CLOSE(3)
+
+*       ** UPDATE CONTROL FILE
+
+        IDAY=IDAY+1
+        IF (IDAY.LE.MONTBL(IMO)) GO TO 325
+        IDAY=1
+        IMO=IMO+1
+        IF (IMO.LE.12) GO TO 325
+        IMO=1
+        IYR=IYR+1
+
+325     IDATE=IYR*10000+IMO*100+IDAY
+
+        OPEN (3,'DAILY.CTL',RANDIO)
+        WRITE (3#1,350) IDATE
+350     FORMAT (I6)
+        CLOSE (3)
+
+*       ** FINISHED
+
+        TYPE 400
+400     FORMAT (//,5X,'DAILY - END OF JOB')
+        GO TO 999
+
+
+*       ** ERRORS
+
+500     TYPE 505
+505     FORMAT (/,5X,'UNABLE TO OPEN DAILY.CTL')
+        GO TO 999
+
+510     TYPE 515,(NPCTL(I),I=1,2)
+515     FORMAT (/,5X,'UNABLE TO OPEN: ',2A5)
+        GO TO 999
+
+520     TYPE 515,(NPDAY(I),I=1,2)
+        GO TO 999
+
+
+999     END
+
+***********************************************************************
+*                                                                     *
+*                         SUBROUTINE: CKFILE                          *
+*                                                                     *
+*       THIS SUBROUTINE OPENS A FILE AND IF IT IS EMPTY PLACES        *
+*       AN 'X' IN THE FILE.                                           *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL CKFILE(IFILE)                                           *
+*       WHERE THE REQUIRED INPUT IS:                                  *
+*                IFILE = ARRAY CONTAINING FILE NAME                   *
+*                                                                     *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE CKFILE(IFILE)
+        INTEGER IFILE(2)
+
+        OPEN (21,IFILE,RANDIO)
+        ISIZE=SIZE(21)
+        IF (ISIZE.NE.0) GO TO 270
+        WRITE (21#1,255)
+255     FORMAT ('X')
+        TYPE 260,(IFILE(I),I=1,2)
+260     FORMAT (/,10X,'NO CHANGE RECORDS FOR: ',2A5,/)
+270     CLOSE (21)
+        RETURN
+        END
+  
