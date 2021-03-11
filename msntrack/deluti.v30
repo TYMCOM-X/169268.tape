@@ -1,0 +1,2488 @@
+C      ***************************************************
+C      *                                                 *
+C      *      PROGRAM NAME : DELUTI.FTF (3.0)            *
+C      *                                                 *
+C      *      AUTHORS : EDSEL GARCIAMENDEZ BUDAR         *
+C      *                and JAVIER A. MANRIQUEZ          *
+C      *                                                 *
+C      *      DATE    : 01/16/1986                       *
+C      *                07/12/1986                       *
+C      *                08/17/1987  JJOELS               *
+C      *                                                 *
+C      *     VERSION 3.0 ADDED THE 5 DIGIT NODE NUMBER   *
+C      *     CAPABILITY.                                 *
+C      *                                                 *
+C      *      PURPOSE : DISPLAY NODE & LINK LOAD         *
+C      *                STATISTICS OBTAINED FROM XRAY.   *
+C      *                                                 *
+C      *                                                 *
+C      *      INPUT FILES :                              *
+C      *                                                 *
+C      *      DUIN1 : NS XRAY DATA BASE                  *
+C      *                                                 *
+C      *      DUIN2 : KS XRAY DATA BASE                  *
+C      *                                                 *
+C      *      DUIN3 : CKTS TOPOLOGY DATA BASE            *
+C      *                                                 *
+C      *                                                 *
+C      *      OUTPUT FILES :                             *
+C      *                                                 *
+C      *      DUOUT1 : NODES / LINKS REPORT FILE         *
+C      *                                                 *
+C      *      DUOUT2 : FRECUENCY REPORT OUTPUT FILE      *
+C      *                                                 *
+C      *      DUOUT3 : SUMMARY REPORT OUTPUT FILE        *
+C      *                                                 *
+C      *      DUOUT4 : ERROR MESSAGE OUTPUT FILE         *
+C      *                                                 *
+C      *      DUOUT5 : 1022 DMI FILE WITH SUMMARY        *
+C      *                                                 *
+C      ***************************************************
+
+         DIMENSION DUIN1(4), DUIN2(4), DUIN3(4), DUOUT1(4)
+         DIMENSION DUOUT2(4), DUOUT3(4), DUOUT4(4), DUOUT5(4)
+	 DIMENSION DUOUT6(4)
+
+         DUIN1(1) = '(MSNT'
+         DUIN1(2) = 'RACK)'
+         DUIN1(3) = 'DUNS.'
+         DUIN1(4) = 'DMS  '
+         DUIN2(1) = '(MSNT'
+         DUIN2(2) = 'RACK)'
+         DUIN2(3) = 'DUKS.'
+         DUIN2(4) = 'DMS  '
+         DUIN3(1) = '(NETS'
+         DUIN3(2) = 'TAT)C'
+         DUIN3(3) = 'KTS.D'
+         DUIN3(4) = 'MS   '
+         DUOUT1(1) = '(NETE'
+         DUOUT1(2) = 'NG)DU'
+         DUOUT1(3) = 'GEN.R'
+         DUOUT1(4) = 'PT  '
+         DUOUT2(1) = '(NETE'
+         DUOUT2(2) = 'NG)DU'
+         DUOUT2(3) = 'FCY.R'
+         DUOUT2(4) = 'PT  '
+         DUOUT3(1) = '(NETE'
+         DUOUT3(2) = 'NG)DU'
+         DUOUT3(3) = 'SUM.R'
+         DUOUT3(4) = 'PT  '
+         DUOUT4(1) = '(NETE'
+         DUOUT4(2) = 'NG)DU'
+         DUOUT4(3) = 'XCN.R'
+         DUOUT4(4) = 'PT  '
+         DUOUT5(1) = '(SYSD'
+         DUOUT5(2) = 'AT)DU'
+         DUOUT5(3) = 'SUM.D'
+         DUOUT5(4) = 'MI  '
+	 DUOUT6(1) = '(SYSD'
+	 DUOUT6(2) = 'AT)SU'
+	 DUOUT6(3) = 'RVEY.'
+	 DUOUT6(4) = 'DMI  '
+
+
+         CALL DBSTRT(1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0)
+
+         CALL DBOPEN ('(MSNTRACK)DUNS.DMS','(NETSTAT)CKTS.DMS',
+     1                      '(MSNTRACK)DUKS.DMS')
+
+         TYPE 30
+30       FORMAT(////,18X,48('*'),/,18X,'* WELCOME TO THE DELAY',
+     1   ' UTILIZATION PROGRAM(3.0)*',/,18X,48('*'),/,18X,'*',
+     2    46(' '),'*',/,18X,'*',9X,' THIS PROGRAM SUMMARIZES NOD',
+     3   'E',8X,'*',/,18X,'*',9X,' AND LINK LOAD INFORMATION.',10X,
+     4   '*', /,18X,'*',9X,' IT PROVIDES XRAY INFORMATION ON :',3X,
+     5   '*',/,18X,'*',9X,' EXEC LOOP COUNTS, THROUGHPUT, ',6X,
+     6   '*',/,18X,'*',9X,' BANDWIDTH UTILIZATIONS, AND ,',7X,
+     7   '*',/,18X,'*',9X,' NODE/LINK DELAYS PER PACKET.',8X,
+     8   '*',/,18X,'*',46(' '),'*',/,18X,48('*'))             
+
+34	TYPE 35,DUOUT1,DUOUT2,DUOUT3,DUOUT4,DUOUT5
+35	FORMAT (//,10X,'THE DEFAULT OUTPUT FILES ARE:',/,15X,
+     1		4A5,/,15X,4A5,3(/,15X,4A5),/,10X,'WOULD YOU LIKE TO',
+     2		' CHANGE THE FILE NAMES? Y/N : ',$)
+	READ (5,36,ERR=34)ANS
+36	FORMAT (A1)
+	IF (ANS.EQ.'N') GO TO 45
+	IF (ANS.NE.'Y') GO TO 34
+		TYPE 37
+37		FORMAT(/,20X,'GENERAL REPORT FILE NAME :',$)
+		READ (5,38,ERR=34)DUOUT1
+38		FORMAT (4A5)
+		TYPE 39
+39		FORMAT(/,20X,'FREQUENCY REPORT FILE NAME :',$)
+		READ (5,38,ERR=34)DUOUT2
+		TYPE 40
+40		FORMAT(/,20X,'SUMMARY REPORT FILE NAME :',$)
+		READ (5,38,ERR=34)DUOUT3
+		TYPE 41
+41		FORMAT(/,20X,'ERROR FILE NAME : ',$)
+		READ (5,38,ERR=34)DUOUT4
+		TYPE 42
+42		FORMAT(/,20X,'DMI SUMMARY FILE NAME : ',$)
+		READ (5,38,ERR=34)DUOUT4
+
+45       OPEN (10, DUOUT1, OUTPUT)
+         OPEN (15, DUOUT2, OUTPUT)
+         OPEN (20, DUOUT3, OUTPUT)
+C	 OPEN (25, DUOUT4, OUTPUT)
+	 OPEN (30, DUOUT5, OUTPUT)
+C			C SURVEY starts.Used to print specific node performnc.:
+	 OPEN (35, DUOUT6, OUTPUT)
+C			C SURVEY ends, but continues once more in PRINTNOD.
+C			Remember to use the right data base: NTRACK vs DUXRAY!
+C			Also, since the number of I/O devices used with this
+C			extra OPEN (35. exceeds the maximum, I need to comment
+C			out the OPEN (25.. and the WRITE(25... statements.
+
+         CALL DBSET (1)
+         CALL DBFIND ('ALL')
+         CALL DBNREC(III)
+	 CALL DBEXEC('SORT KEY CDATE')
+         CALL DBGREC($47)
+         CALL DBVAL ('CDATE',NDATE1)
+        CALL DBGREC($47,III)
+        CALL DBVAL('CDATE',NDATE2)
+C			The above just to compute the starting date. To compute
+C			the ending date, I need to do the following mess:
+C       ITEMP = NDATE1/100
+C	 ITEMP = ITEMP*100
+C	 IDIF = NDATE1-ITEMP
+C	 JJJ = ITEMP+100+IDIF
+C	 IF (JJJ.GE.861300)JJJ =JJJ + 8800
+C46       CALL DBFIND ('CDATE','GT',JJJ)
+C	 CALL DBSORT ('CDATE','DESCENDING')
+C         CALL DBGREC($47)
+C         CALL DBVAL ('CDATE',NDATE2)
+
+47       TYPE 50, NDATE1
+50       FORMAT(//,20X,' STARTING DATE IS (MMDDYY) : ',I6)
+71       TYPE 70, NDATE2
+70       FORMAT(/,20X,' ENDING DATE (MMDDYY) : ',I6)
+
+100      TYPE 110
+110      FORMAT(//,20X,'WOULD YOU LIKE NODE INFORMATION ? (Y/N): ',$)
+         READ (5,120,ERR=100)ANSNOD
+120      FORMAT(A1)
+         IF (ANSNOD.EQ.'Y'.OR.ANSNOD.EQ.'N'.OR.ANSNOD.EQ.'y'.OR.
+     1        ANSNOD.EQ.'n') GO TO 139
+         GO TO 100
+
+139      TYPE 140
+140      FORMAT(//,20X,'WOULD YOU LIKE LINK INFORMATION ? (Y/N): ',$)
+         READ (5,120,ERR=139)ANSLIN
+         IF (ANSLIN.EQ.'Y'.OR.ANSLIN.EQ.'N'.OR.ANSLIN.EQ.'y'.OR.
+     1        ANSLIN.EQ.'n') GO TO 148
+         GO TO 139
+
+148      IF (ANSNOD.EQ.'Y'.OR.ANSNOD.EQ.'y') CALL NODES(NDATE1,NDATE2,
+     1                                       NNODE,NPAGE)
+         NPAGE1 = MAX0(NPAGE-1,0)
+
+         IF (ANSLIN.EQ.'Y'.OR.ANSLIN.EQ.'y') CALL LINKS(NDATE1,NDATE2,
+     1                                       NLINK,NPAGE)
+         NPAGE2 = MAX0(NPAGE-1,0)
+
+         TYPE 150, DUOUT1, DUOUT2, DUOUT3, NNODE,NPAGE1,NLINK,NPAGE2
+150      FORMAT (/,3X,'NODE/LINK OUTPUT FILE : ',4A5,/,3X,
+     1           'EXCEPTION FQCY FILE : ',2X,4A5,/,3X,'SUMMARY FILE',
+     2           ' : ',9X,4A5,/,10X,'RENAME YOUR FILES IF YOU WANT ',
+     3           'TO SAVE THEM! THANKS!',//,10X,'ANALYSIS OF ',I4,
+     4           ' NODES IN ',I4,' PAGES',/,10X,'ANALYSIS OF ',I4,
+     5           ' LINKS IN ',I4,' PAGES.')
+
+         CLOSE (10)
+         CLOSE (15)
+         CLOSE (20)
+	 CLOSE (25)
+	 CLOSE (30)
+
+         CALL DBEND
+
+         END
+
+
+C                      <<<<<   MAIN PROGRAM ENDS HERE   >>>>>
+
+ 
+         
+C**********************************************************************
+
+
+         SUBROUTINE NODES(NDATE1,NDATE2,NNODE,NPAGE)
+
+	 DIMENSION DIA(2)
+	 INTEGER ALLND(15),SWIT(15),CONSAT(15),SISIS(15),OTHRND(15)
+
+         NNODE = 0
+         NPAGE = 1
+
+         TYPE 20
+20       FORMAT(///,20X,'NODES ACCESS MENU',/,20X,'===== ====== ====',
+     1     ///,17X,'1) INDIVIDUAL NODES',/,17X,'2) RANGE OF NODES',
+     2     /,17X,'3) NODES IN SITE',/,17X,'4) NODES IN STATE',
+     3     /,17X,'5) NODES IN GIVEN CLASS SITES',/,17X,'6) ALL',
+     4     ' NODES IN THE NETWORK')
+
+25       TYPE 30
+30       FORMAT (/,15X,'PLEASE TYPE ONE OPTION (1-6) : ',$) 
+         READ (5,40,ERR=25)MENANS
+40       FORMAT(I1)
+
+         IF (MENANS.EQ.1) CALL NOSINGL(NDATE1,NDATE2,NNODE,NPAGE,
+     1				ALLND,SWIT,CONSAT,SISIS,OTHRND,DIA)
+         IF (MENANS.EQ.2) CALL NORANGE(NDATE1,NDATE2,NNODE,NPAGE,
+     1				ALLND,SWIT,CONSAT,SISIS,OTHRND,DIA)
+         IF (MENANS.EQ.3) CALL NOSITES(NDATE1,NDATE2,NNODE,NPAGE,
+     1				ALLND,SWIT,CONSAT,SISIS,OTHRND,DIA)
+         IF (MENANS.EQ.4) CALL NOSTATE(NDATE1,NDATE2,NNODE,NPAGE,
+     1				ALLND,SWIT,CONSAT,SISIS,OTHRND,DIA)
+         IF (MENANS.EQ.5) CALL NOCLASS(NDATE1,NDATE2,NNODE,NPAGE,
+     1				ALLND,SWIT,CONSAT,SISIS,OTHRND,DIA)
+         IF (MENANS.EQ.6) CALL NONET(NDATE1,NDATE2,NNODE,NPAGE,
+     1				ALLND,SWIT,CONSAT,SISIS,OTHRND,DIA)
+         IF (MENANS.GE.7) GO TO 25
+
+	 CALL SUMNPR(NDATE1,NDATE2,ALLND,SWIT,CONSAT,SISIS,OTHRND,DIA)
+
+         RETURN
+         END
+
+C        <<<< END NODES SUBROUTINE >>>>
+
+C *********************************************************************
+
+         SUBROUTINE LINKS(NDATE1,NDATE2,NLINK,NPAGE)
+
+	 DIMENSION DIA(2)
+         INTEGER ALLLN(15),BW96(15),BW14(15),BW19(15)
+	 INTEGER BW28(15),BW38(15),BW56(15),BWOTHR(15)
+
+         NLINK = 0
+         NPAGE = 1
+
+         TYPE 20
+20       FORMAT (///,20X,'LINKS ACCESS MENU',/,20X,'===== ===',
+     1   '=== ====',///,17X,'1) INDIVIDUAL NODE PAIR',/,17X,
+     2   '2) LINES STARTING IN SITE ID NUMBER',/,17X,'3) LINES ',
+     3   'STARTING IN SITE CLASS',/,17X,'4) ALL LINES IN ',
+     4   ' A STATE',/,17X,'5) LINES BY CIRCUIT NUMBER',/,17X,
+     5   '6) LINES BY BANDWIDTH',/,17X,'7) ALL LINES OF THE NETWORK') 
+                                 
+25       TYPE 30
+30       FORMAT (/,15X,'PLEASE TYPE ONE OPTION (1-7) : ',$)
+         READ (5,40,ERR=25) LINMEN
+40       FORMAT (I1)   
+
+         IF (LINMEN.LE.0.OR.LINMEN.GT.7) GO TO 25
+         IF (LINMEN.EQ.1) CALL LINOPA(NDATE1,NDATE2,NLINK,NPAGE,
+     1		ALLLN,BW96,BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+         IF (LINMEN.EQ.2) CALL LISITE(NDATE1,NDATE2,NLINK,NPAGE,
+     1		ALLLN,BW96,BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+         IF (LINMEN.EQ.3) CALL LICLAS(NDATE1,NDATE2,NLINK,NPAGE,
+     1		ALLLN,BW96,BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+         IF (LINMEN.EQ.4) CALL LISTAT(NDATE1,NDATE2,NLINK,NPAGE,
+     1		ALLLN,BW96,BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+         IF (LINMEN.EQ.5) CALL LICIRC(NDATE1,NDATE2,NLINK,NPAGE,
+     1		ALLLN,BW96,BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+         IF (LINMEN.EQ.6) CALL LIBAND(NDATE1,NDATE2,NLINK,NPAGE,
+     1		ALLLN,BW96,BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+         IF (LINMEN.EQ.7) CALL LINETW(NDATE1,NDATE2,NLINK,NPAGE,
+     1		ALLLN,BW96,BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+
+	 CALL SUMLPR (NDATE1,NDATE2,ALLLN,BW96,BW14,BW19,BW28,BW38,
+     1			BW56,BWOTHR,DIA)
+
+         RETURN
+         END
+
+
+C ************************************************************************
+
+
+         SUBROUTINE NOSINGL(NDATE1,NDATE2,NNODE,NPAGE,ALLND,SWIT,
+     1			CONSAT,SISIS,OTHRND,DIA)
+
+	 DIMENSION DIA(2)
+	 INTEGER ALLND(15),SWIT(15),CONSAT(15),SISIS(15),OTHRND(15)
+
+         SORTY = 'NODE '
+
+25       TYPE 30
+30       FORMAT (///,20X,'PLEASE TYPE NODE NUMBER : ',$)
+         READ(5,40,ERR=25)NODNUM
+40       FORMAT(I5) 
+             
+         CALL DBSET(2)
+         CALL DBFIND('PT1','EQ',NODNUM)
+         CALL DBSRCH('PTY1','NCT','HOST')
+         CALL DBNREC(IREC)
+         IF (IREC.EQ.0)GOTO 50
+         GOTO 90
+50       CALL DBFIND('PT2','EQ',NODNUM)
+         CALL DBSRCH('PTY2','NCT','HOST')
+         CALL DBNREC(LREC)
+         IF (LREC.EQ.0)GOTO 70
+         GOTO 90
+70       TYPE 80,NODNUM
+80       FORMAT(//,5X,'NODE REQUESTED : ',I5,2X,'... NOT FOUND !')
+         WRITE(15,80)NODNUM
+         GOTO 100    
+90       CALL PRINRP(NDATE1,NDATE2,NODNUM,SORTY,NNODE,NPAGE,
+     1		ALLND,SWIT,CONSAT,SISIS,OTHRND,DIA)
+
+95       TYPE 96
+96       FORMAT (/,20X,'ANOTHER NODE ? (Y/N) : ',$)
+         READ (5,97)ANRE
+97       FORMAT (A1)
+         IF (ANRE.EQ.'Y'.OR.ANRE.EQ.'y')GO TO 25
+
+100      RETURN
+         END
+
+C            <<<<<< END NOSINGL SUBROUTINE >>>>>>
+
+C   *********************************************************************
+
+
+         SUBROUTINE NORANGE(NDATE1,NDATE2,NNODE,NPAGE,ALLND,SWIT,
+     1			CONSAT,SISIS,OTHRND,DIA)
+
+	 DIMENSION DIA(2)
+	 INTEGER ALLND(15),SWIT(15),CONSAT(15),SISIS(15),OTHRND(15)
+
+10       TYPE 20
+20       FORMAT(//,20X,'PLEASE TYPE STARTING NODE : ',$)
+         READ (5,30,ERR=10) NODSTA
+30       FORMAT(I5)
+
+35       TYPE 40
+40       FORMAT(/,20X,'PLEASE TYPE ENDING NODE    : ',$)  
+         READ (5,30,ERR=35) NODEND
+         CALL DBSET(2)
+         CALL DBFIND('PT1','GE',NODSTA,'AND','PT1','LE',NODEND)
+         CALL DBSRCH('PTY1','NCT','HOST')
+         CALL DBNREC(IREC)
+         IF (IREC.EQ.0)GOTO 50
+         GOTO 80
+50       CALL DBFIND('PT2','GE',NODSTA,'AND','PT2','LE',NODEND)
+         CALL DBSRCH('PTY2','NCT','HOST')
+         IF (LREC.EQ.0)GOTO 60
+         GOTO 80
+60       TYPE 70,NODSTA,NODEND
+70       FORMAT(//,5X,'NODES BETWEEN : ',I5,' - ',I5,2X,'ARE NOT',
+     1          ' ... FOUND !!!')  
+         GOTO 100
+80       CALL SORTNOD(SORTY)
+         CALL PRINRP(NDATE1,NDATE2,NODNUM,SORTY,NNODE,NPAGE,
+     1		ALLND,SWIT,CONSAT,SISIS,OTHRND,DIA)
+
+85       TYPE 90
+90       FORMAT (//,5X,'ANOTHER NODE RANGE ? (Y/N) : ',$)
+         READ (5,95,ERR=85) QUEL
+95       FORMAT (A1)
+         IF (QUEL.EQ.'Y') GO TO 10
+         IF ( QUEL.EQ.'N') GO TO 100
+         GO TO 85
+
+100      RETURN 
+         END
+
+C                    <<<<<<< END OF NORANGE >>>>>>>>
+
+C ***********************************************************************
+
+         SUBROUTINE NOSITE(NDATE1,NDATE2,NNODE,NPAGE,ALLND,SWIT,
+     1			CONSAT,SISIS,OTHRND,DIA)
+
+	 DIMENSION DIA(2)
+	 INTEGER ALLND(15),SWIT(15),CONSAT(15),SISIS(15),OTHRND(15)
+
+10       TYPE 20
+20       FORMAT (///,20X,'PLEASE TYPE THE SITE ID NUMBER : ',$)
+         READ (5,30,ERR=10) NSITE
+30       FORMAT(I4)
+
+         CALL DBSET(2)
+         CALL DBFIND('SITE1','EQ',NSITE)
+         CALL DBSRCH('PTY1','NCT','HOST')
+         CALL DBNREC(IREC)
+         IF (IREC.EQ.0)GOTO 40
+         GOTO 80
+40       CALL DBFIND('SITE2','EQ',NSITE)
+         CALL DBSRCH('PTY2','NCT','HOST')
+         CALL DBNREC(LREC)
+         IF (LREC.EQ.0)GOTO 50
+         GOTO 80
+50       TYPE 60,NSITE
+60       FORMAT(//,5X,'SITE REQUESTED : ',I4,2X,'... NOT ',
+     1         '...FOUND !!!')
+         GOTO 100
+80       CALL SORTNOD(SORTY)
+         CALL PRINRP(NDATE1,NDATE2,NODNUM,SORTY,NNODE,NPAGE,
+     1		ALLND,SWIT,CONSAT,SISIS,OTHRND,DIA)
+
+85       TYPE 90
+90       FORMAT (//,5X,'ANOTHER SITE ID ? (Y/N) : ',$)
+         READ (5,95,ERR=85) QUEL
+95       FORMAT (A1)
+         IF (QUEL.EQ.'Y') GO TO 10
+         IF ( QUEL.EQ.'N') GO TO 100
+         GO TO 85
+
+100      RETURN
+         END
+
+C                    <<<<<<<<<<< END NOSITE SUBROUTINE >>>>>>>>
+
+C **************************************************************************
+
+
+         SUBROUTINE NOSTATE(NDATE1,NDATE2,NNODE,NPAGE,ALLND,SWIT,
+     1			CONSAT,SISIS,OTHRND,DIA)
+
+	 DIMENSION DIA(2)
+	 INTEGER ALLND(15),SWIT(15),CONSAT(15),SISIS(15),OTHRND(15)
+
+10       TYPE 20
+20       FORMAT(///,15X,'TYPE THE STATE ABREVIATION IN TWO LETTERS',
+     1	 ' : ',$)
+         READ (5,30,ERR=10) NSTATE
+30       FORMAT(A2) 
+         CALL DBSET(2)
+         CALL DBFIND('ALL')
+         CALL DBSRCH('ST1','EQ',NSTATE)
+         CALL DBSRCH('PTY1','NCT','HOST')
+         CALL DBNREC(IREC)
+         IF (IREC.EQ.0) GOTO 50
+         GOTO 80
+50       CALL DBFIND('ALL')
+         CALL DBSRCH('ST2','EQ',NSTATE)
+         CALL DBSRCH('PTY2','NCT','HOST')
+         CALL DBNREC(LREC)
+         IF (LREC.EQ.0) GOTO 60
+         GOTO 80
+60       TYPE 70,NSTATE
+70       FORMAT(//,5X,'STATE REQUESTED : ',A2,2X,'... NOT FOUND !!!')
+         WRITE(15,70)NSTATE
+         GOTO 100     
+80       CALL SORTNOD(SORTY)
+         CALL PRINRP(NDATE1,NDATE2,NODNUM,SORTY,NNODE,NPAGE,
+     1		ALLND,SWIT,CONSAT,SISIS,OTHRND,DIA)
+
+85       TYPE 90
+90       FORMAT (//,5X,'ANOTHER STATE ? (Y/N) : ',$)
+         READ (5,95,ERR=85) QUEL
+95       FORMAT (A1)
+         IF (QUEL.EQ.'Y') GO TO 10
+         IF ( QUEL.EQ.'N') GO TO 100
+         GO TO 85
+
+100      RETURN
+         END
+C         <<<<<<<<< END NOSTATE SUBROUTINE >>>>>>>>
+
+C  ***************************************************************
+
+         SUBROUTINE NOCLASS(NDATE1,NDATE2,NNODE,NPAGE,ALLND,SWIT,
+     1			CONSAT,SISIS,OTHRND,DIA)
+
+	 DIMENSION DIA(2)
+	 INTEGER ALLND(15),SWIT(15),CONSAT(15),SISIS(15),OTHRND(15)
+
+10       TYPE 20
+20       FORMAT(///,18X,'TYPE THE SITE CLASS IN ONE DIGIT : ',$)
+         READ (5,30,ERR=10) NCLASS
+30       FORMAT(I1)
+
+         CALL DBSET(2)
+         CALL DBFIND('ALL')
+         CALL DBSRCH('CLASS1','EQ',NCLASS)
+         CALL DBSRCH('PTY1','NCT','HOST')
+         CALL DBNREC(IREC)
+         IF (IREC.GT.0)GOTO 80
+
+40       CALL DBFIND ('ALL')
+         CALL DBSRCH('CLASS2','EQ',NCLASS,'AND','PTY2','NCT','HOST')
+         CALL DBSRCH('PTY2','NCT','HOST')
+         CALL DBNREC(LREC)
+         IF (LREC.EQ.0)GOTO 50 
+         GOTO 80  
+50       TYPE 60,NCLASS
+60       FORMAT(//,5X,'CLASS REQUESTED : ',I4,2X,'... NOT FOUND !!!')
+         WRITE(15,60)NCLASS
+         GOTO 100
+80       CALL SORTNOD(SORTY)
+         CALL PRINRP(NDATE1,NDATE2,NODNUM,SORTY,NNODE,NPAGE,
+     1		ALLND,SWIT,CONSAT,SISIS,OTHRND,DIA)
+
+85       TYPE 90
+90       FORMAT (//,5X,'ANOTHER SITE CLASS ? (Y/N) : ',$)
+         READ (5,95,5) QUEL
+95       FORMAT (A1)
+         IF (QUEL.EQ.'Y') GO TO 10
+         IF ( QUEL.EQ.'N') GO TO 100
+         GO TO 85
+
+100      RETURN
+         END
+
+C           <<<<<< END OF NOCLASS SUBROUTINE >>>>>>
+
+C *********************************************************************
+
+         SUBROUTINE NONET(NDATE1,NDATE2,NNODE,NPAGE,ALLND,SWIT,
+     1			CONSAT,SISIS,OTHRND,DIA)
+
+	 DIMENSION DIA(2)
+	 INTEGER ALLND(15),SWIT(15),CONSAT(15),SISIS(15),OTHRND(15)
+
+         CALL DBSET(2)
+         CALL DBFIND('ALL')
+         CALL DBSRCH('PTY1','NCT','HOST','AND','PTY2','NCT','HOST')
+         CALL SORTNOD(SORTY)
+         CALL PRINRP(NDATE1,NDATE2,NODNUM,SORTY,NNODE,NPAGE,
+     1		ALLND,SWIT,CONSAT,SISIS,OTHRND,DIA)
+
+         RETURN
+         END            
+
+C               <<<<<<< END NONET SUBROUTINE >>>>>>>
+
+C ***********************************************************
+
+         SUBROUTINE LICIRC(NDATE1,NDATE2,NLINK,NPAGE,ALLLN,
+     1			BW96,BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+
+         DIMENSION CIRC(4),DIA(2)
+         INTEGER ALLLN(15),BW96(15),BW14(15),BW19(15)
+	 INTEGER BW28(15),BW38(15),BW56(15),BWOTHR(15)
+
+         SORTY = 'CRCT.'
+10       DO 15 I=1,4
+         CIRC(I)='     '
+15       CONTINUE
+
+17       TYPE 20
+20       FORMAT(///,20X,'TYPE CIRCUIT NUMBER : ',$)
+         READ (5,30,ERR=17) CIRC
+30       FORMAT(4A5)
+         CALL DBSET(2)
+         CALL DBFIND('ALL') 
+         CALL DBSRCH('CCT','CT',CIRC,'AND','PTY1','NCT','HOST',
+     1               'AND','PTY2','NCT','HOST')
+         CALL DBEXEC ('SEA PT1 LT PT2')
+         CALL DBNREC(IREC)
+         IF (IREC.EQ.0)GOTO 40
+         GOTO 80
+40       TYPE 50,CIRC 
+50       FORMAT(//,5X,'CIRCUIT ID REQUESTED : ',4A5,2X,
+     1          '... NOT FOUND !!!')
+         WRITE(15,50)CIRC 
+         GOTO 100      
+80       CALL PRILRP(NDATE1,NDATE2,SORTY,NLINK,NPAGE,ALLLN,BW96,
+     1		BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+
+85       TYPE 90
+90       FORMAT (//,5X,'ANOTHER CIRCUIT ID ? (Y/N) : ',$)
+         READ (5,95,ERR=85) QUEL
+95       FORMAT (A1)
+         IF (QUEL.EQ.'Y') GO TO 10
+         IF ( QUEL.EQ.'N') GO TO 100
+         GO TO 85
+
+100      RETURN
+         END 
+C               <<< END LCIRCC SUBROUTINE >>>
+
+C ******************************************************
+        SUBROUTINE LINOPA(NDATE1,NDATE2,NLINK,NPAGE,ALLLN,
+     1			BW96,BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+
+	 DIMENSION DIA(2)
+         INTEGER ALLLN(15),BW96(15),BW14(15),BW19(15)
+	 INTEGER BW28(15),BW38(15),BW56(15),BWOTHR(15)
+
+         SORTY = 'INPUT'
+10       TYPE 20
+20       FORMAT(///,20X,'TYPE ORIGINATING NODE : ',$)
+         READ (5,30,ERR=10) NSTART
+30       FORMAT(I5)
+
+35       TYPE 40
+40       FORMAT(///,20X,'TYPE TERMINATING NODE : ',$)
+         READ (5,30,ERR=35)NEND
+
+         CALL DBSET(2)
+         CALL DBFIND('PT1','EQ',NSTART,'AND','PT2','EQ',NEND)
+         CALL DBSRCH('PTY1','NCT','HOST','AND','PTY2','NCT','HOST')
+         CALL DBNREC(IREC)
+         IF (IREC.EQ.0)GOTO 50
+         GOTO 80
+50       CALL DBFIND('PT1','EQ',NEND,'AND','PT2','EQ',NSTART)
+         CALL DBSRCH('PTY1','NCT','HOST','AND','PTY2','NCT','HOST')
+         CALL DBNREC(LREC) 
+         IF (LREC.EQ.0)GOTO 60
+         GOTO 80
+60       TYPE 70,NSTART,NEND
+70       FORMAT(//,5X,'PAIR OF NODES : 'I5,2X,'AND',2X,I5,'... NOT',
+     1          ' FOUND !!!')
+         GOTO 100
+80       CALL PRILRP(NDATE1,NDATE2,SORTY,NLINK,NPAGE,ALLLN,BW96,
+     1		BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+
+85       TYPE 90
+90       FORMAT (//,5X,'ANOTHER NODE PAIR ? (Y/N) : ',$)
+         READ (5,95,ERR=85) QUEL
+95       FORMAT (A1)
+         IF (QUEL.EQ.'Y') GO TO 10
+         IF ( QUEL.EQ.'N') GO TO 100
+         GO TO 85
+
+100      RETURN
+         END
+
+C                  <<<<<< END LINOPA SUBOUTINE >>>>>>
+
+C **********************************************************************
+
+         SUBROUTINE LISITE(NDATE1,NDATE2,NLINK,NPAGE,ALLLN,
+     1			BW96,BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+
+	 DIMENSION DIA(2)
+         INTEGER ALLLN(15),BW96(15),BW14(15),BW19(15)
+	 INTEGER BW28(15),BW38(15),BW56(15),BWOTHR(15)
+
+10       TYPE 20
+20       FORMAT(///,20X,'PLEASE TYPE SITE ID NUMBER : ',$)
+         READ (5,30,ERR=10) NUSITE
+30       FORMAT(I4)
+         CALL DBSET(2)
+         CALL DBFIND('ALL')
+C                                      The following is done to avoid repetaing
+C                                      same link information twice (HW,MS).
+         CALL DBFIND('SITE1','EQ',NUSITE,'OR','SITE2','EQ',NUSITE)
+         CALL DBEXEC('SEA PT1 LE PT2')
+         CALL DBSRCH('PTY1','NCT','HOST','AND','PTY2','NCT','HOST')
+         CALL DBNREC(LREC)
+         IF (LREC.EQ.0)GOTO 50
+         GOTO 80
+
+50       TYPE 60,NUSITE
+60       FORMAT(//,5X,'SITE REQUESTED : ',I4,2X,'... NOT FOUND !!!')
+         WRITE(15,60)NUSITE
+         GOTO 100
+80       CALL SORTLIN(SORTY)
+         CALL PRILRP(NDATE1,NDATE2,SORTY,NLINK,NPAGE,ALLLN,BW96,
+     1		BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+
+85       TYPE 90
+90       FORMAT (//,5X,'ANOTHER SITE ? (Y/N) : ',$)
+         READ (5,95,ERR=85) QUEL
+95       FORMAT (A1)
+         IF (QUEL.EQ.'Y') GO TO 10
+         IF ( QUEL.EQ.'N') GO TO 100
+         GO TO 85
+
+100      RETURN
+         END
+
+C             <<<<<<<< END LISITE SUBROUTINE >>>>>>>>
+
+C ********************************************************************
+
+         SUBROUTINE LISTAT(NDATE1,NDATE2,NLINK,NPAGE,ALLLN,
+     1			BW96,BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+
+	 DIMENSION DIA(2)
+         INTEGER ALLLN(15),BW96(15),BW14(15),BW19(15)
+	 INTEGER BW28(15),BW38(15),BW56(15),BWOTHR(15)
+
+10       TYPE 20
+20       FORMAT (///,20X,'PLEASE TYPE STATE IN TWO LETTERS : ',$)   
+         READ (5,30,ERR=10) ASTATE
+30       FORMAT(A2)
+         CALL DBSET(2)
+         CALL DBFIND('ALL')  
+C                       To avoid repeating links twice that are in same state:
+         CALL DBSRCH('ST1','EQ',ASTATE,'OR','ST2','EQ',ASTATE)
+         CALL DBEXEC('SEA PT1 LE PT2')
+         CALL DBSRCH('PTY1','NCT','HOST','AND','PTY2','NCT','HOST')
+         CALL DBNREC(IREC)
+         IF (IREC.EQ.0)GOTO 50
+         GOTO 80
+
+50       TYPE 60,NSTATE
+60       FORMAT(//,5X,'STATE REQUSTED : ',A2,2X,'... NOT FOUND !!!')
+         WRITE(15,60)NSTATE
+         GOTO 100
+
+80       CALL SORTLIN(SORTY)
+         CALL PRILRP(NDATE1,NDATE2,SORTY,NLINK,NPAGE,ALLLN,BW96,
+     1		BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+
+85       TYPE 90
+90       FORMAT (//,5X,'ANOTHER STATE ? (Y/N) : ',$)
+         READ (5,95,ERR=85) QUEL
+95       FORMAT (A1)
+         IF (QUEL.EQ.'Y') GO TO 10
+         IF ( QUEL.EQ.'N') GO TO 100
+         GO TO 85
+
+100      RETURN
+         END
+
+C             <<<<<<< END LISTAT SUBROUTINE >>>>>>>   
+
+C ********************************************************************
+
+
+         SUBROUTINE LICLAS(NDATE1,NDATE2,NLINK,NPAGE,ALLLN,
+     1			BW96,BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+
+	 DIMENSION DIA(2)
+         INTEGER ALLLN(15),BW96(15),BW14(15),BW19(15)
+	 INTEGER BW28(15),BW38(15),BW56(15),BWOTHR(15)
+
+10       TYPE 20
+20       FORMAT(///,20X,'TYPE SITE CLASS NUMBER DESIRED : ',$)
+         READ (5,30,ERR=10) NUCLAS
+30       FORMAT(I2)
+         CALL DBSET(2)
+         CALL DBFIND('ALL')
+         CALL DBSRCH('CLASS1','EQ',NUCLAS,'AND','CLASS2','EQ',NUCLAS)
+         CALL DBEXEC('SEA PT1 LE PT2')
+         CALL DBSRCH('PTY1','NCT','HOST','AND','PTY2','NCT','HOST')
+         CALL DBNREC(IREC)
+         IF (IREC.EQ.0)GO TO 50
+         GOTO 80
+
+50       TYPE 60,NUCLAS
+60       FORMAT(//,5X,'CLASS REQUESTED : ',I3,2X,'... NOT FOUND !!!')
+         WRITE(15,60)NUCLAS
+         GOTO 100
+
+80       CALL SORTLIN(SORTY)
+         CALL PRILRP(NDATE1,NDATE2,SORTY,NLINK,NPAGE,ALLLN,BW96,
+     1		BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+
+85       TYPE 90
+90       FORMAT (//,5X,'ANOTHER SITE CLASS ? (Y/N) : ',$)
+         READ (5,95,ERR=85) QUEL
+95       FORMAT (A1)
+         IF (QUEL.EQ.'Y') GO TO 10
+         IF ( QUEL.EQ.'N') GO TO 100
+         GO TO 85
+
+100      RETURN
+         END  
+
+C              <<<<<<< END LICLAS SUBROUTINE >>>>>>>
+
+C ***************************************************************
+
+
+         SUBROUTINE LIBAND(NDATE1,NDATE2,NLINK,NPAGE,ALLLN,
+     1			BW96,BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+
+	 DIMENSION DIA(2)
+         INTEGER ALLLN(15),BW96(15),BW14(15),BW19(15)
+	 INTEGER BW28(15),BW38(15),BW56(15),BWOTHR(15)
+
+10       TYPE 20
+20       FORMAT(///,20X,'TYPE THE LINE BANDWIDTH IN KBPS : ',$)
+         READ (5,30,ERR=10)BAND
+30       FORMAT(A4)
+         CALL DBSET(2)
+         CALL DBFIND ('ALL')
+         CALL DBSRCH('BNDW','CT',BAND,'AND','PTY1','NCT','HOST',
+     1               'AND','PTY2','NCT','HOST')
+         CALL DBEXEC ('SEA PT1 LT PT2')
+
+         CALL DBNREC(IREC)
+         IF (IREC.EQ.0)GOTO 40
+         GOTO 80 
+40       TYPE 50,BAND
+50       FORMAT(//,5X,'BANDWIDTH REQUESTED : ',A5,2X,
+     1         '... NOT FOUND !!!')
+         WRITE(15,50)BAND   
+         GOTO 100
+80       CALL SORTLIN(SORTY)
+         CALL PRILRP(NDATE1,NDATE2,SORTY,NLINK,NPAGE,ALLLN,BW96,
+     1		BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+
+85       TYPE 90
+90       FORMAT (//,5X,'ANOTHER LINE BANDWIDTH ? (Y/N) : ',$)
+         READ (5,95,ERR=85) QUEL
+95       FORMAT (A1)
+         IF (QUEL.EQ.'Y') GO TO 10
+         IF ( QUEL.EQ.'N') GO TO 100
+         GO TO 85
+
+100      RETURN
+         END
+
+C                <<<<<< END LIBAND SUBROUTINE >>>>>>
+
+C ******************************************************************
+
+         SUBROUTINE LINETW(NDATE1,NDATE2,NLINK,NPAGE,ALLLN,
+     1			BW96,BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+
+	 DIMENSION DIA(2)
+         INTEGER ALLLN(15),BW96(15),BW14(15),BW19(15)
+	 INTEGER BW28(15),BW38(15),BW56(15),BWOTHR(15)
+
+         CALL DBSET(2)
+         CALL DBFIND('ALL')
+         CALL DBSRCH('PTY1','NCT','HOST','AND','PTY2','NCT','HOST')
+         CALL DBEXEC ('SEA PT1 LT PT2')
+         CALL SORTLIN(SORTY)
+         CALL PRILRP(NDATE1,NDATE2,SORTY,NLINK,NPAGE,ALLLN,BW96,
+     1		BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+
+         RETURN
+         END
+
+C                 <<<<<< END LINETW SUBROUTINE >>>>>>
+
+C **********************************************************************
+
+         SUBROUTINE PRINRP(NDATE1,NDATE2,NODNUM,SORTY,NNODE,NPAGE,
+     1			ALLND,SWIT,CONSAT,SISIS,OTHRND,DIA)
+
+         DIMENSION COMP(4),TYPE(4),CITY(4), DIA(2)
+	 INTEGER ALLND(15),SWIT(15),CONSAT(15),SISIS(15),OTHRND(15)
+
+         NAUX2=0
+         REPTYP = 'NODE '
+
+         CALL DATE(DIA)
+
+C                                I start here for every single node:
+
+5        DO 10 I=1,4
+           COMP(I)='     '
+           TYPE(I)='     '
+           CITY(I)='     '
+10       CONTINUE
+
+         N=1
+         NUMREC=0
+
+         CALL CLEAN(NTEXCT,NTEXLW,NTEXHW,NTNLCO,NTNLCI,NTNACO,
+     1        NTNACI,NTNTD,NTROIN,NTROUT,NCOUNT,NDATPE,NTIMPE,PERCE,
+     2        NCDY,NDADLY,NTIDLY,PERDLY)
+C                                                    Since one node has several
+C                                                    records(lines),we choose 1
+25       CALL DBGREC($200)
+         CALL DBVAL('PT1',NAUX1)
+         IF (NAUX2.EQ.NAUX1)GOTO 25
+C                                       We get information for one node using
+C                                       the first record on the CKTS.
+         IF (NUMREC.GT.0)GOTO 60
+
+50       CALL DBVAL('CMP1',COMP,'ST1',STATE,'SITE1',NSITE,
+     1   'PTY1',TYPE,'PLACE1',CITY,'CLASS1',NCLASS,'BNDW',BAND,
+     2   'KHOST1',NHOST,'PT1',NODNUM)
+C                                                 Once chosen one record, we
+C                                                 look for the snapshots on
+C                                                 that node. If no snap-shots,
+C                                                 we write a warning.
+         CALL DBMAP(1,'PT1','NODE')
+         CALL DBNREC(IREC)
+         IF (IREC.EQ.0)GOTO 110      
+C                                          We loop here to analyze and
+C                                          accumulate the snap-shots.
+
+60       CALL DBGREC($100)
+         NUMREC=NUMREC+1
+
+         CALL DBVAL('CDATE',NDATE,'EXCT',NEXCT,'EXLW',NEXLW,'EXHW',
+     1   NEXHW,'LCO',NLCO,'LCI',NLCI,'ACO',NACO,'ACI',NACI,'TD',
+     2   NTD,'NODE',NODNUM,'CTIME',NTIME)        
+
+         CALL ADDTOT(NTEXCT,NTEXLW,NTEXHW,NTNLCO,NTNLCI,NTNACO,
+     1   NTNACI,NTNTD,NTROIN,NTROUT,NEXCT,NEXLW,NEXHW,NLCO,NLCI,
+     2   NACO,NACI,NTD)
+          
+         CALL CHEXCL(NODNUM,NHOST,COMP,STATE,NSITE,TYPE,CITY,NCLASS,
+     1               NDATE,NTIME,NEXCT,NCOUNT,NDATPE,NTIMPE,NTRIGD,
+     2               NTRIGE,NTD,NCDY,NDADLY,NTIDLY,NUMREC)
+  
+         IF (NUMREC.EQ.1)CALL INITIAL(MINEXC,MIEXL,MILCO,MILCI,MIACO,
+     1       MIACI,NEXCT,NEXLW,NEXHW,NLCO,NLCI,NACO,NACI,MAXEXC,
+     2       MAEXLW,MALCO,MALCI,MACO,MACI,NTD,MIDLY,MADLY,MINTHI,
+     3       MINTHO,MAXTHI,MAXTHO)
+
+             CALL MAXMIN(NEXCT,NEXLW,NLCO,NLCI,NACO,NACI,NEXHW,
+     1       MINEXC,MIEXL,MILCO,MILCI,MIACO,MIACI,MAXEXC,MAEXLW,MALCO,
+     2       MALCI,MACO,MACI,NTD,MIDLY,MADLY,MINTHI,MINTHO,MAXTHI,
+     3       MAXTHO)
+
+          GOTO 60          
+
+C                                          We get here after finishing
+C                                          the snap-shots for one node
+
+100     CALL DIVTOT(NTEXCT,NTEXLW,NTEXHW,NTNLCO,NTNLCI,NTNACO,NTNACI,
+     1        NTNTD,NTROIN,NTROUT,MTROIN,MTROUT,NUMREC)
+
+        CALL FREPER(NCOUNT,NUMREC,PERCE,NCDY,PERDLY,NTRIGD,NTRIGE)
+
+	CALL SUMAND (MINEXC,MAXTHI,MAXTHO,ALLND,SWIT,CONSAT,SISIS,
+     1		OTHRND,TYPE)
+
+         NNODE = NNODE + 1
+         AREM = AMOD(FLOAT(NNODE-1),3.0)
+         IF (AREM.EQ.0.0) CALL PRINHE(NDATE1,NDATE2,NPAGE,DIA,SORTY,
+     1                                REPTYP)
+
+        CALL PRINTNOD(NDATE,NTEXCT,NTEXLW,NTEXHW,NTNLCO,NTNLCI,NTNACO,
+     1    NTNACI,NTNTD,MTROIN,MTROUT,COMP,STATE,NSITE,MINEXC,MIEXL,
+     2    MILCO,MILCI,MIACO,MIACI,MAXEXC,MAEXLW,MALCO,MALCI,MACO,MACI,
+     3    NUMREC,NODNUM,TYPE,CITY,NCLASS,NDATE1,NDATE2,NHOST,NTIME,
+     4    NCOUNT,PERCE,NDATPE,NTIMPE,NNODE,NTRIGD,NTRIGE,PERDLY,MIDLY,
+     5    MADLY,NDADLY,NTIDLY,MINTHI,MINTHO,MAXTHI,MAXTHO)
+
+          GOTO 130
+C                                  .... and we finished for one record.
+
+
+110         IF (N.GT.1)GOTO 130
+
+C         WRITE(25,120)NODNUM
+C120      FORMAT(/,5X,'NODE REQUESTED : ',I5,2X,'... NOT FOUND !!!')
+         N=2
+
+
+130      CALL DBSET(2)
+         NAUX2=NAUX1
+         GOTO 5
+
+200      RETURN
+         END 
+
+C             <<<<<<< END PRINRP SUBROUTINE >>>>>>>
+
+C ******************************************************************
+
+         SUBROUTINE CHEXCL(NODNUM,NHOST,COMP,STATE,NSITE,TYPE,
+     1              CITY,NCLASS,NDATE,NTIME,NEXCT,NCOUNT,NDATPE,
+     2              NTIMPE,NTRIGD,NTRIGE,NTD,NCDY,NDADLY,NTIDLY,
+     3              NUMREC)
+
+         DIMENSION COMP(4),TYPE(4),CITY(4),CIT1(3)
+
+         DO 10 I=1,3
+10       CIT1(I)=CITY(I)
+
+         NTRIGD = 25
+         NTRIGE = 40
+
+         IF (NEXCT.GT.NTRIGE)GO TO 100
+
+         NCOUNT=NCOUNT+1
+         NDATPE = NDATE
+         NTIMPE = NTIME
+
+         IF (NCDY.GE.1.OR.NCOUNT.GT.1)GO TO 35
+
+         WRITE(15,30)NODNUM,CIT1,NHOST,STATE,TYPE,NSITE,COMP,
+     1               NCLASS
+30       FORMAT(/,5X,'NODE : ',I5,40X,'CITY : ',3A5,/,5X,'HOST ',
+     1          ': ',I5,40X,'STATE : ',A2,/,5X,'TYPE : ',4A5,25X,'SITE ',
+     2          'ID : ',I5,/,5X,'COMPANY : ',4A5,22X,'SITE CLASS',
+     3          ' : ',I2,/)
+
+35      WRITE(15,40)NDATE,NTIME,NEXCT
+40      FORMAT(5X,'DATE : ',I6,2X,'TIME : ',I6,2X,'EXCT  : ',I5) 
+
+100     IF (NTD.LE.NTRIGD)GO TO 200
+
+         NCDY = NCDY + 1
+         NDADLY = NDATE
+         NTIDLY = NTIME
+
+         IF (NCDY.GT.1.OR.NCOUNT.GE.1)GO TO 135
+
+         WRITE(15,30)NODNUM,CIT1,NHOST,STATE,TYPE,NSITE,COMP,
+     1               NCLASS
+
+135      WRITE(15,140)NDATE,NTIME,NTD
+140      FORMAT(5X,'DATE : ',I6,2X,'TIME : ',I6,2X,'DELAY : ',I5) 
+
+200     RETURN
+        END
+C               <<<< END CHEXCL SUBROUTINE >>>>
+                                  
+C *******************************************************************
+
+         SUBROUTINE FREPER(NCOUNT,NUMREC,PERCE,NCDY,PERDLY,
+     1                       NTRIGD,NTRIGE)
+
+         IF (NCOUNT.EQ.0)GOTO 100
+            PERCE=(FLOAT(NCOUNT)/FLOAT(NUMREC))*100.0
+            WRITE (15,20) NTRIGE,NCOUNT,PERCE
+20          FORMAT(//,5X,'NUMBER OF EXCT LESS THAN',I3,2X,': ',I7,/,5X,
+     1        'PERCENTAGE : %',F6.2)
+
+100      IF (NCDY.EQ.0) GO TO 150
+            PERDLY = (FLOAT(NCDY)/FLOAT(NUMREC))*100.0
+            WRITE (15,120) NTRIGD,NCDY,PERDLY
+120         FORMAT (/,5X,'NUMBER OF DELAY OBS. OVER',I3,2X,
+     1              ': ',I5,/,5X,'PERCENTAGE : %',F6.2)
+
+150       IF (NCOUNT.GT.0.OR.NCDY.GT.0) WRITE (15,160)NUMREC
+160                        FORMAT(/,5X,'TOTAL OBSERVATIONS : ',I7)
+
+200      RETURN
+         END
+C             <<<< END FREPER SUBROUTINE >>>>
+
+C **********************************************************************
+
+          SUBROUTINE PRINHE(NDATE1,NDATE2,NPAGE,DIA,SORTY,REPTYP)
+
+         DIMENSION DIA(2)
+
+         WRITE (10,20)
+20       FORMAT('^Q^L')
+         WRITE (10,30) DIA(1),DIA(2),NPAGE,REPTYP,SORTY,NDATE1,NDATE2
+30       FORMAT(1X,2A5,54X,'PAGE ',I4,/,23X,A5,'STATUS REPORT ',
+     1          'SORTED BY ',A5,/,23X,34('='),/,28X,'PE',
+     2          'RIOD : ',I6,'-',I6)
+         NPAGE = NPAGE + 1
+
+         RETURN
+         END
+
+C *******************************************************************
+
+
+         SUBROUTINE PRINTNOD(NDATE,NTEXCT,NTEXLW,NTEXHW,NTNLCO,
+     1   NTNLCI,NTNACO,NTNACI,NTNTD,MTROIN,MTROUT,COMP,STATE,NSITE,
+     2   MINEXC,MIEXL,MILCO,MILCI,MIACO,MIACI,MAXEXC,MAEXLW,MALCO,
+     3   MALCI,MACO,MACI,NUMREC,NODNUM,TYPE,CITY,NCLASS,NDATE1,
+     4   NDATE2,NHOST,NTIME,NCOUNT,PERCE,NDATPE,NTIMPE,NNODE,
+     5   NTRIGD,NTRIGE,PERDLY,MIDLY,MADLY,NDADLY,NTIDLY,MINTHI,
+     6   MINTHO,MAXTHI,MAXTHO)
+
+         DIMENSION COMP(4),TYPE(4),CITY(4), CIT1(3)
+
+         CIT1(1)=CITY(1)
+         CIT1(2)=CITY(2)
+         CIT1(3)=CITY(3)
+
+         WRITE (10,40)NNODE,NODNUM,CIT1,NHOST,STATE,TYPE,NSITE,COMP,
+     1               NCLASS,NUMREC
+40       FORMAT(/,I3,') NODE : ',I5,40X,'CITY : ',3A5,/,5X,'HOST ',
+     1          ': ',I5,40X,'STATE : ',A2,/,5X,'TYPE : ',4A5,25X,'SITE ',
+     2          'ID : ',I5,/,5X,'COMPANY : ',4A5,22X,'SITE CLASS : ',I2,
+     3          ' ',/,5X,'SNAP-SHOTS : ',I4)
+
+         WRITE (10,50)
+50       FORMAT (/,52X,'EXTREME CASE SAMPLES',/,20X,'AVERAGE',3X,
+     1           'MINIMUM',3X,'MAXIMUM',4X,'  %  ',3X,'DATE/TIME',
+     2           3X,'TRIGGER')
+
+         WRITE (10,60) NTEXCT,MINEXC,MAXEXC,PERCE,NDATPE,NTIMPE,NTRIGE
+60       FORMAT(/,3X,'EXEC LOOP COUNT:',3X,I4,6X,I4,6X,I4,5X,F4.1,
+     1          2X,I6,'/',I4,3X,'UNDER',I3)
+
+         WRITE (10,70),NTEXLW,MIEXL,MAEXLW
+70       FORMAT(  3X,'EXEC LOW W. MRK:',3X,I4,6X,I4,6X,I4)
+
+         WRITE (10,80) MTROIN,MINTHI,MAXTHI
+80       FORMAT(  3X,'THROUGHPUT IN:',4X,I5,5X,I5,5X,I5)
+
+         WRITE (10,90) MTROUT,MINTHO,MAXTHO
+90       FORMAT(  3X,'THROUGHPUT OUT:',3X,I5,5X,I5,5X,I5)
+
+         WRITE (10,100) NTNTD,MIDLY,MADLY,PERDLY,NDADLY,NTIDLY,NTRIGD
+100      FORMAT(  3X,'NODAL DELAY:  ',5X,I4,6X,I4,6X,I4,5X,F4.1,
+     1         2X,I6,'/',I4,3X,'OVER ',I3,///,20('*   '))
+
+C 		C SURVEY starts:
+		Write (35,200)Nodnum,Minexc,Miexl,Maxthi,Maxtho,Madly
+200		Format (I5,1x,I4,1x,I4,1x,I5,1x,I5,1x,I4)
+C		C SURVEY ends.
+         RETURN
+         END
+
+
+C                <<<<<<< END SUBROUTINE PRINTNOD >>>>>>>
+
+C ***********************************************************************
+
+
+
+         SUBROUTINE PRILRP(NDATE1,NDATE2,SORTY,NLINK,NPAGE,ALLLN,
+     1		BW96,BW14,BW19,BW28,BW38,BW56,BWOTHR,DIA)
+
+         DIMENSION COMPA(4),TYPEA(4),CITYA(4),COMPB(4),TYPEB(4),
+     1             CITYB(4),TCIRC(4), DIA(2)
+
+         INTEGER ALLLN(15),BW96(15),BW14(15),BW19(15)
+	 INTEGER BW28(15),BW38(15),BW56(15),BWOTHR(15)
+
+
+         REPTYP = 'LINK '
+         NAUX2=0 
+         NAUX4=0
+         N = 1
+
+         CALL DATE (DIA)
+
+11       DO 15 I=1,4
+            COMPA(I)='     '
+            TYPEA(I)='     '
+            CITYA(I)='     '
+            COMPB(I)='     '
+            TYPEB(I)='     '
+            CITYB(I)='     '       
+            TCIRC(I)='     '
+15       CONTINUE
+
+         NUMREC=0
+
+         CALL CLEAPAR(NTCPSI,NTCPSO,NTPHIN,NTPHOU,NTBAIN,
+     1     NTBOUT,NTDLAY,NTPAIN,NTPOUT,N14I,N14O,N56I,N56O,N96I,
+     2     N96O,N19I,N19O,N28I,N28O,NGI,NGO,NDATBI,NDATBO,NTIMBI,
+     3     NTIMBO,NUM,NIN,NOUT)
+
+25       CALL DBGREC($200)
+         CALL DBVAL('PT1',NAUX1,'PT2',NAUX3)
+
+         IF (NAUX2.EQ.NAUX1.AND.NAUX4.EQ.NAUX3)GOTO 25    
+         IF (NUMREC.EQ.0)GOTO 50
+         GOTO 60
+
+50       CALL DBVAL('CMP1',COMPA,'ST1',STATE1,'SITE1',NSITE1,
+     1   'PTY1',TYPEA,'PLACE1',CITYA,'CLASS1',NCLAS1,'BNDW',BAND,
+     2   'CMP2',COMPB,'ST2',STATE2,'SITE2',NSITE2,'PTY2',TYPEB,
+     3   'PLACE2',CITYB,'CLASS2',NCLAS2,'CCT',TCIRC,
+     4   'KHOST1',NHOST1,'KHOST2',NHOST2)           
+
+         CALL DBMAP(3,'PT1','NOD1')
+         CALL DBFIND('LAST','AND','NOD2','EQ',NAUX3)
+         CALL DBNREC(LREC)
+
+         IF (LREC.GT.0) GO TO 60
+            CALL DBSET (2)
+            CALL DBVAL('CMP2',COMPA,'ST2',STATE1,'SITE2',NSITE1,
+     1       'PTY2',TYPEA,'PLACE2',CITYA,'CLASS2',NCLAS1,'BNDW',BAND,
+     2       'CMP1',COMPB,'ST1',STATE2,'SITE1',NSITE2,'PTY1',TYPEB,
+     3       'PLACE1',CITYB,'CLASS1',NCLAS2,'CCT',TCIRC,
+     4       'KHOST2',NHOST1,'KHOST1',NHOST2)
+            CALL DBSET (3)
+            CALL DBFIND('NOD2','EQ',NAUX1,'AND','NOD1','EQ',NAUX3)
+            CALL DBNREC (LREC)
+            IF (LREC.EQ.0)GOTO 150
+
+60       CALL DBGREC($100)
+         NUMREC=NUMREC+1
+
+         CALL DBVAL('NTRACKDATE',NDATE,'PCPSI',NCPSI,'PHWIN',NPHWIN,
+     1   'PCPSO',NCPSO,'PHWOU',NPHWOU,'UTLZI',NBANIN,'UTLZO',NBAOUT,
+     2   'DLTOT',NDLTOT,'NOD1',NODSTA,'NOD2',NODEND,'TIME',NTIME)
+        
+         CALL ADDPAR(NTCPSI,NTCPSO,NTPHIN,NTPHOU,NTBAIN,NTBOUT,
+     1   NTDLAY,NCPSI,NCPSO,NPHWIN,NPHWOU,NBANIN,NBAOUT,NDLTOT,
+     2   NTPAIN,NTPOUT,NOVHDI,NOVHDO)
+
+         IF (NUMREC.EQ.1)CALL INIPAR(MICPSI,MICPSO,MIPHIN,MIPHOU,
+     1       MIBAIN,MIBAOU,MIDLAY,MACPSI,MACPSO,MAPHIN,MAPHOU,
+     2       MABAIN,MABAOU,MADLAY,NCPSI,NCPSO,NPHWIN,NPHWOU,
+     3       NBANIN,NBAOUT,NDLTOT,MIVHDI,MAVHDI,MIVHDO,
+     4       MAVHDO,NOVHDI,NOVHDO) 
+
+             CALL MAXPAR(NCPSI,NCPSO,NPHWIN,NPHWOU,NBANIN,NBAOUT,
+     1       NDLTOT,MICPSI,MICPSO,MIPHIN,MIPHOU,MIBAIN,
+     2       MIBAOU,MIDLAY,MACPSI,MACPSO,MAPHIN,MAPHOU,MABAIN,
+     3       MABAOU,MADLAY,MIVHDI,MAVHDI,MIVHDO,MAVHDO,NOVHDI,
+     4       NOVHDO)
+
+          CALL CHEFRE(NHOST1,NHOST2,NODSTA,NODEND,COMPA,COMPB,
+     1         STATE1,STATE2,NSITE1,NSITE2,TYPEA,TYPEB,CITYA,
+     2         CITYB,NCLAS1,NCLAS2,NBANIN,NBAOUT,TCIRC,BAND,N14I,
+     3         N14O,N56I,N56O,N96I,N96O,N19I,N19O,N28I,N28O,
+     4         NGI,NGO,ITRIGI,ITRIGO,NUMREC,VAR,MR,NDATE,NTIME,NUM,
+     5         NDATBI,NDATBO,NTIMBI,NTIMBO,BWFL96,BWFL14,BWFL19,
+     6	       BWFL28,BWFL38,BWFL56)
+     
+          GOTO 60          
+100       CALL DIVPAR(NTCPSI,NTCPSO,NTPHIN,NTPHOU,NTBAIN,NTBOUT,
+     1         NTDLAY,NUMREC,NTPAIN,NTPOUT)
+
+          CALL PRIPER(N14I,N14O,N56I,N56O,N96I,N96O,N19I,N19O,
+     1           N28I,N28O,NGI,NGO,PERBI,PERBO,NUMREC,NIN,NOUT)
+
+	CALL SUMALN (MABAIN,MABAOU,ALLLN,BW96,BW14,BW19,BW28,BW38,
+     1			BW56,BWOTHR,BWFL96,BWFL14,BWFL19,BWFL28,
+     1			BWFL38,BWFL56)
+
+          NLINK = NLINK + 1
+          AREM = AMOD( FLOAT(NLINK-1),2.0)
+          IF (AREM.EQ.0.0) CALL PRINHE(NDATE1,NDATE2,NPAGE,DIA,
+     1                                 SORTY,REPTYP)
+
+          CALL PRINTLIN(NDATE,NTCPSI,NTCPSO,NTPHIN,NTPHOU,NTBAIN,
+     1    NTBOUT,NTDLAY,MICPSI,MICPSO,MIPHIN,MIPHOU,MIBAIN,MIBAOU,
+     2    MIDLAY,MACPSI,MACPSO,MAPHIN,MAPHOU,MABAIN,MABAOU,MADLAY,
+     3    COMPA,STATE1,NSITE1,TYPEA,CITYA,NCLAS1,COMPB,STATE2,
+     4    NSITE2,TYPEB,CITYB,NCLAS2,BAND,NUMREC,NODSTA,NODEND,TCIRC,
+     5    NHOST1,NHOST2,NTIME,NDATE1,NDATE2,NTPAIN,NTPOUT,MIVHDI,
+     6    MAVHDI,MIVHDO,MAVHDO,ITRIGI,ITRIGO,PERBI,PERBO,NDATBI,
+     7    NDATBO,NTIMBI,NTIMBO,NLINK)
+
+          GOTO 160
+
+150       IF (N.GT.1)GOTO 160
+
+C         WRITE(25,140)NAUX1,NAUX2
+C140      FORMAT(/,5X,'CIRCUIT REQUESTED BETWEEN : ',I5,' AND ',I5,
+     1        ' ... NOT FOUND !!!')
+         N=2
+
+160      CALL DBSET(2)
+         NAUX2=NAUX1
+         NAUX4=NAUX3
+         GOTO 11
+
+
+200      RETURN
+         END 
+
+C             <<<<<<< END PRILRP SUBROUTINE >>>>>>>
+
+C *******************************************************************
+
+         SUBROUTINE  CHEFRE(NHOST1,NHOST2,NODSTA,NODEND,COMPA,
+     1     COMPB,STATE1,STATE2,NSITE1,NSITE2,TYPEA,TYPEB,CITYA,
+     2     CITYB,NCLAS1,NCLAS2,NBANIN,NBAOUT,TCIRC,BAND,N14I,
+     3     N14O,N56I,N56O,N96I,N96O,N19I,N19O,N28I,N28O,NGI,NGO,
+     4     ITRIGI,ITRIGO,NUMREC,VAR,MR,NDATE,NTIME,NUM,NDATBI,
+     5     NDATBO,NTIMBI,NTIMBO,BWFL96,BWFL14,BWFL19,BWFL28,
+     6     BWFL38,BWFL56)
+
+         DIMENSION COMPA(4),COMPB(4),CITYA(4),CITYB(4),TYPEA(4)
+         DIMENSION TYPEB(4),TCIRC(4),CKTSID(3),COMA(2),TYPA(2),TYPB(2)
+         DIMENSION CITA(2),CITB(2)
+
+         DO 5 I = 1,2
+            COMA(I) = COMPA(I)
+            TYPA(I) = TYPEA(I)
+            TYPB(I) = TYPEB(I)
+            CITA(I) = CITYA(I)
+            CITB(I) = CITYB(I)
+5           CKTSID(I) = TCIRC(I)
+            CKTSID(3) = TCIRC(3)
+
+C			The following are the thresholds for bandwidth
+C			utilizations used to determine overload conditions
+
+         L14 = 55
+         L19 = 60
+         L28 = 55
+	 L38 = 60
+         L56 = 75
+         L96 = 45
+
+C			The following are the flags used to pass the
+C			information on the circuit's bandwidth within subrout.
+
+	BWFL96 = 0.0
+	BWFL14 = 0.0
+	BWFL19 = 0.0
+	BWFL28 = 0.0
+	BWFL38 = 0.0
+	BWFL56 = 0.0
+			
+         IF (BAND.EQ.'14.4 '.OR.BAND.EQ.' 14.4'.OR.BAND.EQ.'14400'
+     1      .OR.BAND.EQ.'M14.4'.OR.BAND.EQ.'U14.4'.OR.BAND
+     2      .EQ.'C14.4'.OR.BAND.EQ.'P14.4') GO TO 14
+
+         IF (   BAND.EQ.'9.6  '.OR.BAND.EQ.'  9.6'.OR.BAND.EQ.' 9.6 '
+     1      .OR.BAND.EQ.'9600 '.OR.BAND.EQ.' 9600'.OR.BAND.EQ.'M9.6 '
+     2      .OR.BAND.EQ.'P9.6 '.OR.BAND.EQ.'C9.6 '.OR.BAND.EQ.'U9.6 ')
+     3      GO TO 96
+
+         IF (   BAND.EQ.'56   '.OR.BAND.EQ.'   56'.OR.BAND.EQ.' 56  '
+     1      .OR.BAND.EQ.'  56 '.OR.BAND.EQ.'M56  '.OR.BAND.EQ.'P56  '
+     2      .OR.BAND.EQ.'56KB '.OR.BAND.EQ.'56000'.OR.BAND.EQ.'MS   ')
+     3      GO TO 56
+
+         IF (   BAND.EQ.'19.2 '.OR.BAND.EQ.' 19.2'.OR.BAND.EQ.'19200'
+     1      .OR.BAND.EQ.'P19.2'.OR.BAND.EQ.'C19.2'.OR.BAND.EQ.'M19.2')
+     2      GO TO 19
+
+         IF (BAND.EQ.'28.8 '.OR.BAND.EQ.' 28.8'.OR.BAND.EQ.'28800')
+     1      GO TO 28
+
+         IF (   BAND.EQ.'38.4 '.OR.BAND.EQ.' 38.4'.OR.BAND.EQ.'38400'
+     1      .OR.BAND.EQ.'P38.4'.OR.BAND.EQ.'C38.4'.OR.BAND.EQ.'M38.4')
+     2      GO TO 38
+
+
+          GOTO 99
+
+14      ITRIGI = L14
+        ITRIGO = L14
+	BWFL14 = 1.0
+         IF (NBANIN.LT.L14.AND.NBAOUT.LT.L14) GO TO 200
+            IF (NBANIN.LT.L14) GO TO 15
+               N14I = N14I + 1
+               NDATBI = NDATE
+               NTIMBI = NTIME
+15          IF (NBAOUT.LT.L14) GO TO 100
+               N14O = N14O + 1
+               NDATBO = NDATE
+               NTIMBO = NTIME
+         GO TO 100
+
+19       ITRIGI = L19
+         ITRIGO = L19
+	 BWFL19 = 1.0
+         IF (NBANIN.LT.L19.AND.NBAOUT.LT.L19) GO TO 200
+            IF (NBANIN.LT.L19) GO TO 20
+               N19I = N19I + 1
+               NDATBI = NDATE
+               NTIMBI = NTIME
+20          IF (NBAOUT.LT.L19) GO TO 100
+               N19O = N19O + 1
+               NDATBO = NDATE
+               NTIMBO = NTIME
+         GO TO 100
+
+28       ITRIGI = L28
+         ITRIGO = L28
+	 BWFL28 = 1.0
+         IF (NBANIN.LT.L28.AND.NBAOUT.LT.L28) GO TO 200
+            IF (NBANIN.LT.L28) GO TO 29
+               N28I = N28I + 1
+               NDATBI = NDATE
+               NTIMBI = NTIME
+29          IF (NBAOUT.LT.L28) GO TO 100
+               N28O = N28O + 1
+               NDATBO = NDATE
+               NTIMBO = NTIME
+         GO TO 100
+
+38       ITRIGI = L38
+         ITRIGO = L38
+	 BWFL38 = 1.0
+         IF (NBANIN.LT.L38.AND.NBAOUT.LT.L38) GO TO 200
+            IF (NBANIN.LT.L28) GO TO 39
+               N38I = N38I + 1
+               NDATBI = NDATE
+               NTIMBI = NTIME
+39          IF (NBAOUT.LT.L38) GO TO 100
+               N38O = N38O + 1
+               NDATBO = NDATE
+               NTIMBO = NTIME
+         GO TO 100
+
+56       ITRIGI = L56
+         ITRIGO = L56
+	 BWFL56 = 1.0
+         IF (NBANIN.LT.L56.AND.NBAOUT.LT.L56) GO TO 200
+            IF (NBANIN.LT.L56) GO TO 57
+               N56I = N56I + 1
+               NDATBI = NDATE
+               NTIMBI = NTIME
+57          IF (NBAOUT.LT.L56) GO TO 100
+               N56O = N56O + 1
+               NDATBO = NDATE
+               NTIMBO = NTIME
+         GO TO 100
+
+96       ITRIGI = L96
+         ITRIGO = L96
+	 BWFL96 = 1.0
+         IF (NBANIN.LT.L96.AND.NBAOUT.LT.L96) GO TO 200
+            IF (NBANIN.LT.L96) GO TO 97
+               N96I = N96I + 1
+               NDATBI = NDATE
+               NTIMBI = NTIME
+97          IF (NBAOUT.LT.L96) GO TO 100
+               N96O = N96O + 1
+               NDATBO = NDATE
+               NTIMBO = NTIME
+         GO TO 100
+
+99       ITRIGI = L96
+         ITRIGO = L96
+         IF (NBANIN.LT.L96.AND.NBAOUT.LT.L96) GO TO 200
+            IF (NBANIN.LT.L96) GO TO 98
+               NGI = NGI + 1
+               NDATBI = NDATE
+               NTIMBI = NTIME
+98          IF (NBAOUT.LT.L96) GO TO 100
+               NGO = NGO + 1
+               NDATBO = NDATE
+               NTIMBO = NTIME
+         GO TO 100
+
+100      IF (NUM.GT.0)GOTO 150
+
+         NUM=NUM+1
+
+         WRITE (15,140)NODSTA,NODEND,CKTSID,NHOST1,NHOST2,BAND,
+     1      TYPA,TYPB,COMA,COMPB,CITA,CITB,STATE1,STATE2,
+     2      NSITE1,NSITE2,NCLAS1,NCLAS2
+140      FORMAT (//,23X,'POINT 1',8X,'POINT 2',/,23X,'-------',
+     1      8X,'-------',/,5X,'NODE :',12X,I5,10X,I5,11X,'CKT',
+     2      ' ID : ',3A5,/,5X,'HOST :',12X,I5,10X,I5,11X,'BANDWIDTH ',
+     3      ': ',A5,/,5X,'TYPE :',12X,2A5,5X,2A5,6X,' ',
+     4      ' ',4X,/,5X,'COMPANY :',9X,2A5,5X,
+     4      4A5,/,5X,'CITY :',12X,2A5,5X,2A5,/,5X,'STATE :',11X,
+     5      A2,13X,A2,/,5X,'SITE ID :',9X,I5,10X,I5,/,5X,'SITE ',
+     6      'CLASS :',6X,I2,13X,I2,/)
+
+150      WRITE(15,160)NDATE,NTIME,NBANIN,NBAOUT
+160      FORMAT(5X,'DATE : ',I6,2X,'TIME : ',I6,2X,'BNDW IN : % ',
+     1      I5,2X,'BNDW OUT : % ',I5)
+
+200      RETURN
+         END
+C              <<<< END CHEFRE SUBROUTINE >>>>
+
+C ****************************************************************
+
+         SUBROUTINE PRIPER(N14I,N14O,N56I,N56O,N96I,N96O,
+     1                     N19I,N19O,N28I,N28O,NGI,NGO,PERBI,
+     2                     PERBO,NUMREC,NIN,NOUT)
+           
+         A=FLOAT(NUMREC)
+         IF (A.LE.1.0)A=1.0        
+         IF (N14I.GT.0) NIN=N14I
+         IF (N14O.GT.0) NOUT=N14O
+         IF (N56I.GT.0) NIN=N56I
+         IF (N56O.GT.0) NOUT=N56O
+         IF (N96I.GT.0) NIN=N96I
+         IF (N96O.GT.0) NOUT=N96O
+         IF (N19I.GT.0) NIN=N19I
+         IF (N19O.GT.0) NOUT=N19O
+         IF (N28I.GT.0) NIN=N28I
+         IF (N28O.GT.0) NOUT=N28O
+         IF (NGI.GT.0)  NIN=NGI
+         IF (NGO.GT.0)  NOUT=NGO
+
+         PERBI = (FLOAT(NIN)/A)*100.0
+         PERBO = (FLOAT(NOUT)/A)*100.0
+
+         IF (PERBI.LE.0.0.AND.PERBO.LE.0.0) GO TO 100
+
+         WRITE (15,80) PERBI,PERBO,NIN,NOUT,NUMREC
+80       FORMAT(/,5X,'% IN : ',F4.1,'  % OUT : ',F4.1,/,5X,'FREQ ',
+     1         'IN : 'I3,'  FREQ OUT : ',I3,//,5X,'OBSERVATIONS : ',I7)
+    
+100      RETURN
+         END
+C           <<<<< END PRIPRE SUBROUTINE >>>>>
+
+C ****************************************************************           
+
+
+
+C           <<<< END PRIPER SUBROUTINE >>>>
+
+C ******************************************************************
+       
+         SUBROUTINE PRINTLIN(NDATE,NTCPSI,NTCPSO,NTPHIN,NTPHOU,
+     1    NTBAIN,NTBOUT,NTDLAY,MICPSI,MICPSO,MIPHIN,MIPHOU,MIBAIN,
+     2    MIBAOU,MIDLAY,MACPSI,MACPSO,MAPHIN,MAPHOU,MABAIN,MABAOU,
+     3    MADLAY,COMPA,STATE1,NSITE1,TYPEA,CITYA,NCLAS1,COMPB,
+     4    STATE2,NSITE2,TYPEB,CITYB,NCLAS2,BAND,NUMREC,NODSTA,
+     5    NODEND,TCIRC,NHOST1,NHOST2,NTIME,NDATE1,NDATE2,NTPAIN,
+     6    NTPOUT,MIVHDI,MAVHDI,MIVHDO,MAVHDO,ITRIGI,ITRIGO,
+     7    PERBI,PERBO,NDATBI,NDATBO,NTIMBI,NTIMBO,NLINK)
+
+         DIMENSION COMPA(4),TYPEA(4),CITYA(4),COMPB(4),TYPEB(4)
+         DIMENSION CITYB(4),TCIRC(4),COMA(2),COMB(2),TYPA(2)
+         DIMENSION TYPB(2),CITA(2),CITB(2),CKTSID(3)
+
+         DO 5 I=1,2
+           COMA(I)=COMPA(I)
+           COMB(I)=COMPB(I)
+           TYPA(I)=TYPEA(I)
+           TYPB(I)=TYPEB(I)
+           CITA(I)=CITYA(I)
+           CITB(I)=CITYB(I)
+           CKTSID(I)=TCIRC(I)
+5        CONTINUE
+           CKTSID(3)=TCIRC(3)
+
+         WRITE (10,10)NLINK,NODSTA,NODEND,CKTSID,NHOST1,NHOST2,BAND,
+     1      TYPA,TYPB,NUMREC,COMA,COMPB,CITA,CITB,STATE1,STATE2,
+     2      NSITE1,NSITE2,NCLAS1,NCLAS2
+10       FORMAT (//,23X,'POINT 1',8X,'POINT 2',/,23X,'-------',
+     1      8X,'-------',/,I3,')',' NODE :',12X,I5,10X,I5,11X,'CKT',
+     2      ' ID : ',3A5/,5X,'HOST :',12X,I5,10X,I5,11X,'BANDWIDTH ',
+     3      ': ',A5,/,5X,'TYPE :',12X,2A5,5X,2A5,6X,'SNAP-SHOTS',
+     4      ' : ',I4,/,5X,'COMPANY :',9X,2A5,5X,
+     4      4A5,/,5X,'CITY :',12X,2A5,5X,2A5,/,5X,'STATE :',11X,
+     5      A2,13X,A2,/,5X,'SITE ID :',9X,I5,10X,I5,/,5X,'SITE ',
+     6      'CLASS :',6X,I2,13X,I2)
+
+         WRITE (10,30)
+30       FORMAT (/,52X,'EXTREME CASE SAMPLES',/,20X,'AVERAGE',3X,
+     1           'MINIMUM',3X,'MAXIMUM',4X,'  %  ',3X,'DATE/TIME',
+     2           3X,'TRIGGER')
+
+         WRITE (10,40) NTCPSI,MICPSI,MACPSI
+C                                           PERCI,NDATPI,NTIMPI
+40       FORMAT(/,3X,'CHARS PER SEC  IN:',I5,5X,I5,5X,I5)
+C               5X,F4.1,2X,I6,'/',I4,3X,'OVER 600')
+
+         WRITE (10,60) NTCPSO,MICPSO,MACPSO
+C                                           PERCO,NDATPO,NTIMPO
+60       FORMAT(3X,'CHARS PER SEC OUT:',I5,5X,I5,5X,I5)
+C               ,5X,F4.1,2X,I6,'/',I4,3X,'OVER 600')
+
+         WRITE (10,70) NTPHIN,MIPHIN,MAPHIN
+70       FORMAT(  3X,'CPS IN-HIGH W.MRK:',I5,5X,I5,5X,I5)
+
+         WRITE (10,80) NTPHOU,MIPHOU,MAPHOU
+80       FORMAT(  3X,'CPS OUT-HGH.W.MRK:',I5,5X,I5,5X,I5)
+
+         WRITE (10,90) NTBAIN,MIBAIN,MABAIN,PERBI,NDATBI,NTIMBI,ITRIGI
+90       FORMAT(  3X,'BNDWDTH UTLZN  IN:',I5,5X,I5,5X,I5,
+     1          5X,F4.1,2X,I6,'/',I4,3X,'OVER %',I2)
+
+         WRITE (10,100)NTBOUT,MIBAOU,MABAOU,PERBO,NDATBO,NTIMBO,ITRIGO
+100      FORMAT(  3X,'BNDWDTH UTLZN OUT:',I5,5X,I5,5X,I5,
+     1          5X,F4.1,2X,I6,'/',I4,3X,'OVER %',I2)
+
+         WRITE (10,110) NTDLAY,MIDLAY,MADLAY
+110      FORMAT(  3X,'LINK DELAY(MS/PK):',I5,2(5X,I5),///,20('*   '))
+
+           
+         RETURN
+         END
+
+
+C                <<<<<<< END SUBROUTINE PRINTLIN >>>>>>>
+
+C ***********************************************************************
+       
+         SUBROUTINE SORTNOD(SORTY)
+
+         TYPE 20
+20       FORMAT(///,20X,'SORT NODE REPORT BY:',/,20X,'==== =',
+     1   '=== ====== ===',///,17X,'1) NODE NUMBER',/,17X,'2) ',
+     2   'STATE',/,17X,'3) SITE',/,17X,
+     3   '4) NODE TYPE',/,17X,'5) SITE CLASS',/,17X,/)
+C     4   '6) NODES BY EXCT',//,17X,'7) NODES BY DELAY')
+
+25       TYPE 30
+30       FORMAT(///,15X,'PLEASE TYPE ONE OPTION (1-5) : ',$)
+
+         READ (5,40,ERR=25) NODSOR
+40       FORMAT(I1)
+
+         IF (NODSOR.LE.0.OR.NODSOR.GT.5) GO TO 25
+
+         IF (NODSOR.EQ.1) GO TO 41
+         GO TO 42
+41           CALL DBSORT('PT1','PT2','ASCEN')
+             SORTY = 'NODE ' 
+             GO TO 70
+42       IF (NODSOR.EQ.2) GO TO 43
+         GO TO 44
+43           CALL DBSORT('ST1','PT1','ASCEN')
+             SORTY = 'STATE'
+             GO TO 70
+44       IF (NODSOR.EQ.3) GO TO 45
+         GO TO 46
+45           CALL DBSORT('SITE1','PT1','ASCEN')
+             SORTY = 'SITE '
+             GO TO 70
+46       IF (NODSOR.EQ.4) GO TO 47
+         GO TO 48
+47           CALL DBSORT('PTY1','PT1','ASCEN')
+             SORTY = 'NTYPE'
+             GO TO 70
+48       IF (NODSOR.EQ.5) GO TO 49
+         GO TO 50
+49           CALL DBSORT('CLASS1','PT1','ASCEN')
+             SORTY = 'CLASS'
+             GO TO 70
+50       IF (NODSOR.EQ.6) GO TO 55
+         GO TO 60
+55               CALL DBSET (1)
+                 CALL DBSORT('EXCT','ASCEN')
+                 CALL DBSET (2)
+                 GO TO 70
+60       IF (NODSOR.EQ.7) GO TO 65
+         GO TO 70
+65               CALL DBSET (1)
+                 CALL DBSORT('TD','ASCEN')
+                 CALL DBSET (2)
+70       RETURN
+         END
+
+C                   <<<<<< END SORTNOD SUBROUTINE >>>>>>
+
+C **********************************************************
+     
+
+         SUBROUTINE SORTLIN(SORTY)
+
+10       TYPE 20
+20       FORMAT (//,20X,'SORT LINK REPORT BY:',/,20X,20('='),/,
+     1      /,17X,'1) NODE PAIRS',/,17X,'2) STATE',/,17X,
+     2      '3) SITE ID NUMBER',/,17X,'4) NODE TYPES',/,17X,
+     3      '5) SITE CLASSES',/,17X,'6) BANDWIDTH',/,17X,
+     4      '7) CIRCUIT ID.',//,15X,'PLEASE TYPE ONE OPTION (1-7)',
+     5      ' : ',$)
+
+25       READ(5,30,ERR=10) MENLIN
+30       FORMAT(I1)
+
+         IF (MENLIN.LE.0.OR.MENLIN.GT.7) GO TO 10
+         IF (MENLIN.EQ.1) GO TO 35
+         GO TO 40
+35           CALL DBSORT('PT1','PT2','ASCEN')
+             SORTY = 'NODES'
+             GO TO 100
+40       IF (MENLIN.EQ.2) GO TO 45
+         GO TO 50
+45           CALL DBSORT('ST1','ST2','PT1','PT2','ASCEN')
+             SORTY = 'STATE'
+             GO TO 100
+50       IF (MENLIN.EQ.3) GO TO 55
+         GO TO 60
+55           CALL DBSORT('SITE1','SITE2','PT1','PT2','ASCEN')
+             SORTY = 'SITES'
+             GO TO 100
+60       IF (MENLIN.EQ.4) GO TO 65
+         GO TO 70
+65           CALL DBSORT('PTY1','PTY2','PT1','PT2','ASCEN')
+             SORTY = 'NTYPE'
+             GO TO 100
+70       IF (MENLIN.EQ.5) GO TO 75
+         GO TO 80
+75           CALL DBSORT('CLASS1','CLASS2','PT1','PT2','ASCEN')
+             SORTY = 'CLASS'
+             GO TO 100
+80       IF (MENLIN.EQ.6) GO TO 85
+         GO TO 90
+85           CALL DBSORT('BNDW','PT1','PT2','ASCEN')
+             SORTY = 'BNWDH'
+             GO TO 100
+90       IF (MENLIN.EQ.7) CALL DBSORT('CCT','PT1','PT2','ASCEN')
+             SORTY = 'CK.ID'
+
+100      RETURN
+         END
+C               <<<<<<<< END SORTLIN SUBROUTINE >>>>>>>>
+
+C******************************************************************************
+
+
+        SUBROUTINE NETWORK
+
+        CALL NONET
+        CALL LINETW
+        RETURN
+        END
+
+C     <<<< END NETWORK SUBROUTINE >>>>
+
+C **************************************************************************
+	
+          SUBROUTINE CLEAN(NTEXCT,NTEXLW,NTEXHW,NTNLCO,NTNLCI,NTNACO,
+     1       NTNACI,NTNTD,NTROIN,NTROUT,NCOUNT,NDATPE,NTIMPE,PERCE,
+     2       NCDY,NDADLY,NTIDLY,PERDLY)
+
+          NTEXCT=0
+          NTEXLW=0
+          NTEXHW=0
+          NTNLCO=0
+          NTNLCI=0
+          NTNACO=0
+          NTNACI=0
+           NTNTD=0
+          NTROIN=0
+          NTROUT=0
+          NCOUNT=0
+          PERCE = 0.0
+          NDATPE = 0
+          NTIMPE = 0
+          NCDY = 0
+          NDADLY = 0
+          NTIDLY = 0
+          PERDLY = 0.0
+
+          RETURN
+          END
+
+C         <<< END SUBROUTINE CLEAN >>>>
+  
+C************************************************************************
+
+	
+          SUBROUTINE CLEAPAR(NTCPSI,NTCPSO,NTPHIN,NTPHOU,
+     1       NTBAIN,NTBOUT,NTDLAY,NTPAIN,NTPOUT,N14I,N14O,N56I,
+     2       N56O,N96I,N96O,N19I,N19O,N28I,N28O,NGI,NGO,NDATBI,
+     3       NDATBO,NTIMBI,NTIMBO,NUM,NIN,NOUT)
+
+          NTCPSI=0
+          NTCPSO=0
+          NTPHIN=0
+          NTPHOU=0
+          NTBAIN=0
+          NTBOUT=0
+          NTDLAY=0
+          NTPAIN=0
+          NTPOUT=0     
+          N14I=0
+          N14O=0
+          N56I=0
+          N56O=0
+          N96I=0
+          N96O=0
+          N19I=0
+          N19O=0
+          N28I=0
+          N28O=0
+          NGI=0
+          NGO=0
+          NDATBI =0
+          NDATBO=0
+          NTIMBI=0
+          NTIMBO=0
+          NUM=0
+          NIN = 0
+          NOUT = 0
+
+          RETURN
+          END
+
+C         <<< END SUBROUTINE CLEPAR >>>>
+C ***************************************************************
+
+          SUBROUTINE INITIAL(MINEXC,MIEXL,MILCO,MILCI,MIACO,MIACI,
+     1         NEXCT,NEXLW,NEXHW,NLCO,NLCI,NACO,NACI,MAXEXC,MAEXLW,
+     2         MALCO,MALCI,MACO,MACI,NTD,MIDLY,MADLY,MINTHI,MINTHO,
+     3         MAXTHI,MAXTHO)
+
+          MINTHI = NLCI + NACI
+          MINTHO = NLCO + NACO
+          MAXTHI = NLCI + NACI
+          MAXTHO = NLCO + NACO
+          MINEXC=NEXCT
+          MIEXL=NEXLW
+          MILCO=NLCO
+          MILCI=NLCI
+          MIACO=NACO
+          MIACI=NACI
+          MIDLY = NTD
+          MAXEXC=NEXCT
+          MAEXLW=NEXLW
+          MALCO=NLCO
+          MALCI=NLCI
+          MACO=NACO
+          MACI=NACI
+          MADLY = NTD
+
+          RETURN
+          END
+
+C         <<< END SUBROUTINE INITIAL >>>
+
+C ***************************************************************
+
+          SUBROUTINE INIPAR(MICPSI,MICPSO,MIPHIN,MIPHOU,MIBAIN,
+     1    MIBAOU,MIDLAY,MACPSI,MACPSO,MAPHIN,MAPHOU,MABAIN,
+     2    MABAOU,MADLAY,NCPSI,NCPSO,NPHWIN,NPHWOU,NBANIN,
+     3    NBAOUT,NDLTOT,MIVHDI,MAVHDI,MIVHDO,MAVHDO,
+     4    NOVHDI,NOVHDO) 
+
+          MICPSI=NCPSI
+          MICPSO=NCPSO
+          MIPHIN=NPHWIN
+          MIPHOU=NPHWOU
+          MIBAIN=NBANIN
+          MIBAOU=NBAOUT
+          MIDLAY=NDLTOT
+          MACPSI=NCPSI
+          MACPSO=NCPSO
+          MAPHIN=NPHWIN
+          MAPHOU=NPHWOU
+          MABAIN=NBANIN
+          MABAOU=NBAOUT
+          MADLAY=NDLTOT
+          MIVHDI=NOVHDI
+          MAVHDI=NOVHDI
+          MIVHDO=NOVHDO
+          MAVHDO=NOVHDO
+  
+          RETURN
+          END
+
+C                 <<<<<<<<<    END SUBROUTINE INIPAR    >>>>>>>>>>
+
+C *********************************************************************
+
+         SUBROUTINE MAXMIN(NEXCT,NEXLW,NLCO,NLCI,NACO,NACI,
+     1          NEXHW,MINEXC,MIEXL,MILCO,MILCI,MIACO,MIACI,
+     2          MAXEXC,MAEXLW,MALCO,MALCI,MACO,MACI,NTD,MIDLY,
+     3          MADLY,MINTHI,MINTHO,MAXTHI,MAXTHO)
+
+         MNTHI = NLCI + NACI
+         MNTHO = NLCO + NACO
+         MXTHI = NLCI + NACI
+         MXTHO = NLCO + NACO
+
+          IF (NEXCT.LT.MINEXC)MINEXC=NEXCT
+          IF (NEXLW.LT.MIEXL)MIEXL=NEXLW
+          IF (NLCO.LT.MILCO)MILCO=NLCO
+          IF (NLCI.LT.MILCI)MILCI=NLCI
+          IF (NACO.LT.MIACO)MIACO=NACO
+          IF (NACI.LT.MIACI)MIACI=NACI
+          IF (MNTHI.LT.MINTHI) MINTHI = MNTHI
+          IF (MNTHO.LT.MINTHO) MINTHO = MNTHO
+          IF (NTD.LT.MIDLY)MIDLY = NTD
+
+          IF (NEXCT.GT.MAXEXC)MAXEXC=NEXCT
+          IF (NEXLW.GT.MAEXLW)MAEXLW=NEXLW
+          IF (NLCO.GT.MALCO)MALCO=NLCO
+          IF (NLCI.GT.MALCI)MALCI=NLCI
+          IF (NACO.GT.MACO)MACO=NACO
+          IF (NACI.GT.MACI)MACI=NACI
+          IF (MXTHI.GT.MAXTHI) MAXTHI = MXTHI
+          IF (MXTHO.GT.MAXTHO) MAXTHO = MXTHO
+          IF (NTD.GT.MADLY)MADLY = NTD
+
+          RETURN
+          END
+
+C         <<< END MAXMIN SUBROUTINE >>>
+
+C *********************************************************************
+
+         SUBROUTINE MAXPAR(NCPSI,NCPSO,NPHWIN,NPHWOU,NBANIN,
+     1    NBAOUT,NDLTOT,MICPSI,MICPSO,MIPHIN,MIPHOU,MIBAIN,
+     2    MIBAOU,MIDLAY,MACPSI,MACPSO,MAPHIN,MAPHOU,MABAIN,
+     3    MABAOU,MADLAY,MIVHDI,MAVHDI,MIVHDO,MAVHDO,NOVHDI,
+     4    NOVHDO)     
+
+          IF (NCPSI.LT.MICPSI)MICPSI=NCPSI
+          IF (NCPSO.LT.MICPSO)MICPSO=NCPSO
+          IF (NPHWIN.LT.MIPHIN)MIPHIN=NPHWIN
+          IF (NPHWOU.LT.MIPHOU)MIPHOU=NPHWOU
+          IF (NBANIN.LT.MIBAIN)MIBAIN=NBANIN
+          IF (NBAOUT.LT.MIBAOU)MIBAOU=NBAOUT
+          IF (NDLTOT.LT.MIDLAY)MIDLAY=NDLTOT
+          IF (NCPSI.GT.MACPSI)MACPSI=NCPSI
+          IF (NCPSO.GT.MACPSO)MACPSO=NCPSO
+          IF (NPHWIN.GT.MAPHIN)MAPHIN=NPHWIN
+          IF (NPHWOU.GT.MAPHOU)MAPHOU=NPHWOU
+          IF (NBANIN.GT.MABAIN)MABAIN=NBANIN
+          IF (NBAOUT.GT.MABAOU)MABAOU=NBAOUT
+          IF (NDLTOT.GT.MADLAY)MADLAY=NDLTOT
+          IF (NOVHDI.LT.MIVHDI)MIVHDI=NOVHDI
+          IF (NOVHDI.GT.MAVHDI)MAVHDI=NOVHDI
+          IF (NOVHDO.LT.MIVHDO)MIVHDO=NOVHDO
+          IF (NOVHDO.GT.MAVHDO)MAVHDO=NOVHDO
+
+          RETURN
+          END
+
+C         <<< END MAXPAR SUBROUTINE >>>
+
+C *************************************************************
+
+         SUBROUTINE ADDTOT(NTEXCT,NTEXLW,NTEXHW,NTNLCO,NTNLCI,
+     1   NTNACO,NTNACI,NTNTD,NTROIN,NTROUT,NEXCT,NEXLW,NEXHW,
+     2   NLCO,NLCI,NACO,NACI,NTD)
+
+          NTEXCT=NTEXCT+NEXCT
+          NTEXLW=NTEXLW+NEXLW
+          NTEXHW=NTEXHW+NEXHW
+          NTNLCO=NTNLCO+NLCO
+          NTNLCI=NTNLCI+NLCI
+          NTNACO=NTNACO+NACO
+          NTNACI=NTNACI+NACI
+          NTNTD=NTNTD+NTD
+          NTROIN=NTROIN+NLCI+NACI
+          NTROUT=NTROUT+NLCO+NACO
+   
+          RETURN
+          END
+
+C         <<<< END SUBROUTINE ADDTOT >>>>
+
+C *************************************************************
+
+         SUBROUTINE ADDPAR(NTCPSI,NTCPSO,NTPHIN,NTPHOU,NTBAIN,
+     1   NTBOUT,NTDLAY,NCPSI,NCPSO,NPHWIN,NPHWOU,NBANIN,NBAOUT,
+     2   NDLTOT,NTPAIN,NTPOUT,NOVHDI,NOVHDO)  
+
+          NTCPSI=NTCPSI+NCPSI
+          NTCPSO=NTCPSO+NCPSO
+          NTPHIN=NTPHIN+NPHWIN
+          NTPHOU=NTPHOU+NPHWOU
+          NTBAIN=NTBAIN+NBANIN
+          NTBOUT=NTBOUT+NBAOUT
+          NTDLAY=NTDLAY+NDLTOT
+          NTPAIN=NTPAIN+NOVHDI
+          NTPOUT=NTPOUT+NOVHDO
+
+          RETURN
+          END
+
+C         <<<< END SUBROUTINE ADDPAR >>>>
+C ***************************************************
+
+         SUBROUTINE DIVTOT(NTEXCT,NTEXLW,NTEXHW,NTNLCO,NTNLCI,
+     1   NTNACO,NTNACI,NTNTD,NTROIN,NTROUT,MTROIN,MTROUT,NUMREC)
+
+          IF (NUMREC.EQ.0)NUMREC=1
+
+          NTEXCT=NTEXCT/NUMREC
+          NTEXLW=NTEXLW/NUMREC
+          NTEXHW=NTEXHW/NUMREC
+          NTNLCO=NTNLCO/NUMREC
+          NTNLCI=NTNLCI/NUMREC
+          NTNACO=NTNACO/NUMREC
+          NTNACI=NTNACI/NUMREC
+          NTNTD=NTNTD/NUMREC
+          MTROIN=NTROIN/NUMREC
+          MTROUT=NTROUT/NUMREC
+
+          RETURN
+          END
+
+C         <<< END SUBROUTINE DIVTOT >>>
+
+C ***************************************************
+
+         SUBROUTINE DIVPAR(NTCPSI,NTCPSO,NTPHIN,NTPHOU,NTBAIN,
+     1   NTBOUT,NTDLAY,NUMREC,NTPAIN,NTPOUT)
+
+          IF (NUMREC.EQ.0)NUMREC=1
+
+          NTCPSI=NTCPSI/NUMREC    
+          NTCPSO=NTCPSO/NUMREC
+          NTPHIN=NTPHIN/NUMREC
+          NTPHOU=NTPHOU/NUMREC
+          NTBAIN=NTBAIN/NUMREC
+          NTBOUT=NTBOUT/NUMREC
+          NTDLAY=NTDLAY/NUMREC
+          NTPAIN=NTPAIN/NUMREC
+          NTPOUT=NTPOUT/NUMREC
+
+          RETURN
+          END
+
+C         <<< END SUBROUTINE DIVPAR >>>
+
+C ************************************************
+       
+	SUBROUTINE SUMAND (MINEXC,MAXTHI,MAXTHO,ALLND,SWIT,CONSAT,
+     1		SISIS,OTHRND,TYPE)
+
+	DIMENSION TYPE(4)
+	INTEGER ALLND(15),SWIT(15),CONSAT(15),SISIS(15),OTHRND(15)
+
+C		Allnd(i) array contains information on all the nodes that
+C		were selected. The index i represents the following information:
+C			i=1 ==>1-3K CPS,  i=2 ==>3-6 K CPS, i=3 ==>6-9K CPS,
+C			i=4 ==>>9 K CPS,  i=5 is the total cummulative
+C			characters. Hence, SISIS(3) represents the number of
+C			ISIS machines which had CPS between 6K and 9K CPS.
+C			i=6 ==>0-20 EXLC, i=7 ==>20-40 EXLC, i=8 ==>40-60 EXLC,
+C			i=9 ==>60-80 EXLC, i=10==> >80 EXLC, and i=11 ==>
+C			total cummulative exec count loops
+
+
+C		We summarize the throughput (addition of both in and out)
+C		information:
+
+	MTH = MAXTHI + MAXTHO
+
+	IF (MTH.LT.3000) I = 1
+	IF (MTH.GE.3000.AND.MTH.LT.6000) I = 2
+	IF (MTH.GE.6000.AND.MTH.LT.9000) I = 3
+	IF (MTH.GE.9000) I = 4
+
+	ALLND(I) = ALLND(I) + 1
+	ALLND(5) = ALLND(5) + MTH
+
+	IF (TYPE(1).EQ.'SWITC') GO TO 10
+	GO TO 20
+10		SWIT(I) = SWIT(I) + 1
+		SWIT(5) = SWIT(5) + MTH
+		GO TO 70
+
+20	IF (TYPE(1).EQ.'CONSA'.OR.TYPE(1).EQ.'TYMSA') GO TO 30
+	GO TO 40
+30		CONSAT(I) = CONSAT(I) + 1
+		CONSAT(5) = CONSAT(5) + MTH
+		GO TO 70
+
+40	IF (TYPE(1).EQ.'ISIS ') GO TO 50
+	GO TO 60
+50		SISIS(I) = SISIS(I) + 1
+		SISIS(5) = SISIS(5) + MTH
+		GO TO 70
+
+60		OTHRND(I) = OTHRND(I) + 1
+		OTHRND(5) = OTHRND(5) + MTH
+
+
+C		The following code is used to summarize Exec Loop Count info.
+
+
+70	IF (MINEXC.GE.0.AND.MINEXC.LT.20) I = 6
+	IF (MINEXC.GE.20.AND.MINEXC.LT.40) I = 7
+	IF (MINEXC.GE.40.AND.MINEXC.LT.60) I = 8
+	IF (MINEXC.GE.60.AND.MINEXC.LT.80) I = 9
+	IF (MINEXC.GE.80) I = 10
+
+	ALLND(I) = ALLND(I) + 1
+	ALLND(11) = ALLND(11) + MINEXC
+
+	IF (TYPE(1).EQ.'SWITC') GO TO 110
+	GO TO 120
+110		SWIT(I) = SWIT(I) + 1
+		SWIT(11) = SWIT(11) + MINEXC
+		GO TO 170
+
+120	IF (TYPE(1).EQ.'CONSA'.OR.TYPE(1).EQ.'TYMSA') GO TO 130
+	GO TO 140
+130		CONSAT(I) = CONSAT(I) + 1
+		CONSAT(11) = CONSAT(11) + MINEXC
+		GO TO 170
+
+140	IF (TYPE(1).EQ.'ISIS ') GO TO 150
+	GO TO 160
+150		SISIS(I) = SISIS(I) + 1
+		SISIS(11) = SISIS(11) + MINEXC
+		GO TO 170
+
+160		OTHRND(I) = OTHRND(I) + 1
+		OTHRND(11) = OTHRND(11) + MINEXC
+
+170	RETURN
+	END
+
+C		<<END SUBROUTINE SUMAND>>
+
+C ******************************************************************
+
+	SUBROUTINE SUMALN (MABAIN,MABAOU,ALLLN,BW96,BW14,BW19,
+     1			BW28,BW38,BW56,BWOTHR,BWFL96,BWFL14,BWFL19,
+     1			BWFL28,BWFL38,BWFL56)
+
+        INTEGER ALLLN(15),BW96(15),BW14(15),BW19(15)
+	INTEGER BW28(15),BW38(15),BW56(15),BWOTHR(15)
+
+C			The meaning of the arrays is as follows:
+C			i=1 ==> bandw. utiliz between 0 and 20 %
+C			i=2 ==>%20-%40 Bw.Utz, i=3 ==> %40-60 Bw.Utl.
+C			i=4 ==>%60-80 Bw.Utlz, i=5 ==>80-100% Bw.Utilz, and
+C			i=6 ==> cummulative BW.Utlz. Hence, array BW56(3)
+C			represents the number of 56 KBPS lines whose maximum
+C			observed utilization values falls between 40 and 60 %.
+
+
+	MAXBW = MAX0(MABAIN,MABAOU)
+
+	IF (MAXBW.GE.0.AND.MAXBW.LT.20) I = 1
+	IF (MAXBW.GE.20.AND.MAXBW.LT.40) I = 2
+	IF (MAXBW.GE.40.AND.MAXBW.LT.60) I = 3
+	IF (MAXBW.GE.60.AND.MAXBW.LT.80) I = 4
+	IF (MAXBW.GE.80) I = 5
+
+	ALLLN(I) = ALLLN(I) + 1
+	ALLLN(6) = ALLLN(6) + MAXBW
+
+
+	IF (BWFL96.EQ.1) GO TO 10
+	GO TO 20
+10		BW96(I) = BW96(I) + 1
+		BW96(6) = BW96(6) + MAXBW
+		GO TO 150
+
+20	IF (BWFL14.EQ.1.0) GO TO 30
+	GO TO 40
+30		BW14(I) = BW14(I) + 1
+		BW14(6) = BW14(6) + MAXBW
+		GO TO 150
+
+40	IF (BWFL19.EQ.1.0) GO TO 50
+	GO TO 60
+50		BW19(I) = BW14(I) + 1
+		BW19(6) = BW19(6) + MAXBW
+		GO TO 150
+
+60	IF (BWFL28.EQ.1.0) GO TO 70
+	GO TO 80
+70		BW28(I) = BW28(I) + 1
+		BW28(6) = BW28(6) + MAXBW
+		GO TO 150
+
+80	IF (BWFL38.EQ.1.0) GO TO 90
+	GO TO 100
+90		BW38(I) = BW38(I) + 1
+		BW38(6) = BW38(6) + MAXBW
+		GO TO 150
+
+100	IF (BWFL56.EQ.1.0) GO TO 110
+	GO TO 120
+110		BW56(I) = BW56(I) + 1
+		BW56(6) = BW56(6) + MAXBW
+		GO TO 150
+
+120		BWOTHR(I) = BWOTHR(I) + 1
+		BWOTHR(6) = BWOTHR(6) + MAXBW
+
+150	RETURN
+	END
+
+
+C		<<END OF SUBROUTINE SUMALN>>
+
+C   ***********************************************************************
+
+
+	SUBROUTINE SUMNPR (NDATE1,NDATE2,ALLND,SWIT,CONSAT,SISIS,
+     1			OTHRND,DIA)
+
+C				This subroutine prints the node summary
+
+	DIMENSION RANGE(15),FREALL(15),FRESWI(15),FRECON(15),FREISI(15)
+	DIMENSION FREOTH(15),DIA(2)
+
+	INTEGER ALLND(15),SWIT(15),CONSAT(15),SISIS(15),OTHRND(15)
+	INTEGER TOTNOD,TOTSWI,TOTCON,TOTISI,TOTOTH
+
+	DO 1 I=1,15
+		FREALL(I) = 0.0
+		FRESWI(I) = 0.0
+		FRECON(I) = 0.0
+		FREISI(I) = 0.0
+		FREOTH(I) = 0.0
+1	CONTINUE
+
+	RANGE(1) = '0 - 3'
+	RANGE(2) = '3 - 6'
+	RANGE(3) = '6 - 9'
+	RANGE(4) = '  > 9'
+	RANGE(5) = 'CUMMU'
+	RANGE(6) = ' 0-20'
+	RANGE(7) = '20-40'
+	RANGE(8) = '40-60'
+	RANGE(9) = '60-80'
+	RANGE(10)= '  >80'
+	RANGE(11)='CUMMU'
+
+	TOTNOD = 0
+	TOTSWI = 0
+	TOTCON = 0
+	TOTISI = 0
+	TOTOTH = 0
+
+	DO 5 I = 1,4
+		TOTNOD = TOTNOD + ALLND(I)
+		TOTSWI = TOTSWI + SWIT(I)
+		TOTCON = TOTCON + CONSAT(I)
+		TOTISI = TOTISI + SISIS(I)
+		TOTOTH = TOTOTH + OTHRND(I)
+5	CONTINUE
+
+C			Note: The following FREcls(i) represent the frequencies
+C			of occurance (%) of nodes of type "cls" with CPS 
+C			(i=1,4) or EXLC (i=6,10) between each cathegory. The
+C			exceptions are the values for i = 5 and i = 11, since
+C			the arrays class(i=5 or 11) contain the cummulative
+C			vaues of CPS and EXLC respectively. Hence, FREcls(i)
+C			for i = 5 and 11 mean the average KCPS and EXLC for
+C			nodes of classes cls, respectively!.
+
+	DO 10 J = 1,11
+		CONS = 100.0
+		IF (J.EQ.5) CONS = 0.001
+		IF (J.EQ.11)CONS = 1.0
+
+		IF (TOTNOD.EQ.0) GO TO 6
+			FREALL(J) = CONS*ALLND(J)/TOTNOD
+6		IF (TOTSWI.EQ.0) GO TO 7
+			FRESWI(J) = CONS*SWIT(J)/TOTSWI
+7		IF (TOTCON.EQ.0)GO TO 8
+			FRECON(J) = CONS*CONSAT(J)/TOTCON
+8		IF (TOTISI.EQ.0) GO TO 9
+			FREISI(J) = CONS*SISIS(J)/TOTISI
+9		IF (TOTOTH.EQ.0) GO TO 10
+			FREOTH(J) = CONS*OTHRND(J)/TOTOTH
+10	CONTINUE
+
+
+	WRITE (20,20)DIA(1),DIA(2),NDATE1,NDATE2
+20	FORMAT (//,4X,2A5,10X,'N O D E   S U M M A R Y',//,15X,
+     1		'SAMPLES TAKEN BETWEEN: ',I6,' AND ',I6,////,2X,
+     2		'RANGE IN KILO CPS',3X,'ALL NODES',3X,'SWITCHERS',
+     3		3X,' CONSATS ',3X,'  ISIS   ',3X,'OTHER NOD',/,2X,
+     4		'  MAX (IN+OUT)   ',5(3X,' #    %  '),/,2X,
+     5		17('='),5(3X,'==== ===='),/)
+
+	DO 30 I=1,4
+		WRITE (20,25)RANGE(I),ALLND(I),FREALL(I),SWIT(I),
+     1			FRESWI(I),CONSAT(I),FRECON(I),SISIS(I),
+     2			FREISI(I),OTHRND(I),FREOTH(I)
+25		FORMAT (//,7X,A5,6X,5(3X,I4,F5.0))
+30	CONTINUE
+
+	I = 5
+	WRITE (20,35) TOTNOD,TOTSWI,TOTCON,TOTISI,TOTOTH,
+     1		FREALL(I),FRESWI(I),FRECON(I),FREISI(I),FREOTH(I)
+35	FORMAT (14X,5(8X,'----'),//,3X,'CLASS TOTALS :',
+     1		5(4X,I4,4X),//,1X,'KCPS CLASS AVG :',5(6X,F4.1,2X),///)
+
+	WRITE (20,40)
+40	FORMAT(/,2X,'RANGE IN EXE LOOP',3X,'ALL NODES',3X,'SWITCHERS',
+     1		3X,' CONSATS ',3X,'  ISIS   ',3X,'OTHER NOD',/,2X,
+     2		'  MIN ( EXLC )   ',5(3X,' #    %  '),/,2X,
+     3		17('='),5(3X,'==== ===='),/)
+
+
+	DO 50 I=6,10
+		WRITE (20,25)RANGE(I),ALLND(I),FREALL(I),SWIT(I),
+     1			FRESWI(I),CONSAT(I),FRECON(I),SISIS(I),
+     2			FREISI(I),OTHRND(I),FREOTH(I)
+50	CONTINUE
+
+	I = 11
+	WRITE (20,55) TOTNOD,TOTSWI,TOTCON,TOTISI,TOTOTH,
+     1		FREALL(I),FRESWI(I),FRECON(I),FREISI(I),FREOTH(I)
+55	FORMAT (14X,5(8X,'----'),//,3X,'CLASS TOTALS :',
+     1		5(4X,I4,4X),//,1X,'EXLC CLASS AVG :',
+     2		5(5X,F5.1,2X),////,10X,'# Number of nodes with ',
+     3		'KCPS/EXLC within range',/,10X,'% Percent ',
+     4		'of nodes of given class within range.',/,'^Q^L')
+
+C				To create DMI output file for trend analysis:
+
+	CALL DATCON(DIA,JOUR,JERR)
+	N = 11
+	WRITE (30,60)JOUR,NDATE1,NDATE2,(ALLND(I),I=1,N),
+     1		(SWIT(I),I=1,N),(CONSAT(I),I=1,N),(SISIS(I),I=1,N),
+     2		(OTHRND(I),I=1,N)
+60	FORMAT (I6,2I6,55(I8))
+
+	RETURN
+	END
+
+C		<<END SUBROUTINE SUMNPR>>
+
+C     ***************************************************************
+
+
+	SUBROUTINE SUMLPR (NDATE1,NDATE2,ALLLN,BW96,BW14,BW19,BW28,
+     1			BW38,BW56,BWOTHR,DIA)
+
+C				This subroutine prints the line summary
+
+	DIMENSION RANGE(15),FREALL(15),FRE96(15),FRE14(15)
+	DIMENSION FRE19(15),FRE28(15),FRE38(15),FRE56(15)
+	DIMENSION FREOTH(15),DIA(2)
+
+	INTEGER ALLLN(15),BW96(15),BW14(15),BW19(15)
+	INTEGER BW28(15),BW38(15),BW56(15),BWOTHR(15)
+	INTEGER TOTALL,TOT96,TOT14,TOT19,TOT28,TOT38,TOT56,TOTOTH
+
+	DO 1 I=1,15
+		FREALL(I) = 0.0
+		FRE96(I) = 0.0
+		FRE14(I) = 0.0
+		FRE19(I) = 0.0
+		FRE28(I) = 0.0
+		FRE38(I) = 0.0
+		FRE56(I) = 0.0
+		FREOTH(I) = 0.0
+1	CONTINUE
+		
+	RANGE(1) = ' 0-20'
+	RANGE(2) = '20-40'
+	RANGE(3) = '40-60'
+	RANGE(4) = '60-80'
+	RANGE(5) = '80-99'
+	RANGE(6) = 'CUMMU'
+
+	TOTALL = 0
+	TOT96 = 0
+	TOT14 = 0
+	TOT19 = 0
+	TOT28 = 0
+	TOT38 = 0
+	TOT56 = 0
+	TOTOTH = 0
+
+	DO 5 I = 1,5
+		TOTALL = TOTALL + ALLLN(I)
+		TOT96 = TOT96 + BW96(I)
+		TOT14 = TOT14 + BW14(I)
+		TOT19 = TOT19 + BW19(I)
+		TOT28 = TOT28 + BW28(I)
+		TOT38 = TOT38 + BW38(I)
+		TOT56 = TOT56 + BW56(I)
+		TOTOTH = TOTOTH +BWOTHR(I)
+5	CONTINUE
+C						Above, TOT### = BW###(6) !
+
+
+C			Note: The following FREbw(i) represent the frequencies
+C			of occurance (%) of lines of bandwidth "bw" with band-
+C			width utilization between each cathegory (i=1,5). The
+C			exceptions are the values for i = 6, since
+C			the arrays BWbw(i=6) contains the cummulative
+C			values of bandwidth utilization. Hence, FREbw(i)
+C			for i = 6 means the average bandwidth utilization for
+C			lines of bandwidth bw.
+
+	DO 15 J = 1,6
+		CONS = 100.0
+		IF (J.EQ.6) CONS = 1.0
+
+		IF (TOTALL.EQ.0) GO TO 7
+			FREALL(J) = CONS*ALLLN(J)/TOTALL
+7		IF (TOT96.EQ.0) GO TO 8
+			FRE96(J) = CONS*BW96(J)/TOT96
+8		IF (TOT14.EQ.0) GO TO 9
+			FRE14(J) = CONS*BW14(J)/TOT14
+9		IF (TOT19.EQ.0) GO TO 10
+			FRE19(J) = CONS*BW19(J)/TOT19
+10		IF (TOT28.EQ.0) GO TO 11
+			FRE28(J) = CONS*BW28(J)/TOT28
+11		IF (TOT38.EQ.0) GO TO 12
+			FRE38(J) = CONS*BW38(J)/TOT38
+12		IF (TOT56.EQ.0) GO TO 13
+			FRE56(J) = CONS*BW56(J)/TOT56
+13		IF (TOTOTH.EQ.0) GO TO 15
+			FREOTH(J) = CONS*BWOTHR(J)/TOTOTH
+15	CONTINUE
+
+
+	WRITE (20,20)DIA,NDATE1,NDATE2
+20	FORMAT (//,4X,2A5,10X,'L I N K   S U M M A R Y',//,15X,
+     1		'SAMPLES TAKEN BETWEEN: ',I6,' AND ',I6,////,1X,
+     2		'RANGE',/,1X,'% BW.U',2X,' ALL LN  ',' 9.6 KB  ',
+     3		'14.4 KB  ','19.2 KB  ','28.8 KB  ','38.4 KB  ',
+     4		'  56 KB  ',' OTH.BW.',/,1X,'MX(I,O)',
+     5		8('   #   %',1X),/,1X,7('='),8(' === === '),///)
+
+	DO 30 I=1,5
+		WRITE (20,25)RANGE(I),ALLLN(I),FREALL(I),BW96(I),
+     1			FRE96(I),BW14(I),FRE14(I),BW19(I),FRE19(I),
+     2			BW28(I),FRE28(I),BW38(I),FRE38(I),BW56(I),
+     3			FRE56(I),BWOTHR(I),FREOTH(I)
+25		FORMAT (//,1X,A5,2X,8(I4,F5.0))
+30	CONTINUE
+
+	I = 6
+	WRITE (20,35) TOTALL,TOT96,TOT14,TOT19,TOT28,TOT38,TOT56,
+     1		TOTOTH,FREALL(I),FRE96(I),FRE14(I),FRE19(I),
+     2		FRE28(I),FRE38(I),FRE56(I),FREOTH(I)
+35	FORMAT (6X,8(3X,'----',2X),//,1X,'TOTALS:',8(I5,4X),//,1X,
+     1		'AVG % :',8(2X,F5.1,2X),/////,10X,'# Number of lines',
+     2		' with bandw. utilz. within range',/,10x,
+     3		'% Percent of lines of given bandwidth within range.')
+
+C				Finally we create the DMI trend file.
+
+	CALL DATCON(DIA,JOUR,JERR)
+	M = 6
+	WRITE (30,40)JOUR,NDATE1,NDATE2,(ALLLN(I),I=1,M),
+     1		(BW96(I),I=1,M),(BW14(I),I=1,M),(BW19(I),I=1,M),
+     2		(BW28(I),I=1,M),(BW38(I),I=1,M),(BW56(I),I=1,M),
+     3		(BWOTHR(I),I=1,M)
+40	FORMAT (I6,2I6,48(I8))
+
+	RETURN
+	END
+
+C		<<END SUBROUTINE SUMLPR>>
+
+C     ***************************************************************
+*************************************************************************
+*                                                                     *
+*                       SUBROUTINE: (MSL:28)DATCON.FTF                *
+*                                                                     *
+*       THIS SUBROUTINE CONVERTS A DATE FROM FORMAT: DD-MMM-YY        *
+*       WHE DD AND YY ARE INTEGER AND MMM IS ALPHA TO A FORMAT OF     *
+*       YYMMDD (WHERE YY=YEAR,MM=MONTH,DD=DAY AND ALL ARE NUMERIC.    *
+*                                                                     *
+*       I:      SYSDAT  2WORD ARRAY CONTAINING DATE IN FORMAT:        *
+*                       DD-MMM-YY.                                    *
+*                                                                     *
+*       O:      IDATE   INTEGER VARIABLE CONTAINING DATE CONVERTED    *
+*                       TO YYMMDD FORMAT.                             *
+*                                                                     *
+*       O:      IERR    ERROR FLAG. SET AS FOLLOWS.                   *
+*                       -1 = FATAL ERROR
+*                        0 = NO ERROR                                 *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE DATCON(SYSDAT,IDATE,IERR)
+
+        INTEGER SYSDAT(2),MONTBL(12)
+
+        MONTBL(1)="453035600000
+        MONTBL(2)="433134200000
+        MONTBL(3)="467036200000
+        MONTBL(4)="407416200000
+        MONTBL(5)="467037100000
+        MONTBL(6)="453535600000
+        MONTBL(7)="453535400000
+        MONTBL(8)="407534700000
+        MONTBL(9)="517136000000
+        MONTBL(10)="477076400000
+        MONTBL(11)="473376600000
+        MONTBL(12)="423134300000
+
+*       ** CONVERT DAY AND YEAR TO INTEGER VARIABLES
+
+        CALL RTC (ICHAR,SYSDAT,1)
+        DECODE (1,110,ICHAR)ID1
+110     FORMAT  (I1)
+        CALL RTC (ICHAR,SYSDAT,2)
+        DECODE (1,110,ICHAR)ID2
+        CALL RTC (ICHAR,SYSDAT,8)
+        DECODE (1,110,ICHAR)ID3
+        CALL RTC (ICHAR,SYSDAT,9)
+        DECODE (1,110,ICHAR)ID4
+
+*       ** CONVERT MONTH TO AN INTEGER VARIABLE
+        K=1
+        DO 120 I=4,6
+        CALL RTC (ICHAR,SYSDAT,I)
+        CALL STC (ICHAR,IMNTH,K)
+        K=K+1
+120     CONTINUE
+
+        DO 125 I=1,12
+        IF (IMNTH.EQ.MONTBL(I)) GO TO 130
+125     CONTINUE
+
+        TYPE 127,IMNTH
+127     FORMAT (5X,'ERROR!! SYSTEM RETURNED UNRECOGNIZABLE MONTH NAME: '
+     X,A5,/)
+        IERR=-1
+        GO TO 999
+
+*       ** FINALLY PUT SYSTEM DATE INTO YYMMDD FORMAT.
+
+130     IDATE=ID3*100000+ID4*10000+I*100+ID1*10+ID2
+
+
+*               FINISHED. RETURN
+
+999     RETURN
+        END
+   %:W­
