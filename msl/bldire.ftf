@@ -1,0 +1,651 @@
+****************************************************************
+*
+* PROGRAM BLDIRE: PROGRAM BUILDS THE FORTRAN INTEGER,REAL, AND 
+* EQUIVALENCE STATEMENTS REQUIRED TO ASSIGN THE PROPER VARIABLE TYPE,
+* TO THE FORTRAN VARIABLE NAME ENTERED IN PROGRAM ENTDEF.
+* THE PROGRAM ALSO GENERATES THE EQUIVALENCE STATEMENT WHICH WILL
+* EQUIVALENCE THE VARIABLE NAME TO THE PROPER ELEMENT (OR ELEMENTS
+* IN THE CASE OF TEXT ATTRIBUTES) IN ARRAY VARVAL. N.B. : AS LONG
+* AS THE FORTRAN VARIABLE NAME IS USED TO REFRENCE OFFSETS INTO
+* ARRAY VARVAL, THE INTERNAL TYPE REPRESENTATION OF THE ELEMENT
+* IN VARVAL (TYPE, I.E. INTEGER, REAL, COMPLEX, ...) WILL BE GOVERNED
+* BY THE TYPE DECLARATION OF THE FORTRAN VARIABLE NAME, AND NOT
+* BY THE TYPE DECLARATION OF ARRAY VARVAL. THUS IT IS POSSIBLE TO
+* STOTRE BOTH INTEGER, REAL, AND OTHER VARIABLE TYPES IN THE
+* SAME ARRAY, BY THE USE OF EQUIVALENCE STATEMENTS.
+*
+***************************************************************
+         IMPLICIT INTEGER (A-Z)
+         REAL REALVL(100)
+         DIMENSION VNAME(5),SCRTCH(5),INTEGER(14,20),REAL(14,20),
+     X     EQUIV(14,20)
+         DIMENSION DEFARR(7,200),ATTNAM(650),VARVAL(800),PROMPT(400),
+     X     VALID(650),IMAGE(400),FORNAM(400),INPFIL(3),OUTFIL(3)
+         DATA INTEGER(2,1),INTEGER(3,1),INTEGER(4,1)/'   IN','TEGER'
+     X     ,'     '/
+         DATA REAL(2,1),REAL(3,1),REAL(4,1)/'   RE','AL   ','     '/
+         DATA EQUIV(2,1),EQUIV(3,1),EQUIV(4,1)/'   EQ','UIVAL','ENCE '/
+         TYPE 5
+ 5       FORMAT( ' BLDIRE VERSION 1.00     21 NOV. 1979')
+*
+*  NEXT GROUP OF VARIABLES ARE POINTERS INTO DEFARR
+*
+         VALPTR=2
+         TYPE=6
+         LENGTH=7
+*
+*
+*  NEXT VARIABLE POINTS TO THE POSITION OF THE ATTRIBUTE BEING PROCESSED
+*
+         ATTNUM=0
+*
+*  ACCEPT INPUT AND OUTPUT FILE NAMES
+*
+         TYPE 10
+10       FORMAT(' ENTER INPUT FILE NAME : ',$)
+         ACCEPT 20,INPFIL
+20       FORMAT(3A5)
+*
+         TYPE 30
+30       FORMAT(' ENTER OUTPUT FILE NAME : ',$)
+         ACCEPT 20,OUTFIL
+         OPEN(21,OUTFIL,OUTPUT,SYMBOLIC)
+*
+* BUILD THE DEFINITION ARRAYS, AND INITIALIZE ARRAYS TO
+* CONTAIN THE INTEGER,REAL, AND EQUIVALENCE STATEMENTS, AND POINTERS
+*
+         CALL BLDSPC(INPFIL,DEFARR,ATTNAM,PROMPT,VARVAL,VALID,
+     X     IMAGE,REALVL,FORNAM)
+*
+         CALL INIT(INTEGER,ILINE,IPT)
+         CALL INIT(REAL,RLINE,RPT)
+         CALL INIT(EQUIV,ELINE,EPT)
+*
+*
+****************************************************************
+*
+* BEGIN PROCESSING VARIBLE NAMES. GET THE FORTRAN VARIABLE NAME
+* FROM FORNAM. IF ATTRIBUTE TYPE IS TEXT, APPEND THE PROPER
+* DIMENSION TO THE END OF THE VARIABLE NAME. PLACE THE VAR-
+* IABLE NAME INTO THE ARRAY CONTAINING THE FORTRAN INTEGER, OR REAL
+* STATEMENT AS APPROPRIATE. NEXT BUILD THE CLAUSE TO BE PLACED IN THE
+* FORTRAN EQUIVALENCE STATEMENT. USE THE POINTER INTO VARVAL CONTAINED
+* IN DEFARR, TO FIND THE PROPER ELEMENT OF VARVAL FOR EQUIVALENCING.
+******************************************************************
+*
+*
+* START
+100      ATTNUM=ATTNUM+1
+*
+* END OF ATTRIBUTES ?
+*
+         IF(DEFARR(1,ATTNUM).EQ. -1) GOTO 1000
+*
+* INITIALIZE SCRATCH PAD ARRAYS. VNAME TO CONTAIN FORTRAN VARIABLE NAME
+* SCRTCH TO CONTAIN CLAUSE FOR EQUIVALENCE STATEMENT.
+*
+*
+         DO 110 I=1,5
+         VNAME(I)='     '
+         SCRTCH(I)='     '
+ 110     CONTINUE
+*
+* GET FORTRAN VARIABLE NAME
+*
+         DO 120 I=1,2
+         VNAME(I)=FORNAM(I+(ATTNUM-1)*2)
+ 120     CONTINUE
+*
+* TEST FOR TYPE=TEXT. IF SO SUPPLY PROPER DIMENSION
+*
+         IDIM=1
+         IF(DEFARR(TYPE,ATTNUM).NE.'T    ') GOTO 200
+*
+         IDIM=DEFARR(LENGTH,ATTNUM)/5
+         IF(MOD(DEFARR(LENGTH,ATTNUM),5).NE.0) IDIM=IDIM+1
+*
+* CHECK TO SEE IF THE PROPER DIMENSION IS ONE. IF SO, NO ACTION IS REQUIRED.
+*
+         IF(IDIM.EQ.1) GOTO 200
+*
+* CONVERT THE DIMENSION TO ASCII.
+*
+         ENCODE(5,130,DIMC) IDIM
+ 130     FORMAT(I5)
+*
+* APPEND DIMENSION TO VARIABLE NAME IN VNAME.
+*
+         VNAMPO=IINDEX(VNAME,1,15,' ',1,1)
+         CALL STC('(',VNAME,VNAMPO)
+         VNAMPO=VNAMPO+1
+*
+* TRANSFER THE NUMERIC CHARACTERS IN DIMC. SKIP BLANKS
+*
+         DO 140 I=1,5
+         IF(EQ(DIMC,I,' ',1,1)) GOTO 140
+         CALL RTC(CHARL,DIMC,I)
+         CALL STC(CHARL,VNAME,VNAMPO)
+         VNAMPO=VNAMPO+1
+ 140     CONTINUE
+         CALL STC(')',VNAME,VNAMPO)
+*
+* THE VARIBLE NAME, PROPERLY DIMENSIONED IS NOW STORED IN VNAME.
+* PLACE THE CONTENTS OF VNAME IN THE PROPER INTEGER, OR REAL 
+* STATEMENT.
+*
+ 200     IF(DEFARR(TYPE,ATTNUM).EQ.'R    ') GOTO 210
+         CALL PATCH(VNAME,INTEGER,ILINE,IPT)
+         GO TO 220
+ 210     CALL PATCH(VNAME,REAL,RLINE,RPT)
+*
+* BUILD THE PROPER CLAUSE FOR THE EQUIVALENCE STATEMENT.
+*
+ 220     SCRTCH(1)='(VARV'
+         SCRTCH(2)='AL(  '
+         SCRTPO=9
+*
+* ENCODE THE OFFSET INTO VARVAL CONTAINED IN DEFARR.
+*
+         ENCODE(5,310,OFFSET) DEFARR(VALPTR,ATTNUM)
+ 310     FORMAT(I5)
+*
+* PLACE THE OFFSET IN THE EQUVALENCE CLAUSE.
+*
+         DO 320 I=1,5
+         IF(EQ(OFFSET,I,' ',1,1)) GOTO 320
+         CALL RTC(CHARL,OFFSET,I)
+         CALL STC(CHARL,SCRTCH,SCRTPO)
+         SCRTPO=SCRTPO+1
+ 320     CONTINUE
+         CALL STC(')',SCRTCH,SCRTPO)
+         SCRTPO=SCRTPO+1
+         CALL STC(',',SCRTCH,SCRTPO)
+         SCRTPO=SCRTPO+1
+*
+* ARRAY SCRTCH IS NOW READY TO RECIEVE THE VARIABLE NAME IN VNAME
+*
+* MAKE THE EQUIVALENCE BETWEEN THE OFFSET POINTED TO IN DEFARR,
+* AND THE FIRST ELEMENT OF THE VARIABLE IN VNAME.
+*
+*
+         IF (IDIM.EQ. 1) GOTO 350
+*
+*
+* FIND THE SUBSCRIPT IN VNAME AND SET TO 1.
+*
+*
+         SUBPO=IINDEX(VNAME,1,15,'(',1,1)+1
+         CALL STC('1',VNAME,SUBPO)
+         SUBPO=SUBPO+1
+         CALL STC(')',VNAME,SUBPO)
+         SUBPO=SUBPO+1
+*
+*
+* BLANK OUT THE REMAINDER OF VNAME AS REQUIRED.
+*
+*
+         IF (SUBPO.GE.16) GOTO 350
+         DO 330 I=SUBPO,15
+         CALL STC(' ',VNAME,I)
+ 330     CONTINUE
+*
+*
+* FIND THE LAST NON-BLANK CHARACTER IN VNAME, AND TRANSFER ALL NON-BLANKS
+* TO SCRTCH
+*
+*
+ 350     VNAML=IINDEX(VNAME,1,15,' ',1,1)-1
+*
+         IF(VNAML .EQ. -1) VNAML=15
+*
+         DO 360 I=1,VNAML
+         CALL RTC(CHARL,VNAME,I)
+         CALL STC(CHARL,SCRTCH,SCRTPO)
+         SCRTPO=SCRTPO+1
+ 360     CONTINUE
+         CALL STC(')',SCRTCH,SCRTPO)
+         SCRTPO=SCRTPO+1
+*
+*
+* SCRTCH NOW CONTAINS THE COMPLETE CLAUSE TO BE INSERTED INTO
+* THE EQUIVALENCE STATEMENT.
+*
+*
+         CALL PATCH(SCRTCH,EQUIV,ELINE,EPT)
+*
+*
+* GET THE NEXT ATTRIBUTE
+*
+*
+         GO TO 100
+*
+*
+********************************************************
+*
+* AFTER ALL ATTRIBUTES HAVE BEEN PROCESSED, WRITE ARRAYS, AND CLOSE
+*
+*
+ 1000    CALL WRITE(INTEGER,ILINE)
+         CALL WRITE(REAL,RLINE)
+         CALL WRITE(EQUIV,ELINE)
+         CLOSE (21)
+         END
+************************************************************************
+*
+*               SUBROUTINE BLDSPC
+*
+*       IO: INPUT FILE NAME
+*       IO: DEFARR ARRAY
+*       IO: ATTNAM ARRAY
+*       IO: PROMPT ARRAY
+*       IO: VARVAL ARRAY
+*       IO: VALID ARRAY
+*       IO: IMAGE ARRAY
+*       IO: FORNAM ARRAY
+*
+*       THIS SUBROUTINE IS TO BE CALLED AT THE BEGINING OF EACH PROGRAM
+* WHICH REFFERANCES A DATA BASE INORDER TO BUILD THE ARRAYS IN THE APPROPRIATE
+* FORMAT ACCORDING TO THE DBDEF.DOC FILE.  THE INPUT FILE SPECIFICATION IS TO
+* BE HARD CODED INTO THE PROGRAM OR INPUT BY THE USER.  THIS FILE IS NORMALLY
+* GENERATED BY THE ENTDEF.FTF PROGRAM.
+*       CURRENTLY THE ARRAYS ARE PASSED IN THE CALL, BUT SOMETIME IN THE FUTURE
+* THIS WILL BE CHANGED SO THAT THE ARRAYS ARE DEFINED TO BE IN COMMON.
+*
+* *** NOTE THAT BLDSPC IS A SPECIAL FORM OF THE BLDDEF SUBROUTINE.
+* *** THE TWO DIFFER IN THAT BLDSPC READS THE FORTRAN VARIABLE NAME
+* *** INPUT THROUGH PROGRAM ENTDEF, INTO ARRAY FORMAN, WHILE BLDDEF
+* *** SKIPS THAT RECORD ON INPUT.
+*
+************************************************************************
+
+        SUBROUTINE BLDSPC(INPFIL,DEFARR,ATTNAM,PROMPT,VARVAL,VALID
+     X,IMAGE,REALVL,FORNAM)
+
+
+        REAL    REALVL(100),RELVAL
+
+        INTEGER INPFIL(3)
+
+*       DECLARE DATA BASE DEFINITION ARRAYS     ***********
+*
+        INTEGER DEFARR(7,200),ATTNAM(650),VARVAL(800),PROMPT(400)
+     X ,VALID(650),IMAGE(400),FORNAM(400),MAXDEF
+
+
+        INTEGER ATTPTR,VARPTR,PMTPTR,VALPTR,IMGPTR,TLEN,COMMND(16)
+
+
+        INTEGER RELPTR,FORPTR
+*
+*               SET MAXIMUM VARIABLE CONSTANTS FOR LOOPING THRU THE ARRAYS
+*
+        MAXDEF=200
+*               SET THE INITIAL POINTERS TO APPROPREATE VALUE
+
+
+        ATTPTR=0
+        VARPTR=1
+        PMTPTR=0
+        VALPTR=0
+        RELPTR=0
+        IMGPTR=0
+*                 NEXT PTR TO -1,SINCE IT MUST START AT 1,INC BY 2.
+        FORPTR=-1
+
+
+************************** BEGIN BUILDING ARRAYS *********************
+
+3000    OPEN(20,INPFIL,INPUT,SYMBOLIC)
+
+
+*                               FORMATS FOR READING INPUT FILE AND CONVERTING
+*                               THE ARRAY PTR TO TEXT
+
+3010    FORMAT(16A5)
+3015    FORMAT(A5)
+
+*                               BEGIN LOOPING THRU SPECIFIED ATTRIBUTES
+
+        DO 5000 J=1,200
+
+*************************************************************************
+*                               BUILD ATTNAM ARRAY WITH 1 WORD OF BLANKS
+*                               AS TERMINATORS AND UPDATE DEFARR
+************************************************************************
+
+*                               ASSIGN DEFARR(ATTNAM,ATTRIBUTE) TO THE
+*                               ASCII CHAR EQV. TO ATTPTR
+        ATTPTR=ATTPTR+1
+        DEFARR(1,J)=ATTPTR
+*                               READ ATTRIBUTE NAME FROM INPUT FILE
+        READ(20,3010,END=5001)COMMND
+*                               LOOP THRU ATT NAME (MAX 20 CHAR) AND
+*                               STORE A TRAILING BLANK
+
+        DO 3030 K=1,5
+
+        ATTNAM(ATTPTR)=COMMND(K)
+        IF (COMMND(K).EQ.'     ') GOTO 3035
+        ATTPTR=ATTPTR+1
+3030    CONTINUE
+******************************************************************
+*                                 GET FORTRAN VARIABLE NAME
+******************************************************************
+
+3035    FORPTR=FORPTR+2
+        READ(20,3036)(FORNAM(I),I=FORPTR,FORPTR+1)
+3036    FORMAT(2A5)
+
+
+************************************************************************
+*                               ENTER ATTRIBUTE TYPE AND STORE ASCII IN 
+*                               DEFARR
+************************************************************************
+
+        READ(20,3010)COMMND
+        DEFARR(6,J)=COMMND(1)
+
+************************************************************************
+*                               ENTER ATTRIBUTE LENGTH IN CHARS
+************************************************************************
+
+3040    READ(20,3045)TLEN
+3045    FORMAT(G)
+        DEFARR(7,J)=TLEN
+
+************************************************************************
+*                               STORE THE PROMPT STRING (40 CHAR MAX)
+*                               WITH A WORD OF TRAILING BLANKS
+************************************************************************
+
+3050    READ(20,3010)COMMND
+
+*                               STORE THE DEFARR ARRAY OFFSET
+        PMTPTR=PMTPTR+1
+        DEFARR(3,J)=PMTPTR
+*                               BEGIN STORING IN THE PROMPT ARRAY
+        DO 3070 K=1,9
+        PROMPT(PMTPTR)=COMMND(K)
+        IF (COMMND(K).EQ.'     ') GOTO 3075
+        PMTPTR=PMTPTR+1
+3070    CONTINUE
+
+************************************************************************
+*                               STORE THE VALID VALUES FOR EACH ATTRIBUTE
+*                               TYPES 'IO','ID', AND 'R' HAVE 2 WORDS
+*                               WITH 1ST BEING LOWEST POSSIBLE VALUE AND
+*                               OTHER THE HIGHEST.  TEXT FIELDS
+*                               HAVE 25 MAX. VALUES WITH EACH BEING TERMINATED
+*                               BY A WORD OF BLANKS.  EACH ATTRIBUTE GROUP
+*                               IS TERMINATED BY A WORD CONTAINING "*END*"
+*                               IF EVERYTHING IS LEGAL 1 WORD CONTAING
+*                               "*ANY*" IS STORED
+************************************************************************
+
+*                               TEST IF TYPE REAL
+3075    IF (DEFARR(6,J).EQ.'R    ') GOTO 3135
+
+*                               STORE THE TEXT AND/OR INTEGER VALID VALUES
+
+        VALPTR=VALPTR+1
+        DEFARR(4,J)=VALPTR
+*                               TEST TYPE OF ATTRIBUTE
+        IF (DEFARR(6,J).EQ.'ID   ') GOTO 3130
+        IF (DEFARR(6,J).EQ.'IO   ') GOTO 3130
+
+*                               LOOP THRU POSSIBLE VALID VALUES
+        DO 3115 K=1,25
+*                               IF FIRST TIME THRU FOR THIS ATTRIBUTE
+*                               INCREMENT OF VALPTR IS DONE ABOVE
+        IF (K.EQ.1) GOTO 3100
+        VALPTR=VALPTR+1
+
+3100    READ(20,3010)COMMND
+
+        DO 3110 L=1,4
+
+        VALID(VALPTR)=COMMND(L)
+        IF (COMMND(1).EQ.VANY) GOTO 3140
+        IF (COMMND(1).EQ.'     ') GOTO 3120
+        IF (COMMND(L).EQ.'     ') GOTO 3115
+        VALPTR=VALPTR+1
+
+3110    CONTINUE
+
+3115    CONTINUE
+
+*                               MARK THE END OF ATTRIBUTES VALUES
+3120    VALID(VALPTR)='*END*'
+        GOTO 3140
+*
+*                               IF NUMERIC ENTER THE HI/LOW RANGE
+*
+3130    READ(20,3010)COMMND
+        VALID(VALPTR)=COMMND(1)
+        VALPTR=VALPTR+1
+        READ(20,3010)COMMND
+        VALID(VALPTR)=COMMND(1)
+        GOTO 3140
+
+*                               STORE THE REAL VALID VALUE RANGE
+
+3135    RELPTR=RELPTR+1
+        DEFARR(4,J)=RELPTR
+        READ(20,3138)RELVAL
+3138    FORMAT(F12.2)
+        REALVL(RELPTR)=RELVAL
+        READ(20,3138)RELVAL
+        RELPTR=RELPTR+1
+        REALVL(RELPTR)=RELVAL
+
+
+************************************************************************
+*                               STORE THE IMAGE ARRAY (10 CHAR MAX)
+*                               AND INITIALIZE THE DEFARR ARRAY
+************************************************************************
+
+3140    IMGPTR=IMGPTR+1
+        DEFARR(5,J)=IMGPTR
+
+        READ(20,3010)COMMND
+
+        DO 3160 K=1,3
+        IMAGE(IMGPTR)=COMMND(K)
+        IF (COMMND(K).EQ.'     ') GOTO 3170
+        IMGPTR=IMGPTR+1
+
+3160    CONTINUE
+
+************************************************************************
+*                               CALCULATE THE OFFSETS INTO VARVAL TO
+*                               STORE IN THE DEFARR ARRAY
+*                               THIS ROUTINE IS ONE BEHIND THE COUNT
+*                               AND DETERMINE IT'S OFFSET BY THE LENGTH OF
+*                               THE LAST ATTRIBUTE
+************************************************************************
+
+3170    DEFARR(2,J)=VARPTR
+
+        IF (DEFARR(6,J) .EQ. 'R    ') GOTO 3185
+        IF (DEFARR(6,J).EQ.'ID   ') GOTO 3185
+        IF (DEFARR(6,J).EQ.'IO   ') GOTO 3185
+*                               CALCULATE THE LENGTH IN WORDS OF THIS ATTRIBUTE
+        TLEN=DEFARR(7,J)
+        N=TLEN
+        TLEN=TLEN/5
+        IF (MOD(N,5).EQ.0) GOTO 3180
+        TLEN=TLEN+1
+3180    VARPTR=VARPTR+TLEN
+        GOTO 5000
+
+*                               HERE IF TYPE ID,IO OR R
+3185    VARPTR=VARPTR+1
+
+***********************************  CONTINUE LOOP THRU ATTRIBUTES
+
+5000    CONTINUE
+
+5001    DO 5010 K=1,7
+        DEFARR(K,J)=-1
+5010    CONTINUE
+
+        ATTNAM(ATTPTR)=-1
+        PROMPT(PMTPTR+1)=-1
+        VALID(VALPTR+1)=-1
+        REALVL(RELPTR+1)=-1
+        IMAGE(IMGPTR+1)=-1
+
+
+        CLOSE(20)
+
+        RETURN
+
+        END
+****************************************************************
+* SUBROUTINE FILLS THE CONTENTS OF THE FIRST ARGUEMENT
+* INTO THE SECOND ARGUEMENT AT THE LINE, AND POSITION
+* INDICATED BY IARRLN, AND IARRPT RESPECTIVLY.
+* SUBROUTINE MAKES CHECKS TO AVOID LINE OVERFLOW, AND OUTPUT
+* OF MORE THAN 19 CONTINUATION LINES, WHICH WOULD RESULT IN
+* A COMPILATION ERROR.
+* NOTE THAT BY SUBSCRIPTING IARR IN THE CALLS TO STC THE PATCH
+* SUBROUTINE BECOMES LINE ORIENTED. THE SUBROUTINE OPERATES ON THE
+* LINE PASSED, OR THE LINE PASSED + 1 IF INSUFFICIENT SPACE REMAINS
+* IN THE LINE PASSED.
+***************************************************************
+*
+*
+         SUBROUTINE PATCH(IFILL,IARR,IARRLN,IARRPT)
+         DIMENSION IFILL(5),IARR(14,20)
+*
+*
+* GET THE LENGTH OF THE TEXT TO BE PATCHED IN
+*
+*
+         IFLEN=IINDEX(IFILL,1,25,' ',1,1)-1
+         IF (IFLEN .EQ. -1) IFLEN = 25
+*
+*
+* CHECK FOR POSSIBLE LINE OVERFLOW. GO TO NEXT LINE IF WRITING
+* ON THE CURRENT LINE WOULD RESULT IN AN OVERFLOW.
+*
+*
+         IF((IFLEN+IARRPT) .LE. 69) GOTO 100
+*
+*
+* START AT THE BEGINING OF THE NEXT LINE.
+*
+*
+         IARRLN=IARRLN+1
+         IARRPT=11
+*
+*
+* CHECK FOR MORE THAN 21 LINES. IF SO, WRITE OUT CURRENT CONTENTS
+* OF IARR, AND REINITIALIZE.
+*
+*
+         IF(IARRLN .GE. 21) CALL WRITE(IARR,IARRLN)
+         IF(IARRLN .GE. 21) CALL INIT(IARR,IARRLN,IARRPT)
+*
+*
+* IF THIS IS THE FIRST ENTRY AFTER THE KEY WORD, DO NOT OUTPUT
+* A COMMA BEFORE PATCHING IN.
+*
+*
+ 100     IF((IARRLN .EQ. 1) .AND. (IARRPT .LE. 21)) GOTO 110
+*
+*
+         CALL STC(',',IARR(1,IARRLN),IARRPT)
+         IARRPT=IARRPT+1
+*
+*
+* PATCH IN THE FILLER
+*
+*
+ 110     DO 120 I=1,IFLEN
+         CALL RTC(ICHARL,IFILL,I)
+         CALL STC(ICHARL,IARR(1,IARRLN),IARRPT+I-1)
+ 120     CONTINUE
+*
+*
+* UPDATE IARRPT TO POINT TO NEXT AVAILABLE POSITION.
+*
+*
+         IARRPT=IARRPT+IFLEN
+*
+*
+         RETURN
+         END
+*************************************************************
+* SUBROUTINE INITIALIZES THE ARRAYS PASSED TO IT
+* THESE ARRAYS WILL CONTAIN THE INTEGER, REAL, AND EQUIVALENCE
+* STATEMENTS. NOTE THAT SINCE THE SUBROUTINE CAN NOT
+* KNOW WHICH ARRAY IT HAS BEEN PASSED, IT WILL NOT INITIALIZE
+* THE ELEMENTS IN THE ARRAY WHICH CONTAINS THE TEXT FOR THE
+* FORTRAN KEY WORDS INTEGER, REAL, OR EQUIVALENCE.
+************************************************************
+*
+*
+*
+         STINE INIT(IARR,IARRLN,IARRPT)
+         DIMENSION IARR(14,20)
+*
+         IARRLN=1
+         IARRPT=21
+*
+*
+* SET THE FIRST WORD OF EACH LINE TO BLANKS.
+*
+*
+         DO 100 I=1,20
+         IARR(1,I)='     '
+ 100     CONTINUE
+*
+*
+* SET THE FORTRAN CONTINUATION LINE INDICATOR (IE. COLUMN 6) 
+* IN THE SECOND THROUGH TWENTYETH LINES.
+*
+*
+         DO 110 I=2,20
+         IARR(2,I)='X    '
+ 110     CONTINUE
+*
+*
+* BLANK OUT THE FIRST LINE, SAVING THE ELEMENTS WHICH CONTAIN THE
+* FORTRAN KEY WORD.
+*
+*
+         DO 120 I=5,14
+         IARR(I,1)='     '
+ 120     CONTINUE
+*
+*
+* BLANK OUT THE REMAINING ELEMENTS OF THE ARRAY.
+*
+*
+         DO 140 I=2,20
+         DO 130 J=3,14
+         IARR(J,I)='     '
+ 130     CONTINUE
+ 140     CONTINUE
+*
+*
+         RETURN
+         END
+*******************************************************************
+* SUBROUTINE WRITES OUT THE ARRAY PASSED.
+*******************************************************************
+*
+*
+         SUBROUTINE WRITE(IARR,IARRLN)
+         DIMENSION IARR(14,20)
+*
+*
+         IF (IARRLN .GT. 20) IARRLN=20
+         WRITE(21,100)((IARR(I,J),I=1,14),J=1,IARRLN)
+ 100     FORMAT(14A5)
+*
+*
+         RETURN
+         END
+    =]If
