@@ -1,0 +1,1892 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                          TOM
+                                      User's Guide
+
+                                    January 4, 1983
+                                       Version 2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                     Tymshare, Inc.
+
+                              Network Technology Division
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+                                        CONTENTS                                        ________
+
+
+          1.0 OVERVIEW ..................................................... 1
+
+             1.1 Access Levels and Configuration Options ................... 1
+
+             1.2 Hardwired TOM Ports ....................................... 2
+
+             1.3 Format .................................................... 2
+
+             1.4 Command Syntax ............................................ 2
+
+             1.5 Special Characters ........................................ 3
+
+                1.5.1 Escape ............................................... 3
+
+                1.5.2 Carriage Return ...................................... 4
+
+          2.0 LEVEL 0 COMMANDS ............................................. 5
+
+             2.1 Diagnostics Command ....................................... 5
+
+             2.2 Enquire Command ........................................... 5
+
+             2.3 Exit Command .............................................. 6
+
+             2.4 Grab Command .............................................. 6
+
+             2.5 Password Command .......................................... 7
+
+             2.6 Radix Command ............................................. 7
+
+             2.7 Status Command ............................................ 7
+
+             2.8 Status Messages Command .................................. 10
+
+             2.9 Time Command ............................................. 11
+
+             2.10 To Command .............................................. 11
+
+             2.11 Who Command ............................................. 12
+
+          3.0 LEVEL 1 COMMANDS ............................................ 13
+
+             3.1 Assign Command ........................................... 13
+
+             3.2 Candidate Command ........................................ 13
+
+             3.3 Down Command ............................................. 14
+
+             3.4 Message Command .......................................... 14
+
+             3.5 Shut Command ............................................. 15
+
+
+                                                                        Page i
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+             3.6 Speed Ports Command ...................................... 16
+
+             3.7 Types Command ............................................ 17
+
+             3.8 Up Command ............................................... 18
+
+             3.9 Zone Command ............................................. 18
+
+          4.0 LEVEL 2 COMMANDS ............................................ 19
+
+             4.1 Change Host Command ...................................... 19
+
+          5.0 DIAGNOSTIC MESSAGES ......................................... 20
+
+             5.1 All Ports Down ........................................... 20
+
+             5.2 No Ports Available ....................................... 20
+
+             5.3 Ring No Answer ........................................... 20
+
+             5.4 Invalid Username ......................................... 21
+
+             5.5 Access Not Permitted ..................................... 21
+
+             5.6 No Host Acknowledgement .................................. 21
+
+             5.7 Dropped For Inactivity ................................... 21
+
+          6.0 COMMAND SUMMARY ............................................. 22
+
+          Index ........................................................... 24
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                       Page ii
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+          SECTION 1.0 OVERVIEW          ____________________
+
+          The TYMCOM Operations Manager (TOM) is a process used to monitor and
+          manipulate various dynamic options of  the ISIS Asynchronous TYMCOM.
+          The ISIS Asynchronous TYMCOM runs in  a slot under ISIS.  A terminal
+          connected to  the TOM will  receive  all diagnostic  messages output
+          by the TYMCOM  and  can be  used to  receive status  reports on  the
+          host  processes  and the  ports associated   with the slot.   It can
+          also be used to affect these statuses.
+
+          The TOM  may  be accessed  through  a  local hardwired  port  on the
+          ISIS machine, or by logging in  through the network.   The number of
+          hardwired ports and their positions may be changed by  using the TOM
+          Assign command  (see Section 3.1).   However, the maximum  number of
+          users that may be  logged into the TOM at any  one time is specified
+          at system generation.
+
+
+          SECTION 1.1 Access Levels and Configuration Options          ___________________________________________________
+
+          Change license is the ability to alter the status of the TYMCOM.  It
+          is obtained by exercising the  Grab command.  Any terminal connected
+          to the  TOM may receive  diagnostics and TYMCOM  status information,
+          but only a user with change  license may affect the configuration of
+          the TYMCOM.  Only one user at a time can have change license.
+
+          TOM commands  are divided into three  levels.  Level 0  commands are
+          always accessable.  Level  1 commands are accessable  after assuming
+          change license via the Grab command (see Section 2.4).  Level 2 com-
+          mands are only accessable by logging in  to the TOM using a particu-
+          lar username and assuming change license.   Level 2 commands are not
+          accessable through the hardwired TOM ports.
+
+          The special username may be changed  with the TOMGG(username) state-
+          ment in the configuration file.  The  default name is !##TOM##.  The
+          username  is ##TOM##,  the exclamation  point  (!) is  added by  the
+          Supervisor for shut override status.
+
+          The TOMCL(level,command) statement in the configuration file is used
+          to increase the level of a command.  Level 0 commands may be changed
+          to level 1 or  2.  Level 1 commands may be changed  to level 2 only.
+          Level 2 commands may not be changed.
+
+          Commands  that  are  initially level   0  are described  in  Section
+          2.0.  Commands   that  are   initially level   1  are  described  in
+          Section 3.0.  Commands  that  are  initially level  2  are described
+          in  Section 4.0.
+
+
+
+
+
+
+
+
+
+                                                            OVERVIEW    Page 1
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+          SECTION 1.2 Hardwired TOM Ports          _______________________________
+
+
+          Asynchronous ports and  SIO ports can  be directly  connected (hard-
+          wired) to  TOM ports.   A hardwired  port allows  access to  the TOM
+          without the  necessity of  building a  circuit through  the network.
+          Should a failure occur  in the network, the TOM user  with a connec-
+          tion through a hardwired port can always access the TOM.
+
+          A hardwired  TOM port is  a port that has  been assigned to  the TOM
+          subhost (subhost 0)  either in the Tymfile  or by a TOM  Assign com-
+          mand.  On normal asynchronous ports, when a terminal is connected to
+          a hardwired TOM port  (DSR and CD are raised), the  port returns the
+          message "please type  your terminal identifier".  The  user can then
+          type a  terminal identifier,  as with  a TYMSAT,  and the  port will
+          respond with the TOM greeting message  and the user will be directly
+          connected.  On SIO ports, the port responds immediately with the TOM
+          greeting when a terminal is connected.
+
+          Only ASCII terminals are supported on hardwired TOM ports.
+
+
+          SECTION 1.3 Format          __________________
+
+          Most commands require  that either hosts, subhost  ordinals (SORDs),
+          or ports be listed.
+
+          Hosts and SORDs define sets of ports  which are connected to differ-
+          ent processes.  A network  host is a collection of one  or more sub-
+          processes.  In the TYMCOM, the  SORDs are numbered sequentially from
+          zero.
+
+          Ports  are numbered  sequentially  starting  from  zero.   These are
+          logical  port numbers.   Their  relationship  to  the  physical port
+          numbers  associated   with  the  hardware    depends  on   the  ISIS
+          configuration.  Each asynchronous logical unit  is 16 ports and each
+          SIO  logical unit  is one  port.  The  SIO ports  always follow  the
+          asynchronous ports.
+
+
+          SECTION 1.4 Command Syntax          __________________________
+
+          Only the  first two characters of  a command are interpreted  by the
+          TOM.  Any remaining characters of the command are discarded, and are
+          only included  for clarity.  Each command  is terminated by  a space
+          or, when there  are no parameters,  a carriage return.  Commands may
+          be entered in upper or lower case.
+
+          The following notation is used to describe the command syntax.
+
+          UPPERCASE      Minimum required  segment of  a command  or parameter
+                         that must be entered.
+
+          lowercase      Optional segment of a command word or a variable.
+
+
+                                                            OVERVIEW    Page 2
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+              { }        Braces enclose  an item  or a list  of items,  one of
+                         which must be chosen.  The braces are never entered.
+
+              [ ]        Brackets enclose an optional item,  or list of items,
+                         one of which may be  chosen unless specifically over-
+                         ridden.  Brackets are never entered.
+
+               |         Represents an  "or" choice  between optional  values.
+                         It is never entered.
+
+          In most commands in which a SORD  or port number is required, one or
+          more single  numbers, one  or more inclusive  ranges of  numbers, or
+          both, may be specified.  This specification is indicated in the com-
+          mand syntax as  a range.  A range  must be specified as  two numbers
+          separated by a hyphen.  If more than  one number or range of numbers
+          are  specified,  they must  be  separated  by commas  (for  example,
+          1,10-15,18,27-30).
+
+          Hosts are not  numbered sequentially.  Therefore, when  host numbers
+          are specified in  a command, ranges are not permitted.   If a series
+          of host numbers is specified, the numbers  must be separated by com-
+          mas (for example, 1,3,4).
+
+          When the  TOM cannot  interpret a command  (for example,  an invalid
+          command or incorrect  syntax), the command will be  ignored, and the
+          TOM will  respond with  a question  mark (?).    Also, if  a command
+          requiring change  license is entered by  a user which does  not have
+          that license, the command will be  ignored, and the TOM will respond
+          with a question mark.
+
+
+          SECTION 1.5 Special Characters          ______________________________
+
+          There are  two characters  which  have  special significance  to the
+          TOM.  These are the escape character and the carriage return.
+
+
+          1.5.1 Escape                ______
+
+          On most terminals  the <ESC> or <ALT MODE> key  perform the function
+          of the escape  character.  Additionally, any ASCII  character with a
+          hexadecimal value in the  range 00 to 1F (except for  0D, which is a
+          carriage return) and  7B to 7F  (control characters) will  be recog-
+          nized by the  TOM as an escape character.  The  escape character may
+          be entered at any time.
+
+
+
+
+
+
+
+
+
+
+
+                                                            OVERVIEW    Page 3
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+          When an escape is entered, diagnostic  messages are temporarily sus-
+          pended.  Diagnostics  will resume when  the next carriage  return is
+          entered, or  after a one minute  timeout has expired.   Gobblers are
+          sent out on the line.  Any command being entered is aborted, and any
+          commands that may have been typed ahead are flushed and ignored.  If
+          a command was  being executed, any pending terminal  output from the
+          command is discarded.  The TOM indicates it is ready to accept a new
+          command by returning a ">" prompt.
+
+          The TOM  operates in full duplex  mode.  Therefore, commands  may be
+          entered at any time even though diagnostics may be printing.
+
+
+          1.5.2 Carriage Return                _______________
+
+          A  carriage  return  causes  the current   command  (if  any)  to be
+          executed.   Diagnostic output  is resumed,  unless  output has  been
+          turned off.  (See Section 2.1 for the command used to turn output on
+          or off.)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                            OVERVIEW    Page 4
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+          SECTION 2.0 LEVEL 0 COMMANDS          ____________________________
+
+          The following Level 0 (zero) commands do not require change license.
+          Some of  the Level 0  commands alter the  status of the  terminal at
+          which they  are issued  by turning  diagnostic messages  off, or  by
+          changing the  radix in which numbers  are output.  However,  they do
+          not alter the  status of the TYMCOM or its  associated hosts, SORDs,
+          or ports.
+
+
+          SECTION 2.1 Diagnostics Command          _______________________________
+
+          Syntax:  DIagnostics {OFf|ON}
+          Default:  On
+          Description:  This command turns the printing of diagnostic messages
+               at the terminal on and off.  Note that messages sent from other
+               TOM  terminals with  the TO  command are  not suppressed  while
+               diagnostics are off (see Section 2.10).
+
+          Example:
+
+               >di of
+
+               >
+
+
+          SECTION 2.2 Enquire Command          ___________________________
+
+          Syntax:  ENquire
+          Description:  This  command is  used for  tracing circuit  problems.
+               The output  from this  command is in  two portions.   The first
+               gives the  TYMCOM version number  and revision level,  the slot
+               and node  numbers of  the TYMCOM, the  ISIS version  number and
+               Kernel host number.  The second part  shows, in table form, the
+               numbers of  the logical  units assigned to  the ISIS  slot, the
+               devices assigned, the physical port numbers on the machine, and
+               the logical port numbers the TYMCOM uses.
+
+               For normal asynchronous  logical units, the device  is shown as
+               "ASY" followed by the async group  number and then the physical
+               port numbers which are related to the async group number.
+
+               For SIO logical units, the device is shown as "SIO" followed by
+               the SIO mother-board device address  and then the physical port
+               number of the interface card port.
+
+
+
+
+
+
+
+
+
+
+
+                                                    LEVEL 0 COMMANDS    Page 5
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+          Example:
+
+               >en
+
+               ISIS ASYNC TYMCOM -- VERSION   2.  0
+               SLOT  2  NODE 2030
+               ISIS VERSION   502  KERNEL  544
+               LOGICAL        PHYSICAL TYMCOM
+                UNIT   DEVICE  PORTS   PORTS
+                  0    ASY  4  64- 79   0- 15
+                  1    ASY  5  80- 95  16- 31
+                  2    ASY  6  96-111
+                  3    SIO 80    2       32
+                  4    SIO 80    3       33
+
+               >
+
+
+          SECTION 2.3 Exit Command          ________________________
+
+          Syntax:  EXit
+          Description:  This  command is  used to  log the  user off  the TOM.
+               Other users logged on to the TOM are uneffected.
+
+          Example:
+
+               >ex
+
+
+          SECTION 2.4 Grab Command          ________________________
+
+          Syntax:  GRab [password]
+          Default:  Releases change license
+          Description:  This command accesses change  license if a password is
+               entered, or releases change license  if the password is omitted
+               and the user  is the current holder of license.   Only the user
+               with change license may execute commands which alter the status
+               of the TYMCOM, hosts, SORDs, or ports.
+
+               In order to prevent confusion, it is  advisable to let the cur-
+               rent  holder of  license   know that  you  are   going to  grab
+               license.  The WHO command allows a user to find out if any user
+               logged into the  TOM holds license (see Section  2.11).  The TO
+               commllows  a user to send  advisory messages to  that user
+               (see Section 2.10).
+
+               Note that a null password will look like a Grab command without
+               a password to the TYMCOM.
+
+          Example:
+
+               >gr lucky
+
+               >
+
+
+                                                    LEVEL 0 COMMANDS    Page 6
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+          SECTION 2.5 Password Command          ____________________________
+
+          Syntax:  PAssword {old_password}
+          Default:  Null
+          Description:   This command  changes  the  password needed  to  Grab
+               change license.  The  current password must be  included in the
+               command.  The TOM will prompt twice for the new password, which
+               may contain  up to  seven characters.   Any  characters  except
+               carriage return, space, question mark, and the escape character
+               may  be  included.  Lower  case characters  are  equivalent  to
+               upper  case   in the  password.   The  new password  should  be
+               entered within one minute after the prompt, otherwise a timeout
+               will occur and the command will be aborted.
+
+          Example:
+
+               >pa charles
+               ENTER PASSWORD:  snoopy
+               AGAIN:  snoopy
+
+               >
+
+
+          SECTION 2.6 Radix Command          _________________________
+
+          Syntax:  RAdix {Decimal|Hexadecimal|Octal}
+          Default:  Decimal
+          Description:  This command  sets, for this user only,  the radix for
+               all numbers input to and output  from the TOM.  The radix value
+               may be decimal, hexadecimal, or octal.
+
+               Note:  Host numbers are always decimal,  regardless of the cur-
+               rent radix.
+
+          Example:
+
+               >ra h
+
+               >
+
+
+          SECTION 2.7 Status Command          __________________________
+
+          Syntax:  STatus [Full] [H host_list|S sord_range|P port_range]
+          Default:  Lists status of all hosts, SORDs, and ports.
+          Description:  This  command is  used to  list information  about the
+               current state of the TYMCOM.  When the command is entered with-
+               out parameters, Status Full Hosts is assumed, and all hosts are
+               listed.
+
+
+
+
+
+
+
+                                                    LEVEL 0 COMMANDS    Page 7
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+               When "STatus  Hosts" is  requested, a list  of the  host status
+               (UP, DOWN, or  SHUT), is followed by the  SORD numbers assigned
+               to that host.  The status of each SORD is indicated by the let-
+               ter U, D, or S (for UP, DOWN, and SHUT) following the SORD num-
+               ber.  Host numbers are  always decimal, regardless of  the cur-
+               rent radix.
+
+               Note:  The network Supervisor log may show one of  four differ-
+               ent  states   for  a  host.    They  are   "UP   AND ANSWERED",
+               "UP AND   SHUT", "DOWN",  and "GONE".  The  TOM refers  to  the
+               first three   states as "UP",   "SHUT" and "DOWN".   The "GONE"
+               state occurs  when a  host  number is  removed from  the TYMCOM
+               with the change command  or if the node leaves the network.
+
+               When the TYMCOM is initialized, the TOM host is  set to "UP AND
+               ANSWERED".  The  status of all other   hosts  is set to "UP AND
+               ANSWERED" after  a delay of  three minutes unless  their status
+               has  been  changed by  a  TOM command  during the  three minute
+               delay.
+
+               When  "STatus  Full  Hosts" is  requested,  the  list  includes
+               information about the SORDs and ports assigned to each host, in
+               addition to  the host  status.  When the  listing for  SORDs is
+               requested, the SORD number, status,  four character host greet-
+               ing, and subhost indexes, are  indicated.  When the listing for
+               ports is  requested, the  port number,  port status,  candidate
+               type (Ifup or Signal), permitted  terminal types, and permitted
+               baud rates,  are indicated.   (The first  host name  is usually
+               specified as "TOM".)  This command  generates the most complete
+               status listing.  It  is the default listing and  will appear if
+               the command is entered without parameters.
+
+               When "STatus  Sords" is requested,  the list includes  the SORD
+               number,  host number,  SORD status  (UP, DOWN,  or SHUT),  four
+               character greeting name  (from the "xxxx is  ON LINE" message),
+               and subhost indexes.  If no SORD number is specified, all SORDs
+               will be listed.
+
+               When "STatus  Full Sords" is  requested, the list  includes the
+               information  given  by  the Status  SORDs  command,  the  ports
+               assigned to each  SORD requested, and the status  of each port.
+               If no SORD number is specified, all SORDs will be listed.
+
+               When "STatus  Ports" is requested,  the list includes  the port
+               numbers and port  status for each port  requested.  Port status
+               is indicated  by the letters  U, D, S, A,  or V (for  UP, DOWN,
+               SHUT, ACTIVE,  and VESTIGIAL, respectively).   ACTIVE indicates
+               that the port is UP, and that a circuit to it exists.  A VESTI-
+               GIAL port is one  which has been shut, but still  has an active
+               circuit.  If  no port  number is specified,  all ports  will be
+               listed.
+
+
+
+
+
+                                                    LEVEL 0 COMMANDS    Page 8
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+               When "STatus  Full Ports" is  requested, the list  includes the
+               port numbers and the port status,  the candidate type, the SORD
+               number, valid  terminal types,  and speed  types for  each port
+               requested.  Candidate  type is  SIG for  ports which  require a
+               signal (usually  DTR) high for  assignment, and IFUP  for those
+               that only need to be UP to  be assigned.  See the Speed command
+               for speed types (Section 3.6), and the Types command for termi-
+               nal types (Section  3.7).  If no port number  is specified, all
+               ports will be listed.
+
+
+          Examples:
+
+               >st
+                 HOST  STATUS
+                   321  UP
+                   SORD    0 UP   TOM  ##
+                     PORT STATUS CAND SORDS : TYPES>SPEED
+                        0 UP     IFUP   0 : 0-31>F
+
+                   SORD    1 UP   HSTZ
+                     PORT STATUS CAND SORDS : TYPES>SPEED
+                        1 UP     IFUP   1 : 0- 4,12> 5
+                        2 UP     IFUP   1 : 0- 4,12> 5
+                        3 UP     IFUP   1 : 0- 4,12> 5
+                        7 UP     IFUP   1 : 0- 4,12> 5
+                        8 UP     IFUP   1 : 0- 4,12> 5
+                        9 UP     IFUP   1 : 0- 4,12> 5
+                 HOST  STATUS
+                   323  SHUT
+                   SORD    2 UP   HSTA AA
+                     PORT STATUS CAND SORDS : TYPES>SPEED
+                        4 UP     IFUP   2 : 0- 4,12> 5
+                        5 UP     IFUP   2 : 0- 4,12> 5
+                        6 UP     IFUP   2 : 0- 4,12> 5
+
+                   SORD    3 UP   HSTB AB BB
+                     PORT STATUS CAND SORDS : TYPES>SPEED
+                       10 UP     IFUP   3 : 0- 4,12> 5
+                       11 UP     IFUP   3 : 0- 4,12> 5
+                       12 ACTIVE IFUP   3 : 0- 4,12> 5
+                       13 SHUT   IFUP   3 : 0- 4,12> 5
+                       14 SHUT   IFUP   3 : 0- 4,12> 5
+                       15 DOWN   IFUP   3 : 0- 4,12> 5
+                   SORD    4 UP   HSTC
+                     PORT STATUS CAND SORDS : TYPES>SPEED
+                       16 ACTIVE IFUP   4 : 0- 4,12> 5
+                       17 ACTIVE IFUP   4 : 0- 4,12> 5
+                       18 VESTIG IFUP   4 : 0- 4,12> 5
+                       19 UP     IFUP   4 : 0- 4,12> 5
+                       20 SHUT   IFUP   4 : 0- 4,12> 5
+                       21 DOWN   IFUP   4 : 0- 4,12>F
+                       22 UP     IFUP   4 : 0- 4,12>F
+
+
+
+                                                    LEVEL 0 COMMANDS    Page 9
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+                       23 UP     IFUP   4 : 0- 4,12>F
+                       24 UP     IFUP   4 : 0- 4,12>F
+                       25 UP     IFUP   4 : 0- 4,12>F
+                       26 UP     IFUP   4 : 0- 4,12>F
+                       27 UP     IFUP   4 : 0- 4,12>F
+                       28 UP     IFUP   4 : 0- 4,12>F
+                       29 UP     IFUP   4 : 0- 4,12>F
+                       30 UP     IFUP   4 : 0- 4,12>F
+                       31 UP     IFUP   4 : 0- 4,12>F
+
+               >st h 321,323
+               HOST  STATUS SORDS
+                 321  UP       0U   1U
+                 323  SHUT     2U   3U   4U
+
+
+               >st s 3
+               SORD  HOST STATUS NAME
+                  3   323  UP    HSTB AB BB
+
+
+               >st f s 3
+               SORD  HOST STATUS NAME /PORTS
+                  3   323  UP    HSTB AB BB
+                     10U  11U  12A  13S  14S  15D
+
+
+               >st p 16-22
+                 16A  17A  18V  19U  20S  21D  22U
+
+
+               >st f p 0-3
+               PORT STATUS CAND SORDS : TYPES>SPEED
+                  0 UP     IFUP   0 : 0-31>F
+                  1 UP     IFUP   1 : 0- 4,12> 5
+                  2 UP     IFUP   1 : 0- 4,12> 5
+                  3 UP     IFUP   1 : 0- 4,12> 5
+               >
+
+
+          SECTION 2.8 Status Messages Command          ___________________________________
+
+          Syntax:  STatus Messages [sord_range]
+          Default:  All SORDs will be listed.
+          Description:  This command  lists the messages currently  set by the
+               Message command to be output to the user if the specified SORDs
+               are DOWN  or SHUT.  If no  messages are currently set,  the TOM
+               will simply return to the > prompt.
+
+
+
+
+
+
+
+
+                                                   LEVEL 0 COMMANDS    Page 10
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+          Example:
+
+               >st m 0-4
+               SORDS   0   2
+                DOWN FOR EMERGENCY MAINTENANCE
+               SORDS   1   3   4
+                RETURNING TO SERVICE AT 13:30
+
+               >
+
+
+
+          SECTION 2.9 Time Command          ________________________
+
+          Syntax:  TIme
+          Description:  This command outputs the current  date and time to the
+               terminal, in the form:
+
+                    ddmmyy hh:mm:ss
+
+               where ddmmyy is  the day, month, and year, and  hh:mm:ss is the
+               hour, minute, and second.
+
+               If the time zone is set to  Greenwich Mean Time (either at sys-
+               tem generation or by the Zone command), the time is followed by
+               the letters "(GMT)".
+
+               The timestamp is also output automatically at an interval spec-
+               ified at system generation, unless diagnostics have been turned
+               off.   This unsolicited  timestamp is  preceded  by the  string
+               "FFF:".  Time is  output for the zone selected  when the TYMCOM
+               was  generated, unless changed with  the Zone command.
+
+          Example:
+
+               >ti
+               1NOV82 09:34:18
+
+               >
+
+
+          SECTION 2.10 To Command          _______________________
+
+          Syntax:  TO {tom_user_range} {"text"}
+          Description:  This  command sends  the  message   text  to   the TOM
+               user numbers specified in the TOM user range.  No error message
+               is generated if a user number specified is not currently logged
+               into the TOM.  The Who command provides the facility for deter-
+               mining user numbers.  The message  delimiter  (")  may  be  any
+               single  nonnumeric character except  blank, carriage  return or
+               escape characters.  A  carriage return will terminate  the mes-
+               sage.  The message length is limited to one line or 120 charac-
+               ters.  The final delimiter may be omitted.
+
+
+
+                                                   LEVEL 0 COMMANDS    Page 11
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+               The message  received by the  specified  TOM users  is preceded
+               by "nn>>", where  "nn" is  the user number of  the user issuing
+               the command.  The  message is received whether  diagnostics are
+               on or off.
+
+               This command should always be issued prior to the Grab command,
+               to advise the current holder of change license that you wish to
+               access license (see Section 2.4).
+
+          Example of outgoing message:
+
+               >to 2 "Is it OK if I grab change license?"
+
+               >
+
+          Example of incoming message:
+
+               3>>Is it OK if I grab change license?
+
+               >
+
+
+          SECTION 2.11 Who Command          ________________________
+
+          Syntax:  WHo
+          Description:  This  command lists user  numbers for  users currently
+               connected to the TOM.  The TOM user number issuing the WHO com-
+               mand is followed by an asterisk; the user currently with change
+               license is followed by the letter "L".
+
+          Example:
+
+               >wh
+                 0 1 2L 3*
+
+               >
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                   LEVEL 0 COMMANDS    Page 12
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+          SECTION 3.0 LEVEL 1 COMMANDS          ____________________________
+
+          The following Level 1 commands require  change license (that is, the
+          TOM user  must "GRAB" change license  first).  Level 1  commands are
+          used to alter the status of the TYMCOM's associated hosts, SORDs, or
+          ports.
+
+
+          SECTION 3.1 Assign Command          __________________________
+
+          Syntax:  ASsign {port_range} To {sord_number}
+          Description:  This command  assigns ports within the  specified port
+               range to the specified SORD number.  If a port in the specified
+               range is currently active, an error  message will be issued and
+               the entire command will be ignored.  If  no ports in the speci-
+               fied range are currently active, the  ports will first be deas-
+               signed from  any SORD to  which they were  previously assigned.
+               If no SORD number  is specified, the ports  specified are deas-
+               signed, but not reassigned to any SORD.
+
+          Example:
+
+               >as 8-9 t 2
+
+               >
+
+
+          SECTION 3.2 Candidate Command          _____________________________
+
+          Syntax:  CAndidate {port_range} {Ifup|Signal}
+          Description:  The  parameter Ifup  declares ports  in the  specified
+               range to be candidates for circuit assignment if they have been
+               declared up with the Up command (see Section 3.8).
+
+               The parameter Signal  declares ports in the  specified range to
+               be candidates for circuit assignment if they have been declared
+               up with the Up  command, and if the customer's  machine is pre-
+               senting a high signal (usually DTR) to the port.
+
+          Example:
+
+               >ca 1-3 s
+
+               >
+
+
+
+
+
+
+
+
+
+
+
+
+                                                   LEVEL 1 COMMANDS    Page 13
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+          SECTION 3.3 Down Command          ________________________
+
+          Syntax:  DOwn [H host_list|S sord_range|P port_range]
+          Description:  This  command causes  the specified  hosts, SORDs,  or
+               ports to be set down.  The network Supervisor will be informed.
+               For hosts, current users are not  affected, but the host is not
+               available for  new logins.   For SORDs,  current users  will be
+               dropped.  The SORD for  the TOM may be SHUT, but  it can not be
+               brought  DOWN.  For  ports,  current  users are  dropped.   For
+               hosts, individual host numbers must  be specified, separated by
+               commas.  Inclusive ranges  may not be specified.   Host numbers
+               are always decimal, regardless of the  current radix.  The Sta-
+               tus command  contains additional  host status  information (see
+               Section  2.7).  For  SORDs and  ports, the  parameters must  be
+               specified in ranges.
+
+          Example:
+
+               >do p 9-15,23-26
+
+               >
+
+
+          SECTION 3.4 Message Command          ___________________________
+
+          Syntax:  MEssage {sord_range} {"text"}
+          Description:  This  command sets message text  to be printed  at the
+               terminal of any user who attempts to log into a specified SORD,
+               regardless of  the SORD's current  status.  The command  may be
+               used to  advise users  of current SORD  status or  planned down
+               time.  However,  the message  will only be  sent if   the hosts
+               associated  with the  SORDs are  UP.    Otherwise, the  message
+               "HOST DOWN" or "HOST  SHUT" is sent to the user  by the network
+               Supervisor, whether or not "text" is defined.
+
+               Everything between the first occurrence  of the message delimi-
+               ter (") to  the second occurrence of  the same message  delimi-
+               ter   is  sent   exactly   as   typed, including  any  carriage
+               returns, linefeeds,   etc.  The  message  delimiter may  be any
+               nonnumeric  character except  blank,  carriage  return, or  the
+               escape characters.  The message text may not be longer than 157
+               characters.  Once the carriage return  is entered for the first
+               line of the message, the message should be completed within one
+               minute, otherwise a timeout will occur  and the command will be
+               aborted.
+
+               If "text" is omitted, the message  area for the specified SORDs
+               is cleared.  The Status Messages  command provides the facility
+               for determining the message text currently  in effect (see Sec-
+               tion 2.8).
+
+
+
+
+
+
+                                                   LEVEL 1 COMMANDS    Page 14
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+          Example:
+
+               >me 1 "The TYMCOM will be going down at 11 P.M. on December 10,
+               1982.  It  will return  to service  at 8  A.M. on  December 11,
+               1982."
+
+               >
+
+
+
+          SECTION 3.5 Shut Command          ________________________
+
+          Syntax:  SHut {H host_list|S sord_range|P port_range}
+          Description:   This command  shuts the  specified  hosts, SORDs,  or
+               ports to  any new users unless  they have Shut  Override status
+               for their username.  For hosts and SORDs, current users are not
+               affected.  For ports,  current users are not  affected, but the
+               port is no longer a candidate for assignment.  For hosts, indi-
+               vidual host  numbers must  be specified,  separated by  commas.
+               Inclusive ranges may not be  specified.  See the Status command
+               for additional host status information  (see Section 2.7).  For
+               SORDs and ports, a range must be specified.
+
+          Example:
+
+               >sh s 1
+
+               >
+
+               Note:  Shut override status has no effect on shut ports.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                   LEVEL 1 COMMANDS    Page 15
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+          SECTION 3.6 Speed Ports Command          _______________________________
+
+          Syntax:  SPeed {rate} {P port_range}
+          Description:  This command indicates the  baud rate that  the TYMCOM
+               will use when  it communicates with the async  host ports.  The
+               specified ports will communicate at the specified speed regard-
+               less of the types of terminals permitted to log into the ports.
+               Thus the TYMCOM may then communicate with the host and the ter-
+               minal at  different speeds.
+
+               The allowed  values for "rate",  other than  FULL (F) or BAUDOT
+               (B) are specified in the following chart.  If "F" is specified,
+               the full  range of  speeds associated  with the  terminal types
+               allowed by the Types command (see Section 3.7) is supported for
+               the ports  in the range specified.   A baud rate  which matches
+               the terminal  baud rate is selected  each time a user  logs in.
+               Note that "B"  may be specified for SIO ports  only, and causes
+               the port to use Baudot protocol.
+
+               If a "rate" other than one listed below is specified, or if the
+               specified rate is not supported by  the ISIS Kernel on the node
+               in which the TYMCOM resides, then  the command is aborted and a
+               "?" is printed at the user's terminal.
+
+                    Rate      Speed                    ____      _____
+
+                     0        110 baud
+                     1        150 baud
+                     2        300 baud
+                     3        400 baud
+                     4        600 baud
+                     5        1200 baud
+                     6        300 baud (3767)
+                     7        134.5 baud (2741)
+                     8        300 baud, 10 cps
+                     9        1200 baud, 10 cps
+                     10       2400 baud
+                     11       4800 baud
+                     12       9600 baud (SIO only)
+                     13       50 baud Baudot
+                     14       75 baud Baudot
+                     15       75 baud
+                     B        Variable Baudot (SIO only)
+                     F        Full--all rates supported.
+
+          Example:
+
+               >sp 5 p 8-15
+
+               >
+
+
+
+
+
+
+                                                   LEVEL 1 COMMANDS    Page 16
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+          SECTION 3.7 Types Command          _________________________
+
+          Syntax:  TYpes {type} {P port_range}
+          Description:  This command specifies the terminal types that may log
+               in to the specified ports.   Types that were previously allowed
+               to log in  are disallowed, unless respecified  by this command.
+               The terminal types are listed in the following chart:
+
+                    Type   TID     SPEED                    ____   ___     _____
+
+                    0      aux     1200 baud
+                    1      A       300 baud
+                    2      C       300 baud
+                    3      E       300 baud
+                    4      G       300 baud
+                    5      B       150 baud
+                    6      F       150 baud
+                    7      J       150 baud
+                    8      P<cr>   300 baud (3767 in 2741 mode)
+                    9      P<cr>   134.5 baud (2741)
+                    10     D       110 baud
+                    11             2780
+                    12     A       1200 baud
+                    13             Burroughs polled terminal
+                    14             Reserved
+                    15             Baudot
+                    16     A       2400 baud
+                    17             3270
+                    18             Reserved
+                    19     A       4800 baud
+                    20     A       9600 baud
+                    21             Multiplexed PVC
+                    22             Audio response
+                    23             Videotex
+                    24-31          Reserved for future assignment
+
+          Example:
+
+               >ty 12,16 p 0-15
+
+               >
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                   LEVEL 1 COMMANDS    Page 17
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+          SECTION 3.8 Up Command          ______________________
+
+          Syntax:  UP {H host_list|S sord_range|P port_range}
+          Description:  This command brings up  the specified hosts, SORDs, or
+               ports.  Hosts  are always  decimal, regardless  of the  current
+               radix.  For hosts,  individual host numbers must  be specified,
+               separated by  commas.  Inclusive ranges  may not  be specified.
+               For SORDs and ports, a range must be specified.
+
+          Example:
+
+               >up p 0-7
+
+               >
+
+
+          SECTION 3.9 Zone Command          ________________________
+
+          Syntax:  ZOne [+|-]{number_hours}
+          Description:  This command changes the  bias of the timestamp output
+               so that corrections can be made.   The bias should be specified
+               in number of hours preceded by a  plus sign (+) or no plus sign
+               for a positive  number, or by a  minus sign (-) for  a negative
+               number.  A positive number designates a time differential for a
+               location East of Greenwich, England.   A negative number desig-
+               nates a  time differential  for a  location West  of Greenwich,
+               England.  The  Zone command changes  the default time  zone for
+               all  users logged  in to  the TOM.   The time  zone remains  in
+               effect until the  TYMCOM is reinitialized, or  the Zone command
+               is reissued.
+
+          Example:
+
+               >zo -8
+
+               >
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                   LEVEL 1 COMMANDS    Page 18
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+          SECTION 4.0 LEVEL 2 COMMANDS          ____________________________
+
+          Level  2 commands  are  only accessable  by logging  in  to the  TOM
+          through the network using a particular username and assumming change
+          license.  Level 2 commands cannot be changed to other levels.
+
+
+          SECTION 4.1 Change Host Command          _______________________________
+
+          Syntax:  CHange {old_host_number} To {new_host_number}
+          Description:  This command changes the old  network host number to a
+               new network host number.  The new host  is set to a SHUT state.
+               Existing circuits are  not affected.  The old  host is reported
+               as  "GONE".  The  host numbers  are always  stated in  decimal.
+               Only one  individual host  number may  be specified;  neither a
+               series of numbers nor  inclusive ranges of numbers  are permit-
+               ted.
+
+          Example:
+
+               >ch 321 t 322
+
+               >
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                   LEVEL 2 COMMANDS    Page 19
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+          SECTION 5.0 DIAGNOSTIC MESSAGES          _______________________________
+
+          Diagnostic messages  are sent  to all  users connected  to the  TOM,
+          except those that have turned diagnostics off.
+
+          In the following  sections, the default message text  is shown.  The
+          user has the option  of specifying alternate text  at system genera-
+          tion.
+
+
+          SECTION 5.1 All Ports Down          __________________________
+
+          The All Ports Down (APD) message occurs  when a user attempts to log
+          into a SORD whose ports are all DOWN.  The message is generated only
+          if the  circuit to the  TYMCOM is completed.   If all ports  for all
+          SORDs on  a host  are DOWN,  that host  is reported  to the  network
+          Supervisor as  SHUT, even though no  TOM command has been  issued to
+          SHUT the host.  In such a case,  the circuit to the TYMCOM would not
+          be completed, and  the Supervisor message "HOST SHUT"  would be sent
+          to the user (except  in the case of Shut Override  status).  The APD
+          message appears in the form:
+
+               sss:  ALL PORTS DOWN
+
+          where sss is the number of the SORD whose ports are DOWN.
+
+
+          SECTION 5.2 No Ports Available          ______________________________
+
+          The No Ports Available (NPA) message  occurs when a user attempts to
+          log into  a SORD which  does have some  active (UP) ports,  but none
+          available for circuit assignment.  The message appears in the form:
+
+               sss:  NO PORTS AVAILABLE
+
+          where sss is the number of the SORD with no available ports.
+
+
+          SECTION 5.3 Ring No Answer          __________________________
+
+          The  Ring No  Answer (RNA)  message occurs  when the  host fails  to
+          respond to a ring from a port.  The message appears in the form:
+
+               sss:  RING NO ANSWER ON PORT ppp
+
+          where sss is the SORD to which the  port is assigned, and ppp is the
+          number of the port which was not answered.
+
+          The number of seconds the TYMCOM will ring a port before disconnect-
+          ing the user is specified at system generation.
+
+          Note:  The  SORD number will be  printed in whatever radix  has been
+          set for  this session, but  the port number  will be printed  in the
+          radix set at system generation (see Section 2.6).
+
+
+                                                DIAGNOSTIC MESSAGES    Page 20
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+          SECTION 5.4 Invalid Username          ____________________________
+
+          The Invalid Username (IUN) message occurs when a username containing
+          an unknown subhost index is detected.  This  may happen if the posi-
+          tion of  the subhost index  within the  username does not  match the
+          position determined by TYMCOM option SINDXP,  whether by an error in
+          username validation, or in the configuration of SINDXP.  The message
+          is in the form:
+
+               FFF:  USERNAME INVALID, DISCONNECTING
+
+          Since the circuit was never completed, neither a SORD or port number
+          is applicable.  (FFF does not stand for anything.)
+
+
+          SECTION 5.5 Access Not Permitted          ________________________________
+
+          The Access Not Permitted  (ANP) message occurs if  the TYMCOM state-
+          ments BARNOD  or OKNODE  were specified  at system  generation.  The
+          message appears in the form:
+
+               sss:  ACCESS FROM THIS NODE IS NOT PERMITTED
+
+          where sss is the  number of the SORD to which  access is disallowed.
+          Note that this message only reports that a login to a specified SORD
+          has been attempted from  a node defined as having no  access to that
+          SORD.
+
+
+          SECTION 5.6 No Host Acknowledgement          ___________________________________
+
+          The No Host Acknowledgement (NHA) message occurs when the host fails
+          to acknowledge a user disconnect on  a port.  The message appears in
+          the form:
+
+               ppp:  HOST DID NOT ACKNOWLEDGE USER DISCONNECT
+
+          where ppp is the port number.
+
+
+
+          SECTION 5.7 Dropped For Inactivity          __________________________________
+
+          The Dropped For Inactivity (INA) message occurs  when a port is dis-
+          connected because the inactivity timer  has expired.  The message is
+          in the form:
+
+               ppp:  DROPPED FOR INACTIVITY
+
+          where ppp is the port number.
+
+
+
+
+
+
+                                                DIAGNOSTIC MESSAGES    Page 21
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+          SECTION 6.0 COMMAND SUMMARY          ___________________________
+
+          The following summary lists all TOM commands, gives a brief descrip-
+          tion of each command and indicates  its access level and the section
+          number where it can be found.
+
+          Command         Description                         Level    Section          _______         ___________                         _____    _______
+
+          ASSIGN          Assigns ports to a SORD.              1        3.1
+
+          CANDIDATE       Declares a port to be an ifup or      1        3.2
+                          signal candidate for circuit
+                          assignment.
+
+          CHANGE          Changes a host number.                2        4.1
+
+          DIAGNOSTICS     Turns diagnostic messages off or      0        2.1
+                          on.
+
+          DOWN            Sets "down" the specified hosts,      1        3.3
+                          SORDs, or ports.
+
+          ENQUIRE         Lists information about the node      0        2.2
+                          and slot where the TYMCOM is
+                          running.
+
+          EXIT            Logs the user off.                    0        2.3
+
+          GRAB            Accesses or revokes change license.   0        2.4
+
+          MESSAGE         Sets text to be output to the         1        3.4
+                          terminal when a user logs into a
+                          specified SORD.
+
+          PASSWORD        Sets the password used by the Grab    0        2.5
+                          command.
+
+          RADIX           Specifies the radix in which SORD     0        2.6
+                          and port numbers will be input and
+                          output.
+
+          SHUT            Disallows new logons to specified     1        3.5
+                          hosts, SORDs, or ports.
+
+          SPEED           Specifies the baud rates at which     1        3.6
+                          a port will communicate.
+
+          STATUS          Lists status information for hosts,   0        2.7
+                          SORDs, or ports.
+
+          STATUS MESSAGES Lists the messages currently set      0        2.8
+                          by the message command.
+
+
+
+
+                                                    COMMAND SUMMARY    Page 22
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+          Command         Description                         Level    Section          _______         ___________                         _____    _______
+
+          TIME            Prints the current time.              0        2.9
+
+          TO              Sends message text to specified       0        2.10
+                          TOM users.
+
+          TYPES           Specifies the terminal types a        1        3.7
+                          port will support.
+
+          UP              Permits logons to the specified       1        3.8
+                          hosts, SORDs, or ports.
+
+          WHO             Lists user numbers of all users       0        2.11
+                          currently logged into the TOM.
+
+          ZONE            Specifies the time zone for all       1        3.9
+                          TOM users.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                    COMMAND SUMMARY    Page 23
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+                                         INDEX                                         _____
+
+
+          Abbreviation of commands and parameters ................ 2
+          Access Levels and Configuration Options ................ 1
+          Access Not Permitted message ........................... 21
+          Accessing change license ............................... 6
+          Active port ............................................ 13
+          Active status .......................................... 10
+          All Ports Down message ................................. 20
+          ALT MODE key ........................................... 3
+          ANP .................................................... 21
+          Answered status ........................................ 10
+          APD .................................................... 20
+          Assign command ......................................... 1, 2, 13
+          Async group ............................................ 5
+
+          Baud rate .............................................. 16
+
+          Candidate command ...................................... 13
+          Candidate type ......................................... 13
+          Carriage return ........................................ 4
+          Change host command .................................... 8, 19
+          Change license ......................................... 1, 5, 6, 7
+          Change license commands ................................ 13
+          Changing the grab password ............................. 7
+          Circuit assignment ..................................... 13
+          Command abbreviation ................................... 2
+          Command summary ........................................ 22
+          Command syntax ......................................... 2, 3
+          Commands that do not require license ................... 5
+          Commands that require change license ................... 13
+          Configuration Options .................................. 1
+
+          Data Terminal Ready (DTR) .............................. 13
+          Decimal host number .................................... 7, 19
+          Decimal radix .......................................... 7
+          Diagnostic messages .................................... 1, 5, 20
+          Diagnostics command .................................... 5, 11
+          Down command ........................................... 14
+          Down status ............................................ 10
+          Dropped For Inactivity message ......................... 21
+
+          Enquire command ........................................ 5
+          ESC key ................................................ 3
+          Escape character ....................................... 3
+          Exit command ........................................... 6
+
+
+
+
+
+
+
+
+
+                                                                       Page 24
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+          Format ................................................. 2, 3
+
+          Gone status ............................................ 10
+          Grab command ........................................... 1, 6
+
+          Hexadecimal radix ...................................... 7
+          High signal ............................................ 13
+          HOST definition ........................................ 2
+          Host down message ...................................... 14
+          Host shut message ...................................... 14
+          HOST status ............................................ 10, 18
+
+          Ifup candidate ......................................... 13
+          INA .................................................... 21
+          Inclusive range ........................................ 3
+          Invalid Username message ............................... 21
+          ISIS ................................................... 2
+          IUN .................................................... 21
+
+          Kernel host number ..................................... 5
+
+          Level 0 commands ....................................... 1, 5
+          Level 1 commands ....................................... 1, 13
+          Level 2 commands ....................................... 1, 19
+          Logical port number .................................... 2, 5
+          Logical unit ........................................... 2, 5
+
+          Message command ........................................ 14
+          Message delimiter ...................................... 14
+          Message text ........................................... 11, 14
+
+          Network host ........................................... 2
+          Network Supervisor ..................................... 8, 14, 18
+          NHA .................................................... 21
+          No Host Acknowledgement message ........................ 21
+          No license commands .................................... 5
+          No Ports Availabe message .............................. 20
+          Node number ............................................ 5
+          NPA .................................................... 20
+
+          Octal radix ............................................ 7
+          Overview ............................................... 1
+
+          Parameter abbreviation ................................. 2
+          Password characters .................................... 7
+          Password command ....................................... 7
+          Physical port number ................................... 2, 5
+          Port assignment ........................................ 13
+          Port candidate type .................................... 13
+          PORT definition ........................................ 2
+
+
+
+
+
+
+                                                                       Page 25
+
+
+          TOM User's Guide                                     January 4, 1983
+
+
+
+          PORT status ............................................ 10, 18
+
+          Radix command .......................................... 7
+          Radix values ........................................... 7
+          Revoking change license ................................ 6
+          Ring No Answer message ................................. 20
+          RNA .................................................... 20
+
+          Sending messages to TOM users .......................... 11
+          Shut command ........................................... 15
+          Shut override status ................................... 15
+          Shut status ............................................ 10, 19
+          Signal candidate ....................................... 13
+          Slot number ............................................ 5
+          SORD definition ........................................ 2
+          SORD messages .......................................... 10
+          SORD status ............................................ 10, 18
+          Special characters ..................................... 3
+          Speed command .......................................... 16
+          Status command ......................................... 7, 10, 15
+          Status messages command ................................ 14
+          Status reports ......................................... 1
+          Status SORDS command ................................... 10
+          Subhost ordinal ........................................ 2
+          Summary of commands .................................... 22
+          System generation ...................................... 1
+
+          Terminal baud rate ..................................... 16
+          Terminal types ......................................... 16, 17
+          Terminating a command .................................. 2
+          Time command ........................................... 11
+          Timestamp .............................................. 11, 18
+          TO command ............................................. 6, 11
+          TOM .................................................... 1
+          TOMCL .................................................. 1
+          TOMGG .................................................. 1
+          Turning off diagnostics ................................ 5
+          TYMCOM Operations Manager .............................. 1
+          TYMCOM version number .................................. 5
+          Types command .......................................... 17
+
+          Up and answered status ................................. 10
+          Up and shut status ..................................... 10
+          Up command ............................................. 13, 18
+          Up status .............................................. 10
+
+          WHO command ............................................ 6, 12
+
+          Zone command ........................................... 11, 18
+
+
+
+
+
+
+
+                                                                       Page 26
+
+
+
+
+
+
+                                 READER'S COMMENT FORM
+
+                                    TOM User's Guide
+                             Publications Order Number 425
+
+
+          How was this document used?
+
+          _____    Marketing tool
+
+          _____    Technical reference
+
+          _____    Other ____________________________________________________
+
+
+                         ____________________________________________________
+
+
+          Your comments on this  document are welcome.  Please  list page num-
+          bers where appropriate and any suggestions for further improvement.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          Please send this form to: Network Technology Division
+                                    Documentation
+                                    TYMSHARE, Inc.
+                                    10261 Bubb Road
+                                    Cupertino, CA  95014
+
+
+
+
+
+    (@¤
