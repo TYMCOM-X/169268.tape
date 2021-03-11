@@ -1,0 +1,124 @@
+
+        SUBROUTINE PGRADE (AVGOT, NPORTS,
+     X          PG, NP1, NP5, NP10, NP15, ERR)
+
+C       FILENAME - (NSMOTHER)PGRADE.F4
+C       PROGRAMMER - NORM SMOTHERS 446-7133
+C       DATE - 7/12/78
+
+C       PURPOSE - TO COMPUTE THE ERLANG-B FUNCTION FOR THE 
+C               PROBABILITY OF CONGESTION (ALL BUSY) EXPRESSED
+C               AS A PER CENTAGE AND THE NUMBER OF PORTS
+C               REQUIRED TO DELIVER P-1, P-5, P-10, P-15 LEVELS
+C               OF SERVICE.
+
+C       PROCEEDURE
+C               CHECK PASSED PARAMETERS FOR ERRORS
+C               RECURSIVELY COMPUTE THE MEASURES
+C               EXPRESS AS PERCENTAGE
+
+
+C       GIVEN
+C               AVGOT = THE MEAN OF THE OFFERED TRAFFIC
+C               NPORTS = THE NUMBER OF SERVICE CHANNELS
+
+C       YIELDING
+C               PG = THE PROB OF CONGESTION AS A PER CENTAGE
+C               NP5 = MINIMUM NUMBER OF PORTS REQUIRED TO DELIVER A
+C                       PGRADE OF 5 OR LESS
+C               NP10 =
+C               NP15 =
+C               ERR = ERROR FLAG
+
+C       SUBROUTINES CALLED
+C               NONE
+
+C       DICTIONARY
+C               TPG = TEMP VALUE OF PGRADE FOR A PARTICULAR I
+C               NFLG = 0 BEFORE PG IS COMPUTED, = 1 AFTER
+C               N5FLG = 0 BEFORE NP5 IS COMPUTED, = 1 AFTER
+C               N10FLG = 
+C               N15FLG =
+
+C               I = DO LOOP INDEX
+
+
+C       XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+C       LETS CHECK THE PARAMETERS PASSED FOR ERRORS
+        IF ((NPORTS .GT. 0) .AND. (AVGOT .GE. 0)) GO TO 100
+                ERR = 1
+                TYPE 9000, ERR
+9000            FORMAT (1X, 'ERROR - BAD INPUT TO PG, ERR = ', F2.0)
+                RETURN
+100     CONTINUE
+
+        IF (AVGOT .GT. 0.0001) GO TO 537
+                PG = 0
+                NP1 = 1
+                NP5 = 1
+                NP10 = 1
+                NP15 = 1
+                RETURN
+537     CONTINUE
+
+C       LETS RECURSIVELY COMPUTE THE PROB OF BUSY
+        NP1 = 0
+        NP5 = 0
+        NP10 = 0
+        NP15 = 0
+        PG = 100
+        NFLG = 0
+        N1FLG = 0
+        N5FLG = 0
+        N10FLG = 0
+        N15FLG = 0
+        TPG = 1.00
+        I = 1
+200             TPG = (TPG*AVGOT) /
+     X                  (FLOAT(I)+(TPG*AVGOT))
+                IF ((TPG .GE. 0.01) .OR. (N1FLG .EQ. 1)) GO TO 201
+                        NP1 = I
+                        N1FLG = 1
+201             CONTINUE
+                IF ((TPG .GE. 0.05) .OR. (N5FLG .EQ. 1)) GO TO 202 
+                        NP5 = I
+                        N5FLG = 1
+202             CONTINUE
+                IF ((TPG .GE. 0.10) .OR. (N10FLG .EQ. 1)) GO TO 208
+                        NP10 = I
+                        N10FLG = 1
+208             CONTINUE
+                IF ((TPG .GE. 0.15) .OR. (N15FLG .EQ. 1)) GO TO 210
+                        NP15 = I
+                        N15FLG = 1
+210             CONTINUE
+                IF (I .NE. NPORTS) GO TO 204
+                        PG = TPG
+                        NFLG = 1
+204             CONTINUE
+                IF ((N5FLG .EQ. 1) .AND. (NFLG .EQ. 1) .AND.
+     X                  (N10FLG .EQ. 1) .AND. (N15FLG .EQ. 1)
+     X                  .AND. (N1FLG .EQ. 1)) GO TO 300
+                IF (TPG .GT. 0.000001) GO TO 206
+                        PG = TPG
+                        GO TO 300
+206             CONTINUE
+        I = I + 1
+        GO TO 200
+300     CONTINUE
+
+
+C       LETS CHECK FOR UNFORSEEN ERRORS
+102     IF ((PG .GE. 0) .AND. (PG .LE. 1)) GO TO 101
+                ERR = 2
+                TYPE 9001, PG
+9001            FORMAT (1X , 'ERROR - PG = ', F10.3)
+                RETURN
+101     CONTINUE
+
+C       LETS EXPRESS IT AS A PER CENTAGE
+        PG = PG * 100.00
+
+        RETURN 
+        END
