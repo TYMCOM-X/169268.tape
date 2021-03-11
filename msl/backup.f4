@@ -1,0 +1,651 @@
+***********************************************************************
+*                                                                     *
+*       BACKUP.F4    VER. 1.1    J.JOELS            OCTOBER,1979      *
+*                                                                     *
+*       THIS PROGRAM IS A UTILITY PROGRAM FOR CODE GENERATION.        *
+*       IT CREATES A COMMANDS FILE THAT PERFORMS THREE FUNCTIONS:     *
+*       1. TELECOPIES ALL NECESSARY FILES FOR A SPECIFIED NODE TO     *
+*          THE CODE GENERATION BACKUP SYSTEM.                         *
+*       2. ALL FILES TELECOPIED ARE DECLARED ALL RD RD ON BOTH THE    *
+*          BACKUP AND HOME SYSTEMS.                                   *
+*       3. RUNS A CHECKSUM ON ALL FILES TELECOPIED ON BOTH THE        *
+*          BACKUP AND HOME SYSTEMS.                                   *
+*                                                                     *
+*       FILES NEEDED: BACKUP.CTL                                      *
+*       FILES CREATED: BACKUP.COM,CKSUM.COM                           *
+*                                                                     *
+*       LOADING SEQUENCE: LOAD BACKUP                                 *
+*                                                                     *
+***********************************************************************
+
+        INTEGER TYPES(20,11),NODES(5,4),NAM(2),DATA(60),EXT(10),
+     X           PNTKER,PNTSLO,VAKFLE(2),TELFLE(2),FILFLE(2),IDATE(2),
+     X           JOBARR(3),BAKFLE(2),BFFLE(2)
+
+*       ** PRINT DATE AND TIME
+
+        CALL DATE(IDATE)
+        CALL TIME(ITIME)
+
+        TYPE 90,(IDATE(I),I=1,2),ITIME
+90      FORMAT (//,1X,'VERSION 1.1',/,
+     X             1X,2A5,2X,A5,///)
+
+*       ** INIT ARRAY: TYPES
+
+        DO 95 I=1,20
+        DO 95 J=1,10
+        TYPES(I,J)='     '
+95      CONTINUE
+
+*       ** OPEN CONTROL FILE AND READ HOME SYSTEM AND BACKUP SYSTEM
+
+        OPEN (3,'BACKUP.CTL',INPUT,ERR=800)
+        READ (3,100)IHOME,IBACK
+100     FORMAT(2I)
+
+*       ** READ NODE TYPES AND FILE EXTENSIONS
+
+        ITPNT=1
+
+105     READ (3,110,END=180)TYPES(ITPNT,1),(DATA(I),I=1,60)
+110     FORMAT (A3,1X,60A1)
+
+*       ** BREAK OUT FILE EXTENSIONS
+
+        IPNT=1
+        IEPNT=2
+        IEND=0
+
+        DO 150 I=1,60
+        IF (IEND.NE.0) GO TO 170
+        IF (DATA(I).EQ.' ') GO TO 130
+        IF (DATA(I).EQ.',') GO TO 120
+        CALL STC(DATA(I),IEXT,IPNT)
+        IPNT=IPNT+1
+        GO TO 150
+
+*       ** FOUND END OF EXTENSION
+
+120     IF (I.EQ.1) GO TO 155
+        IF (IPNT.GT.4) GO TO 160
+        TYPES(ITPNT,IEPNT)=IEXT
+        IEXT='    '
+        IPNT=1
+        IEPNT=IEPNT+1
+        IF (IEPNT.LE.11) GO TO 150
+        TYPE 122,TYPES(ITPNT,1)
+122     FORMAT (1X,'EXCEEDED MAX OF 10 EXTENSIONS PER TYPE ON TYPE: ',
+     X          A3,/)
+        GO TO 999
+
+*       ** END OF EXTENSIONS, GO PROCESS LAST EXTENSION
+
+130     IF (I.EQ.1) GO TO 155
+        IEND=1
+        GO TO 120
+
+150     CONTINUE
+        GO TO 170
+
+*       ** NO EXTENSIONS
+
+155     TYPE 156,TYPES(ITPNT,1)
+156     FORMAT (1X,'ERROR! NO EXTENSIONS FOR: ',A3)
+        GO TO 999
+
+*       ** BAD EXTENSION
+
+160     TYPE 161,IEXT,TYPES(ITPNT,1)
+161     FORMAT (1X,'ERROR! BAD EXTENSION: ',A5,' FOR: ',A3)
+        GO TO 999
+
+*       ** READY TO READ ANOTHER TYPE. IF TYPES IS'KER' OR 'SLO'
+*          SET POINTERS
+
+170     IF (TYPES(ITPNT,1).EQ.'KER') PNTKER=ITPNT
+        IF (TYPES(ITPNT,1).EQ.'SLO') PNTSLO=ITPNT
+        ITPNT=ITPNT+1
+        IF (ITPNT.LE.20) GO TO 105
+        TYPE 175
+175     FORMAT (1X,'EXCEEDED MAX OF 20 TYPES')
+        GO TO 999
+
+*       ** FINISHED READING CONTROL FILE. SET UP ISIS AS A VALID TYPE.
+
+180     CLOSE (3)
+        TYPES(ITPNT,1)='ISI'
+        INPNT=1
+
+
+
+*       ** GET JOB NUMBER
+
+182     CALL GETJOB(IJOB)
+
+*       ** BUILD COMMANDS FILE NAMES
+
+        ENCODE(3,184,L)IJOB
+184     FORMAT (I3)
+        DECODE (3,185,L)(JOBARR(I),I=1,3)
+185     FORMAT (3I1)
+        ENCODE (10,186,BAKFLE)(JOBARR(I),I=1,3)
+186     FORMAT (3I1,'BAK.TMP')
+        ENCODE (10,187,TELFLE)(JOBARR(I),I=1,3)
+187     FORMAT (3I1,'TEL.TMP')
+        ENCODE (10,188,FILFLE)(JOBARR(I),I=1,3)
+188     FORMAT (3I1,'FIL.TMP')
+        ENCODE (10,189,BFFLE)(JOBARR(I),I=1,3)
+189     FORMAT (3I1,'FIL.BAK')
+
+*       ** OUTPUT STARTUP MESSAGE
+
+        TYPE 190,IJOB,(FILFLE(I),I=1,2),(BAKFLE(I),I=1,2),
+     X   (TELFLE(I),I=1,2)
+190     FORMAT (//,5X,'JOB NUMBER =             ',I3,/
+     X             5X,'LIST OF FILES =          ',2A5,/
+     X             5X,'BACKUP COMMANDS FILE =   ',2A5,/
+     X             5X,'TELECOPY COMMANDS FILE = ',2A5,/)
+
+*       ** MAKE SURE TELECOPY IS TAKING PLACE IN CORRECT DIRECTION.
+
+191     TYPE 192,IHOME,IBACK
+192     FORMAT (//,5X,'***** TELECOPYING FROM ',I2,' TO ',I2,' *****',/
+     X            ,5X,'O.K.? ',$)
+        ACCEPT 193,IANS
+193     FORMAT (A1)
+        IF (IANS.EQ.'Y') GO TO 200
+        IF (IANS.NE.'N') GO TO 191
+        TYPE 194
+194     FORMAT (/,5X,'PLEASE UPDATE FILE: BACKUP.CTL')
+        GO TO 999
+
+
+
+
+*       ** PROMPT FOR FILE NAME AND NODE TYPE
+
+200     TYPE 210
+210     FORMAT (1X,'* NAME,TYPE: ',$)
+        ACCEPT 215,(DATA(I),I=1,10)
+215     FORMAT (10A1)
+
+*       ** BREAK OUT TYPE FROM NAME
+
+        DO 220 I=1,10
+        IF (DATA(I).EQ.' '.AND.I.EQ.1) GO TO 300
+        IF (DATA(I).EQ.' ') GO TO 225
+        IF (DATA(I).EQ.',') GO TO 230
+        CALL STC(DATA(I),NAM,I)
+220     CONTINUE
+
+*       ** ERROR. NAME TOO LONG
+
+221     TYPE 222
+222     FORMAT (1X,'NAME CAN NOT EXCEED 6 CHARS.')
+        GO TO 200
+
+*       ** ERROR. BLANK IN NAME
+
+225     TYPE 226
+226     FORMAT (1X,'ERROR! BLANK IN NAME')
+        GO TO 200
+
+*       ** REACHED ','
+
+230     IF (I.GT.7) GO TO 221
+        IPOS=I+1
+        IPOS2=1
+        ITYPE='     '
+
+        DO 240 I=IPOS,10
+        IF (DATA(I).EQ.' ') GO TO 245
+        CALL STC(DATA(I),ITYPE,IPOS2)
+        IPOS2=IPOS2+1
+240     CONTINUE
+
+*       ** CHECK FOR VALID TYPE
+
+245     DO 250 I=1,ITPNT
+        INDEX=I
+        IF (ITYPE.EQ.TYPES(I,1)) GO TO 270
+250     CONTINUE
+
+*       ** NOT A VALID TYPE
+
+        TYPE 260
+260     FORMAT (1X,'INVALID TYPE. TYPE FILE BACKUP.CTL FOR HELP')
+        GO TO 200
+
+*       ** PUT NAME AND TYPE INTO NODES ARRAY, THEN INPUT ANOTHER NAME
+
+270     NODES(INPNT,1)=NAM(1)
+        NODES(INPNT,2)=NAM(2)
+        NODES(INPNT,3)=ITYPE
+        NODES(INPNT,4)=INDEX
+        NAM(1)='     '
+        NAM(2)='     '
+        INPNT=INPNT+1
+        IF (INPNT.LE.5) GO TO 200
+
+*       ** START BUILDING COMMANDS FILE
+
+300     OPEN (21,BAKFLE,OUTPUT,ERR=810)
+        OPEN (22,FILFLE,OUTPUT,ERR=820)
+        OPEN (23,TELFLE,OUTPUT,ERR=830)
+
+*       ** OUTPUT DECLARE AND CKSUM COMMANDS FOR HOME SYSTEM
+
+        WRITE (21,301)
+301     FORMAT ('DECLARE ALL RD RD')
+        WRITE (21,302)(FILFLE(I),I=1,2)
+302     FORMAT ('@',2A5)
+        WRITE (21,303)
+303     FORMAT ('R CKSUM')
+        WRITE (21,302)(FILFLE(I),I=1,2)
+        WRITE (21,304)
+304     FORMAT (/)
+
+*       ** OUTPUT CALL TO RUN TELECOPY COMMANDS FILE
+
+        WRITE (21,305)
+305     FORMAT ('DAT',/,'GET (SYS)TELECO',/,'REEN',/)
+
+*       ** OUTPUT 'TALK' COMMAND TO BACKUP SYSTEM
+
+        WRITE (21,306)IBACK
+306     FORMAT ('R TELECOPY',/,'TALK ',I2)
+
+*       ** OUTPUT DECLARE AND CKSUM COMMANDS FOR BACKUP SYSTEM
+
+        WRITE (21,301)
+        WRITE (21,302)(BFFLE(I),I=1,2)
+        WRITE (21,303)
+        WRITE (21,302)(BFFLE(I),I=1,2)
+        WRITE (21,304)
+
+*       ** OUTPUT COMMAND TO DELETE FILE OF FILE NAMES
+
+        WRITE (21,307)(BFFLE(I),I=1,2)
+307     FORMAT ('DELETE ',2A5)
+
+*       ** OUTPUT COMMAND TO END 'TALK'
+
+        WRITE (21,308)
+308     FORMAT ('LOG')
+
+*       ** CLOSE  COMMANDS FILE
+
+        CLOSE(21)
+
+*       ** OUTPUT A CR SO THAT IF THERE IS A DETACHED JOB OUT THERE WE CAN
+*          GO AHEAD AND LOG IN.
+
+        WRITE (23,311)
+311     FORMAT(/)
+
+*       ** OUTPUT 'REPLACE' COMMAND TO TELECOPY COMMANDS FILE
+
+        WRITE (23,309)
+309     FORMAT ('REPLACE')
+
+*       ** OUTPUT APPROPRIATE TELECOPY COMMANDS FOR EACH NAME IN
+*          ARRAY: NODES
+
+        DO 600 I=1,INPNT-1
+
+*       ** PLACE EXTENSIONS FOR NAME INTO ARRAY: EXT, NAME 
+*          INTO ARRAY: NAME
+
+        DO 310 II=2,11
+        EXT(II-1)=TYPES(NODES(I,4),II)
+310     CONTINUE
+
+315     NAM(1)=NODES(I,1)
+325     NAM(2)=NODES(I,2)
+
+*       ** BRANCH TO APPROPRIATE CODE
+
+        IF (NODES(I,3).EQ.'ISI') GO TO 500
+        IF (NODES(I,3).EQ.'SLO') GO TO 450
+        IF (NODES(I,3).EQ.'KER') GO TO 400
+
+*       ** OUTPUT COMMANDS TO COMMANDS FILE
+
+        CALL OUTCOM(IHOME,IBACK,NAM,EXT)
+        GO TO 600
+
+*       ********** KERNAL **********
+
+400     CALL KEROUT(IHOME,IBACK,NAM,EXT)
+        GO TO 600
+
+*       ********** SLOT **********
+
+450     IOPT=1
+        CALL SLOOUT(IHOME,IBACK,NAM,EXT,IOPT,ISTOP)
+        GO TO 600
+
+*       ********** ISIS **********
+
+*       ** OUTPUT KERNAL COMMANDS. PUT KERNAL EXTENSIONS INTO 
+*          ARRAY: EXT
+
+500     DO 510 IK=2,11
+        EXT(IK-1)=TYPES(PNTKER,IK)
+510     CONTINUE
+
+        CALL KEROUT(IHOME,IBACK,NAM,EXT)
+
+*       ** OUTPUT SLOT COMMANDS. PUT SLOT EXTENSIONS INTO ARRAY: EXT
+
+        DO 530 IK=2,11
+        EXT(IK-1)=TYPES(PNTSLO,IK)
+530     CONTINUE
+
+        IOPT=2
+520     CALL SLOOUT(IHOME,IBACK,NAM,EXT,IOPT,ISTOP)
+        IF (ISTOP.EQ.0) GO TO 520
+
+600     CONTINUE
+
+*       ** FINISHED. PLACE COMMAND TO TELECOPY FILE OF FILE NAMES
+*          TO BACKUP SYSTEM
+
+        CLOSE(22)
+        WRITE (23,610)IHOME,(FILFLE(I),I=1,2),IBACK,(BFFLE(I),I=1,2)
+610     FORMAT ('(TYMNET:',I2,')',2A5,',(TYMNET:',I2,')',2A5)
+        CLOSE(23)
+        GO TO 999
+
+
+*       ** ERROR
+
+800     TYPE 805
+805     FORMAT (1X,'UNABLE TO OPEN: BACKUP.CTL')
+        GO TO 999
+
+810     TYPE 815,(BAKFLE(I),I=1,2)
+815     FORMAT (1X,'UNABLE TO OPEN: ',2A5)
+        GO TO 999
+
+820     TYPE 815,(FILFLE(I),I=1,2)
+        GO TO 999
+
+830     TYPE 815,(TELFLE(I),I=1,2)
+        GO TO 999
+
+999     END
+
+
+***********************************************************************
+*                                                                     *
+*                       SUBROUTINE: OUTCOM                            *
+*                                                                     *
+*       THIS SUBROUTINE OUTPUTS THE TELECOPY COMMANDS, DECLARE        *
+*       COMMANDS AND CHECKSUM COMMANDS FOR ALL FILES TO BE BACKED     *
+*       UP ON A GIVEN NODE.                                           *
+*       THE CALLING SEQUENCE IS :                                     *
+*        CALL OUTCOM(IHOME,IBACK,NAM,EXT)                             *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*               IHOME = HOME SYSTEM NUMBER                            *
+*               IBACK = BACKUP SYSTEM NUMBER                          *
+*               NAM   = ARRAY CONTAINING FILE NAME (NO EXTENSION)     *
+*               EXT   = ARRAY CONTAINING FILE NAME EXTENSIONS FOR ALL *
+*                       FILES TO BE BACKED UP.                        *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE OUTCOM(IHOME,IBACK,NAM,EXT)
+
+        INTEGER NAM(2),EXT(10),FLENAM(2)
+
+*       ** OUTPUT COPY COMMANDS TO TELECOPY FILE, FILE NAMES TO
+*          NAME FILE
+
+        DO 150 I=1,10
+        IF (EXT(I).EQ.'     ') GO TO 155
+        CALL BLDNAM(NAM,EXT(I),FLENAM)
+        WRITE (23,110)IHOME,(FLENAM(II),II=1,2),IBACK
+110     FORMAT ('(TYMNET:',I2,')',2A5,',:',I2)
+
+*       ** OUTPUT FILE NAME TO NAME FILE.  CKSUM PROGRAM DOESN'T LIKE
+*          EXTRA BLANKS AT END OF NAME. SO... WRITE NAME OUT 1 
+*          CHAR. AT A TIME.
+
+*       ** 1ST FIND OUT HOW MANY NON-BLANK CHARS THERE ARE IN THE NAME
+
+        DO 120 J=1,10
+        IEND=J
+        CALL RTC(ICHAR,FLENAM,J)
+        IF (ICHAR.EQ.' ') GO TO 121
+120     CONTINUE
+        GO TO 123
+
+121     IEND=IEND-1
+
+123     DO 130 J=1,IEND
+        CALL RTC(ICHAR,FLENAM,J)
+        IF (J.NE.IEND) WRITE(22,125)ICHAR
+        IF (J.EQ.IEND) WRITE(22,129)ICHAR
+125     FORMAT(A1,$)
+129     FORMAT (A1)
+130     CONTINUE
+
+
+150     CONTINUE
+
+
+*       ** FINISHED. RETURN
+
+155     RETURN
+        END
+
+***********************************************************************
+*                                                                     *
+*                       SUBROUTINE: BLDNAM                            *
+*                                                                     *
+*       THIS SUBROUTINE TAKES A VARIABLE LENGTH FILE NAME AND A       *
+*       VARIABLE LENGTH EXTENSION AND BUILDS A FILENAME.              *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL BLDNAM(NAM,EXT,FLENAM)                                  *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*               NAM    = ARRAY CONTAINING FILE NAME (NO EXTENSION)    *
+*               EXT    = EXTENSION                                    *
+*       WHERE THE RETURNED VALUE IS:                                  *
+*               FLENAM = ARRAY CONTAING THE COMBINED FILE NAME AND    *
+*                       EXTENSION                                     *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE BLDNAM(NAM,EXT,FLENAM)
+
+        INTEGER NAM(2),EXT,FLENAM(2)
+
+        FLENAM(1)='     '
+        FLENAM(2)='     '
+
+*       ** PLACE FILE NAME IN ARRAY: FLENAM
+
+        DO 100 I=1,6
+        CALL RTC(ICHAR,NAM,I)
+        IF (ICHAR.EQ.' ') GO TO 110
+        CALL STC(ICHAR,FLENAM,I)
+100     CONTINUE
+        IPOS=7
+        GO TO 115
+
+110     IPOS=I
+115     CALL STC('.',FLENAM,IPOS)
+        IPOS=IPOS+1
+
+*       ** PLACE EXTENTION INTO ARRAY: FLENAM
+
+        DO 150 I=1,3
+        CALL RTC(ICHAR,EXT,I)
+        IF (ICHAR.EQ.' ') RETURN
+        CALL STC(ICHAR,FLENAM,IPOS)
+        IPOS=IPOS+1
+150     CONTINUE
+
+*       ** FINISHED
+
+        RETURN
+        END
+
+***********************************************************************
+*                                                                     *
+*                       SUBROUTINE: KEROUT                            *
+*                                                                     *
+*       THIS SUBROUTINES OUTPUTS ALL OF THE REGULAR BACKUP COMMANDS   *
+*       FOR A NODE TYPE OF 'KERNAL'.  IT ALSO OUTPUTS ANOTHER         *
+*       SET OF SIMILAR COMMANDS FOR THE SET  OF 'BAK' BACKUP FILES    *
+*       THAT ARE PROVIDED FOR ALL ISIS MACHINES.                      *
+*       EXAMPLE:  NOD252 IS BEING BACKED UP. BESIDES FILES:           *
+*       NOD252.TYM,NOD252.CMD,NOD252.NIB,...ETC. BEING TELECOPIED,    *
+*       THE FOLLOWING FILES WILL ALSO BE TELECOPIED: BAK252.TYM        *
+*       BAK252.CMD,BAK252.NIB,...ETC.                                 *
+*                                                                     *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL KEROUT(IHOME,IBACK,NAM,EXT)                             *
+*       WHERE THE REQUIRED VALUES ARE:                                *
+*               IHOME = HOME SYSTEM NUMBER                            *
+*               IBACK = BACKUP SYSTEM NUMBER                          *
+*               NAM   = ARRAY CONTAINING FILE NAME (NO EXTENSION)     *
+*               EXT   = ARRAY CONTAINING FILE NAME EXTENSIONS FOR ALL *
+*                       FILES TO BE BACKED UP.                        *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE KEROUT(IHOME,IBACK,NAM,EXT)
+
+        INTEGER NAM(2),EXT(10),NAM2(2)
+
+*       ** OUTPUT COMMANDS FOR FILE NAME AS IS.
+
+        CALL OUTCOM (IHOME,IBACK,NAM,EXT)
+
+*       ** BUILD 'BAK' FILE NAME
+
+        NAM2(1)='BAK  '
+        NAM2(2)='     '
+
+        DO 100 I=4,6
+        CALL RTC(ICHAR,NAM,I)
+        CALL STC(ICHAR,NAM2,I)
+100     CONTINUE
+
+*       ** OUTPUT COMMANDS FOR 'BAK' FILE NAME
+
+        CALL OUTCOM(IHOME,IBACK,NAM2,EXT)
+
+*       ** FINISHED. RETURN
+
+        RETURN
+        END
+
+***********************************************************************
+*                                                                     *
+*                       SUBROUTINE: SLOOUT                            *
+*                                                                     *
+*       THIS SUBROUTINE PROMPTS FOR A SLOT NUMBER ON AN ISI MACHINE   *
+*       BEING BACKED UP. THEN OUTPUTS THE REGULAR COMMANDS FOR        *
+*       THE SPECIFIED FILENAME AND SLOT EXTENSIONS. IT ALSO OUTPUTS   *
+*       A SET OF SIMILAR COMMANDS FOR THE BACKUP FILES THAT ARE       *
+*       PROVIDED FOR EACH SLOT ON AN ISIS MACHINE.                    *
+*       EXAMPLE: IF NOD252-SLOT 1  IS BEING BACKED UP THEN            *
+*       IN ADDITION TO FILES: NOD252.L01,NOD252.T01,ETC. BEING        *
+*       TELECOPIED, THE FOLLOWING FILES WILL ALSO BE TELECOPIED:      *
+*       BAK252.L01,BAK252.T01,ETC....                                 *
+*                                                                     *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL SLOOUT(IHOME,IBACK,NAM,EXT,IOPT,ISTOP)                  *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*               IHOME = HOME SYSTEM NUMBER                            *
+*               IBACK = BACKUP SYSTEM NUMBER                          *
+*               NAM   = ARRAY CONTAINING FILE NAME (NO EXTENSION)     *
+*               EXT   = ARRAY CONTAINING FILE NAME EXTENSIONS FOR ALL *
+*                       FILES TO BE BACKUP UP.                        *
+*               IOPT  = OPTION. IF SET TO 1 ONLY ONE SLOT WI     *
+*                       BE PROMPTED FOR.  IF SET TO 2 THEN WILL       *
+*                       CHECK FOR C.R. TO END PROMPTING FOR SLOTS.    *
+*       WHERE RETURNED VALUES ARE:                                    *
+*               ISTOP = FLAG. SET IF IN OPTION 2 A C.R. IS ENTERED    *
+*                       AT THE SLOT PROMPT.                           *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE SLOOUT(IHOME,IBACK,NAM,EXT,IOPT,ISTOP)
+
+        INTEGER NAM(2),EXT(10),EXT2(10),NAM2(2)
+
+        ISTOP=0
+
+*       ** INIT ARRAY: EXT2
+
+        DO 90 I=1,10
+        EXT2(I)='     '
+90      CONTINUE
+
+*       ** INPUT SLOT NUMBER
+
+ 95     IF (IOPT.NE.1) GO TO 125
+        TYPE 100,(NAM(J),J=1,2)
+100     FORMAT (1X,'* ',A5,A1,' SLOT? ',$)
+        ACCEPT 110,ISLOT
+110     FORMAT (I)
+        IF (ISLOT.GE.1.AND.ISLOT.LE.9) GO TO 150
+        GO TO 140
+
+125     TYPE 130,(NAM(J),J=1,2)
+130     FORMAT (1X,'* ',A5,A1,' SLOT? (C.R. TO STOP): ',$)
+        ACCEPT 110,ISLOT
+        IF (ISLOT.GE.1.AND.ISLOT.LE.9) GO TO 150
+        IF (ISLOT.NE.0) GO TO 140
+        ISTOP=1
+        RETURN
+
+*       ** ERROR
+
+140     TYPE 145
+145     FORMAT (6X,'?',/)
+        ISLOT=0
+        GO TO 95
+
+*       ** BUILD EXTENSIONS
+
+150     ENCODE (1,155,IASLOT)ISLOT
+155     FORMAT (I1)
+
+        DO 160 I=1,10
+        IF (EXT(I).EQ.' ') GO TO 165
+        CALL RTC(ICHAR,EXT(I),1)
+        CALL STC(ICHAR,EXT2(I),1)
+        CALL RTC(ICHAR,EXT(I),2)
+        CALL STC(ICHAR,EXT2(I),2)
+        CALL STC(IASLOT,EXT2(I),3)
+160     CONTINUE
+
+*       ** OUTPUT COMMANDS FOR FILE NAME AS IS.
+
+165     CALL OUTCOM(IHOME,IBACK,NAM,EXT2)
+
+*       ** BUILD 'BAK' FILE NAME
+
+        NAM2(1)='BAK  '
+        NAM2(2)='     '
+
+        DO 170 I=4,6
+        CALL RTC(ICHAR,NAM,I)
+        CALL STC(ICHAR,NAM2,I)
+170     CONTINUE
+
+*       ** OUTPUT COMMANDS FOR 'BAK' FILE ANME
+
+        CALL OUTCOM(IHOME,IBACK,NAM2,EXT2)
+
+*       ** FINISHED.
+
+        RETURN
+        END
+ ` 6
