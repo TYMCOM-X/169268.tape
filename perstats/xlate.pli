@@ -1,0 +1,400 @@
+ XLATE:     PROCEDURE OPTIONS(MAIN);                                    XXL00010
+                                                                        XXL00020
+                                                                        XXL00030
+  /* THIS PROCEDURE TRANSLATES AN ASCII RAM INPUT TAPE    */            XXL00040
+  /* INTO AN EBCDIC FILE.                                */             XXL00050
+  /* BY THE USER. */                                                    XXL00060
+                                                                        XXL00070
+                                                                        XXL00080
+            DECLARE (SYSIN,SYSPRINT) FILE;                              XXL00090
+            DECLARE IBLK FIXED BINARY(3,0) INIT(0);                     XXL00100
+            DECLARE BSIZE FIXED BINARY(15,0) INIT(0);                   XXL00110
+            PUT EDIT ('Enter tape blocking factor: ') (SKIP,A);         XXL00120
+            GET EDIT (IBLK) (F(2));                                     XXL00130
+            BSIZE = 240;                                                XXL00140
+            PUT EDIT ('Blksize :',IBLK,BSIZE) (A,A);                    XXL00150
+            DECLARE ASCIN FILE RECORD INPUT ENVIRONMENT ( LEAVE, FBS,   XXL00160
+              RECSIZE(240),TOTAL, BLKSIZE(3840));                       XXL00170
+ /* THE BLKSIZE OF 3840 WAS CHOSEN FOR RAM BLOCKING FACTOR OF 16 */     XXL00180
+                                                                        XXL00190
+            DECLARE EBCOUT FILE RECORD OUTPUT ENVIRONMENT(F,            XXL00200
+             RECSIZE(240),TOTAL);                                       XXL00210
+                                                                        XXL00220
+            DECLARE INREC CHARACTER(240);                               XXL00230
+            DECLARE REC_COUNT FIXED BINARY(31,0) INIT(0);               XXL00240
+            DECLARE FILE_COUNT FIXED BINARY(31,0) INIT(0);              XXL00250
+            DECLARE (ADDR,SUBSTR,TRANSLATE,PLIRETC) BUILTIN;            XXL00260
+                                                                        XXL00270
+                                                                        XXL00280
+            DECLARE XBITS(256) BIT(8) STATIC INITIAL                    XXL00290
+                              /* ASCII    EBCDIC      CHARACTER      */ XXL00300
+                              /* (HEX)    (HEX)                      */ XXL00310
+              ('00000000'B,   /* 00       00          NULL           */ XXL00320
+               '00000001'B,   /* 01       01          CNTL A         */ XXL00330
+               '00000010'B,   /* 02       02          CNTL B         */ XXL00340
+               '00000011'B,   /* 03       03          CNTL C         */ XXL00350
+               '00000100'B,   /* 04       04          CNTL D         */ XXL00360
+               '00000101'B,   /* 05       05          CNTL E         */ XXL00370
+               '00000110'B,   /* 06       06          CNTL F         */ XXL00380
+               '00000111'B,   /* 07       07          CNTL G         */ XXL00390
+               '00010110'B,   /* 08       16          BACKSPACE      */ XXL00400
+               '00000101'B,   /* 09       05          TAB            */ XXL00410
+               '00100101'B,   /* 0A       25          LINE FEED      */ XXL00420
+               '00001011'B,   /* 0B       0B          VERT. TAB      */ XXL00430
+               '00001100'B,   /* 0C       0C          FORM FEED      */ XXL00440
+               '00001101'B,   /* 0D       0D          CR             */ XXL00450
+               '00001110'B,   /* 0E       0E          CNTL N         */ XXL00460
+               '00001111'B,   /* 0F       0F          CNTL O         */ XXL00470
+                                                                        XXL00480
+               '00010000'B,   /* 10       10          CNTL P         */ XXL00490
+               '00010001'B,   /* 11       11          CNTL Q         */ XXL00500
+               '00010010'B,   /* 12       12          CNTL R         */ XXL00510
+               '00010011'B,   /* 13       13          CNTL S         */ XXL00520
+               '00010100'B,   /* 14       14          CNTL T         */ XXL00530
+               '00010101'B,   /* 15       15          CNTL U         */ XXL00540
+               '00010110'B,   /* 16       16          CNTL V         */ XXL00550
+               '00010111'B,   /* 17       17          CNTL W         */ XXL00560
+               '00011000'B,   /* 18       18          CNTL X         */ XXL00570
+               '00011001'B,   /* 19       19          CNTL Y         */ XXL00580
+               '00011010'B,   /* 1A       1A          CNTL Z         */ XXL00590
+               '00100111'B,   /* 1B       27          ESCAPE         */ XXL00600
+               '00011100'B,   /* 1C       1C          CNTL \         */ XXL00610
+               '00011101'B,   /* 1D       1D          CNTL           */ XXL00620
+               '00011110'B,   /* 1E       1E          CNTL ^         */ XXL00630
+               '00011111'B,   /* 1F       1F          CNTL _         */ XXL00640
+                                                                        XXL00650
+               '01000000'B,   /* 20       40          SPACE          */ XXL00660
+               '01011010'B,   /* 21       5A          !              */ XXL00670
+               '01111111'B,   /* 22       7F          "              */ XXL00680
+               '01111011'B,   /* 23       7B          #              */ XXL00690
+               '01011011'B,   /* 24       5B          $              */ XXL00700
+               '01101100'B,   /* 25       6C          %              */ XXL00710
+               '01010000'B,   /* 26       50          &              */ XXL00720
+               '01111101'B,   /* 27       7D          '              */ XXL00730
+               '01001101'B,   /* 28       4D          (              */ XXL00740
+               '01011101'B,   /* 29       5D          )              */ XXL00750
+               '01011100'B,   /* 2A       5C          *              */ XXL00760
+               '01001110'B,   /* 2B       4E          +              */ XXL00770
+               '01101011'B,   /* 2C       6B          ,              */ XXL00780
+               '01100000'B,   /* 2D       60          -              */ XXL00790
+               '01001011'B,   /* 2E       4B          .              */ XXL00800
+               '01100001'B,   /* 2F       61          /              */ XXL00810
+                                                                        XXL00820
+               '11110000'B,   /* 30       F0          0              */ XXL00830
+               '11110001'B,   /* 31       F1          1              */ XXL00840
+               '11110010'B,   /* 32       F2          2              */ XXL00850
+               '11110011'B,   /* 33       F3          3              */ XXL00860
+               '11110100'B,   /* 34       F4          4              */ XXL00870
+               '11110101'B,   /* 35       F5          5              */ XXL00880
+               '11110110'B,   /* 36       F6          6              */ XXL00890
+               '11110111'B,   /* 37       F7          7              */ XXL00900
+               '11111000'B,   /* 38       F8          8              */ XXL00910
+               '11111001'B,   /* 39       F9          9              */ XXL00920
+               '01111010'B,   /* 3A       7A          :              */ XXL00930
+               '01011110'B,   /* 3B       5E          ;              */ XXL00940
+               '01001100'B,   /* 3C       4C          <              */ XXL00950
+               '01111110'B,   /* 3D       7E          =              */ XXL00960
+               '01101110'B,   /* 3E       6E          >              */ XXL00970
+               '01101111'B,   /* 3F       6F          ?              */ XXL00980
+                                                                        XXL00990
+               '01111100'B,   /* 40       7C          @              */ XXL01000
+               '11000001'B,   /* 41       C1          A              */ XXL01010
+               '11000010'B,   /* 42       C2          B              */ XXL01020
+               '11000011'B,   /* 43       C3          C              */ XXL01030
+               '11000100'B,   /* 44       C4          D              */ XXL01040
+               '11000101'B,   /* 45       C5          E              */ XXL01050
+               '11000110'B,   /* 46       C6          F              */ XXL01060
+               '11000111'B,   /* 47       C7          G              */ XXL01070
+               '11001000'B,   /* 48       C8          H              */ XXL01080
+               '11001001'B,   /* 49       C9          I              */ XXL01090
+               '11010001'B,   /* 4A       D1          J              */ XXL01100
+               '11010010'B,   /* 4B       D2          K              */ XXL01110
+               '11010011'B,   /* 4C       D3          L              */ XXL01120
+               '11010100'B,   /* 4D       D4          M              */ XXL01130
+               '11010101'B,   /* 4E       D5          N              */ XXL01140
+               '11010110'B,   /* 4F       D6          O              */ XXL01150
+                                                                        XXL01160
+               '11010111'B,   /* 50       D7          P              */ XXL01170
+               '11011000'B,   /* 51       D8          Q              */ XXL01180
+               '11011001'B,   /* 52       D9          R              */ XXL01190
+               '11100010'B,   /* 53       E2          S              */ XXL01200
+               '11100011'B,   /* 54       E3          T              */ XXL01210
+               '11100100'B,   /* 55       E4          U              */ XXL01220
+               '11100101'B,   /* 56       E5          V              */ XXL01230
+               '11100110'B,   /* 57       E6          W              */ XXL01240
+               '11100111'B,   /* 58       E7          X              */ XXL01250
+               '11101000'B,   /* 59       E8          Y              */ XXL01260
+               '11101001'B,   /* 5A       E9          Z              */ XXL01270
+               '11000000'B,   /* 5B       C0                         */ XXL01280
+               '11100000'B,   /* 5C       E0          \              */ XXL01290
+               '11010000'B,   /* 5D       D0                         */ XXL01300
+               '11111010'B,   /* 5E       FA          ^              */ XXL01310
+               '01101101'B,   /* 5F       6D          _              */ XXL01320
+                                                                        XXL01330
+               '01111001'B,   /* 60       79          @              */ XXL01340
+               '10000001'B,   /* 61       81          A              */ XXL01350
+               '10000010'B,   /* 62       82          B              */ XXL01360
+               '10000011'B,   /* 63       83          C              */ XXL01370
+               '10000100'B,   /* 64       84          D              */ XXL01380
+               '10000101'B,   /* 65       85          E              */ XXL01390
+               '10000110'B,   /* 66       86          F              */ XXL01400
+               '10000111'B,   /* 67       87          G              */ XXL01410
+               '10001000'B,   /* 68       88          H              */ XXL01420
+               '10001001'B,   /* 69       89          I              */ XXL01430
+               '10010001'B,   /* 6A       91          J              */ XXL01440
+               '10010010'B,   /* 6B       92          K              */ XXL01450
+               '10010011'B,   /* 6C       93          L              */ XXL01460
+               '10010100'B,   /* 6D       94          M              */ XXL01470
+               '10010101'B,   /* 6E       95          N              */ XXL01480
+               '10010110'B,   /* 6F       96          O              */ XXL01490
+                                                                        XXL01500
+               '10010111'B,   /* 70       97          P              */ XXL01510
+               '10011000'B,   /* 71       98          Q              */ XXL01520
+               '10011001'B,   /* 72       99          R              */ XXL01530
+               '10100010'B,   /* 73       A2          S              */ XXL01540
+               '10100011'B,   /* 74       A3          T              */ XXL01550
+               '10100100'B,   /* 75       A4          U              */ XXL01560
+               '10100101'B,   /* 76       A5          V              */ XXL01570
+               '10100110'B,   /* 78       A6          W              */ XXL01580
+               '10100111'B,   /* 79       A7          X              */ XXL01590
+               '10101000'B,   /* 79       A8          Y              */ XXL01600
+               '10101001'B,   /* 7A       A9          Z              */ XXL01610
+               '11000000'B,   /* 7B       C0                         */ XXL01620
+               '01101010'B,   /* 7C       6A          \              */ XXL01630
+               '11010000'B,   /* 7D       D0                         */ XXL01640
+               '10100001'B,   /* 7E       A1          ^              */ XXL01650
+               '11111111'B,   /* 7F       FF          RUBOUT         */ XXL01660
+                                                                        XXL01670
+               '00000000'B,   /* 00       00          NULL           */ XXL01680
+               '00000001'B,   /* 01       01          CNTL A         */ XXL01690
+               '00000010'B,   /* 02       02          CNTL B         */ XXL01700
+               '00000011'B,   /* 03       03          CNTL C         */ XXL01710
+               '00000100'B,   /* 04       04          CNTL D         */ XXL01720
+               '00000101'B,   /* 05       05          CNTL E         */ XXL01730
+               '00000110'B,   /* 06       06          CNTL F         */ XXL01740
+               '00000111'B,   /* 07       07          CNTL G         */ XXL01750
+               '00010110'B,   /* 08       16          BACKSPACE      */ XXL01760
+               '00000101'B,   /* 09       05          TAB            */ XXL01770
+               '00100101'B,   /* 0A       25          LINE FEED      */ XXL01780
+               '00001011'B,   /* 0B       0B          VERT. TAB      */ XXL01790
+               '00001100'B,   /* 0C       0C          FORM FEED      */ XXL01800
+               '00001101'B,   /* 0D       0D          CR             */ XXL01810
+               '00001110'B,   /* 0E       0E          CNTL N         */ XXL01820
+               '00001111'B,   /* 0F       0F          CNTL O         */ XXL01830
+                                                                        XXL01840
+               '00010000'B,   /* 10       10          CNTL P         */ XXL01850
+               '00010001'B,   /* 11       11          CNTL Q         */ XXL01860
+               '00010010'B,   /* 12       12          CNTL R         */ XXL01870
+               '00010011'B,   /* 13       13          CNTL S         */ XXL01880
+               '00010100'B,   /* 14       14          CNTL T         */ XXL01890
+               '00010101'B,   /* 15       15          CNTL U         */ XXL01900
+               '00010110'B,   /* 16       16          CNTL V         */ XXL01910
+               '00010111'B,   /* 17       17          CNTL W         */ XXL01920
+               '00011000'B,   /* 18       18          CNTL X         */ XXL01930
+               '00011001'B,   /* 19       19          CNTL Y         */ XXL01940
+               '00011010'B,   /* 1A       1A          CNTL Z         */ XXL01950
+               '00100111'B,   /* 1B       27          ESCAPE         */ XXL01960
+               '00011100'B,   /* 1C       1C          CNTL \         */ XXL01970
+               '00011101'B,   /* 1D       1D          CNTL           */ XXL01980
+               '00011110'B,   /* 1E       1E          CNTL ^         */ XXL01990
+               '00011111'B,   /* 1F       1F          CNTL _         */ XXL02000
+                                                                        XXL02010
+               '01000000'B,   /* 20       40          SPACE          */ XXL02020
+               '01011010'B,   /* 21       5A          !              */ XXL02030
+               '01111111'B,   /* 22       7F          "              */ XXL02040
+               '01111011'B,   /* 23       7B          #              */ XXL02050
+               '01011011'B,   /* 24       5B          $              */ XXL02060
+               '01101100'B,   /* 25       6C          %              */ XXL02070
+               '01010000'B,   /* 26       50          &              */ XXL02080
+               '01111101'B,   /* 27       7D          '              */ XXL02090
+               '01001101'B,   /* 28       4D          (              */ XXL02100
+               '01011101'B,   /* 29       5D          )              */ XXL02110
+               '01011100'B,   /* 2A       5C          *              */ XXL02120
+               '01001110'B,   /* 2B       4E          +              */ XXL02130
+               '01101011'B,   /* 2C       6B          ,              */ XXL02140
+               '01100000'B,   /* 2D       60          -              */ XXL02150
+               '01001011'B,   /* 2E       4B          .              */ XXL02160
+               '01100001'B,   /* 2F       61          /              */ XXL02170
+                                                                        XXL02180
+               '11110000'B,   /* 30       F0          0              */ XXL02190
+               '11110001'B,   /* 31       F1          1              */ XXL02200
+               '11110010'B,   /* 32       F2          2              */ XXL02210
+               '11110011'B,   /* 33       F3          3              */ XXL02220
+               '11110100'B,   /* 34       F4          4              */ XXL02230
+               '11110101'B,   /* 35       F5          5              */ XXL02240
+          '11110110'B,   /* 36       F6          6              */ XXL02250
+               '11110111'B,   /* 37       F7          7              */ XXL02260
+               '11111000'B,   /* 38       F8          8              */ XXL02270
+               '11111001'B,   /* 39       F9          9              */ XXL02280
+               '01111010'B,   /* 3A       7A          :              */ XXL02290
+               '01011110'B,   /* 3B       5E          ;              */ XXL02300
+               '01001100'B,   /* 3C       4C          <              */ XXL02310
+               '01111110'B,   /* 3D       7E          =              */ XXL02320
+               '01101110'B,   /* 3E       6E          >              */ XXL02330
+               '01101111'B,   /* 3F       6F          ?              */ XXL02340
+                                                                        XXL02350
+               '01111100'B,   /* 40       7C          @              */ XXL02360
+               '11000001'B,   /* 41       C1          A              */ XXL02370
+               '11000010'B,   /* 42       C2          B              */ XXL02380
+               '11000011'B,   /* 43       C3          C              */ XXL02390
+               '11000100'B,   /* 44       C4          D              */ XXL02400
+               '11000101'B,   /* 45       C5          E              */ XXL02410
+               '11000110'B,   /* 46       C6          F              */ XXL02420
+               '11000111'B,   /* 47       C7          G              */ XXL02430
+               '11001000'B,   /* 48       C8          H              */ XXL02440
+               '11001001'B,   /* 49       C9          I              */ XXL02450
+               '11010001'B,   /* 4A       D1          J              */ XXL02460
+               '11010010'B,   /* 4B       D2          K              */ XXL02470
+               '11010011'B,   /* 4C       D3          L              */ XXL02480
+               '11010100'B,   /* 4D       D4          M              */ XXL02490
+               '11010101'B,   /* 4E       D5          N              */ XXL02500
+               '11010110'B,   /* 4F       D6          O              */ XXL02510
+                                                                        XXL02520
+               '11010111'B,   /* 50       D7          P              */ XXL02530
+               '11011000'B,   /* 51       D8          Q              */ XXL02540
+               '11011001'B,   /* 52       D9          R              */ XXL02550
+               '11100010'B,   /* 53       E2          S              */ XXL02560
+               '11100011'B,   /* 54       E3          T              */ XXL02570
+               '11100100'B,   /* 55       E4          U              */ XXL02580
+               '11100101'B,   /* 56       E5          V              */ XXL02590
+               '11100110'B,   /* 57       E6          W              */ XXL02600
+               '11100111'B,   /* 58       E7          X              */ XXL02610
+               '11101000'B,   /* 59       E8          Y              */ XXL02620
+               '11101001'B,   /* 5A       E9          Z              */ XXL02630
+               '11000000'B,   /* 5B       C0                         */ XXL02640
+               '11100000'B,   /* 5C       E0          \              */ XXL02650
+               '11010000'B,   /* 5D       D0                         */ XXL02660
+               '11111010'B,   /* 5E       FA          ^              */ XXL02670
+               '01101101'B,   /* 5F       6D          _              */ XXL02680
+                                                                        XXL02690
+               '01111001'B,   /* 60       79          @              */ XXL02700
+               '10000001'B,   /* 61       81          A              */ XXL02710
+               '10000010'B,   /* 62       82          B              */ XXL02720
+               '10000011'B,   /* 63       83          C              */ XXL02730
+               '10000100'B,   /* 64       84          D              */ XXL02740
+               '10000101'B,   /* 65       85          E              */ XXL02750
+               '10000110'B,   /* 66       86          F              */ XXL02760
+               '10000111'B,   /* 67       87          G              */ XXL02770
+               '10001000'B,   /* 68       88          H              */ XXL02780
+               '10001001'B,   /* 69       89          I              */ XXL02790
+               '10010001'B,   /* 6A       91          J              */ XXL02800
+               '10010010'B,   /* 6B       92          K              */ XXL02810
+               '10010011'B,   /* 6C       93          L              */ XXL02820
+               '10010100'B,   /* 6D       94          M              */ XXL02830
+               '10010101'B,   /* 6E       95          N              */ XXL02840
+               '10010110'B,   /* 6F       96          O              */ XXL02850
+                                                                        XXL02860
+               '10010111'B,   /* 70       97          P              */ XXL02870
+               '10011000'B,   /* 71       98          Q              */ XXL02880
+               '10011001'B,   /* 72       99          R              */ XXL02890
+               '10100010'B,   /* 73       A2          S              */ XXL02900
+               '10100011'B,   /* 74       A3          T              */ XXL02910
+               '10100100'B,   /* 75       A4          U              */ XXL02920
+               '10100101'B,   /* 76       A5          V              */ XXL02930
+               '10100110'B,   /* 78       A6          W              */ XXL02940
+               '10100111'B,   /* 79       A7          X              */ XXL02950
+               '10101000'B,   /* 79       A8          Y              */ XXL02960
+               '10101001'B,   /* 7A       A9          Z              */ XXL02970
+               '11000000'B,   /* 7B       C0                         */ XXL02980
+               '01101010'B,   /* 7C       6A          \              */ XXL02990
+               '11010000'B,   /* 7D       D0                         */ XXL03000
+               '10100001'B,   /* 7E       A1          ^              */ XXL03010
+               '11111111'B);  /* 7F       FF          RUBOUT         */ XXL03020
+                                                                        XXL03030
+                                                                        XXL03040
+            DECLARE XTABLE CHARACTER(256) BASED(P);                     XXL03050
+            DECLARE P POINTER INITIAL ((ADDR(XBITS)));                  XXL03060
+                                                                        XXL03070
+                                                                        XXL03080
+    ON TRANSMIT(ASCIN)                                                  XXL03090
+       BEGIN;                                                           XXL03100
+       DISPLAY('PERMANENT ERROR READING TAPE. FILE =');                 XXL03110
+       DISPLAY(FILE_COUNT);                                             XXL03120
+       END;                                                             XXL03130
+                                                                        XXL03140
+            ON ENDFILE(ASCIN) GOTO ABORT;                               XXL03150
+            OPEN FILE (ASCIN);                                          XXL03160
+                                                                        XXL03170
+    /* READ THE VOLUME LABEL */                                         XXL03180
+                                                                        XXL03190
+    READ FILE (ASCIN) INTO (INREC);                                     XXL03200
+    INREC =TRANSLATE(INREC,XTABLE);                                     XXL03210
+    IF SUBSTR(INREC,1,4) ='VOL1' THEN                                   XXL03220
+       BEGIN;                                                           XXL03230
+       DISPLAY ('PROCESSING TAPE NUMBER : ');                           XXL03240
+       DISPLAY (SUBSTR(INREC,5,6));                                     XXL03250
+       DISPLAY ('OWNER : ');                                            XXL03260
+       DISPLAY(SUBSTR(INREC,38,14));                                    XXL03270
+                                                                        XXL03280
+       /* READ THE FILES */                                             XXL03290
+                                                                        XXL03300
+ FILE_LOOP:                                                             XXL03310
+       ON ENDFILE(ASCIN) GOTO DONE;                                     XXL03320
+                                                                        XXL03330
+       /* READ THE HDR1 RECORD */                                       XXL03340
+                                                                        XXL03350
+       READ FILE(ASCIN) INTO (INREC);                                   XXL03360
+       INREC =TRANSLATE(INREC,XTABLE);                                  XXL03370
+       IF SUBSTR(INREC,1,4) \='HDR1' THEN GOTO ABORT;                   XXL03380
+                                                                        XXL03390
+       /* READ THE HDR2 RECORD */                                       XXL03400
+                                                                        XXL03410
+       ON ENDFILE(ASCIN) GOTO HDR_END;                                  XXL03420
+       READ FILE(ASCIN) INTO (INREC);                                   XXL03430
+       INREC =TRANSLATE(INREC,XTABLE);                                  XXL03440
+       IF SUBSTR(INREC,1,4) \='HDR2' THEN GOTO ABORT;                   XXL03450
+       READ FILE(ASCIN) INTO (INREC);                                   XXL03460
+                                                                        XXL03470
+ HDR_END:                                                               XXL03480
+       CLOSE FILE(ASCIN);                                               XXL03490
+                                                                        XXL03500
+       /* READ THE DATA */                                              XXL03510
+                                                                        XXL03520
+       FILE_COUNT =FILE_COUNT + 1;                                      XXL03530
+       OPEN FILE (ASCIN);                                               XXL03540
+       ON ENDFILE(ASCIN) GOTO READ_TRAILER;                             XXL03550
+                                                                        XXL03560
+  READ_LOOP:                                                            XXL03570
+       READ FILE(ASCIN) INTO(INREC);                                    XXL03580
+       INREC =TRANSLATE(INREC,XTABLE);                                  XXL03590
+       IF SUBSTR(INREC,1,1) =' ' THEN GOTO READ_LOOP;                   XXL03600
+       REC_COUNT =REC_COUNT+1;                                          XXL03610
+       WRITE FILE(EBCOUT) FROM(INREC);                                  XXL03620
+       GOTO READ_LOOP;                                                  XXL03630
+                                                                        XXL03640
+                                                                        XXL03650
+ READ_TRAILER:                                                          XXL03660
+       CLOSE FILE(ASCIN);                                               XXL03670
+       OPEN FILE(ASCIN);                                                XXL03680
+       ON ENDFILE(ASCIN) GOTO ABORT;                                    XXL03690
+                                                                        XXL03700
+       READ FILE(ASCIN) INTO (INREC);                                   XXL03710
+                                                                        XXL03720
+       ON ENDFILE(ASCIN) GOTO EOF_END;                                  XXL03730
+                                                                        XXL03740
+       READ FILE(ASCIN) INTO (INREC);                                   XXL03750
+ EOF_END:                                                               XXL03760
+       CLOSE FILE(ASCIN);                                               XXL03770
+       OPEN FILE (ASCIN);                                               XXL03780
+                                                                        XXL03790
+    /* LOOP HERE */                                                     XXL03800
+       GOTO FILE_LOOP;                                                  XXL03810
+                                                                        XXL03820
+       END;                                                             XXL03830
+                                                                        XXL03840
+    ELSE                                                                XXL03850
+       DISPLAY('NOT A RAM TAPE!!!');                                    XXL03860
+                                                                        XXL03870
+ ABORT:                                                                 XXL03880
+    DISPLAY('TAPE IMPROPERLY FORMATTED.');                              XXL03890
+    CALL PLIRETC(1);                                                    XXL03900
+                                                                        XXL03910
+ DONE:                                                                  XXL03920
+    DISPLAY('DONE!');                                                   XXL03930
+    DISPLAY(FILE_COUNT);                                                XXL03940
+    DISPLAY('FILES   HAVE BEING PROCESSED !');                          XXL03950
+    DISPLAY(REC_COUNT);                                                 XXL03960
+    DISPLAY('RECORDS HAVE BEING PROCESSED !');                          XXL03970
+                                                                        XXL03980
+            END XLATE;                                                  XXL03990
+  @?£
