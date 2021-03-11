@@ -1,0 +1,255 @@
+::*********************** QUICKY ENGINE DISC FORMATTER *************
+         RA     0
+R0       EQ     0
+R1       EQ     1
+R2       EQ     2
+R3       EQ     3
+R4       EQ     4
+R5       EQ     5
+R6       EQ     6
+R7       EQ     7
+R8       EQ     8
+R9       EQ     9
+R10      EQ     $A  10
+R11      EQ     $A  11
+R12      EQ     $A  12
+R13      EQ     $A  13
+R14      EQ     $A  14
+R15      EQ     $A  15
+ 
+TRACK    EQ     3
+HEAD     EQ     4
+SECT     EQ     5
+ADDR     EQ     6
+TEMP     EQ     7
+DEVADD   EQ     8
+ESELCH   EQ     9
+COMAND   EQ     $A  10
+CNTRLR   EQ     $A  11
+PANEL1   EQ     $A  12
+PANEL2   EQ     $A  13
+         RA     0                       :DEFAULT RADIX IS HEX
+
+         ORG    2700
+         LHI    DEVADD,00D7             :SET UP DEVICE ADDRES= D7
+         J      BEGIN                   :START THE PROGRAM
+
+         ORG    2800
+         LHI    DEVADD,00D6             :SET UP DEVICE ADDRESS= D6
+         J      BEGIN                   :START THE PROGRAM
+
+         ORG    2900
+         LHI    DEVADD,00C7             :SET UP DEVICE ADDRESS= C7
+         J      BEGIN                   :START THE PROGRAM
+
+         ORG    2E00
+         LIS    SECT,0                  :START HERE TO FORMAT A TRACK TO
+         LH     TEMP,2F00               :BE DEFECTIVE. BEFORE STARTING
+         OI     TEMP,55550000           :SET REG #3 TO EQUAL THE CYL ADDR
+         ST     TEMP,2F00               :AND REG #4 TO EQUAL THE HEAD ADDR
+         SLL    HEAD,0D
+         OHI    HEAD,4000
+         LHI    TEMP,2E40
+         STH    TEMP,3190
+         LHI    TEMP,L50
+         STH    TEMP,L50-4
+         J      RESET
+
+         ORG    2E40                    :CLEAN THE DEFECTIVE FORMAT MESS
+         LHI    TEMP,SKIP
+         STH    TEMP,3190
+         L      TEMP,2F00
+         STH    TEMP,2F00
+         LHI    TEMP,ADDSET
+         STH    TEMP,L50-4
+         J      DONE
+
+         ORG    2F00
+IFSKIP   HC     0                       :SET THIS LOCATION TO A NON ZERO
+                                        :VALUE TO SKIP WRITE DATA
+
+         ORG    3000
+         LHI    DEVADD,00C6             :SET UP DEVICE ADDRESS= C6
+BEGIN    LHI    ESELCH,00F0             :SET UP ESELCH ADDRESS
+         LHI    CNTRLR,00B6             :SET UP CONTROLLER ADDRESS
+         LIS    R2,0
+         LIS    TRACK,0
+         LIS    HEAD,0
+         LIS    SECT,0
+         LIS    R1,0
+L00      ST     SECT,1000,R2
+         AIS    R2,4
+         CHI    R2,0120
+         JT     1,L00                  :ZERO OUT THE ENTIRE BUFFER
+
+         J      RESET                   :RESET IT ALL AND START
+
+         ORG    3050
+RESET    LHI    COMAND,00C8             :LOAD COMMAND REGISTER
+         OCR    CNTRLR,COMAND           :COMMAND CONTROLLER: RESET
+         LHI    COMAND,00C1             :LOAD COMMAND REGISTER
+         OCR    DEVADD,COMAND           :COMMAND DEVICE: RESTORE
+ 
+::  START MAIN LOOP
+ 
+ADDSET   LR     ADDR,TRACK
+         NHI    ADDR,00FF
+         OR     ADDR,SECT
+         OR     ADDR,HEAD
+         STH    ADDR,1000
+         LR     PANEL1,DEVADD           :LOAD DEVICE ADDRESS FOR DISPLAY
+         LR     PANEL2,ADDR             :LOAD FORMAT ADDRESS FOR DISPLAY
+         CIO    PANEL1,1                :DISPLAY DATA ON FRONT PANEL
+L01      SSR    ESELCH,TEMP
+         JT     8,L01
+         SSR    DEVADD,TEMP
+         LIS    R15,1                   :SET ERROR NUMBER = 1
+L02      SSR    CNTRLR,TEMP
+         JT     5,ERROR
+         LIS    R15,2                   :SET ERROR NUMBER = 2
+L03      SSR    DEVADD,TEMP
+         JT     8,L03
+         JT     1,ERROR
+         LHI    TEMP,0008
+         OCR    ESELCH,TEMP            :COMMAND ESELCH TO STOP
+         EXBR   TRACK,TRACK
+         WDR    DEVADD,TRACK            :WRITE CYLINDER ADDRESS #1
+         EXBR   TRACK,TRACK
+         WDR    DEVADD,TRACK            :WRITE CYLINDER ADDRESS #2
+         LHI    TEMP,00C2               :
+         OCR    DEVADD,TEMP             :COMMAND DISK: SEEK
+L11      SSR    CNTRLR,TEMP
+         JF     2,L11
+         LIS    R15,7                   :SET ERROR NUMBER = 7
+L12      SSR    DEVADD,TEMP
+         JT     8,L12
+         JT     2,ERROR
+         LHI    TEMP,08
+         OCR    ESELCH,TEMP             :COMMAND ESELCH STOP
+         LHI    TEMP,10
+         WDR    ESELCH,TEMP            :WRITE STARTING ADDRESS
+         EXBR   TEMP,TEMP
+         WDR    ESELCH,TEMP             :WRITE STARTING ADDRESS #2
+         LHI    TEMP,11
+         WDR    ESELCH,TEMP            :WRITE ENDING ADDRESS
+         LHI    TEMP,0B         
+         WDR    ESELCH,TEMP             :WRITE ENDING ADDRESS #2
+         EXBR   TRACK,TRACK
+         WDR    DEVADD,TRACK
+         EXBR   TRACK,TRACK
+         WDR    DEVADD,TRACK           :WRITE CYLINDER ADDRESS
+         EXBR   ADDR,ADDR               
+         WDR    CNTRLR,ADDR            :WRITE HEAD,SECTOR ADDRESSES
+         EXBR   ADDR,ADDR               :CHANGE IT BACK SO ITS RIGHT
+         LHI    COMAND,00C6
+         OCR    CNTRLR,COMAND          :COMMAND CONTROLLER: FORMAT WRITE
+         LHI    COMAND,0010
+         OCR    ESELCH,COMAND          :START DMA OPERATION
+L05      SSR    ESELCH,TEMP            :SENSE ESELCH STATUS
+         JT     8,L05                  :WAIT IF BUSY
+         LHI    COMAND,0008
+         OCR    ESELCH,COMAND          :STOP ESELCH
+         LIS    R15,3                   :SET ERROR NUMBER = 3
+L06      SSR    CNTRLR,TEMP            :SENSE CONTROLLER STATUS
+         JT     5,ERROR
+         JT     8,L06
+         JF     2,L06
+         LIS    R15,4                   :SET ERROR NUMBER = 4
+L07      SSR    DEVADD,TEMP
+         JT     8,L07                  :WAIT IF BUSY
+         JT     1,ERROR
+         OCR    ESELCH,COMAND          :STOP ESELCH
+         AHI    SECT,0100
+         CHI    SECT,1800              :CHECK FOR LAST SECTOR
+         JT     1,ADDSET
+         LIS    SECT,0
+         AHI    HEAD,2000
+         CHI    HEAD,2000              :CHECK FOR LAST HEAD
+         JF     7,ADDSET
+         LIS    HEAD,0
+L50      LR     ADDR,TRACK
+         NHI    ADDR,00FF
+         OR     ADDR,SECT
+         OR     ADDR,HEAD
+         LR     PANEL1,DEVADD           :LOAD DEVICE ADDRESS FOR DISPLAY
+         LR     PANEL2,ADDR             :LOAD FORMAT ADDRESS FOR DISPLAY
+         OHI    PANEL1,0F000            :SET WRITING FLAG
+         CIO    PANEL1,1                :DISPLAY DATA ON FRONT PANEL
+L21      SSR    ESELCH,TEMP
+         JT     8,L21
+         SSR    DEVADD,TEMP
+         LIS    R15,8                   :SET ERROR NUMBER = 8
+L22      SSR    CNTRLR,TEMP
+         JT     5,ERROR
+         LIS    R15,9                   :SET ERROR NUMBER = 9
+L23      SSR    DEVADD,TEMP
+         JT     8,L23
+         JT     1,ERROR
+         LHI    TEMP,0008
+         OCR    ESELCH,TEMP            :COMMAND ESELCH TO STOP
+         EXBR   TRACK,TRACK
+         WDR    DEVADD,TRACK            :WRITE CYLINDER ADDRESS #1
+         EXBR   TRACK,TRACK
+         WDR    DEVADD,TRACK            :WRITE CYLINDER ADDRESS #2
+         LHI    TEMP,00C2               :
+         OCR    DEVADD,TEMP             :COMMAND DISK: SEEK
+L24      SSR    CNTRLR,TEMP
+         JF     2,L24
+         LIS    R15,0A                  :SET ERROR NUMBER = 10
+L25      SSR    DEVADD,TEMP
+         JT     8,L25
+         JT     2,ERROR
+         LHI    TEMP,08
+         OCR    ESELCH,TEMP             :COMMAND ESELCH STOP
+         LH     TEMP,IFSKIP             :CHECK FOR SKIP
+         JT     3,SKIP
+         LHI    TEMP,10
+         WDR    ESELCH,TEMP
+         WDR    ESELCH,TEMP            :WRITE START ADDRESS
+         WDR    ESELCH,TEMP
+         LHI    TEMP,1F
+         WDR    ESELCH,TEMP            :WRITE END ADDRESS
+         EXBR   TRACK,TRACK
+         WDR    DEVADD,TRACK
+         EXBR   TRACK,TRACK
+         WDR    DEVADD,TRACK           :WRITE CYLINDER ADDRESS
+         EXBR   ADDR,ADDR
+         WDR    CNTRLR,ADDR            :WRITE HEAD,SECTOR ADDRESSES
+         EXBR   ADDR,ADDR               :CHANGE IT BACK SO ITS RIGHT
+         LHI    COMAND,00C2
+         OCR    CNTRLR,COMAND          :COMMAND CONTROLLER: WRITE
+         LHI    COMAND,0010
+         OCR    ESELCH,COMAND          :START DMA OPERATION
+L08      SSR    ESELCH,TEMP            :SENSE ESELCH STATUS
+         JT     8,L08                  :WAIT IF BUSY
+         LHI    COMAND,0008
+         OCR    ESELCH,COMAND          :STOP ESELCH
+         LIS    R15,5                   :SET ERROR NUMBER = 5
+L09      SSR    CNTRLR,TEMP             :SENSE CONTROLLER STATUS
+         JT     8,L09                  :WAIT IF BUSY
+         JF     2,L09                  :WAIT IF NOT IDLE
+         JT     5,ERROR
+         LIS    R15,6                   :SET ERROR NUMBER = 6
+L10      SSR    DEVADD,TEMP
+         JT     8,L10                  :WAIT IF BUSY
+         JT     1,ERROR
+SKIP     AHI    SECT,0100
+         CHI    SECT,1800              :CHECK FOR LAST SECTOR
+         JT     1,L50
+         LIS    SECT,0
+         AHI    HEAD,2000
+         CHI    HEAD,2000              :CHECK FOR LAST HEAD
+         JF     7,L50
+         LIS    HEAD,0
+         AIS    TRACK,1
+         CHI    TRACK,0198             :CHECK FOR LAST CYLINDER (TRACK)
+         JT     1,ADDSET
+DONE     LR     PANEL1,DEVADD           :LOAD DEVICE ADDRESS FOR DISPLAY
+         LI     PANEL2,0D15C            :LOAD THE WORD 'DISC'
+         CIO    PANEL1,1                :DISPLAY DATA ON FRONT PANEL
+L99      J      L99
+ERROR    SLL    R15,010                 :SHIFT ERROR NUMBER 16 PLACES
+         OR     PANEL2,R15              :OR IN ERROR NUMBER
+         CIO    PANEL1,1                :DISPLAY DATA ON FRONT PANEL
+         J      L99                     :GO BACK AND HALT
+DEND     END
