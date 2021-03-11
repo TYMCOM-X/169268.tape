@@ -1,0 +1,225 @@
+.se archive='&sectno'
+The Netval ARCHIVE sub-system allows the user to:
+.in 12;.sp;.il -2;- attach a magnetic tape unit to the Netval slot
+.il -2;- detach a magnetic tape unit from the Netval slot
+.il -2;- store Netval disk files on tape in Netval ARCHIVE format
+.il -2;- in addition, if the conditional flag INCLUDE_DUMP is enabled, dump the
+Netval CUD to tape in ASCII format
+.in;.sp;The prompt for the ARCHIVE sub-system is:
+.sp;.il 20;arch>
+.sp;Tape units may have the following status:
+.sp;.cp begin;1.  ATTACHED
+.br;An ATTACHED tape is accessable by users logged into the Netval SLOT only;
+no other slot on the Netval Engine may access the tape unit.
+.cp end;.sp 2;.cp begin;2.  ASSIGNED
+.br;An ASSIGNED tape is reserved for a single Netval validator;
+no other ARCHIVE validator may access the tape unit.
+Only one tape unit may be assigned to a validator at a time.
+During the period that a tape is assigned to a validator, it is also
+attached to the Netval slot.
+.cp end;.sp;Tape units may become ATTACHED and/or ASSIGNED explicitly
+or implicitly.
+.sp;If a tape unit is ATTACHED explicitly by the ATTACH command (Section
+.ur &arattcmd), it remains ATTACHED until it is DETACHED explicitly by the
+.ur DETACH command (Section &ardetcmd).
+Any Netval ARCHIVE validator may use (and therefore may also DETACH)
+an attached tape, as long as no other validator has the tape ASSIGNED.
+.sp;If a tape unit is ASSIGNED explicitly to a validator by the ASSIGN command
+.ur (Section &arasscmd), it remains ASSIGNED until the validator explicitly
+.ur DEASSIGNS the unit by the DEASSIGN command (Section &ardeacmd) OR leaves
+the Netval system (by logging out or becoming disconnected).
+If a Netval user still has a tape ASSIGNED when he logs out,
+Netval will notify him of the unit.
+.sp;During any Netval ARCHIVE command that accesses a tape unit, the unit
+is necessarily both ATTACHED and ASSIGNED for the validator
+(implicitly if not by an explicit command).
+If reserved implicitly, the tape unit is reserved for the Netval slot and the
+validator FOR THE DURATION OF THE COMMAND ONLY.
+At the completion of the command, the unit will have the same status as it
+did before the command.
+If the unit had previously been ATTACHED, it will remain ATTACHED.
+.sp;When a validator enters or leaves the ARCHIVE sub-system he is shown a
+summary of the status of all tape units in use;
+.ur the DISPLAY STATUS command (Section &ardstcmd) may also be used to
+see the summary.
+.sp;The following commands may be executed from the ARCHIVE sub-system:
+.in 5;.sp;.cp begin;ASSIGN        Reserve tape unit for validator
+.br;ATTACH        Reserve tape unit for Netval slot
+.br;DEASSIGN      Free tape unit from validator
+.br;DETACH        Free tape unit from slot
+.br;DISPLAY       Type tape availability or Netval tape id
+.br;DUMP	  Dump CUD to tape in ASCII format
+.br;RETURN        Return to system level
+.br;REWIND        Return magnetic tape to beginning of reel
+.br;STORE         Copy files from disk to tape
+.in;.cp end;.pushsect 'ASSIGN Command'
+.se arasscmd='&sectno'
+Syntax:  ASsign u
+.sp;.cp begin;Description:  The ASSIGN command reserves a magnetic
+tape unit for the Netval ARCHIVE validator, and prevents any other
+validators from accessing the tape unit.
+The unit is reserved for the validator until the DEASSIGN
+.ur (Section &ardeacmd) command is executed OR the validator leaves
+the Netval system.
+.cp end;.sp 2;.cp begin;A sample command/response sequence is:
+.in 10;.sp;arch> assign 0
+.sp;tape assigned
+.sp;arch>
+.in;.cp end;.nextsect 'ATTACH Command'
+.se arattcmd='&sectno'
+Syntax:  ATtach u
+.sp;.cp begin;Description:  The ATTACH command reserves a magnetic tape unit
+for the Netval slot, and prevents any other slots in the Netval Engine
+from accessing the tape unit.
+The unit is reserved for the Netval slot until the DETACH
+.ur (Section &ardetcmd) command is executed.
+.cp end;.sp 2;.cp begin;A sample command/response sequence is:
+.in 10;.sp;arch> attach 0
+.sp;tape attached
+.sp;arch>
+.in;.cp end;.nextsect 'DEASSIGN Command'
+.se ardeacmd='&sectno'
+Syntax:  DEAssign
+.sp;.cp begin;Description:  The DEASSIGN command frees the tape unit from
+the Netval ARCHIVE validator and makes it available to other validators.
+Since a validator may only have one tape assigned at a time, it is not
+necessary to supply the tape unit number.
+.cp end;.sp 2;.cp begin;A sample command/response sequence is:
+.in 10;.sp;arch> deassign
+.sp;unit 0 deassigned
+.sp;arch>
+.in;.cp end;.nextsect 'DETACH Command'
+.se ardetcmd='&sectno'
+Syntax:  DETach u
+.sp;.cp begin;Description:  The DETACH command frees the tape unit from
+the Netval slot and makes it available to other slots in the Netval Engine.
+.cp end;.sp 2;.cp begin;A sample command/response sequence is:
+.in 10;.sp;arch> detach 0
+.sp;tape detached
+.sp;arch>
+.in;.cp end;.nextsect 'DISPLAY Command'
+The ARCHIVE DISPLAY command allows the validator to display information
+about:
+.in 10;.sp;.cp begin;.il -2;- whether or not a magnetic tape is a Netval tape,
+and if it is, the tape version and creation date
+.il -2;- the availability and current usage of tape units
+.in;.cp end;.sp;The following Sections describe the various ARCHIVE
+DISPLAY commands.
+.pushsect 'DISPLAY ID Command'
+Syntax:  DIsplay Id <u>
+.sp;.cp begin;Description:  The DISPLAY ID command allows the validator to
+identify a magnetic tape as a Netval backup tape, and to display
+its creation date and version.
+The tape is rewound initially, to read the first record.
+.cp end;.sp;.cp begin;If the tape is already ASSIGNED to the validator,
+the parameter "u" may be omitted.
+If the validator had not ASSIGNED a tape unit, however,
+"u" must specify the unit.
+Since a validator may only have one unit assigned at a time,
+if the validator already has a unit assigned, the display command
+must refer to that assigned unit.
+.cp end;.sp 2;.cp begin;A sample command/response sequence is:
+.in 10;.sp;arch> display id
+.sp;tape rewinding
+.sp;mta is not a Netval tape
+.cp end;.sp;.cp begin;arch> display id 1
+.sp;tape rewinding
+.sp;NETVAL tape (Version 03.00) created on: 02/08/83
+.sp;arch>
+.in;.cp end;.nextsect 'DISPLAY STATUS Command'
+.se ardstcmd='&sectno'
+Syntax:  DIsplay Status
+.sp;.cp begin;Description:  The DISPLAY STATUS command gives the validator
+a summary of current tape usage and availability.
+It reports magnetic tape units in use, their status,
+and, if ASSIGNED, the validator that the unit is assigned to.
+.cp end;.sp 2;.cp begin;A sample command/response sequence is:
+.in 10;.sp;arch> display status
+.sp;unit
+.sp;  0     ATTACHED
+.br;  2                 ASSIGNED to ARCHIVEUSER
+.sp;arch>
+.in;.cp end;.popsect 1 'DUMP Command'
+Syntax:  DUmp <From block-no> <u>
+.cp begin;.sp;Description:  If the conditional compilation flag INCLUDE_DUMP
+is enabled in the Netval configuration file, the
+DUMP command will be included in the Archive command sub-system.
+.cp end;.sp;.cp begin;The DUMP command rewinds a tape unit, reads
+all CUD entries, and writes the formatted ASCII CUD entries to tape.
+If the parameter FROM is used, the DUMP will start at the specified
+block-no, otherwise it will start at block zero.
+.cp end;.sp;.cp begin;If the tape is already ASSIGNED to the validator,
+the parameter "u" may be omitted.
+If the validator had not ASSIGNED a
+tape unit, however, "u" must specify the unit.
+Since a validator may
+only have one unit assigned at a time, if the validator already
+has a unit assigned, the dump command must refer to that
+assigned unit.
+.cp end;.sp;A message is written to the operator log specifying
+that the command was executed by the validator.
+.sp;NOTE:  This command may be very time consuming.
+.sp 2;.cp begin;A sample command/response sequence is:
+.in 10;.sp;arch> dump
+.sp;tape rewinding
+.br;storing CUD ASCII dump: 115 records written
+.sp;dump completed
+.br;tape rewinding
+.sp;arch>
+.in;.cp end;.nextsect 'RETURN Command'
+.se arretcmd='&sectno'
+Syntax:  RETurn
+.cp begin;.sp;Description:  The RETURN command takes the validator
+back to system command level.
+.cp end;.sp 2;.cp begin;A sample command/response sequence is:
+.in 10;.sp;arch> return
+.sp;*
+.in;.cp end;.nextsect 'REWIND Command'
+Syntax:  REWind <u>
+.cp begin;.sp;Description:  The REWIND command allows the validator
+to position a tape unit to the beginning of the reel.
+.cp end;.sp;.cp begin;If the tape is already ASSIGNED to the validator,
+the parameter "u" may be omitted.
+If the validator had not ASSIGNED a tape unit, however,
+"u" must specify the unit.
+Since a validator may only have one unit assigned at a time,
+if the validator already has a unit assigned, the rewind command
+must refer to that assigned unit.
+.cp end;.sp 2;.cp begin;A sample command/response sequence is:
+.in 10;.sp;arch> rewind
+.sp;tape rewinding
+.sp;tape rewound
+.sp;arch>
+.in;.cp end;.nextsect 'STORE Command'
+Syntax:  STOre <u>
+.cp begin;.sp;Description:  The STORE command rewinds a tape unit,
+and records all disk files on the tape.
+.cp end;.sp;.cp begin;If the tape is already ASSIGNED to the validator,
+the parameter "u" may be omitted.
+If the validator had not ASSIGNED a tape unit, however,
+"u" must specify the unit.
+Since a validator may only have one unit assigned at a time,
+if the validator already has a unit assigned, the store command
+must refer to that assigned unit.
+.cp end;.sp;A message is written to the operator log specifying
+that the command was executed by the validator.
+.sp;NOTE:  This may be a very time consuming command
+since the CUD and operator log files are stored.
+.sp 2;.cp begin;A sample command/response sequence is:
+.in 10;.sp;arch> store
+.sp;tape rewinding
+.sp;storing configuration: 1 records written
+.br;storing node_host(header): 1 records written
+.br;storing node_host(hostlists): 45 records written
+.br;storing node_host(nodelists): 55 records written
+.br;storing node_host(classes): 23 records written
+.br;storing node_host(groups): 8 records written
+.br;storing oper_log: 4 records written
+.br;storing mud_update: 1 records written
+.br;storing CUD: 255 records written
+.br;storing CUD_PARAMETER: 1 records written
+.sp;store completed
+.br;tape rewinding
+.sp;arch>
+.in;.cp end
+  
