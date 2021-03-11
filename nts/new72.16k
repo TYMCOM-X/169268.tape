@@ -1,0 +1,485 @@
+     
+   
+                           16K  V72
+
+
+         THIS IS THE LOADER THAT IS USED FOR LOADING A 16K MACHINE. THE
+         SYNCHRONOUS BOOTSTRAP FOR 16K IS AT THE END OF THIS LISTING.
+   
+         THE TWO ARE LISTED TOGETHER TO GIVE YOU A BETTER UNDERSTANDING
+         OF WHAT THE MACHINE IS DOING.
+   
+         THIS DOCUMENT IS IN THE FILE (CES:33)NEW72.16K .  THE COMPLETE
+         ASSEMBLY LISTING IS UNDER (CES:33)16KV72.LST .
+   
+                 *
+                 * INITIALIZATION FOR LOADER
+                 *
+   37240 014056 START   LDA     ENTRY   LOCATE THE ENTRY
+   37241 006140         SUBI    NWDSB           LOCATE START OF BOOT
+   37242 000111 
+   37243 005014         TAX
+   37244 054102         STA     BOOTRT+1        SAVE RETURN TO BOOT
+                 *
+   37245 015000         LDA     EXEA,X          FETCH I/O INS FROM BOOT
+   37246 154340         ANA     OCT77           REMOVE ADDRESS
+   37247 054047         STA     ENTRY           SAVE FOR NOW
+                 *
+   37250 124017         ADD     ST01            TURN OFF 'RUPTS
+   37251 054016         STA     ST01
+                 *
+   37252 014037         LDA     ST02            ENABLE 'RUPTS
+   37253 124043         ADD     ENTRY
+   37254 054035         STA     ST02
+   37255 054250         STA     ST03
+   37256 054212         STA     ST07
+                 *
+   37257 014227         LDA     ST04            INPUT INST
+   37260 124036         ADD     ENTRY
+   37261 005311         DAR
+   37262 054224         STA     ST04
+                 *
+   37263 014257         LDA     ST05            OUTPUT ZERO DET
+   37264 124032         ADD     ENTRY
+   37265 054255         STA     ST05
+                 *
+   37266 005311         DAR                     OUTPUT DATA
+   37267 054155         STA     ST06
+                 *
+   37270 100000 ST01    EXC     IDA+00         TURN OFF 'RUPTS
+   37271 015015         LDA     VECT,X          LOCATE IVECTS
+   37272 154314         ANA     OCT77           REMOVE UNWANTED BITS
+   37273 005012         TAB                     POINT B AT IT
+                 *
+   37274 006010         LDAI    INPUT1          SET INPUT VEC
+   37275 037505 
+   37276 056003         STA     3,B
+                 *
+   37277 006010         LDAI    OUTPUT1         SET OUTPUT
+   37300 037444 
+   37301 056001         STA     1,B
+                 *
+   
+   37302 015130         LDA     ZDET2,X          FETCH ZERO DETECT
+   37303 054317         STA     ZDET1
+                 *
+   37304 024303         LDB     LSTADR
+   37305 014314         LDA     SYNCIT          BUILD ACKNOWLEGEMENT RECORD
+   37306 056000         STA     0,B
+   37307 005001         TZA                     CLEAR OUT COUNT
+   37310 056001         STA     1,B
+   37311 076002         STX     2,B
+   37312 100200 ST02    EXC     IDA+200         ENABLE 'RUPTS
+   37313 001000         JMP     ACK             LOOK OUT HERE WE GO!!!!
+   37314 037333 
+   37315 103277 FPANL   OBR     77              DRIVES FRONT PANEL
+   37316 001000         JMP     *-*             RETURN TO BOOT
+   37317 000000 
+                ENTRY   E       *-1             LABEL DEFINITION
+   37320 005041         TXA                     SEE IF LOADED WRONG
+   37321 006140         SUBI    ENDLD           BETTER BE ZERO
+   37322 037640 
+   37323 001010         JAZ     START
+   37324 037240 
+   37325 005041         TXA                     LOADED IN WRONG PLACE
+   37326 006140         SUBI    ENDLD-ENTRY+1   GET BACK TO THE BOOT
+   37327 000322 
+   37330 054001         STA     *+2
+   37331 001000         JMP     *-*
+   37332 000000 
+   37333 024254 ACK     LDB     LSTADR          FETCH LAST BUFFER
+   37334 064254         STB     SNDBLK          START THE TRANSMITTER
+   37335 002000         JMPM    CKSUM           COMPUTE THE CHECKSUM
+   37336 037555 
+                 *
+   37337 014264         LDA     VIRT            GET VIRTICAL SUM
+   37340 056000         STA     0,B             PUT INTO BUFFER
+   37341 014263         LDA     DIAG            AND THE DIAGONAL SUM
+   37342 056001         STA     1,B
+                 *
+   37343 014016 NAK     LDA     LIMIT           RESET RECORD TIMER
+   37344 054261         STA     ICNT
+                 *
+                 * WAIT OUT TIMEOUT WHILE LOOKING FOR A RECORD
+                 *
+   37345 014260 NA01    LDA     ICNT            IF TIME IS UP
+   37346 001010 BOOTRT  JAZ     0               RETURN TO BOOT
+   37347 000000 
+   37350 024241         LDB     RECVD           IF NOT UP SEE IF A RECORD
+   37351 001020         JBZ     NA01            IS IN
+   37352 037345 
+   37353 064234         STB     LSTADR          SAVE LAST RECEIVED REC ADDRESS
+                 *
+   37354 005001         TZA                     SET RECORD RECEIVED FLAG OFF
+   37355 054234         STA     RECVD
+                 *
+   
+   37356 002000 RECRCV  JMPM    CKSUM           ITS HERE, IS IT GOOD?
+   37357 037555 
+   37360 014243         LDA     VIRT            CHECK VIRTICAL SUM
+   37361 136000         ERA     0,B
+   37362 114242 LIMIT   ORA     DIAG            CHECK DIAGONAL SUM
+   37363 136001         ERA     1,B
+   37364 001010         JAZ     GOOD            ITS GOOD!!!
+   37365 037370 
+   37366 001000         JMP     NAK             ITS BAD!!!
+   37367 037343 
+                 *
+   37370 014217 GOOD    LDA     LSTADR          FETCH BEGGINING OF RECORD
+   37371 005014         TAX                     SET  TO BUFFER ADR
+   37372 124213         ADD     DATSIZ          LOCATE END OF BUFFER
+   37373 054233         STA     FILSTOP
+                 *
+   37374 015001         LDA     1,X             GET THE COUNT
+   37375 001010         JAZ     0               COUNT ZERO GO START LOADED CODE
+   37376 000000 
+                 *
+   37377 024065         LDB     COM             BUILD INSTRUCTION COM  ,A
+   37400 064035         STB     OPT             FILL WITH ZEROES
+   37401 005002         TZB                     SET COUNT ZERO
+   37402 065001         STB     1,X
+   37403 001002         JAP     SETOK           BR IF POSITIVE COUNT
+   37404 037411 
+                 *
+   37405 024156         LDB     LOAD            BUILD LOAD INSTRUCTION
+   37406 064027         STB     OPT
+   37407 024175         LDB     MAXCHA          SET COUNT FOR ALL CHARACTERS
+   37410 065001         STB     1,X             SET AS COUNT FOR RETURN
+                 *
+   37411 025002 SETOK   LDB     2,X             GET MEMORY ADDRESS
+   37412 154174         ANA     OCT77           STRIP UNUSED BITS
+   37413 001010         JAZ     FILLIT          BR IF DUMP ONLY
+   37414 037432 
+                 *
+   37415 124172         ADD     LSTADR          LOCATE STOPPING POINT
+   37416 054213         STA     MSTOP
+                 *
+   37417 015003 MOVIT   LDA     3,X             GET ONE FROM THE INPUT BUFFER
+   37420 056000         STA     0,B             PUT IT INTO CORE
+                 *
+   37421 005201         COM     ,A              RETURN -1
+   37422 055003         STA     3,X
+                 *
+   37423 005122         IBR                     BUMP THE POINTERS
+   37424 003026         XBNZ    FPANL           DRIVE THE FRONT PANEL IF V70
+   37425 037315 
+   37426 005145         INC     X,AX
+   37427 144202         SUB     MSTOP           CHECK FOR THE END
+   
+   37430 001004         JAN     MOVIT           KEEP GOING
+   37431 037417 
+                 *
+                 * THE FOLLOWING FILLS IN WITH -1 OR TRANSFERS MEMORY FOR OUTPUT
+                 *
+   37432 005041 FILLIT  TXA                     CHECK FOR END OF FILL
+   37433 144173 FILL1   SUB     FILSTOP
+   37434 001002         JAP     ACK             GO ACKNOWLEGE IF DONE
+   37435 037333 
+                 *
+   37436 000000 OPT     *-*                     FILLED IN LATTER
+   37437 055003         STA     3,X             TUCK IT AWAY
+   37440 005122         IBR                     POINT TO NEXT MEMORY WORD
+   37441 005145         INC     X,AX
+   37442 001000         JMP     FILL1           GO TRY AGAIN
+   37443 037433 
+                 *
+                 * OUTPUT INTERRUPT PROCESSING
+                 *
+   37444 000000 OUTPUT1 0
+   37445 103000 ST06    OME     IDA,OTDATA              SEND OUT THE DATA
+   37446 037633 
+   37447 044156         INR     ICNT            BUMP THE TIMER
+   37450 054163         STA     OTASAV
+                 *
+   37451 064163         STB     OTBSAV
+   37452 014141         LDA     OTSTAT          CHECK OUTPUT STATE
+   37453 001004         JAN     OZSTAT          BR STATE ZERO
+   37454 037474 
+                 *
+                 * STATE 1 XFER STATE
+                 *
+   37455 024136         LDB     OTPOS           GET NEXT CHAR
+   37456 016000         LDA     0,B
+   37457 054153         STA     OTDATA
+   37460 005121         INC     B,A             GET NEW POSITION
+   37461 054132         STA     OTPOS
+                 *
+   37462 144153         SUB     OTEND
+   37463 001004         JAN     OTEXIT          EXIT IF NOT DONE
+   37464 037467 
+   37465 005201 COM     COM     ,A
+                 *
+   37466 054125         STA     OTSTAT          RETURN TO STATE ZERO
+                 *
+   37467 014144 OTEXIT  LDA     OTASAV          RESTORE + RETURN
+   37470 024144         LDB     OTBSAV
+   37471 100200 ST07    EXC     200+IDA         ENABLE INTERRUPTS
+   37472 001000         JMP     OUTPUT1,I
+   37473 137444 
+                 *
+   37474 014114 OZSTAT  LDA     SNDBLK          LOOK FOR SNDBLK
+   37475 054116         STA     OTSTAT          SET OUTPUT STATE
+   37476 124114         ADD     WDSREC          LOCATE END OF BUFFER
+   37477 054136         STA     OTEND
+   37500 005201         COM     ,A
+   37501 054107         STA     SNDBLK          CLEAR SEND FLAG
+   37502 054130         STA     OTDATA          AT LEAST 1 PAD SEND
+   
+   37503 001000         JMP     OTEXIT
+   37504 037467 
+                 *
+                 * INPUT INTERRUPT PROCESSING
+                 *
+   37505 000000 INPUT1  0
+   37506 054125         STA     INASAV          SAVE A
+   37507 102500 ST04    CIA     0               BRING IN THE DATA
+   37510 074124         STX     INXSAV
+   37511 034103         LDX     INPOS
+   37512 055000         STA     0,X             PUT AWAY THE DATA
+                 *
+   37513 014102         LDA     INSTAT          WHAT STATE ARE WE IN?
+   37514 001002         JAP     INZSTA          BR SYNC LOOK MODE
+   37515 037547 
+                 *
+   37516 005141 IN01    INC     X,A             CHECK FOR END
+   37517 054075         STA     INPOS
+   37520 144100         SUB     INEND
+   37521 054074         STA     INSTAT          SET NEW STATE IF NEED BE
+   37522 001002         JAP     RECIN           BR IF ALL HERE
+   37523 037531 
+                 *
+   37524 014107 INRET   LDA     INASAV          RESTORE AND RETURN
+   37525 034107         LDX     INXSAV
+   37526 100200 ST03    EXC     200+IDA         RESTORE INTERRUPTS
+   37527 001000         JMP     INPUT1,I
+   37530 137505 
+                 *
+   37531 014065 RECIN   LDA     LSTREC          INDICATE RECORD IS IN
+   37532 054057         STA     RECVD
+                 *
+   37533 014064         LDA     NXTREC          REVERSE BUFFERS
+   37534 054060         STA     INPOS
+   37535 124055         ADD     WDSREC
+   37536 054062         STA     INEND
+   37537 014057         LDA     LSTREC
+   37540 054057         STA     NXTREC
+   37541 014053         LDA     INPOS
+   37542 054054         STA     LSTREC
+                 *
+   37543 103000 ST05    OME     IDA,ZDET1       SET ZERO DET
+   37544 037623 
+   37545 001000         JMP     INRET
+   37546 037524 
+                 *
+   37547 015000 INZSTA  LDA     0,X             GET BACK THE DATA
+   37550 134051         ERA     SYNCIT
+   37551 001010         JAZ     IN01
+   37552 037516 
+   
+   37553 001000         JMP     ST05
+   37554 037543 
+                 *
+                 * CHECKSUM COMPUTATION SUBROUTINE
+                 *
+   37555 000000 CKSUM   0
+   37556 005123         INC     B,AB            GET AROUND SYNC WORD
+   37557 124026         ADD     DATSIZ   
+   37560 054046         STA     FILSTOP         SAVE END OF RECORD
+                 *
+   37561 005001         TZA                     RESET SUMS
+   37562 054041         STA     VIRT
+   37563 054041         STA     DIAG
+                 *
+                LOAD    E       *               LABEL DEFINITION
+   37564 016000 CKLOOP  LDA     0,B             COMPUTE EACH SUM
+   37565 134036         ERA     VIRT
+   37566 054035         STA     VIRT
+   37567 014035         LDA     DIAG
+   37570 004241         LRLA    1
+   37571 136000         ERA     0,B
+   37572 054032         STA     DIAG
+   37573 005123         INC     B,AB
+   37574 144032         SUB     FILSTOP         CHECK IF DONE
+   37575 001004         JAN     CKLOOP
+   37576 037564 
+                 *
+   37577 014025         LDA     DIAG            INCLUDE DIAGONAL IN VIRTICAL
+   37600 004241         LRLA    1
+   37601 134022         ERA     VIRT
+   37602 054022         STA     DIAG
+   37603 001000         JMP     CKSUM,I
+   37604 137555 
+                 *
+                 * CONSTANTS AND INITIALIZED VARIABLEBS
+                 *
+   37605 000034 MAXCHA  +NWORDS-5
+   37606 000036 DATSIZ  +NWORDS-3
+   37607 000077 OCT77   +77
+   37610 037212 LSTADR  +BUF1
+   37611 177777 SNDBLK  -1
+   37612 000000 RECVD   0
+   37613 000041 WDSREC  +NWORDS
+   37614 177777 OTSTAT  -1
+   37615 037254 INPOS   +BUF2
+   37616 000000 INSTAT  +0
+   37617 037254 LSTREC  +BUF2
+   37620 037212 NXTREC  +BUF1
+   37621 037315 INEND   +BUF2+NWORDS
+   37622 031062 SYNCIT  +SYN
+                OTPOS   E       OTSTAT          LABEL DEFINITION
+   
+                 *
+                 * VARIABLE DATA SPACE
+                 *
+   37623        ZDET1   R       *+1
+   37624        VIRT    R       *+1
+   37625        DIAG    R       *+1
+   37626        ICNT    R       *+1
+   37627        FILSTOP R       *+1
+   37630        SAV     R       *+1
+   37631        SAVE    R       *+1
+   37632        MSTOP   R       *+1
+   37633        OTDATA  R       *+1
+   37634        OTASAV  R       *+1
+   37635        OTBSAV  R       *+1
+   37636        OTEND   R       *+1
+                INASAV  E       OTASAV          LABEL DEFINITION
+                INXSAV  E       OTBSAV          LABEL DEFINITION
+                 *
+                 * SPECIAL EQUATES
+                 *
+         000021 ZEROD   E       21
+         000000 IDA     E       0
+         000041 NWORDS  E       33D
+         000010 POWFAL  E       10
+         000012 POWST   E       12
+         000027 IDAB    E       27
+         000010 NBLOCKS E       (SYNCIT-START+1+NWORDS-2)/(NWORDS-1)
+         031062 SYN     E       031062
+         000041 WDPBLK  E       NWORDS
+         011300 LINSP   E       4800D
+         037254 BUF2    E       FPANL-NWORDS
+         037212 BUF1    E       BUF2-NWORDS-1
+   37637                R       LOADER+10*40
+   37640                R       77640           
+   
+                *
+                *SYNCHRONOUS BOOTSTRAP
+                *
+   37640 100027 SETUP   EXC     000+IDAB        TURN OFF 201 INTERRUPTS
+                *
+   37641 014126         LDA     ZDET            DISABLE ALL LINES
+   37642 005311 DISABLE DAR
+   37643 103127         OAR     IDAB
+   37644 103125         OAR     25              TURN OFF SECOND CARD
+   37645 005311         DAR
+   37646 001002         JAP     DISABLE
+   37647 037642 
+                *
+   37650 124117         ADD     ZDET            ENABLE LOAD LINE
+   37651 103127         OAR     IDAB
+                *
+   37652 050010         STA     POWFAL          PUT HALT IN POWERFAIL 'RUPT
+   37653 006010         LDAI    2000            LOAD INPUT 'RUPT
+   37654 002000 
+   37655 050040 STVEC   STA     LINE0
+   37656 050042         STA     LINE0+2
+   37657 054114         STA     CKSUMB
+   37660 050012         STA     POWST           SETUP RESTART
+   37661 006010         LDAI    INPUT
+   37662 037762 
+   37663 050043         STA     LINE0+3
+   37664 006010         LDAI    OUTPUT
+   37665 037753 
+   37666 050041         STA     LINE0+1
+   37667 006010         LDAI    SETUP-1         SET RESTART BRANCH
+   37670 037637 
+   37671 050013         STA     POWST+1
+   37672 100227         EXC     200+IDAB        TURN ON 'RUPTS
+                *
+   37673 006030 BEGIN   LDXI    START
+   37674 037240 
+   37675 006020         LDBI    -(NBLOCKS+1)    NUMBER OF BLOCKS
+   37676 177767 
+                *
+   37677 014073         LDA     DELAYP          SET UP DELAY LIMIT
+   37700 054076         STA     DELAY
+   37701 005122 SBLOCK  IBR                     RECEIVED ALL BLOCKS?
+   37702 001020         JBZ     DONE            CHECK CKSUM IF YES
+   37703 037746 
+   37704 006010         LDAI    -(WDPBLK-1)     BLOCK WORD COUNT MINUS
+   37705 177740                                 CHECKSUM
+   37706 054066         STA     BLCKCNT
+                *
+   37707 103027 SYNC    OME     IDAB,ZDET       SET ZERO DETECT
+   37710 037770 
+   37711 064064         STB     WRDIN           RESET INPUT WORD
+   37712 014064 SYNC1   LDA     DELAY           HAVE WAITED LONG ENOUGH?
+   37713 001002         JAP     SETUP           RESTART IF YES
+   37714 037640 
+   37715 014060         LDA     WRDIN           WAIT FOR A CHAR
+   37716 001004         JAN     SYNC1
+   37717 037712 
+                *
+   
+   37720 134050         ERA     SYNCH           SYNC?
+   37721 001010         JAZ     SYNCED          YES START REC
+   37722 037725 
+   37723 001000         JMP     SYNC            GO SYNC AGAIN
+   37724 037707 
+                *
+   37725 014045 SYNCED  LDA     DELAYP          RESET DELAY
+   37726 054050         STA     DELAY
+   37727 064032 SYNCD1  STB     INPUT           WAIT FOR 'RUPT
+   37730 014031 SYNCD2  LDA     INPUT
+   37731 001004         JAN     SYNCD2
+   37732 037730 
+                *
+   37733 014042         LDA     WRDIN           PUT IN WORD
+   37734 055000         STA     0,X
+   37735 134036         ERA     CKSUMB
+   37736 054035         STA     CKSUMB
+   37737 005144         IXR
+   3774034         INR     BLCKCNT         ALL OF BLOCK IN?
+   37741 014033         LDA     BLCKCNT
+   37742 001010         JAZ     SBLOCK          YES GET NEXT ONE
+   37743 037701 
+   37744 001000         JMP     SYNCD1          NO GET MORE
+   37745 037727 
+                *
+   37746 014025 DONE    LDA     CKSUMB
+   37747 002010         JAZM    ENTRY           GO TO LOADER
+   37750 037317 
+   37751 001000         JMP     SETUP
+   37752 037640 
+   37753 000000 OUTPUT  0
+   37754 103026         OME     IDAB-1,WRDOUT   PUT OUT WORD
+   37755 037772 
+   37756 044020         INR     DELAY           BUMP DELAY COUNTER
+   37757 100227         EXC     200+IDAB        TURN ON 'RUPTS
+   37760 001000         JMP     OUTPUT,I
+   37761 137753 
+                *
+   37762 000000 INPUT   0
+   37763 102026         IME     IDAB-1,WRDIN    GET THE WORD
+   37764 037776 
+   37765 100227         EXC     200+IDAB        TURN ON 'RUPTS
+   37766 001000         JMP     INPUT,I
+   37767 137762 
+                *
+   37770 000021 ZDET    +ZEROD
+   37771 031062 SYNCH   +SYN
+   37772 177777 WRDOUT  -1
+   37773 172110 DELAYP  -(+LINSP/16D)*10D
+   37774 002000 CKSUMB  2000
+   37775 000000 BLCKCNT 0
+   37776 000000 WRDIN   0
+   37777 000000 DELAY   0
+                *
+         000111 NWDSB   E       DONE+3-SETUP
+         000000 EXEA    E       SETUP-SETUP
+         000015 VECT    E       STVEC-SETUP
+         000040 LINE0   E       40
+         000130 ZDET2   E       ZDET-SETUP
+     
+    2`jQ1
