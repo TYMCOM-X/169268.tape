@@ -1,0 +1,231 @@
+***
+***     NEEDLE DATA COUNT
+***
+***
+          integer LEAVE(300,300), LINK(300,300)
+          integer NODE(300), ISESS(20)
+          integer NODCTR, MAXDAL,SESCTR
+          integer NONODE, ISPOT1, ISPOT2, INDAl
+          integer BEGLF
+          integer i, j, k, ii, mm
+
+***   open files for input, output
+          open(14,'(NEEDLEDATA)NID121.P1',input)
+          open(16,'NID12.OUT',output)
+          ifile = 1
+
+***   initialize variables
+          MAXDAL = 18
+          NODCTR = 18
+
+          do 10 i = 1, 300
+               do 20 j = 1, 300
+                    LEAVE(i,j) = 0
+                    LINK(i,j) = 0
+20             continue
+10        continue
+
+*     dallas switchers
+          NODE(1) = 2042
+          NODE(2) = 2046
+          NODE(3) = 2152
+          NODE(4) = 2401
+          NODE(5) = 4260
+          NODE(6) = 4261
+          NODE(7) = 5405
+          NODE(8) = 5406
+          NODE(9) = 5407
+          NODE(10) = 5326
+          NODE(11) = 5327
+          NODE(12) = 5330
+          NODE(13) = 5331
+          NODE(14) = 5377
+          NODE(15) = 5400
+          NODE(16) = 5401
+          NODE(17) = 5610
+          NODE(18) = 5612
+
+          ii = 1
+          mm = 1
+
+400       continue
+
+**
+*          if (mm .gt. 1000) go to 999
+**
+          if (ii .lt. 100) go to 404
+          type 402,mm, NODCTR
+402       format(10x,'REC - ',i10,5X,'NODCTR - ',I5)
+          ii = 0
+
+404       continue
+          ii = ii + 1
+          mm = mm + 1
+
+          read(14,410,err=400,end=999) ISESS(1),NONODE,
+     +         (ISESS(i),i=2,20)
+410       format(13x,i5,13x,i2,30x,20(i5,1x))
+
+          INDAL = 0
+          SESCTR = 0
+          NONODE = NONODE + 1
+
+420       continue
+
+          SESCTR = SESCTR + 1
+          call DCHECK(INDAL,ISESS(SESCTR),NODE,MAXDAL)
+
+          if ((SESCTR .le. NONODE) .and. (INDAL .eq. 0)) 
+     +         go to 420
+
+          if (INDAL .eq. 0) go to 400
+
+          if (SESCTR .gt. 1) SESCTR = SESCTR - 1
+
+          call NCHECK(NODE,NODCTR,ISESS(SESCTR),ISPOT1)
+          BEGLF = ISPOT1
+
+450       continue
+
+          SESCTR = SESCTR + 1
+
+          if (SESCTR .gt. NONODE) go to 460
+
+          call NCHECK(NODE,NODCTR,ISESS(SESCTR),ISPOT2)
+          LINK(ISPOT1,ISPOT2) = LINK(ISPOT1,ISPOT2) + 1
+
+          call DCHECK(INDAL,ISESS(SESCTR),NODE,MAXDAL)
+          ISPOT1 = ISPOT2
+
+          if (INDAL .eq. 1) go to 450
+
+460       continue
+
+          LEAVE(BEGLF,ISPOT1) = LEAVE(BEGLF,ISPOT1) + 1
+
+          go to 400
+
+999       continue
+
+          if (ifile .eq. 2) go to 996
+
+          ifile = 2
+          close(14)
+          open(14,'(needledata)nid121.P2',input)
+          go to 400
+
+996       continue
+
+          call nwrite(NODE,NODCTR,LEAVE,LINK,MAXDAL)
+
+          close(14)
+          close(16)
+
+          stop
+          end
+
+**********
+***
+***   ncheck - check if node in NODE array
+***
+**********
+
+          subroutine NCHECK(NODE,NODCTR,NNODE,ISPOT)
+
+          integer NODE(300), NODCTR, NNODE, ISPOT, i
+
+          i = 0
+
+600       continue
+
+          i = i + 1
+          if ( i .gt. NODCTR) go to 650
+          if (NODE(i) .eq. NNODE) go to 680
+          go to 600
+
+650       continue
+          NODCTR = NODCTR + 1
+          NODE(NODCTR) = NNODE
+          ISPOT = NODCTR
+          go to 699
+
+680       continue
+          ISPOT = i
+ 
+699       continue
+          return
+          end
+
+**********
+***
+***   dcheck - check if node in dallas site
+***
+**********
+
+          subroutine DCHECK(INDAL, DNODE,NODE,MDAL)
+
+          integer INDAL,DNODE,NODE(300),MDAL,i
+
+          i = 0
+          INDAL = 0
+
+500       continue
+          i = i + 1
+          if (i .gt. MDAL) go to 599
+          if (DNODE .eq. NODE(i)) go to 580
+          go to 500
+
+580       continue
+          INDAL = 1
+
+599       continue
+          return
+          end
+
+**********
+***
+***   nwrite - prints results to a file
+***
+*********
+
+          subroutine nwrite(NODE,NODCTR,LEAVE,LINK,MAXDAL)
+
+          integer NODE(300), LEAVE(300,300), LINK(300,300)
+          integer NODCTR, MAXDAL
+          integer i, j, k, l
+
+          k = NODCTR/2 + 1
+
+***   print out nodes
+          do 700 i = 1,k
+               l = i + k
+               write(16,710) i, NODE(i), l, NODE(l)
+710            format(5x,2(I4,')  ',i5,10x))
+700       continue
+
+***   print out LEAVES array
+          do 740 i = 1, NODCTR
+               write(16,746) i, NODE(i)
+746            format(/,5x,'LEAF - ',i4,')  ',i5,':')
+               do 742 j = 1, NODCTR
+                    if (LEAVE(i,j) .eq. 0) go to 742
+                    write(16,744) j,NODE(j), LEAVE(i,j)
+744                 format(15x,i4,')  ',i5, ', ',i5)
+742            continue
+740       continue
+
+***   print out LINKS array
+          do 750 i = 1, MAXDAL+1
+               write(16,756) i, NODE(i)
+756            format(/,5x,'LINK - ',i4,')  ',i5,':')
+               do 752 j = 1, NODCTR
+                    if (LINK(i,j) .eq. 0) go to 752
+                    write(16,754) j,NODE(j), LINK(i,j)
+754                 format(15x,i4,')  ',i5,',  ',i5)
+752            continue
+750       continue
+
+          return
+          end
+
+*********
