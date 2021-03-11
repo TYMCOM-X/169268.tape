@@ -1,0 +1,3713 @@
+                                                                  July 30, 1987
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      SYSTEM GENERATION REFERENCE MANUAL
+
+                                      FOR
+
+                       3270 POLLED BISYNC HOST INTERFACE
+
+
+                                    VERSION
+
+                                   PBH 10.03
+
+
+
+
+
+                                    TYMNET
+                        NETWORK TECHNOLOGY DEVELOPMENT
+                                 July 30, 1987
+
+
+
+
+
+
+
+
+     ====================================================================
+     |   TYMNET's proprietary rights  are included in  the information  |
+     |   disclosed herein.  The recipient, by receiving this document,  |
+     |   agrees  that  neither  this  document  nor   the  information  |
+     |   disclosed herein nor  any part thereof shall be reproduced or  |
+     |   transferred to other documents or used or disclosed to others  |
+     |   for  manufacturing  or  for  any  other   purpose  except  as  |
+     |   specifically authorized in writing by TYMNET.                  |
+     ====================================================================
+
+
+
+
+
+                                                                         PBH103
+                                                                  July 30, 1987
+
+
+
+
+
+
+
+                                   TABLE OF CONTENTS
+
+        Section                                                            Page
+
+
+
+        1.   INTRODUCTION                                                     1
+
+
+        2.   SYNTAX AND FORMATS                                               2
+
+
+        3.   MACRO DEFINITIONS FOR LINE                                       3
+          3.1   HSTPRT - Host Number and Ports                                3
+          3.2   LINTYP - Change Host Line Type                                4
+          3.3   LINE   - Line Address                                         4
+          3.4   HOST   - Associating Host Number                              5
+          3.5   RTSCTS - RTS/CTS Handshake Signals                            5
+          3.6   NOPOLL - No Poll Duration                                     6
+
+
+        4.   MACRO DEFINITIONS FOR CONTROL UNIT                               7
+          4.1   CUNIT - Control Unit Address                                  7
+
+
+        5.   MACRO DEFINITIONS FOR DEVICE                                     8
+          5.1   DEVICE - Device Address                                       8
+          5.2   TYPE   - Device Type                                          9
+          5.3   COLOR  - Color Feature                                        9
+          5.4   XPRNT  - Transparent Data Handling                           10
+          5.5   KKORKJ - Change Character Set                                11
+          5.6   GREET  - Greeting Message When Log On                        12
+          5.7   DISCON - Disconnect Message On Logoff                        13
+          5.8   MDS    - DEFINE MULTIPLE DISCONNECT SEQUENCE                 13
+          5.9   ZAP    - Zap Message From The Host                           14
+          5.10  ASSOC  - Associated Device                                   15
+          5.11  NEEDLE - Needle Message                                      16
+          5.12  INACT  - Timeout Interval For Inactivity                     17
+          5.13  LUD    - Local User Directory                                18
+          5.14  MSGTXT - Message Text                                        19
+          5.15  LUDTRY - LUD Entry                                           19
+          5.16  TSTREQ - SEND TEST REQUEST MESSAGE AT ZAP                    21
+          5.17  MLTDMS - DEFINE SEQUENCE OF MULTIPLE DISCONNECT EXCHANGE     21
+
+
+        6.   CHANGING DEFAULT LINE HOST TYPE FOR THE SLOT                    26
+          6.1   DEFLIN - Define Default Host Line Type                       26
+
+
+                                                                         PBH103
+                                                                  July 30, 1987
+
+
+        7.   CHANGING DEFAULT VALUES FOR LINE                                27
+          7.1   DEFHST - Default Host Number                                 27
+          7.2   DEFRTS  - Default RTS/CTS Handshake Signal                   27
+          7.3   DEFPOL - Polling Timeout From Host                           28
+
+
+        8.   CHANGING DEFAULT VALUES FOR DEVICE PARAMETER                    29
+          8.1   DEFTYP  - Default Device Type                                29
+          8.2   DEFCOL  - Default Color Capability                           30
+          8.3   DEFXPR  - Default Transparency Capability                    30
+          8.4   DEFGRT  - Default Greeting Message                           31
+          8.5   DEFMDS - DEFAULT MULTIPLE DISCONNECT SEQUENCE                31
+          8.6   DEFZAP  - Default Zap Message                                32
+          8.7   DEFASO  - Default Associated Device                          32
+          8.8   DEFNDL  - Default Dynamic Greeting NEEDLE Message            33
+          8.9   DEFIAT  - Default Inactive Timer                             33
+          8.10  DEFLUD  - Default Local User Directory                       34
+          8.11  DEFCHR - Define Default Character Set                        34
+          8.12  DEFTRQ - DEFAULT FOR SEND TEST REQUEST MESSAGE AT ZAP        35
+
+
+        9.   MACRO TO CHANGE SLOT PARAMETERS                                 36
+          9.1   OWLi    - OWL PF-i Key                                       36
+          9.2   AIDIBM  - IBM AID Key                                        37
+          9.3   IBMi    - IBM PF-i Key                                       38
+          9.4   VIRASO - Associated Device Request                           39
+          9.5   VIRTYP - Virtual Host Mode Device Type                       39
+          9.6   ECHO - Echo Project code                                     40
+          9.7   MXMAPU - Maximum Number of Simultaneous Users                41
+          9.8   SCNBUF - Screen Buffer                                       41
+          9.9   SAVQUE - Save Queue Option                                   42
+          9.10  MNPORT - Mminimum Port Number                                42
+          9.11  TOLIAC - Tolerance for Inactivity Timer                      43
+          9.12  TOLNPL - Tolerance for No Polling                            43
+          9.13  INVSTA - ZAP SENSE AND STATUS MESSAGE                        44
+
+
+        10.  MACROS TO DEFINE HOST INTERFACE DEBUGGING PARAMETERS            46
+          10.1  NETCON -- NETWORK CONSOLE                                    46
+          10.2  RETCODE - Trace of BSC Receiver Return Codes                 48
+          10.3  PRTCON  - Print Tymfile Configuration                        48
+          10.4  RTRACE  - BSC Line Receiver Trace                            49
+          10.5  STPCRSH - Halt Slot When Crash                               50
+          10.6  IRINGSZ - IRING Size                                         50
+          10.7  ORINGSZ - ORING Size                                         51
+          10.8  BUFLET - Bufferlet Number.                                   51
+          10.9  CMDLNK - Number of Command Link                              52
+          10.10 PTRACE - Protocol Trace                                      53
+          10.11 GENNIB -- generate the nib file                              53
+
+
+                                     APPENDICES
+                                     ==========
+
+                                                                         PBH103
+                                                                  July 30, 1987
+
+
+        I.   CRASH CODES FOR 3270 PBH INTERFACE                              56
+
+
+        II.  SAMPLE HIF TYMFILE                                              58
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                         PBH103
+        INTRODUCTION                                              July 30, 1987
+
+
+
+
+
+
+                                   1 -  INTRODUCTION
+
+
+             This  document details all the configuration macro's  available to
+        configurate  PBH VERSION 10 RELEASE 03. Information about  this release
+        can be  found in  the (baseline) directory  PBH10.Y03 FIILE.   The host
+        interface configuration must match the configuration of the host front-
+        end processor. When the host interface is generated, several aspects of
+        the configuration must be defined.
+
+                1. The host BSC lines must be specified. The host type if
+                   other then IBM must be specified.
+
+                2. For each BSC line, all control units' addresses whose poll
+                   messages  are  answered  by the  host  interface  must  be
+                   defined.
+
+                3. For each control unit, all  devices recognized by the host
+                   must be defined  by specifying a device  address, a device
+                   type (terminal  or printer), and  a logical  line address.
+                   The  logical line  address  is  used in  assigning  device
+                   addresses to network circuits.
+
+
+             The detailed configuration of  the host interface is  specified in
+        the sample Tymfile.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        1                                                                PBH103
+        SYNTAX AND FORMATS                                        July 30, 1987
+
+
+
+
+
+
+                                2 -  SYNTAX AND FORMATS
+
+
+             The following  statements specify parameters  for the  TYMNET 3270
+        Host  Interface Tymfile:   macro,  ranging macro,  equate,  and message
+        text.
+
+             The following represent macro characteristics:
+
+            o  A macro body cannot exceed 7665 characters.
+
+            o  All macros may begin in column  one; indentation is recom-
+               mended for clarity.  More than one macro can be put in
+               one line and separated by a semicolon. If a macro is
+               separated by a semicolon and it is to be commented out
+               a colon must inserted after all semicolon not just at
+               the beginning of the line.
+
+            o  Open parenthesis "(" immediately follows a name.
+
+            o  Closed parenthesis ")" must follow  the last value without
+               spaces.
+
+            o  Macros to define the line, control unit and device parameters
+               can be omitted; a default value will be assigned as described
+               later.
+
+            o  All characters for a message text must be specified.
+
+            o  A colon (:) on a line indicates a comment (This comment,
+               which is not read by the assembler, is optional).
+
+            o  Spaces within the parentheses are  not entered unless part
+               of the value (as in message text).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        2                                                                PBH103
+        MACRO DEFINITIONS FOR LINE                                July 30, 1987
+
+
+
+
+
+
+                            3 -  MACRO DEFINITIONS FOR LINE
+
+
+             This  section  describes  the  macros  that  are  used  to  define
+        parameters for the BSC line's operation and to be used in the network.
+
+
+
+
+
+
+                          3.1  HSTPRT - Host Number and Ports
+
+
+             Syntax : HSTPRT(arg1,arg2)
+
+             arg1 = the host number (in decimal)
+
+             arg2 = the number of dispatcher ports.
+
+             Description :
+
+             This  macro   specifies  the   host  number,(host#   in  decimal),
+        associated  with  this  host  interface  and  assigns  the   number  of
+        dispatcher ports, (#port in decimal), to the current host number.
+
+             The number of dispatcher ports  is based upon the total  number of
+        devices configured within the specified host number. When HIF  comes up
+        in the network, it will  report this number as the available  ports for
+        circuit building purpose.
+
+             Host intrface supports more than one host number by  defining this
+        macro for each host number desired for the line(s).
+
+             The  number  of  hosts  may not  be  greater  than  the  number of
+        interfaces lines and at least one host number must exist.
+
+             Example :
+
+                HSTPRT(500,6)
+
+             Host number 500 has 6 ports assigned to it.
+
+
+
+
+
+
+
+
+        3                                                                PBH103
+        MACRO DEFINITIONS FOR LINE                                July 30, 1987
+
+
+                          3.2  LINTYP - Change Host Line Type
+
+
+             Syntax : LINTYP(ARG1)
+
+             ARG1 = IBM OR FUJITSU OR HITACHI
+
+             Default : Defined by the previous DEFLIN macro or if DEFLIN is not
+        defined the default is IBM.
+
+             Description :
+
+             This macro defines the line type indicated in the arguement field.
+        This macro must be used before configuration of the line starts.
+
+             This macro can be used to configure the line type to be any one of
+        the above vendors to allow for multi-protocol support in the slot.
+
+             This macro does not,  however, change the default line  type. This
+        can be done only by using the macro DEFLIN(line-type).
+
+             Example: LINTYP(FUJITSU)
+
+             The current line host type is FUJITSU.
+
+
+
+
+
+
+                              3.3  LINE   - Line Address
+
+
+             Syntax : LINE(address)
+
+             Default : Automatically assigned by the  code.
+
+             Description :
+
+             This macro  specifies the current  line address and  indicates the
+        start of  a line configuration.  This address is  arbitrarily assigned,
+        but must be unique.
+
+             There are three macro HOST, RTSCTS and NOPOLL used to  defined the
+        parameters for the current line.
+
+             Example :
+
+                LINE(40)
+
+             The address of current line is 40.
+
+
+
+        4                                                                PBH103
+        MACRO DEFINITIONS FOR LINE                                July 30, 1987
+
+
+                         3.4  HOST   - Associating Host Number
+
+
+             Syntax : HOST(host#)
+
+             Default : Defined by the previous DEFHST macro.
+
+             Description :
+
+             This macro specifies the  host number,(host# in decimal),  for the
+        current line being defined by the LINE macro.
+
+             If DEFHST  is not defined,  then the default  host number  will be
+        relative host number 0.
+
+             Example :
+
+                HOST(900)
+
+             Current line is associated with host number 900.
+
+
+
+
+
+
+                        3.5  RTSCTS - RTS/CTS Handshake Signals
+
+
+             Syntax : RTSCTS(YES/NO)
+
+             Default : Defined by the previous DEFRTS macro.
+
+             Description :
+
+             This macro specifies  whether Request-To-Send (RTS)  and Clear-To-
+        Send (CTS) handshake signals are required.
+
+             The  requirement  of   RTS/CTS  signals  must  conform   with  the
+        Synchronous lines defined on the Engine. Primitive ports do not support
+        RTS/CTS signals and thus cannot be configured to use  RTS/CTS handshake
+        signals   in   the  slot.   The   lines  which   support   RTS/CTS  are
+        2,3,6,7,10,11,14,and 15.
+
+             If DEFRTS is not defined, the default value is NO.
+
+             The values of arguement are the following:
+
+                        YES = RTS is required.
+                        NO  = RTS is not required.
+
+
+             Example :
+
+        5                                                                PBH103
+        MACRO DEFINITIONS FOR LINE                                July 30, 1987
+
+
+                RTSCTS(NO)
+
+             Current line does not require RTS.
+
+
+
+
+
+
+                            3.6  NOPOLL - No Poll Duration
+
+
+             Syntax : NOPOLL(t)
+
+             Default : Defined  by the previous DEFPOL  macro or 90  seconds if
+        DEFPOL is not defined.
+
+             Description :
+
+             This  macro specifies  the time,(t  in decimal),  when no  poll is
+        detected,  then  the host  number  associated with  this  line  will be
+        declared down.
+
+             For multiple lines sharing one host number, this host  number will
+        come up and answered  even if one of the  lines does not get  polled by
+        the Front End Processor.  However,the host interface still  keeps track
+        of the number of available devices which does not include those devices
+        defined for the line(s) that are down.
+
+             Example :
+
+                NOPOLL(60)
+
+             When none  of the polling  sequences, namely General  Poll, Select
+        Poll, or Specific  Poll, is detected after  60 seconds, the  devices on
+        this line will be  brought down and no  circuits can be built  to these
+        devices.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        6                                                                PBH103
+        MACRO DEFINITIONS FOR CONTROL UNIT                        July 30, 1987
+
+
+
+
+
+
+                        4 -  MACRO DEFINITIONS FOR CONTROL UNIT
+
+
+
+
+
+
+
+                           4.1  CUNIT - Control Unit Address
+
+
+             Syntax : CUNIT(addr)
+
+             Default : Automatically assigned by the code for IBM/FUJITSU.
+
+             Description :
+
+             This macro specifies the ad of control unit, in HEX, which is
+        attached  to  the  line  specified in  the  preceding  LINE  macro. The
+        addresses for IBM and  FUJITSU are the specific polling  addresses, ie.
+        40,0C0,0C1,etc. There is only one set of addresses for the control unit
+        in Hitachi format which starts from 0C0,0C1,etc.
+
+             Example :
+
+                CUNIT(40)
+
+             The address of current control unit is 40.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        7                                                                PBH103
+        MACRO DEFINITIONS FOR DEVICE                              July 30, 1987
+
+
+
+
+
+
+                           5 -  MACRO DEFINITIONS FOR DEVICE
+
+
+             This  section describes  the macros  that are  used to  define the
+        various aspects of the device characteristics and enviroment.
+
+
+
+
+
+
+                             5.1  DEVICE - Device Address
+
+
+             Syntax : DEVICE(addr)
+
+             Default : Automatically assigned by the code for IBM/FUJITSU.
+
+             Description :
+
+             This macro specifies  the address of  device which is  attached to
+        the control  unit specified  in the preceding  CUNIT macro.  The device
+        addresses  for IBN  and FUJITSU  are the  same as  the  general polling
+        addresses for the  control unit. The  device addresses for  Hitachi are
+        the specific polling addresses which starts from 0A0,0A1,etc.
+
+             Example :
+
+                DEVICE(0C1)
+
+             The address of current device is 0C1.
+
+             There  are  ten macros  TYPE,  COLOR, XPRNT,  GREET,  DISCON, ZAP,
+        ASSOC, NEEDLE, INACT, KKORKJ and LUD used to define the  parameters for
+        current device.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        8                                                                PBH103
+        MACRO DEFINITIONS FOR DEVICE                              July 30, 1987
+
+
+                               5.2  TYPE   - Device Type
+
+
+             Syntax : TYPE(ARG1)
+
+             where arg1 = c#### or p####.
+
+             Default : Defined by the previous DEFTYP macro.
+
+             Description :
+
+             This  macro specifies  the  device type  and screen  size  of each
+        device with the following values for the arguements.
+
+            C#### = CRT, where #### indicates screen size
+                    in character per screen, it can be the value
+                    480, 960, 1920, 2560, 3400, or 3564.
+            P#### = Printer, where #### indicates screen size
+                    in character per screen, it can be the value
+                    480, 690, 1920, 2560, 3400, or 3564.
+
+
+             For the virtual host  mode terminals or printers, the  screen size
+        of devices must be defined as 1920.
+
+             Example :
+
+                TYPE(C1920)
+
+             The device is a terminal with 1920 characters per screen.
+
+
+
+
+
+
+                              5.3  COLOR  - Color Feature
+
+
+             Syntax : COLOR(ARG1)
+
+             where arg1 = yes or no.
+
+             Default : Defined by the previous DEFCOL macro.
+
+             Description :
+
+             This macro specifies whether  the device can handle color  or not.
+        The values of the argument are the following:
+
+                 YES = can handle color.
+                 NO  = can not handle color.
+
+
+        9                                                                PBH103
+        MACRO DEFINITIONS FOR DEVICE                              July 30, 1987
+
+
+             If the DEFCOL is not defined, the the default value is NO color.
+
+             Example :
+
+                COLOR(YES)
+
+             Current device will be available for call request  requiring color
+        feature.
+
+
+
+
+
+
+                        5.4  XPRNT  - Transparent Data Handling
+
+
+             Syntax : XPRNT(ARG1)
+
+             where arg1 = YES OR NO
+
+             Default : NO if not defined by the previous DEFXPR macro.
+
+             Description :
+
+             This macro specifies  whether the device can  handle transparency.
+        Transparency  is required  for  the extended  features,  eg. programmed
+        symbols, entended highlighting, and extended color.
+
+             The values of the argument are the following:
+
+                 YES = can handle transparency.
+                 NO  = can not handle transparency.
+
+
+             Example :
+
+             XPRNT(YES)
+
+             The device can be operated in the transparency mode.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        10                                                               PBH103
+        MACRO DEFINITIONS FOR DEVICE                              July 30, 1987
+
+
+                          5.5  KKORKJ - Change Character Set
+
+
+             Syntax : KKORKJ(arg1)
+
+             where arg1 = ENG OR KANA OR KANJI
+
+             Default :  Defined by previous  DEFCHR macro or ENG if  the DEFCHR
+        macro is not defined.
+
+             Description :
+
+             This macro changes the character set for the device being defined.
+        It does not change the default character set as defined by the previous
+        DEFCHR macro.
+
+             Example : KKORKJ(KANA)
+
+             This device supports the  KATA KANA character set.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        11                                                               PBH103
+        MACRO DEFINITIONS FOR DEVICE                              July 30, 1987
+
+
+                      5.6  GREET  - Greeting Message When Log On
+
+
+             Syntax : GREET(label1,label2) or GREET(NONE)
+
+             Default : NONE  or Defined by the  previous DEFGRT macro.   If the
+        DEFDSC is not defined, the default value is NONE.
+
+             Description :
+
+             This macro specifies the greeting message that will be sent to the
+        host  when a  user signs  on to  the terminal  and a  circuit  has been
+        established between TERMINAL INTERFACE and HOST INTERFACE.
+
+             This feature is used to do automatic login or logoff so that users
+        can establish session with the host or disconnect previous session that
+        was abnormally terminated.
+
+             There is an option for user to send second greeting message to the
+        host if one greeting  message is not enough  to build a session  to the
+        host.
+
+             After receiving  first greeting message,  host should send  back a
+        WCC(Write Control  Character) with  an unlock keyboard  bit set  to the
+        host interface.
+
+             Upon detection of the Write Control Character with unlock keyboard
+        bit set,the  host interface  will send the  second greeting  message if
+        defined and awaits for data transmissions.
+
+             If  the  WCC  does not  have  unlock  bit set,  host  will  not be
+        expecting any data, so host interface waits until one is found  or when
+        the timer  expires then the  circuit will be  zapped and logon  will be
+        rejected.
+
+             The values of the arguments are the following:
+
+                 lable1 = a label of a maximum of four characters
+                          defined in macro MSGTXT for the
+                          first greeting message, or NONE.
+                 label2 = a label of a maximum of four characters
+                          defined in macro MSGTXT for the second
+                          greeting message, optional.
+                 NONE   = there will be no greeting message sent to host.
+
+
+             Example :
+
+                GREET(GRT1)
+
+             A message with  the label GRT1  will be sent  to host as  the only
+        greeting message.
+
+
+        12                                                               PBH103
+        MACRO DEFINITIONS FOR DEVICE                              July 30, 1987
+
+
+                      5.7  DISCON - Disconnect Message On Logoff
+
+
+             Syntax : DISCON(ARG1)
+
+             where arg1 = NONE OR LABEL.
+
+             Default : Defined by the  previous DEFDSC macro. If the  DEFDSC is
+        not defined, the default value is NONE.
+
+             Description :
+
+             This macro defines the only  message that will be sent out  by the
+        HOST INTERFACE when the circuit is to be terminated.
+
+             The label is a string of text defined by the MSGTXT macro.
+
+             The option of MULT has  been removed from this macro  and replaced
+        by the MDS macro.
+
+                label = a label of a maximum of four characters
+                        defined in macro MSGTXT for the
+                        disconnect message.
+                NONE  = there is no disconnect message required by
+                        the host.
+
+
+             Example :
+
+             DISCON(NONE)
+
+                  No disconnect message is necessary when zapping circuits.
+
+             DISCON(DSCMG)
+
+                  A disconnect message with the label "DSCMG" will be
+                  sent to host.
+
+
+
+
+
+
+
+                   5.8  MDS    - DEFINE MULTIPLE DISCONNECT SEQUENCE
+
+
+             Syntax : MDS(ARG1)
+
+             where arg1 = none or label.
+
+             Default  : Defined  by the  previous DEFMDS  macro. If  the DEFMDS
+
+
+        13                                                               PBH103
+        MACRO DEFINITIONS FOR DEVICE                              July 30, 1987
+
+
+        macro  is  not  defined  the  device  does  not  have  multi-disconnect
+        sequence.
+
+             Description :
+
+             This macro associates or  changes the label of the  sequences that
+        the  Multiple   Disconnect   logic  will  follow  during   the  circuit
+        termination process.
+
+             This macro does not  change the default label, defined  by DEFMDS,
+        for Multiple Disconnect logic.
+
+             label = a label of  a maximum of four characters defined  in macro
+        MLTDMS for multiple disconnect messages.
+
+             none = device does not have multiple disconnect sequence.
+
+             Example : MDS(MUL1)
+
+             This device will follow  the disconnect sequence defined  by label
+        MUL1 used in the macro MLTDMS.
+
+
+
+
+
+
+                        5.9  ZAP    - Zap Message From The Host
+
+
+             Syntax : ZAP(label) or ZAP(NONE)
+
+             Default : NONE or Defined the previous DEFZAP macro.
+
+             Description :
+
+             This macro specifies whether there  will be a zap message  sent to
+        the host interface in order to force the user off the network.
+
+             Once this message is detected by the host interface,  user circuit
+        will  be  terminated   by  following  the  usual   circuit  termination
+        procedure, namely multiple disconnect exchange if defined.
+
+             The length of the text  is not restricted to 4 characters  only as
+        in the earlier versions of the Host Interface.
+
+              The values of the arguement are the following:
+
+                 label = a label of a maximum of four characters defined
+                         in MSGTXT macro for zap message.
+                 NONE  = zap message is not required.
+
+
+
+        14                                                               PBH103
+        MACRO DEFINITIONS FOR DEVICE                              July 30, 1987
+
+
+             Example :
+
+                ZAP(ZAPMSG)
+
+             A  zap message,  defined by  the label  ZAPMSG, sent  to  the host
+        interface will cause the user circuit to be terminated.
+
+
+
+
+
+
+                           5.10  ASSOC  - Associated Device
+
+
+             Syntax : ASSOC(addr) or ASSOC(NONE)
+
+             Default : Defined by the  previous DEFASO macro. If the  DEFASO is
+        not defined, the default value is NONE.
+
+             Description :
+
+             This macro specifies the device address of the  printer associated
+        with this terminal operating.  The associated printer is assumed  to be
+        on the  same control  unit, so  that the  specification of  the printer
+        device address is sufficient.
+
+             In virtual  host mode,  if an associated  printer is  requested at
+        login,the printer is automatically logged on as a seperate device.  The
+        request for associated printer  can be predefined by the  macro VIRASO.
+        The  default  is  no  associated  printer.  In  the  native  mode,  the
+        associated device  connection request mode  (CRM4) in the  3270 display
+        system protocal (DSP) is used by the CMT to request a connection  for a
+        printer  which  is to  be  associated with  an  existing  connection to
+        another crt  device. In  the native  mode, the  crt and  its associated
+        printer have their own network circuit between the host  interface slot
+        and crt slot.
+
+             The native mode with the associated device conection  request mode
+        (CRM4) causes the inactivity timer to be coupled together. The  crt and
+        its associated printer with two independent inactivity  timers defaults
+        to the device timer with the higher value. The inactivity timer defined
+        by the INACT macro on a  device basic will use the higher value  as the
+        master value for the CRM4 coupled devices. The coupled devices will not
+        be disconnectd  as long  as one device  is active  or the  higher value
+        timer (master)has not not elapsed.
+
+             The request for associated printer can be pre-defined by the macro
+        VIRASO, the default is no associated printer.
+
+             The associated printer is intended for Virtual Host Mode terminals
+        with which a printer is attached to the auxiliary port, and  signing on
+
+
+        15                                                               PBH103
+        MACRO DEFINITIONS FOR DEVICE                              July 30, 1987
+
+
+        the  printer  can only  be  done  by the  HOST  INTERFACE  during logon
+        process. CRT and printer will be sharing the same network  circuit even
+        though  they  appear  to  the Front  End  Processor  as  two seperately
+        addressable devices.
+
+             The values of the argument are the following:
+
+                 addr = the address of associated printer device.
+                 NONE = no associated printer device is required.
+
+
+             Example :
+
+                ASSOC(0C2)
+
+             A printer of address 0C2 is associated with this device.
+
+
+
+
+
+
+                             5.11  NEEDLE - Needle Message
+
+
+             Syntax : NEEDLE(ARG1)
+
+             where YES = dynamic greeting message is required.
+
+                   NO  = dynamic greeting message is not required.
+
+             Default : Defined by the  previous DEFNDL macro. If the  DEFNDL is
+        not defined, the default value is NONE.
+
+             Description :
+
+             This macro specifies whether a dynamic greeting message containing
+        the user  information is  to be  sent to  the host  when the  device is
+        logging in.
+
+             The values of argument are the following:
+
+        Following is the format of the NEEDLE message :
+
+          S C D A A A P I D O O O I T U P C D E B B
+          T U V I D D # N H N H P I I S J U V T C C
+          X A A D 1 2   V # # # # X D N C A A X C C
+
+        Interpretation is as follows:
+
+        STX     : The beginning of the NEEDLE message.
+        CUA     : Control Unit Address.
+        DVA     : Device Address.
+
+        16                                                               PBH103
+        MACRO DEFINITIONS FOR DEVICE                              July 30, 1987
+
+
+        AID     : The AID of ENTER key.
+        AD1     : Cursor address byte 1.
+        AD2     : Cursor address byte 2.
+        P#      : ISIS dispatcher port number.
+        INV     : Invoice number.
+        DH#     : Destination Host Number.
+        ON#     : Origination Node Number.
+        OH#     : Origination Host Number.
+        OP#     : Origination Port Number.
+        IIX     : IIX capability indicator.
+        TID     : Terminal ID.
+        USN     : User Name.
+        PJC     : Project Code.
+        CUA     : Associated Control Unit Address.
+        DVA     : Associated Device Address.
+        ETX     : End of Text.
+        BCC     : Checksum
+
+
+             Example :
+
+                NEEDLE(NO)
+
+             No dynamic greeting message is sent to the host when the device is
+        logging in.
+
+
+
+
+
+
+                    5.12  INACT  - Timeout Interval For Inactivity
+
+
+             Syntax : INACT(t)
+
+             t is in seconds  t = 0 indicates disable timer for this device.
+
+             Default : Defined by the  previous DEFIAT macro. If the  DEFIAT is
+        not defined, the default value is 3600 second(1 hour).
+
+             Description :
+
+             This macro specifies the interval of inactivity when the device is
+        to  be  disconnected.  The  inactivity is  usually  caused  by  no data
+        transfer between the host interface and terminal interface.   The timer
+        is on a device selection and independent of other devices EXCEPT in the
+        case of CMT USERS  OPERATING WITH ASSOCIATED PRINTER AND  CRM4 SELECTED
+        in this case  the inactivity timers are  coupled with the  master timer
+        being the higher value timer.   The inactivity timer can be  disable by
+        setting the arg to 0 in the marco.
+
+             Example :
+
+        17                                                               PBH103
+        MACRO DEFINITIONS FOR DEVICE                              July 30, 1987
+
+
+                INACT(90)
+
+             With 90 seconds being inactive, the user is disconnected.
+
+                INACT(0)
+
+             The inactivity timer is disabled for this device.
+
+
+
+
+
+
+                          5.13  LUD    - Local User Directory
+
+
+             Syntax : LUD(label1,label2,....,label16) or LUD(NOLUD/ALNAM)
+
+             Default :  Defined by previous DEFLUD macro. If the DEFLUD  is not
+        defined, the default value is NOLUD.
+
+             Description :
+
+             This macro specifies the LUD entries which allow or restrict logon
+        to  the  device by  the  first  two characters  of  the  username. This
+        username  information  is  provided by  the  Needle  created  by Tymnet
+        Supervisor.
+
+              label1 = first label of name entry in the LUD defined
+                       by macro LUDTRY.
+              labeln = last label of name entry in the LUD which is
+                       defined by macro LUDTRY.
+              NOLUD  = indicate that all usernames except the name
+                       defined in macro LUDTRY can access current device.
+              ALNAM  = all usernames can access current device.
+
+
+             Example :
+
+                LUD(LUD2)
+
+             Usernames  start with  the characters  defined in  entry  LUD2 can
+        access this device.
+
+
+
+
+
+
+
+
+
+
+
+        18                                                               PBH103
+        MACRO DEFINITIONS FOR DEVICE                              July 30, 1987
+
+
+                              5.14  MSGTXT - Message Text
+
+
+             Syntax : MSGTXT(label,text) or MSGTXT(CONT,text)
+
+             Description :
+
+             This macro  defines greeting,  disconnect, or  zap messages  and a
+        label to reference it by.
+
+                where label = a label of a maximum of four character
+                              used to reference this text in
+                              macros GREET, DISCON,and ZAP.
+                      CONT  = indicate the continuation of preivous MSGTXT.
+                      text  = desired text in EBCDIC for greeting,
+                              disconnect or zap message.
+                              Up to 15 characters can be defined.
+
+
+             Example :
+
+         MSGTXT(GRT1,A.ENT.,SP.,J.,L.,O.,G.,O.,N.,SP.,A.,P.,P.,L.,I.,D.)
+         MSGTXT(CONT,4D,I.,M.,S.,5D)
+
+
+             GRT1 refers to  a greeting message  of LOGON APPLID(IMS)  with the
+        cursor address at the location of row 1, column 18.
+
+
+
+
+
+
+                               5.15  LUDTRY - LUD Entry
+
+
+             Syntax : LUDTRY(label,first,second)
+
+             Description :
+
+             This macro specifies the first two characters of a  named entry in
+        LUD(in  ASCII CHARACTERS  OR ASCII  HEX VALUES  PREFIX WITH  "  ) which
+        allows or restricts access to a device by username.
+
+               label  = The name of the LUD entry that will be used
+               first  = The first character for the LUD entry.
+               second = The second character for the LUD entry.
+
+
+             Example :
+
+                LUDTRY(LUD2,I,S) OR LUDTRY(LUD2,"49,"53)
+
+
+        19                                                               PBH103
+        MACRO DEFINITIONS FOR DEVICE                              July 30, 1987
+
+
+             Usernames start with  IS can access  devices that are  limitted by
+        LUD2.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        20                                                               PBH103
+        MACRO DEFINITIONS FOR DEVICE                              July 30, 1987
+
+
+                    5.16  TSTREQ - SEND TEST REQUEST MESSAGE AT ZAP
+
+
+             Syntax: TSTREQ(YES/NO)
+
+             Where
+
+             YES = enables  pbh to send the  test request message  when circuit
+        for the device is being zapped.
+
+             NO = disables the feature for the current device.
+
+             Description :
+
+             This  macro  defines the  "test request"  message feature  for the
+        current device being  configured by the macro  device . The pbh  can be
+        configured  to send  the  test request  message  to the  host  when the
+        network circuit is being zapped. The rest request message is  a special
+        sequence defined as follows:
+
+             SOH % / STX DEV# DEV# ETX BCC BCC
+
+             The  dev# is  the device  number  for the  circuit that  is  to be
+        terminated by the PBH. This macro affects the current device.
+
+             Example :
+
+             TSTREQ(NO)
+
+             The test  request message  is not  sent for  this device  when the
+        circuit is zapped.
+
+
+
+
+
+
+            5.17  MLTDMS - DEFINE SEQUENCE OF MULTIPLE DISCONNECT EXCHANGE
+
+
+             Syntax  :  MLTDMS(LABEL,sndlab1,rcvlab1,.....,sndlab8,rcvlab8)  OR
+        MLTDMS(CONT,sndlab1,rcvlab1,.....,sndlab8,rcvlab8)
+
+             Description :
+
+             This macro  defines a  label to indicate  the desired  sequence of
+        exchange  that must  be  followed by  the  host interface  in  order to
+        disconect the circuit from the FEP.
+
+             The label in the first parameter field is the new label  that will
+        be referred to by the MDS  macro or DEFMDS. As many as 15  other labels
+        can be  defined within  the MLTDMS  macro. Each  label must  be defined
+        previously by the MSGTXT macro.
+
+        21                                                               PBH103
+        MACRO DEFINITIONS FOR DEVICE                              July 30, 1987
+
+
+             The sequence can be continued  by using the MLTDMS with  the label
+        CONT in the first parameter field.
+
+             The purpose of the special exchange is to perform automatic logoff
+        from the host  application, and by  following a predefined  sequence of
+        events, session security can be enhanced and not allowing illegal usesr
+        to  get  on  to  the  same session  that's  been  left  intact  if host
+        application is not aware of the previous disconnect.
+
+             The special  exchange consists  of a  disconnect message  from the
+        host interface  to the host,  followed by a  specific message  from the
+        host to the host interface.
+
+             The message  text defined that  will be delivered  to the  host is
+        allowing the 3270 PBH to  act as if operator is sending  certain logoff
+        sequence or a special message that will trigger the host to  initiate a
+        logoff procedure to terminate the session gracefully with the terminal.
+
+             Host  interface, when  receiving a  message from  the host  in the
+        disconnecting process, takes the  message starting from the  byte after
+        the STX, ESC and  the COMMAND bytes, which  is the WCC byte  and checks
+        the message against the predefined text byte by byte.
+
+             If the host  response is different  from the expected  message, as
+        defined in  the TYMFILE,  or if the  message is  not received  within a
+        predefined  time frame,  then the  circuit is  immediately disconnected
+        without continuing the rest of the special exchange.
+
+             If  the  host   response  is  correct,  then   another  predefined
+        subsequent disconnect message  is sent to the  host and the  circuit is
+        torn  down by  the host  interface if  no more  sequences  are desired,
+        otherwise the exchange continues until all messages are being  sent out
+        and received correctly then circuit terminated.
+
+             The message  text can  be defined by  putting in  EBCDIC character
+        code or by putting  in the graphic representation(ended with  a period)
+        of the EBCDIC character desired.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        22                                                               PBH103
+        MACRO DEFINITIONS FOR DEVICE                              July 30, 1987
+
+
+             The values of the argument are the following:
+
+               sndlabn = a label of a maximum of four characters
+                         defined in macro MSGTXT for disconnect
+                         message which is sent to host whenever
+                         a circuit is to be zapped.
+
+               rcvlabn = a label of a maximum of four characters
+                         defined in macro MSGTXT for the expected
+                         COMMAND message that is sent by the host
+                         in response to the disconnect message
+                         sent by the host interface.
+
+
+             The disconnect message to be sent to the fep, as defined  in macro
+        MSGTXT, must be represented in EBCDIC data string with the format of
+
+                  AID + cursor address + text.
+
+             The expected  response message  received from  the FEP  defined in
+        macro MSGTXT will follow the  rule in the following format:
+
+                  WCC + orders and text.
+
+             Example :
+        MSGTXT(SND1,AIDENT,40,40,L.,O.,G.,O.,F.,F.)
+        MSGTXT(RCV1,WCCN)
+        MSGTXT(SND2,AIDCLR)
+        MSGTXT(RCV2,WCCN,SBA.,40,40)
+        MSGTXT(SND3,AIDPA1)
+        MSGTXT(RCV3,WCCK,B.,Y.,E.,B.,Y.)
+        MLTDMS(MUL1,SND1,RCV1,SND2,RCV2,SND3,RCV3)
+        MLTDMS(MUL2,SND1,RCV1,SND2,RCV3)
+
+             If  the  device  is  declared  for  multiple  disconnect  feature,
+        messages  with the  label MUL1.  SND1  will be  sent to  host  during a
+        disconnect procedure, and message  with the label RCV1 is  the expected
+        message from the host in response to the disconnect message  SND1. This
+        disconnect sequence will continue until the sequence is complete.
+                HIF             FEP
+
+                SND1 -------->
+
+                <-------------  RCV1
+
+                SND2 ---------->
+
+                <-------------  RCV2
+
+                ..............
+
+                <------------   RCV3
+
+
+        23                                                               PBH103
+        MACRO DEFINITIONS FOR DEVICE                              July 30, 1987
+
+
+        Following are tables defining the symbols that can be used within
+        the message text definitions in a more readable form. The EBCDIC
+        form of these keys are still acceptable.
+
+
+                     TABLE 1. Symbol Table for AID
+                ----------------------------------------
+                This table shows the symbols for the AID
+                which may be included in the send part of
+                the disconnect mesage.
+
+                  AID           Symbol      EBCDIC
+                ---------       ------      ------
+                ENTER           A.ENT         7D
+                PF 1 Key        A.PF1         F1
+                PF 2 Key        A.PF2         F2
+                PF 3 Key        A.PF3         F3
+                PF 4 Key        A.PF4         F4
+                PF 5 Key        A.PF5         F5
+                PF 6 Key        A.PF6         F6
+                PF 7 Key        A.PF7         F7
+                PF 8 Key        A.PF8         F8
+                PF 9 Key        A.PF9         F9
+                PF 10 Key       A.PF10        7A
+                PF 11 Key       A.PF11        7B
+                PF 12 Key       A.PF12        7C
+                PF 13 Key       A.PF13        C1
+                PF 14 Key       A.PF14        C2
+                PF 15 Key       A.PF15        C3
+                PF 16 Key       A.PF16        C4
+                PF 17 Key       A.PF17        C5
+                PF 18 Key       A.PF18        C6
+                PF 19 Key       A.PF19        C7
+                PF 20 Key       A.PF20        C8
+                PF 21 Key       A.PF21        C9
+                PF 22 Key       A.PF22        4A
+                PF 23 Key       A.PF23        4B
+                PF 24 Key       A.PF24        4C
+                PA 1 Key        A.PA1         6C
+                PA 2 Key        A.PA2         6E
+                PA 3 Key        A.PA3         68
+                CLEAR Key       A.CLR         6D
+                --------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+        24                                                               PBH103
+        MACRO DEFINITIONS FOR DEVICE                              July 30, 1987
+
+
+
+
+
+                    TABLE 2. Symbol Table for Orders
+             --------------------------------------------
+             This table shows the symbols for the orders
+             which may be included in the receive part of
+             the disconnect message sequence.
+
+                Order                           Symbol       EBCDIC
+                -----                           ------      -------
+             Start Field (SF)                   OR.SF          1D
+             Start Field Extended (SFE)         OR.SFE         29
+             Set Buffer Address (SBA)           OR.SBA         11
+             Set Attribute (SA)                 OR.SA          28
+             Modify Field (MF)                  OR.MF          2C
+             Insert Cursor (IC)                 OR.IC          13
+             Program Tab (PT)                   OR.PT          05
+             Repeat to Address (RA)             OR.RA          3C
+             Erase Unportcted to Address (EUA)  OR.EUA         12
+             Graphic Escape(GE)                 OR.GE          08
+             -------------------------------------------------------
+
+
+                      TABLE 3. Symbol Table for WCC
+             ------------------------------------------------
+             This table shows the symbols for the WCC which
+             may be included in the receive part of the
+             disconnect message sequence.
+
+                           WCC                          Symbol    EBCDIC
+             -------------------------------------      ------    ------
+             Alarm+Restore Keyboard+Reset MDT Bits      WCCAKM      C7
+             Restore Keyboard+Reset MDT Bits            WCCKM       C3
+             Restore Keyboard                           WCCK        C2
+             Alarm                                      WCCA        C4
+             Alarm+Restore Keyboard                     WCCAK       C6
+             No Action                                  WCCN        40
+             NL Format+Start Print                      WCCPNS      C8
+             40 Characters line+Start Print             WCCP4S      D8
+             64 Characters Line+Start Print             WCCP6S      E8
+             80 Characters Line+Start Print             WCCP8S      F8
+             NL Format                                  WCCPN       40
+             40 characters Line                         WCCP4       50
+             64 Characters Line                         WCCP6       60
+             80 Characters Line                         WCCP8       F0
+             ----------------------------------------------------------
+
+        SYMBOLS NOT IN THESE TABLES ARE NOT VALID.
+
+
+
+
+
+        25                                                               PBH103
+        CHANGING DEFAULT LINE HOST TYPE FOR THE SLOT              July 30, 1987
+
+
+
+
+
+
+                   6 -  CHANGING DEFAULT LINE HOST TYPE FOR THE SLOT
+
+
+             The macro  DEFLIN is used  to change the  host type for  the slot.
+        This macro must be used before the LINE marco.
+
+
+
+
+
+
+                      6.1  DEFLIN - Define Default Host Line Type
+
+
+             Syntax : DEFLIN(line-type)
+
+             Where line-type is IBM OR FUJITSU OR HITACHI.
+
+             Default :  Defined by  previous DEFLIN macro. If the  macro DEFLIN
+        is not defined the default is IBM.
+
+             Description :
+
+             This macro defines the default protocol type for the lines  in the
+        slot. The line-type can be  IBM or FUJITSU or HITACHI. This  macro must
+        be used before the line configuration starts.
+
+             It is used  whenever a definition of  the line type is  desired or
+        when the  line type  has been  changed by  the macro LINTYP and   a re-
+        definition is intended to clarify the line type of the subsequent lines
+        that are to be configured.
+
+             Example: DEFLIN(HITACHI)  The default line host type is HITACHI.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        26                                                               PBH103
+        CHANGING DEFAULT VALUES FOR LINE                          July 30, 1987
+
+
+
+
+
+
+                         7 -  CHANGING DEFAULT VALUES FOR LINE
+
+
+             There are three  macros DEFHST, DEFRTS  and DEFPOL used  to change
+        the default for line parameters.  These macros can be  invoked anywhere
+        in the TYMFILE.  The defaults  are changed at the point  of invocation,
+        and may be redefined at a later point.
+
+
+
+
+
+
+                           7.1  DEFHST - Default Host Number
+
+
+             Syntax : DEFHST(n)
+
+             Default : If defhst is not defined the default value is"0".
+
+             Description :
+
+             This macro defines the default host number for the macro  HOST(n).
+
+             Example :
+
+                DEFHST(900)
+
+             The default host number for each line is 900 from this point on.
+
+
+
+
+
+
+                    7.2  DEFRTS  - Default RTS/CTS Handshake Signal
+
+
+             Syntax : DEFRTS(YES/NO)
+
+             Default : If the macro DEFRTS is not defined the default is NO.
+
+             Description :
+
+             This macro defines the default for macro RTSCTS(arg).
+
+             The values of the argument are the following :
+
+                     YES = RTS is required.
+
+        27                                                               PBH103
+        CHANGING DEFAULT VALUES FOR LINE                          July 30, 1987
+
+
+                     NO  = RTS is not required.
+
+
+
+             Example :
+
+                DEFRTS(NO)
+
+             The  default  Request-to-Send/Clear-to-send  handshake  signal for
+        each line is not required from this point on.
+
+
+
+
+
+
+                        7.3  DEFPOL - Polling Timeout From Host
+
+
+             Syntax : DEFPOL(t)
+
+             Default : If the macro DEFPOL is not defined the default  value is
+        90 seconds.
+
+             Description :
+
+             This macro defines the default for macro NOPOLL(t).
+
+             The value of t is the time when no poll is detected, then the host
+        to this line is declared down.
+
+             Example :
+
+                DEFPOL(60)
+
+             The default timeout interval for no poll detected for each line is
+        60 seconds from this point on.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        28                                                               PBH103
+        CHANGING DEFAULT VALUES FOR DEVICE PARAMETER              July 30, 1987
+
+
+
+
+
+
+                   8 -  CHANGING DEFAULT VALUES FOR DEVICE PARAMETER
+
+
+             There are  ELEVEN macros DEFTYP,  DEFCOL, DEFXPR,  DEFGRT, DEFDSC,
+        DEFZAP, DEFASO, DEFNDL, DEFIAT,  DEFLUD, and DEFCHR used to  change the
+        default for device parameters.  These macros can be invoked anywhere in
+        the TYMFILE.  The defaults are changed at the point of  invocation, and
+        may be redefined at later point.
+
+
+
+
+
+
+                          8.1  DEFTYP  - Default Device Type
+
+
+             Syntax : DEFTYP(C####/P####)
+
+             Default : C1920, CRT with 1920 bytes per screen.
+
+             Description :
+
+             This macro defines the default for macro TYPE(arg).
+
+             The values of the argument are the following:
+
+               C#### = terminal, where #### indicates screen size
+                       in character per screen, it can be the value
+                       480, 960, 1920, 2560, 3400, or 3564.
+
+               P#### = printer, where #### indicates screen size
+                       in character per screen, it can be the value
+                       480, 690, 1920, 2560, 3400, or 3564.
+
+
+             For the  virtual host  mode, the  screen size  of devices  must be
+        defined as 1920.
+
+             Example :
+
+                DEFTYP(C1920)
+
+             The default device type is a terminal with the screen of 1920.
+
+
+
+
+
+
+        29                                                               PBH103
+        CHANGING DEFAULT VALUES FOR DEVICE PARAMETER              July 30, 1987
+
+
+                        8.2  DEFCOL  - Default Color Capability
+
+
+             Syntax : DEFCOL(YES/NO)
+
+             Default : NO.
+
+             Description :
+
+             This macro defines the default for macro COLOR(arg).
+
+             The values of argument are the following:
+
+               YES = can handle color.
+               NO  = can not handle color.
+
+
+             Example :
+
+                DEFCOL(NO)
+
+             The default color capability of the device is that the  device can
+        not handle color.
+
+
+
+
+
+
+                    8.3  DEFXPR  - Default Transparency Capability
+
+
+             Syntax : DEFXPR(YES/NO)
+
+             Default : NO.
+
+             Description :
+
+             This macro defines the default for macro XPRNT(arg).
+
+             The values of argument are the  following :
+
+               YES = can handle transparency.
+               NO  = can not handle transparency.
+
+
+             Example :
+
+                DEFXPR(YES)
+
+             The  default transparency  capability of  the device  is  that the
+        device can operate in the transparency mode.
+
+
+        30                                                               PBH103
+        CHANGING DEFAULT VALUES FOR DEVICE PARAMETER              July 30, 1987
+
+
+                        8.4  DEFGRT  - Default Greeting Message
+
+
+             Syntax : DEFGRT(label1,label2) or DEFGRT(NONE)
+
+             Default : NONE.
+
+             Description :
+
+             This macro defines the default label for macro GREET(arg).
+
+             The values of the agument are the following :
+
+               label1 = a label defined in macro MSGTXT for
+                        the first greeting message.
+               label2 = a label defined in macro MSGTXT for
+                        the second greeting mesage, it is optional.
+               NONE   = there is no greeting message sent to host.
+
+
+             Example :
+
+                DEFGRT(GRTMSG)
+
+             The default greeting message is the message with the label GRTMSG.
+
+
+
+
+
+
+                  8.5  DEFMDS - DEFAULT MULTIPLE DISCONNECT SEQUENCE
+
+
+             Syntax : DEFMDS(NONE/label)
+
+             Default :  The default value  is NONE or  defined by  the previous
+        DEFMDS macro.
+
+             Description :
+
+             This  macro  defines the  default  label for macro MDS(arg).
+
+             label = a label defined in macro MLTDMS for multiple disconnect.
+
+             none =  device does not  have multiple disconnect  sequence.  This
+        label will be defined by using the macro MLTDMS.
+
+             Example : DEFMDS(MUL1) The disconnect sequence has the label MUL1.
+
+
+
+
+
+        31                                                               PBH103
+        CHANGING DEFAULT VALUES FOR DEVICE PARAMETER              July 30, 1987
+
+
+                          8.6  DEFZAP  - Default Zap Message
+
+
+             Syntax : DEFZAP(label) or DEFZAP(NONE)
+
+             Default : NONE.
+
+             Description :
+
+             This macro defines the default for macro ZAP(arg).
+
+             The values of the argument are the following:
+
+              label = label defined in MSGTXT macro for zap message.
+              NONE  = zap message is not required.
+
+
+
+             Example :
+
+                DEFZAP(ZAPMSG)
+
+             The default zap message is the message with the label ZAPMSG.
+
+
+
+
+
+
+                       8.7  DEFASO  - Default Associated Device
+
+
+             Syntax : DEFASO(address) or DEFASO(NONE)
+
+             Default : NONE.
+
+             Description :
+
+             This macro defines the default for macro ASSOC(arg).
+
+             The values of the augument are the following:
+
+              address = the address of associated printer device.
+              NONE    = no associated printer device is required.
+
+
+             Example :
+
+                DEFASO(0C3)
+
+             The default associated device is a printer of address 0C3.
+
+
+
+        32                                                               PBH103
+        CHANGING DEFAULT VALUES FOR DEVICE PARAMETER              July 30, 1987
+
+
+                8.8  DEFNDL  - Default Dynamic Greeting NEEDLE Message
+
+
+             Syntax : DEFNDL(YES/NO)
+
+             Default : NO.
+
+             Description :
+
+             This macro defines the default for macro NEEDLE(arg).
+
+             The values of argument are the following:
+
+               YES = dynamic greeting message is required.
+               NO  = dynamic greeting message is not required.
+
+
+             Example :
+
+                DEFNDL(NO)
+
+             As default, no dynamic greeting message is required.
+
+
+
+
+
+
+                         8.9  DEFIAT  - Default Inactive Timer
+
+
+             Syntax : DEFIAT(t)
+
+             Where t = 0 indicates inactivity timer disable for this slot  or t
+        = 1 to x secs.
+
+             Default : 3600 Seconds (1 hour).
+
+             Description :
+
+             This macro defines the default for macro INACT(t).
+
+             This macro defines  the value of  the time interval  of inactivity
+        (no transfer of data) before  the user is disconnected. If zero  (0) is
+        used in the field the inactivity timer is disabled for the  slot unless
+        Macro INACT(t) is defined for the device.
+
+             Example :
+
+                DEFIAT(90)
+
+             The default inactivity interval is 90 seconds.
+
+
+        33                                                               PBH103
+        CHANGING DEFAULT VALUES FOR DEVICE PARAMETER              July 30, 1987
+
+
+                     8.10  DEFLUD  - Default Local User Directory
+
+
+             Syntax:  DEFLUD(label1,label2,...,label16)  OR   DEFLUD(NOLUD)  OR
+        DEFLUD(ALNAM)
+
+             Default  : The  first  LUD entry  (all usernames  can  access this
+        device).
+
+             Description :
+
+             This macro defines the default for the macro LUDTRY.
+
+             LABEL = label of name entry defined by macro LUDTRY.
+
+             NOLUD = indicated that  all usernames except the the  name defined
+        in macro LUDTRY can access current device.
+
+             ALNAM = all usernames can access current device.
+
+             Example :
+
+             DEFLUD(LUD0)
+
+             The default LUD entry is defined by the label LUD0.
+
+
+
+
+
+
+                      8.11  DEFCHR - Define Default Character Set
+
+
+             Syntax : DEFCHR(ENG/KANA/KANJI)
+
+             Default : The default value is DEFCHR(ENG). if the macro DEFCHR is
+        not defined the default is ENG.
+
+             Description :
+
+             This macro defines the default for macro KKORKJ(arg).
+
+             ENG =  means the session has no  special characters.
+
+             KANA =   means the session  uses the additional  special character
+        set of KATA KANA.
+
+             KANJI = means the inclusion  of the KATA KANA CHARACTERS  plus the
+        KANJI characters.
+
+             This default character  set can be defined  on a device  basis and
+        can also be changed by the macro KKORKJ.
+
+        34                                                               PBH103
+        CHANGING DEFAULT VALUES FOR DEVICE PARAMETER              July 30, 1987
+
+
+             Example : DEFCHR(KANA)
+
+             The special characters for KATA KANA will be added to the standard
+        set.
+
+
+
+
+
+
+              8.12  DEFTRQ - DEFAULT FOR SEND TEST REQUEST MESSAGE AT ZAP
+
+
+             Syntax: DEFTRQ(YES/NO)
+
+             Where
+
+             YES = enables  pbh to send the  test request message  when circuit
+        for the device is being zapped for the slot.
+
+             NO = disables the feature for the slot.
+
+             Default :  If the   Marco DEFTRQ  is not  defined this  feature is
+        disabled as if DEFTRQ(NO) is being defined.
+
+             Description :
+
+             This  macro  defines the  "test request"  message feature  for the
+        slot.   All devices  on the  pbh  can be  configured to  send  the test
+        request message to the host  when the network circuit is  being zapped.
+        The rest request message is a special sequence defined as follows:
+
+             SOH % / STX DEV# DEV# ETX BCC BCC
+
+             The  dev# is  the device  number  for the  circuit that  is  to be
+        terminated by the  PBH. This macro affects  the all the devices  on the
+        slot. Hitachi devices are supported.
+
+             Example :
+
+             DEFTRQ(NO)
+
+             The test  request message  is not  sent for  the devices  when the
+        circuit is zapped.
+
+
+
+
+
+
+
+
+
+
+        35                                                               PBH103
+        MACRO TO CHANGE SLOT PARAMETERS                           July 30, 1987
+
+
+
+
+
+
+                         9 -  MACRO TO CHANGE SLOT PARAMETERS
+
+
+
+
+
+
+
+                              9.1  OWLi    - OWL PF-i Key
+
+
+             Syntax : OWLi(n)
+
+             Default : As shown in the following table:
+
+                         OWL1250/TYM470 PF Keys Defaults
+                         _______________________________
+
+          OWL 1250 or                                           IBM 3270 Key
+        TYMSHARE 470 Key        Symbol          Default          Equivalent
+        ________________        ______          _______         ____________
+
+            PF-1                OWLPF1            0F1               PF-1
+            PF-2                OWLPF2            0F2               PF-2
+            PF-3                OWLPF3            0F3               PF-3
+            PF-4                OWLPF4            0F4               PF-4
+            PF-5                OWLPF5            0F5               PF-5
+            PF-6                OWLPF6            0F6               PF-6
+            PF-7                OWLPF7            0F7               PF-7
+            PF-8                OWLPF8            0F8               PF-8
+            PF-9                OWLPF9            06C               PA-1
+            PF-10               OWLP10            06E               PA-2
+            PF-11               OWLP11            06B               PA-3
+            PF-12               OWLP12            06D               CLEAR
+            PF-13               OWLP13            0C5               PF-17
+            PF-14               OWLP14            0C6               PF-18
+            PF-15               OWLP15            0C7               PF-19
+            PF-16               OWLP16            0C8               PF-20
+            PF-17               OWLP17            0F9               PF-9
+            PF-18               OWLP18            07A               PF-10
+            PF-19               OWLP19            07B               PF-11
+            PF-20               OWLP20            07C               PF-12
+            PF-21               OWLP21            0C1               PF-13
+            PF-22               OWLP22            0C2               PF-14
+            PF-23               OWLP23            0C3               PF-15
+            PF-24               OWLP24            0C4               PF-16
+            PF-25               OWLP25            07D               ENTER
+            PF-26               OWLP26            07D               ENTER
+            PF-27               OWLP27            07D               ENTER
+
+        36                                                               PBH103
+        MACRO TO CHANGE SLOT PARAMETERS                           July 30, 1987
+
+
+            PF-28               OWLP28            000                 *
+            PF-29               OWLP29            0C9               PF-21
+            PF-30               OWLP30            04A               PF-22
+            PF-31               OWLP31            04B               PF-23
+            PF-32               OWLP32            04C               PF-24
+
+
+             Description :
+
+             This  macro  specifies the  value  for PERKIN-ELMER  OWL  1250 and
+        TYMSHARE 470 PF keys.
+
+             Example :
+
+                OWL21(ENTER) OR OWL3(PF15)
+
+             The PERKIN-ELMER OWL  PF-21 key functions  as the 3270  ENTER key.
+        The PERKIN-ELMER OWL PF-3 key functions as the 3270 PF-15 key.
+
+
+
+
+
+
+                              9.2  AIDIBM  - IBM AID Key
+
+
+             Syntax : AIDIBM(PFn/PAn/CLEAR/ENTER)
+
+             Default : ENTER key
+
+             Description :
+
+             This macro specifies the AID that is sent to the host whenever the
+        3101 send key is pressed in the virtual host mode.
+
+             Example :
+
+                AIDIBM(PF5)
+
+             The IBM 3101 Send key functions as the 3270 PF-5 key.
+
+
+
+
+
+
+
+
+
+
+
+
+
+        37                                                               PBH103
+        MACRO TO CHANGE SLOT PARAMETERS                           July 30, 1987
+
+
+                              9.3  IBMi    - IBM PF-i Key
+
+
+             Syntax : IBMi(n), i = 1, 24
+
+             Default : Shown below.
+
+                        IBM 3101 PF Key Defaults
+                        ________________________
+
+          IBM                  ESCAPE                IBM 3270 Key
+          3101 Key   Symbol    SEQUENCE    Default   Equivalent
+          --------   ------    --------    -------   ------------
+
+           PF-1      IBMP1     ESC a ETX     0F1        PF-1
+           PF-2      IBMP2     ESC b ETX     0F2        PF-2
+           PF-3      IBMP3     ESC c ETX     0F3        PF-3
+           PF-4      IBMP4     ESC d ETX     0F4        PF-4
+           PF-5      IBMP5     ESC e ETX     000        NETWORK DISCONNECT
+           PF-6      IBMP6     ESC f ETX     06C        PA-1
+           PF-7      IBMP7     ESC g ETX     06E        PA-2
+           PF-8      IBMP8     ESC h ETX     06D        CLEAR
+           PF-9      IBMP9     ESC i ETX     06B        PA-3
+           PF-10     IBMP10    ESC j ETX     07A        PF-10
+           PF-11     IBMP11    ESC k ETX     07B        PF-11
+           PF-12     IBMP12    ESC l ETX     07C        PF-12
+           PF-13     IBMP13    ESC m ETX     0C1        PF-13
+           PF-14     IBMP14    ESC n ETX     0C2        PF-14
+           PF-15     IBMP15    ESC o ETX     0C3        PF-15
+           PF-16     IBMP16    ESC p ETX     0C4        PF-16
+           PF-17     IBMP17    ESC q ETX     0C5        PF-17
+           PF-18     IBMP18    ESC r ETX     0C6        PF-18
+           PF-19     IBMP19    ESC s ETX     0C7        PF-19
+           PF-20     IBMP20    ESC t ETX     0C8        PF-20
+           PF-21     IBMP21    ESC u ETX     0C9        PF-21
+           PF-22     IBMP22    ESC v ETX     04A        PF-22
+           PF-23     IBMP23    ESC w ETX     04B        PF-23
+           PF-24     IBMP24    ESC x ETX     04C        PF-24
+
+          NOTE :
+
+                The Escape sequences begin with the ESC character,
+                followed by the lower case alphabets then ETX character.
+
+
+             Description:
+
+             This macro specifies the value for IBM 3101 PF keys.
+
+             Example :
+
+                IBM2(PF6)
+
+
+        38                                                               PBH103
+        MACRO TO CHANGE SLOT PARAMETERS                           July 30, 1987
+
+
+             The IBM 3101 PF-2 key functions as the IBM 3270 PF-6 key.
+
+
+
+
+
+
+                        9.4  VIRASO - Associated Device Request
+
+
+             Syntax :  VIRASO(YES/NO)
+
+             Default: NO.
+
+             Description :
+
+             This macro  specified whether all  virtual host logins  request an
+        associated device automatically.
+
+             The values for the argument are the following:
+
+                YES =   the virtual host device will have an
+                        associated device (printer) assigned to it.
+                NO  =   the virtual host device will not have an associated
+                        device (printer) assign to it unless an uppercase S
+                        is specified in project code at login.
+
+
+             Example :
+
+                VIRASO(YES)
+
+             The virtual host device will have an associated device assigned to
+        it automatically when it places a call to the HOST INTERFACE.
+
+
+
+
+
+
+                      9.5  VIRTYP - Virtual Host Mode Device Type
+
+
+             Syntax : VIRTYP(PER12/TYM47/IBM31)
+
+             Default : TYM47
+
+             Description :
+
+             This macro specifies the  default for the terminal  type operating
+        in virtual host. Users logging in with the default type do not  have to
+        specify device type in the project code.  If logging in with  any other
+        types, then user must specify the device type during login.
+
+        39                                                               PBH103
+        MACRO TO CHANGE SLOT PARAMETERS                           July 30, 1987
+
+
+             Device types can be one of the following:
+
+                PER12  = Perkin-Elmer OWL1200, 1250, or 1251 terminal.
+                TYM47 = Tymshare 470 terminal.
+                IBM31 = IBM 3101 terminal.
+
+
+             Example :
+
+                VIRTYP(IBM31)
+
+             The default device type for  the virtual host mode is an  IBM 3101
+        terminal.
+
+
+
+
+
+
+                             9.6  ECHO - Echo Project code
+
+
+             Syntax : ECHO(YES/ NO)
+
+             Default : YES.
+
+             Description :
+
+             This  macro specifies  whether the  host interface  will  echo the
+        project code in virtual host mode.
+
+             The values of the argument are the following:
+
+                YES = Host interface will echo the project code.
+                NO  = Host interface will not echo the project code.
+
+
+             Example :
+
+                ECHO(NO)
+
+             Host interface will not echo the project code.
+
+
+
+
+
+
+
+
+
+
+
+
+        40                                                               PBH103
+        MACRO TO CHANGE SLOT PARAMETERS                           July 30, 1987
+
+
+                  9.7  MXMAPU - Maximum Number of Simultaneous Users
+
+
+             Syntax : MXMAPU(n)
+
+             Default : The default value is 1.
+
+             Description :
+
+             This macro specifies the maximum number of simultaneous  users, (n
+        in hexadecimal), of any  combination of the following  devices: Perkin-
+        Elmer Owl 1200 or 1250, IBM 3101 or ASCII-type printer.
+
+             Example :
+
+                MXMAPU(6)
+
+             No more than 6 user of Perkin-Elmer Owl 1200 or 1250, IBM  3101 or
+        ASCII-type printer that can be logged in simultaneously.
+
+
+
+
+
+
+                              9.8  SCNBUF - Screen Buffer
+
+
+             Syntax : SCNBUF(n)
+
+             Default : 0
+
+             Description :
+
+             This   macro  specifies   the  maximum   number  of   devices  (in
+        hexadecimal)   requiring  screen   buffers  that   may  be   logged  in
+        simultaneously.
+
+             In virtual host mode, screen buffers are required for all printers
+        whether or not they are associated printers.
+
+             Example :
+
+                SCNBUF(3)
+
+             No more than three devices requiring screen buffers may  be logged
+        in simultaneously.
+
+
+
+
+
+
+
+        41                                                               PBH103
+        MACRO TO CHANGE SLOT PARAMETERS                           July 30, 1987
+
+
+                            9.9  SAVQUE - Save Queue Option
+
+
+             Syntax : SAVQUE(YES/NO)
+
+             Default :  YES.
+
+             Description :
+
+             Save Queue is an  option that shortens response time  for selected
+        host  systems.  If  this  option  is  enabled,  host  interface, before
+        transmitting data to  the host, will  save a copy  of the data  in SAVE
+        queue.
+
+             Upon receiving  General Poll  from the  Front End  Processor, host
+        interface will send pending responses to the Front End. For some Access
+        Method, when General Poll does not imply Read Modified,it will  issue a
+        specific Read Modified command to pull the response again.
+
+             Since the SAVE queue is enabled, the responses can be  quickly re-
+        transmitted without going all the way back to the terminal for previous
+        messages. The net result is an increase of response time.
+
+             The values of the arguement can be :
+
+                YES = enables the Save Queue.
+                NO  = disables the Save Queue.
+
+
+             Example :
+
+                SAVQUE(YES)
+
+             The Save Queue feature is enabled.
+
+
+
+
+
+
+                          9.10  MNPORT - Mminimum Port Number
+
+
+             Syntax : MNPORT(n)
+
+             Default : 0
+
+             Description :
+
+             This  macro  specifies  the  minimum  number  of  unused  ports(in
+        hexadecimal) which is required  for a particular host. When  the number
+        of unused ports of a host number is lower than this  predefined minimum
+
+
+        42                                                               PBH103
+        MACRO TO CHANGE SLOT PARAMETERS                           July 30, 1987
+
+
+        port number,  any incoming  call targeted to  this host  # will  be re-
+        directed to the second choice of host number by the Supervisor.
+
+             Example :
+
+                MNPORT(2)
+
+             Host interface will send  "Soft Shut"  message to  supervisor when
+        there is only 2 ports left.
+
+
+
+
+
+
+                     9.11  TOLIAC - Tolerance for Inactivity Timer
+
+
+             Syntax : TOLIAC(t)
+
+             Default : 5 Seconds.
+
+             Description :
+
+             This macro specifies the time interval, (in decimal), for checking
+        the inactivity  timer INACT  macro. This  value must  be less  than the
+        value selected for the INACT macro by a multiple of at least 4.
+
+             Example :
+
+                TOLIAC(5)
+
+             Host interface will check the polling timer once every 5 seconds.
+
+
+
+
+
+
+                        9.12  TOLNPL - Tolerance for No Polling
+
+
+             Syntax : TOLNPL(t)
+
+             Default : 5 Seconds.
+
+             Description :
+
+             This macro specifies the time interval,(in decimal),  for checking
+        the NO POLL timer.
+
+             Example :
+
+
+        43                                                               PBH103
+        MACRO TO CHANGE SLOT PARAMETERS                           July 30, 1987
+
+
+                TOLNPL(5)
+
+             The host interface will check the NO Poll timer every 5 seconds.
+
+
+
+
+
+
+                      9.13  INVSTA - ZAP SENSE AND STATUS MESSAGE
+
+
+             Syntax: INVSTA(arg1,arg2,arg3,arg4)
+
+             Where arg1 = YES or NO
+
+             YES = the SENSE  AND STATUS messages will  be sent to the  host at
+        circuit zap.
+
+             NO  =   the SENSE  AND  STATUS message  will  not be  sent  to the
+        host at circuit zap.
+
+             arg2 = defines the sense and status code in hex to be sent  to the
+        IBM        host.
+
+             arg3 = defines the sense and status code in hex to be sent  to the
+        FUJITSU host.
+
+             arg4 = defines the sense and status code in hex to be sent  to the
+        HITACHI host.
+
+             Default:
+
+             If this macro is not  defined, the default is no s/s  message will
+        be sent to the  host at circuit zap. If  the first argument is  YES the
+        default sense and status of intervention required is sent for each host
+        is: IBM host is 40C2 FUJITSU host is 4050   HITACHI host is C2C0.
+
+             Description:
+
+             This macro specifies whether a Sense and Status message is sent to
+        the  host when the circuit  is being zapped. If yes, there  are options
+        for  the user  to  define  a Sense  and Status  message  for  the three
+        different  host types  supported   IBM,FUJITSU, and  HITACHI.  For this
+        feature  to  disconnect  the  user  from  the  application  it  will be
+        necessary to work with the host system programmer. Each  application in
+        the  host  may  response  differently to   the  same  sense  and status
+        information.
+
+             Example: INVSTA(YES,40C2,,0C0C6)
+
+             A  Sense  and  Status  message "40C2"  will  be  sent  to  the IBM
+
+
+        44                                                               PBH103
+        MACRO TO CHANGE SLOT PARAMETERS                           July 30, 1987
+
+
+        host,"4050" to the FUJITSU host,and "C0C6" to the HITACHI host when the
+        circuit is being zapped.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        45                                                               PBH103
+        MACROS TO DEFINE HOST INTERFACE DEBUGGING PARAMETERS      July 30, 1987
+
+
+
+
+
+
+              10 -  MACROS TO DEFINE HOST INTERFACE DEBUGGING PARAMETERS
+
+
+
+
+
+
+
+                            10.1  NETCON -- NETWORK CONSOLE
+
+
+             Syntax: NETCON(arg)
+
+             where arg = YES or NO.
+
+             Default: If this macro is missed, the default is NO.
+
+             Description:
+
+             This macro  specifies whether the  Network Console can  access the
+        Bisync  Operations Monitor(BOM)  and issue  commands to  the  BOM.  The
+        values of the argument are the following:
+
+             YES = the Network Console can access BOM.
+
+             NO  = the Network Console can not access BOM.
+
+             Example: NETCON(YES)
+
+             The Network Console can access BOM and issue commands to the BOM.
+
+             ACCESSING BOM THROUGH NETWORK CONSOLE
+
+             A new feature to  allow the Network Console to  communication with
+        the Extended  DDT was implemented  in the 3270  Host Interface  and the
+        3270  Terminal Interface.   With this  feature, a  user can  access the
+        Bisync Operation Monitors (BOM) through the Network Console.
+
+             To access  the BOM through  the Network Console,  a user  must log
+        into the Network Console first.  Once the user is in the  main commmand
+        level of the Network Console  which is indicated by an  asterisk prompt
+        "*",  the DDT  session  can be  initiated  by the  command  "XDDT" (for
+        Extended DDT) followed the kernel host number and the slot number which
+        the interface  resides.  If the  connection is successful,  the Network
+        Console responds  with the  prompt "xddt>".  If  the connection  is not
+        successful, an error  message "Extended DDT unavailable"  is displayed.
+        To terminate a  DDT session, the  user can use  one of the  3 commands:
+        "RETURN", "QUIT", "EXIT".  This returns the user to to the main command
+        level with an asterisk promp.  An example is given as follows:
+
+        46                                                               PBH103
+        MACROS TO DEFINE HOST INTERFACE DEBUGGING PARAMETERS      July 30, 1987
+
+
+             Please log in: <user name>:<network console host>;<password>
+
+             >
+
+             Network Console - Version 3.02
+
+             name: <name>
+
+             password: <password>
+
+             4/29/86 18:16:20
+
+             * xddt host 555 slot 1
+
+             xddt>status
+
+             HBOM -- 3270PBH Bisync Operations Monitor
+
+             NODE  2062    SLOT  3    29Apr86 18:18:09
+
+             HOST#  STATUS  #PORTS  CIRCUITS
+
+               25    ANSR      3       0
+
+               26    ANSR      3       0
+
+             RESTARTS     LAST START      CIRCUITS
+
+                 1      24Apr86 19:34:25      0
+
+                  BUFFER             CMDLNK              MAPLNK
+
+             LEFT  USED  ZAPS   LEFT  USED   ZAPS   LEFT  USED  ZAPS
+
+              316     3     0    314    17      0    102     0     0
+
+             xddt>return
+
+             *quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        47                                                               PBH103
+        MACROS TO DEFINE HOST INTERFACE DEBUGGING PARAMETERS      July 30, 1987
+
+
+                  10.2  RETCODE - Trace of BSC Receiver Return Codes
+
+
+             Syntax : RETCODE(YES/NO)
+
+             Default : NO.
+
+             Description :
+
+             This  macro  specifies whether  the  interface keeps  a  record of
+        number of occurrence of return codes.
+
+             The values of argument are the following:
+
+               YES = the interface keeps a count of occurrence of return codes
+               NO  = the interface does not keep a count of occurrence of
+                     return codes.
+
+
+             Example :
+
+                RETCODE(YES)
+
+             The interface keeps a count of return codes.
+
+
+
+
+
+
+                      10.3  PRTCON  - Print Tymfile Configuration
+
+
+             Syntax: PRTCON(YES/NO)
+
+             Default : YES.
+
+             Description :
+
+             This  macro specifies  whether the  tymfile configuration  will be
+        displayed at the time when generate the system.
+
+             The values of the argument are the following:
+
+               YES = the tymfile configuration will be displayed.
+               NO  = the tymfile configration will not be displayed.
+
+
+             Example :
+
+                PRTCON(NO)
+
+
+
+        48                                                               PBH103
+        MACROS TO DEFINE HOST INTERFACE DEBUGGING PARAMETERS      July 30, 1987
+
+
+             The configuration defined in tymfile will not be displayed  at the
+        time when generate the system.
+
+
+
+
+
+
+                        10.4  RTRACE  - BSC Line Receiver Trace
+
+
+             Syntax : RTRACE(n,RVDTA,RGEMP,PRHAN,RVSTA,TMRCV,PTCOD)
+
+             Description :
+
+             This macro specifies the increment of 400-byte chunk receive trace
+        table size and the receive trace options to be enabled once the slot is
+        loaded and restarted.
+
+             There are six trace options in the arglist :
+
+               (1) trace a received-data character
+               (2) trace a ring-empty index
+               (3) trace a process-handling byte
+               (4) trace operation-complete return code
+               (5) trace current recieved state 
+               (6) trace the time required for data reception.
+
+
+             These should be used only by technical support representatives for
+        debugging.
+
+             The values of the argument are the following:
+
+              n     = the number of 400-byte blocks allocated for the
+                      trace table.
+              RVDTA = enables the received-data character trace,
+                      optional.
+              RGEMP = enables the ring-empty trace, optional.
+              PRHAN = enables the process-handling byte trace,
+                      optional.
+              RVSTA = enables the current received state trace,
+                      optional.
+              TMRCV = enables the time required for data reception trace,
+                      optional.
+              PTCOD = enables the operation-complete return codes trace,
+                      optional.
+
+
+             Example :
+
+                RTRACE(2,RGEMP,PTCOD,RVDTA)
+
+
+        49                                                               PBH103
+        MACROS TO DEFINE HOST INTERFACE DEBUGGING PARAMETERS      July 30, 1987
+
+
+             800 bytes are allocated to the trace buffer.
+
+             The  operation  complete  return  codes  trace,  the received-data
+        character trace and the ring-empty index trace are enabled.
+
+
+
+
+
+
+                         10.5  STPCRSH - Halt Slot When Crash
+
+
+             Syntax : STPCRSH(YES/NO)
+
+             Default : NO.
+
+             Description :
+
+             This macro specifies whether a slot will halt after a  crash. When
+        the slot crashes, the network service will be interrupted if this macro
+        defines YES.
+
+             The values of argument are the following:
+
+                YES = the slot will halt after a crash.
+                NO  = the slot will restart after a crash
+
+
+             Example :
+
+                STPCRSH(YES)
+
+             The slot will halt after a crash.
+
+
+
+
+
+
+                              10.6  IRINGSZ - IRING Size
+
+
+             Syntax : IRINGSZ(n)
+
+             Default : 500 bytes.
+
+             Description :
+
+             This macro specifies the number  of bytes, (in HEX), for  the ISIS
+        input ring.
+
+             Example :
+
+        50                                                               PBH103
+        MACROS TO DEFINE HOST INTERFACE DEBUGGING PARAMETERS      July 30, 1987
+
+
+                IRINGSZ(1000)
+
+             The size of the ISIS input ring is 1000 HEX bytes.
+
+
+
+
+
+
+                              10.7  ORINGSZ - ORING Size
+
+
+             Syntax : ORINGSZ(n)
+
+             Default : 500 Hexadecimal Bytes.
+
+             Description :
+
+             The macro specifies  the number of bytes,  (in HEX), for  the ISIS
+        output ring.
+
+             Example :
+
+                ORINGSZ(1000)
+
+             The size of the ISIS output ring is 1000 HEX bytes.
+
+
+
+
+
+
+                           10.8  BUFLET - Bufferlet Number.
+
+
+             Syntax : BUFLET(n)
+
+             Default : Calculated by the code.
+
+             Description :
+
+             This  macro  specifies  the  number  (in  decimal)  of  bufferlets
+        allocated  to a  3270 interface.   Each bufferlets  currently  holds 60
+        characters of  data.  The  number n should  be based  on the  number of
+        terminals associated  with the slot  and the nature  of the  traffic in
+        those terminal.
+
+             The values of the argument are the following:
+
+                NBBFLT + k = need k more bufferlets, where NBBFLT is the value
+                             based on the number of lines and ports assigned
+                             to the interface.
+                k          = need a fixed number k of bufferlets.
+
+        51                                                               PBH103
+        MACROS TO DEFINE HOST INTERFACE DEBUGGING PARAMETERS      July 30, 1987
+
+
+                -1         = set to the maximum number of bufferlets possible.
+
+
+             Example :
+
+                BUFLET(600)
+
+             This 3270 interface slot has 600 bufferlets allocated to it.
+
+
+
+
+
+
+                         10.9  CMDLNK - Number of Command Link
+
+
+             Syntax : CMDLNK(n)
+
+             Default: Based on the # of bufferlets plus a reserved low limit.
+
+             Description :
+
+             This macro specifies the number (in decimal) of command  links for
+        this interface.The  number selected  should be based  on the  number of
+        bufferlets plus one per device genned.
+
+             The values of the argument are the following:
+
+                NCMDLK + n = need n more command links, where NCMDLK is
+                             the value based on the number of bufferlets
+                             plus a minimum for the number of devices.
+                n          = need a fixed number of command links.
+
+
+             Example :
+
+                CMDLNK(NCMDLK+40)
+
+             The number of  command links is the  value based on the  number of
+        bufferlets plus a minimum for the number of devices plus 40.
+
+
+
+
+
+
+
+
+
+
+
+
+
+        52                                                               PBH103
+        MACROS TO DEFINE HOST INTERFACE DEBUGGING PARAMETERS      July 30, 1987
+
+
+                            10.10  PTRACE - Protocol Trace
+
+
+             Syntax : PTRACE(n)
+
+             Default : 1.
+
+             Description :
+
+             This macro enables the protocol trace. The protocol trace monitors
+        the line between host and host interface.
+
+             The protocal trace table contains a series of code showing the BSC
+        protocol exchange between HOST  INTERFACE and FRONT END  PROCESSOR.  It
+        is very useful in trouble-shooting the protocol problems.
+
+             The possible values of argument are the following:
+
+                positive value = enable the protocol trace and allocate n
+                                 multiple of 400-byte blocks for the protocol
+                                 trace table.
+                0              = disable protocal trace.
+
+
+             Example :
+
+             PTRACE(2)
+
+             The  protocol  trace  is  enabled;  the  protocol  trace  table is
+        expanded from 400 hex bytes to 800 hex bytes.
+
+
+
+
+
+
+                        10.11  GENNIB -- generate the nib file
+
+
+             Syntax: GENNIB(YES/NO)
+
+             Default: NO.
+
+             Description:  This  macro defines  whether  the nib  file  will be
+        generated if  there is  an assembly error,  undefined symbol  error, or
+        configuration error  during the  system generation.   The value  of the
+        arguments are the following:
+
+             YES  = the  nib file  will be  generated if  there is  an assembly
+        error, undefined symbol error or configuration error during  the system
+        generation.
+
+
+
+        53                                                               PBH103
+        MACROS TO DEFINE HOST INTERFACE DEBUGGING PARAMETERS      July 30, 1987
+
+
+             NO  = the nib file will  not be generated if there is  an assembly
+        error, undefined symbol error or configuration error during  the system
+        generation.
+
+             Example:GENNIB(YES)
+
+             During  the  system generation,  if  there is  an  assembly error,
+        undefined symbol error, or configuration error, the nib file will still
+        be generated.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        54                                                               PBH103
+                                                                  July 30, 1987
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      *   ****  ****  ***** *   * ****  ***** *   *
+                     * *  *   * *   * *     **  * *   *   *    * * 
+                    ***** ****  ****  ****  * * * *   *   *     *  
+                    *   * *     *     *     *  ** *   *   *    * * 
+                    *   * *     *     ***** *   * ****  ***** *   *
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        55                                                               PBH103
+        CRASH CODES FOR 3270 PBH INTERFACE                        July 30, 1987
+
+
+
+
+
+
+                   APPENDIX I.   CRASH CODES FOR 3270 PBH INTERFACE
+
+
+
+        Crash   Nearest         Localize        Crash Reason
+        Code    Label           Module
+
+        60      INDCR           FRNTND          NO ACTIVATION ROUTINE
+        60      INCN1           FRNTND          NO DCB WAS ASSIGNED
+                                                NO STATE TABLE WAS ASSIGNED
+                                                NO ACTIVATION ROUTINE WAS
+                                                ASSIGNED
+        61      SPECL           FRNTND          INVALID PORT 0 MESSAGE
+        62      INVAL           FRNTND          INVALID MESSAGE
+        63      INPUT3          FRNTND          INVALID PORT NUMBER,WHICH HAS
+                                                BEEN ACTIVE TO RECEIVE THE
+                                                NEEDLE
+        80      POM30           MAIN            INVALID PORT 0 MESSAGE
+        81      ZCRASH          MAIN            NO BIG BUFFERLET
+        81      SCRASH          MAIN            NO BIG BUFFERLET
+        81      PUTBC           MAIN            SAME
+        81      PUTBH           MAIN            SAME
+        81      PUTBX           MAIN            SAME
+        81      PUTBHX          MAIN            SAME
+        81      PBCRAS                          NO BIG BUFFERLETS
+        81      TSTMCR                          NBB
+        82      GETR05          MAIN            RELATIVE HOST NUMBER NOT FOUND
+        83      NXTSC                           NO NEXT ELEMENT FOR STORED
+                                                LOGON
+        84      GCL             CMDLST          COMMAND LINK LIST LOCKED FOR
+                                                 'GET'  PROCESS
+        84      GCL01           CMDLST          SAME AS ABOVE
+        85      PCL             CMDLST          COMMAND LINK LIST LOCKED FOR
+                                                 'PUT'  PROCESS
+        86      SRVCRA          BSCSRV          SVC ERROR,TRY TO CONNECT INPUT
+                                                TWICE FOR RECEIVE PROCESS.
+        86      BSX030          BSCSXM          SVC ERROR,TRY TO CONNECT INPUT
+                                                TWICE FOR TRANSMIT PROCESS
+        86      DSR020          BSCDTR          CONNECT INPUT SVC ERROR
+        86      DTRCRA                          SVC OUTPUT ERROR
+        86      DTR220          BSCDTR          CONNECT INPUT SVC ERROR
+        87      BSXCRA          BSCSXM          SVC ERROR,FORCE OUTPUT FAILED
+        87      BSXWCR          BSCSXM          TRANSMIT LIST TOO SMALL
+        87      BSXCRA          BSCSXM          FORCE OUTPUT SVC ERROR
+        87      BSXCRA          BSCSXM          FORCE OUTPUT SVC ERROR
+        88      BSXCRA          BSCSXM          ILLEGAL TRANSMIT OP CODE
+        89      BSXD02                          ILLEGAL BUFFER CHACACTER COUNT
+        8A      DAT120                          ILLEGAL IIX MSG
+        8B      GETBC           MAIN            NO BUFFER ASSIGNED TO GET NEXT
+
+        56                                                               PBH103
+        CRASH CODES FOR 3270 PBH INTERFACE                        July 30, 1987
+
+
+                                                CHARACTER
+        8D      DA.R11          MAIN            RAN OUT OF UNBUSY LINKS
+        8D      DA.X11          MAIN            RAN OUT OF UNBUSY LINKS
+        8E      FNTVH                           CAN'T FIND ASSOCIATED PRINTER
+        98      CLBUG           CMDLST          BUG IN COMMAND LIST USAGE
+        99      NOLNK           MAIN            NO LINK FOR MAP PROCESSING
+        99      CLFULL          CMDLST          COMMAND LINK HAS NO FREE LINK
+        D0      BUFERR          BBUFER          BIG BUFFERLET LISTS LOCKED WHEN
+                                                 'GET'
+        D0      PBB20           BBUFER          BIG BUFFERLET LISTS LOCKED WHEN
+                                                 'PUT'
+        D3      BBCKD                           BAD CHAIN ADDRESS
+        0F      TPT2            TIMEOUT         TIMEOUT FREE LIST EXHAUSTED
+        FF      PCRASH          BSCPTP          BISYNC LINE CRASH
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        57                                                               PBH103
+        SAMPLE HIF TYMFILE                                        July 30, 1987
+
+
+
+
+
+
+                           APPENDIX II.   SAMPLE HIF TYMFILE
+
+
+        :
+        :SAMPLE TYMFILE FOR THE 3270 HOST INTERFACE
+        :
+        :host number 900 has one BSC line and two login devices.
+        :host number 901 has one BSC line and three login devices.
+
+        :define the default value for line
+
+        DEFPOL(10)                      :host down if 10 sec. of no poll
+        PRTCON(YES)
+        DEFLIN(HITACHI)         : DEFINE DEFAULT HOST TYPE
+        DEFPOL(7200)
+        DEFRTS(NO)
+        OPTION(RNGTRC,YES)      : TURN ON RING TRACE
+        DEFMODE(REL)            : DEFAULT MODE IS RELATIVE
+
+        :define the default values for device
+
+        DEFTYP(C1920)                   :1920-character buffer terminal
+        DEFCOL(YES)                     :color capable
+        DEFXPR(YES)                     :transparency capable
+        DEFLUD(ALNAM)                   :all usernames can access this device
+        DEFMDS(MUL1)                    :multiple dsc by sequence mult1
+        DEFZAP(ZAPG)                    :zap message from host
+        DEFGRT(GRM1)                    :one greeting message to host
+        DEFNDL(YES)                     :dynamic greeting message to host
+        DEFIAT(120)                     :inactivity interval of 120 seconds
+
+
+        :The first line  has one control unit and three devices.
+
+        LINTYP(IBM)                     :line type is IBM
+        HSTPRT(900,3)                   :three devcies
+
+        LINE(40)                        :line 0, address 40
+           HOST(900)                    :host 900 associated with this BSC line
+
+           CUNIT(40)                    :CU# 0, address 40 attached to line 0
+
+              DEVICE(40)                :device 0, address 40
+                DISCON(DSCG)            :send single disconnect message
+                KKORKJ(ENG)             :Character set type is english
+                 INACT(90)              :inativity interval of 90 secconds
+
+              DEVICE(0C1)               :device 1, address 0C1
+                 LUD(LUD2)      :usernames start with IS can access the device
+
+        58                                                               PBH103
+        SAMPLE HIF TYMFILE                                        July 30, 1987
+
+
+                 ASSOC(0C2)             :an associated printer of address 0C2
+                 GREET(GRT1,GRT2)       :has two greeting message to host
+
+              DEVICE(0C2)               :device 2, address 0C2
+                 TYPE(P1920)            :printer with screen size 1920
+                 XPRNT(NO)              :can not handle transparency
+
+        :define the new default value for device parameters
+
+        DEFGRT(NONE)                    :no greeting message to host
+        DEFZAP(ZAPG)                    :zap message from host
+        DEFXPR(NO)                      :cannot handle transparancy
+
+
+        :The second line with one control unit and three devices
+
+        HSTPRT(901,3)
+
+        LINE(0C1)               :line 1, address 0C1
+           HOST(901)            :this line is associated with host 901
+           CUNIT(40)            :controlunit 0,address 40 attached to line 1
+              DEVICE(40)        :device 3, address 40
+                KKORKJ(KANA)    :character type kata kana
+
+              DEVICE(0C1)       :device 4, address 0C1
+                 INACT(0)       :disable inactivity timer if cmti release 4.03
+                                :and up are using  cmti timer and crm4
+                 MDS(MUL1)      :special exchange sequences is required
+                                :by the host when doing disconnect
+                 NEEDLE(NO)     :no dynamic greeting message to host
+                 ASSOC(0C2)     :an associated printer of address 0C1
+                 TYPE(C1920)    :a CRT with the screen of 1920
+
+              DEVICE(0C2)       :device 5, address 0C2
+                 INACT(0)       :disable inactivity timer if cmti release 4.03
+                                :and up are using  cmti timer and crm4
+                INVSTA(YES,40C2):intervention status message will be sent
+                 TYPE(P1920)    :asociated printer with the screen of 1920
+                 LUD(LUD1,LUD2) :username start with MN or IS can access
+                                :this device
+
+        :macros to define messages
+        :
+        : Send two Greeting Messages at the time circuit building completed
+        :
+        MSGTXT(GTM1,AIDENT,SP.,J.,N.,E.,T.,W.,O.,R.,K.,SP.,L.,O.,G.,O.,N.)
+        MSGTXT(GTM2,AIDENT,SP.,G.,A.,R.,E.,SP.,Y.,O.,U.,SP.,R.,E.,A.,D.,Y.)
+        :
+        : Message to send when network circuit is broken either
+        : by user or by network
+        :
+        MSGTXT(DSCG,N.,E.,T.,W.,O.,R.,K.,SP.,L.,O.,G.,O.,F.,F.)
+        :
+
+        59                                                               PBH103
+        SAMPLE HIF TYMFILE                                        July 30, 1987
+
+
+        : Multiple message exchange when circuit is brken either
+        : by user or network to terminate the session with the host
+        :
+        : First, Send Clear Key
+        MSGTXT(DSN1,A.CLR)
+        :
+        :Then expect a WRITE command with the sequence in the following order
+        :WCC + orders (SBA+cur. pos.,cur. pos.) + text
+        :
+        MSGTXT(DRC1,A.SBA,40,4B,L.,O.,G.,O.,F.,F.,?.)
+        :
+        : Respond with a text message of YES plus an enter key to host
+        :
+        MSGTXT(DSN2,A.ENT,40,4B,Y.,E.,S.)
+        :
+        : Expect to see Unlock Keyboard  from host
+        :
+        MSGTXT(DRC2,WCCK)
+        :
+        : Then send another text messge to host
+        :
+        MSGTXT(DSN3,A.ENT,40,7D,B.,Y.,E.,SP.,B.,Y.,E.)
+        :
+        : Define message from host to force user off the network
+        : Unlock Keyboard WCC + GET OFF THE NETWORK
+        :
+        MSGTXT(ZAPG,B.,G.,E.,T.,SP.,O.,F.,F.,SP.,T.,H.,E.,SP.,N.,E.,T.)
+        MSGTXT(CONT,W.,O.,R.,K.)
+        :
+        : Define sequence of events for Multiple Disconnect exchange.
+        :
+        MLTDMS(MUL1,DSN1,DRC1,DSN2,DRC2,DSN3)
+        :
+        : Macro to define Local User Directory(LUD) entry
+        :
+        LUDTRY(LUD1,M,N)                :usernames started with MN
+        LUDTRY(LUD2,I,S)                :usernames started with IS
+        :
+        : Macros to define slot parameters
+        :
+        STPCRSH(YES)                    :slot will halt after a crash
+        SAVQUE(YES)                     :enable the Save Queue feature
+        MAXPORT(2)                      :the maximum simutaneous users are two
+        SCNBUF(3)                       :three devices requiring screen
+                                        :buffers may be logged in
+                                        :simultaneously
+
+
+
+
+
+
+
+
+        60                                                               PBH103
+	(!?“
