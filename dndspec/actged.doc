@@ -1,0 +1,697 @@
+                                                              November 24, 1987
+
+
+
+
+
+
+
+
+             @     @@@@@   @@@@@  @@@@@@@        @@@@@  @@@@@@ @@@@@ 
+           @   @  @       @          @         @       @      @    @
+          @@@@@@@ @       @          @         @   @@  @@@    @    @
+          @     @ @       @          @         @    @  @      @    @
+          @     @  @@@@@   @@@@@     @         @@@@@  @@@@@@ @@@@@@ 
+
+
+                                 ENHANCED ACCT
+                                    COMMAND
+                            GENERAL EXTERNAL DESIGN
+
+
+                           Author:  Ashok N. Chippa
+                          NETWORK TECHNOLOGY DIVISION
+                               November 24, 1987
+
+
+
+
+
+
+
+
+
+
+     ********************************************************************
+     ***                  PROPRIETARY INfORMATION                     ***
+     ***                                                              ***
+     ***  MDC-TYMNET's proprietary  rights are included  in the       ***
+     ***  information disclosed herein.  The recipient, by receiving  ***
+     ***  this document,  agrees that neither this document nor  the  ***
+     ***  information disclosed herein nor any part thereof shall be  ***
+     ***  reproduced  or  transferred to other documents or used  or  ***
+     ***  disclosed  to  others for manufacturing or for  any  other  ***
+     ***  purpose  except as specifically authorized in  writing  by  ***
+     ***  MDC-TYMNET.                                                 ***
+     ********************************************************************
+
+
+
+
+
+
+
+
+
+
+
+                     Enhanced ACCT Command General External Design       ACTGED
+                                                              November 24, 1987
+
+
+
+
+
+
+
+                                   TABLE OF CONTENTS
+
+        Section                                                            Page
+
+
+
+        1.   Specifications                                                   1
+          1.1   Objectives                                                    1
+          1.2   Requirements                                                  1
+
+
+        2.   Description of the current ACCT and LACCT commands               3
+          2.1   ACCT command                                                  3
+          2.2   LACCT command                                                 3
+
+
+        3.   The new commands and Error Messsage 460                          5
+          3.1   The ACNT command                                              5
+          3.2   Accounting Error Log Message 460                              6
+             3.2.1    Subtype 1                                               7
+             3.2.2    Subtype 2                                               7
+             3.2.3    Subtype 3                                               7
+             3.2.4    Subtype 4                                               8
+             3.2.5    Subtype 5                                               8
+             3.2.6    Subtype 6                                               8
+
+          3.3   The ALOGE command                                             9
+          3.4   The ALOGD command                                             9
+
+
+                                      INDEX
+                                      =====                                  12
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                     Enhanced ACCT Command General External Design       ACTGED
+        Specifications                                        November 24, 1987
+
+
+
+
+
+
+                                  1 -  Specifications
+
+
+
+
+
+
+
+                                    1.1  Objectives
+
+
+             The  present ACCT  command in  PROBE displays  the number  of free
+        accounting  blocks available  for the  Supervisor to  write on  and the
+        current LACCT command displays  the last accounting block  collected by
+        an accounting collector like RAM (Raw Accounting Merger) in  the Public
+        Network.  The  information  provided  by  these  two  commands  in most
+        instances  is  insufficient  and  is only  a  part  of  the information
+        regarding the accounting activity. There is other data that  is related
+        to accounting that could be critical and very informative.
+
+             This design provides a new consolidated command to include all the
+        pertinent  and  critical  information related  to  accounting.  It also
+        leaves a history of various critical parameters for better  tracking of
+        accounting  activity over  a period  of time.  Currently the  Error log
+        entries  related  to  accounting  consist  of  a  single  message  (28)
+        regarding the  low availability of  the accounting blocks.  This design
+        logs substantially more information periodically onto the   PROBE Error
+        log.
+
+
+
+
+
+
+                                   1.2  Requirements
+
+
+             The new design provides a new ACNT command which includes  all the
+        pertinent and critical information related to accounting. It  also logs
+        this data periodically  onto the PROBE  Error Log for  better awareness
+        and control over accounting activity. This hopefully will enable timely
+        and  easier  trouble shooting  in  case of  accounting  emergencies and
+        problems.
+
+             The  new ACCOUNT  slave provides  the Supervisor  with information
+        regarding the  collection of  accounting blocks  by the  collector. The
+        Supervisor generates a new  accounting pertinent Error Log  message and
+        TMCS interpret this message in an appropriate manner.
+
+
+        ACTGED       Enhanced ACCT Command General External Design            1
+        Specifications                                        November 24, 1987
+
+
+             In  order to  meet the  objectives, code  changes are  required in
+        Supervisor, Probe, Account Slave and Split Kernel/ISIS.
+
+             The required  changes in  Supervisor are needed  to keep  track of
+        accounting accumulation and periodic logging of the accounting data.
+
+             The changes to  Probe are needed  to interpret Error  Log messages
+        and display the new ACNT command.
+
+             The changes to Account Slave are needed in order to keep  tract of
+        accounting  block collection  and  to communicate  with  Supervisor and
+        Probe.
+
+             The changes to Split  Kernel/ISIS are needed to allow  the Account
+        Slave to communicate with  Supervisor and Probe. Presently  the Account
+        Slave has access  only to the Supervisor  R/O area. These  changes will
+        provide the Account Slave with access to R/W area.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        ACTGED       Enhanced ACCT Command General External Design            2
+        Description of the current ACCT and LACCT commands    November 24, 1987
+
+
+
+
+
+
+                2 -  Description of the current ACCT and LACCT commands
+
+
+             The accounting file on  the Supervisor's disc is a  circular file.
+        The  Supervisor  writes accounting  blocks  to this  file  as  they are
+        generated in core.  The position  of next Supervisor write on  the disc
+        is maintained by the Supervisor in core and is stored in the checkpoint
+        sector on  the disc  every 10  hex blocks.   Account Slave  reads these
+        blocks  in order  to  transmit them  to the  collector.   Account Slave
+        informs the Supervisor of the collection by saving the  last accounting
+        block collected in the control  sector on the disc after  collection of
+        every 10 hex blocks.
+
+
+
+
+
+
+                                   2.1  ACCT command
+
+
+             The ACCT command provides the number of free blocks  available for
+        the Supervisor to write on. This is calculated using two  pointers, the
+        next block Supervisor is going to write (maintained by  the Supervisor)
+        and the last block collected (maintained by the ACCOUNT slave).
+
+        Example:
+
+        :ACCT
+        ACCOUNTING BLOCKS LEFT 13196
+
+
+             The above PROBE response  indicates that the Supervisor  can write
+        13196 (decimal) blocks before writing over the uncollected records.
+
+
+
+
+
+
+                                  2.2  LACCT command
+
+
+             The LACCT command provides the last block number collected  by the
+        collector (maintained by the ACCOUNT slave).
+
+        :LACCT
+        LAST ACCOUNT BLOCK COLLECTED 2176
+
+
+        ACTGED       Enhanced ACCT Command General External Design            3
+        Description of the current ACCT and LACCT commands    November 24, 1987
+
+
+             The above PROBE response  indicates that the last  block collected
+        by the collector is 2176 (decimal).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        ACTGED       Enhanced ACCT Command General External Design            4
+        The new commands and Error Messsage 460               November 24, 1987
+
+
+
+
+
+
+                     3 -  The new commands and Error Messsage 460
+
+
+             The new  ACNT command  consolidates the  ACCT, LACCT,  FRZACT (for
+        display only) commands  and includes additional  information pertaining
+        to  accounting.  The  new  Error  Log  message  460  contains  the same
+        information and is logged once every minute.
+
+
+
+
+
+
+                                 3.1  The ACNT command
+
+
+             The PROBE response to the new ACNT command will be as follows:
+
+        :ACNT
+        1 255:15:48:10
+        2 ACCOUNTING BLOCKS AVAILABLE       : 25364     **LOW AVAILABILITY**
+        3 LAST ACCOUNTING BLOCK COLLECTED   : 39938     255:15:47:53
+        4 LAST ACCOUNTING BLOCK WRITTEN     : 19856
+        5 TOTAL BLOCKS NOT COLLECTED        : 20178
+        6 ACCUMULATION RATE FOR PAST MINUTE : 160
+        7 COLLECTION RATE FOR PAST MINUTE   : 39        **COLLECTION INACTIVE**
+        8 LAST BLOCK COLLECTED CHANGED FROM : 30128     TO  28167  255:13:27:19
+        9 ACCOUNTING WRAP PROTECTION SET AT : 100
+
+
+             The numbers in the front are included for explanation only and are
+        not part of the display. All numbers are in decimal.
+
+             Line 1 indicates the  current UTC (Coordinated Universal  Time) as
+        255:15:48:10.
+
+             Line 2 indicates the number of free accounting blocks as 25364. If
+        the free accounting is low, a warning message is included.
+
+             Line 3 shows the last accounting block collected by  the collector
+        as 39938. The next block  the collector should collect would  be 39939.
+        The  display  also  includes  the UTC  time  when  the  last  block was
+        collected.
+
+             Line 4 shows the last accounting block written to the account file
+        by the Supervisor as 19856. The next accounting block to be  written is
+        19857.
+
+
+
+        ACTGED       Enhanced ACCT Command General External Design            5
+        The new commands and Error Messsage 460               November 24, 1987
+
+
+             Line 5 indicates the total number of blocks yet to be collected by
+        the collector as of 255:15:48:10.
+
+             Line 6 indicates the accumulation rate in blocks for the  past one
+        minute window. The  display indicates that  160 blocks were  written by
+        the Supervisor during the past one minute.
+
+             Line 7 indicates  the collection rate in  blocks for the  past one
+        minute window. The display  indicates that 39 blocks were  collected by
+        the collector during the past one minute. If the collection rate during
+        the past minute is zero, and there are accounting blocks to  collect, a
+        warning message is displayed as shown for illustration.
+
+             Line 8 shows the  change in the collection sequence.  Normally the
+        collector collects block at a time in a contiguous fashion. If  for any
+        reason the  collector decides  to collect from  a specific  block, this
+        will be indicated in the display. The above display indicates  that the
+        collector last  collected block 30128  and instead of  collecting block
+        30129 next, it chose to collect block 28167. The display also indicates
+        the UTC at which this happened.
+
+             Line  9  shows  the  accounting  wrap  protection  threshold.  The
+        Supervisor will freeze  if the number of  free blocks falls  below this
+        threshold. The display indicates that the Supervisor will freeze if the
+        number of free blocks falls below 100.
+
+
+
+
+
+
+                         3.2  Accounting Error Log Message 460
+
+
+             The Supervisor records the following data onto the PROBE Error log
+        periodically when active:
+
+                o The number of free blocks available
+                o Last accounting block collected and UTC at which collected
+                o Last accounting block written
+                o Total blocks not collected
+                o Accumulation rate for past one minute
+                o Collection rate for past one minute
+                o Last accounting block changed from value
+                o Last accounting block changed to value
+                o UTC at which this happened
+
+
+             Error Log message 460 is used to record this informatoin  onto the
+        Error Log. The message is  divided into subtypes. The subtypes  and the
+        information contained are as follows:
+
+
+
+        ACTGED       Enhanced ACCT Command General External Design            6
+        The new commands and Error Messsage 460               November 24, 1987
+
+
+                    3.2.1  Subtype 1
+
+             EM0460  Periodic accounting information recorded in Error Log
+
+           0001020304050607080910111213141516171819202122232425262728293031
+           +--------------------------------------------------------------+
+           |                Accounting blocks available                   |
+           +--------------------------------+---------------+-------------+
+           |            0000                |    00/01      |  subtype=01 |
+           +--------------------------------+---------------+-------------+
+
+
+             The second byte from right  if 01 indicates a low  availability of
+        the accounting blocks.
+
+
+
+
+
+                    3.2.2  Subtype 2
+
+           0001020304050607080910111213141516171819202122232425262728293031
+           +--------------------------------------------------------------+
+           |                            UTC                               |
+           +------------------------------------------------+-------------+
+           |        Last accounting block collected         |  subtype=02 |
+           +------------------------------------------------+-------------+
+
+
+
+
+
+
+                    3.2.3  Subtype 3
+
+           0001020304050607080910111213141516171819202122232425262728293031
+           +--------------------------------------------------------------+
+           |                 Last accounting block written                |
+           +------------------------------------------------+-------------+
+           |          Total blocks not collected            |  subtype=03 |
+           +------------------------------------------------+-------------+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        ACTGED       Enhanced ACCT Command General External Design            7
+        The new commands and Error Messsage 460               November 24, 1987
+
+
+                    3.2.4  Subtype 4
+
+           0001020304050607080910111213141516171819202122232425262728293031
+           +--------------------------------------------------------------+
+           |                 Accumulation rate for past minute            |
+           +------------------------------------------------+-------------+
+           |        Collection rate for past minute         |  subtype=04 |
+           +------------------------------------------------+-------------+
+
+
+
+
+
+
+                    3.2.5  Subtype 5
+
+           0001020304050607080910111213141516171819202122232425262728293031
+           +--------------------------------------------------------------+
+           |            Last block collected changed from value           |    
+           +------------------------------------------------+-------------+
+           |    Last block collected changed to value       |  subtype=05 |
+           +------------------------------------------------+-------------+
+
+
+
+
+
+
+                    3.2.6  Subtype 6
+
+           0001020304050607080910111213141516171819202122232425262728293031
+           +--------------------------------------------------------------+
+           |    UTC at which last collected block jumped - see type 05    |
+           +------------------------------------------------+-------------+
+           |                    000000                      |  subtype=06 |
+           +------------------------------------------------+-------------+
+
+
+             PROBE code will be modified to interpret the above 6  subtypes and
+        display them. The display will be similar to the ACNT command display.
+
+             TMCS may interpret these messages in an appropriate manner.
+
+
+
+
+
+
+
+
+
+
+
+
+        ACTGED       Enhanced ACCT Command General External Design            8
+        The new commands and Error Messsage 460               November 24, 1987
+
+
+                                3.3  The ALOGE command
+
+
+             This  Probe command  enables  the periodic  logging  of accounting
+        message 460 by the Supervisor. The command syntax is as follows.
+
+        :ALOGE <n><cr>
+
+
+             where n is an optional number of minutedecimal to be  used as
+        the time period for logging. The  value n is restricted to the  range 1
+        through 60.  This is reasonable since anything greater than an  hour is
+        informative to a much lesser  degree. If argument n is present  a Probe
+        'spy' entry is made.
+
+
+
+
+
+
+                                3.4  The ALOGD command
+
+
+             This Probe command disables the logging of the  accounting message
+        460.  The  command requires  Status  1 and  requires  the  Probe user's
+        password.  The command  also  makes a  Probe 'spy'  entry.  The command
+        syntax is as follows.
+
+        :ALOGD <cr>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        ACTGED       Enhanced ACCT Command General External Design            9
+        INDEX                                                 November 24, 1987
+
+
+                                         INDEX
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        ACTGED       Enhanced ACCT Command General External Design           10
+ Qz4Aæ
