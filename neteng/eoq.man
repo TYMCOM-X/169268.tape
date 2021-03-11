@@ -1,0 +1,743 @@
+                                   EOQ MANUAL 
+ 
+                                       Nancy Lau 
+                                       November 1987 
+ 
+ 
+    1.0  Introduction 
+ 
+         The EOQ program determines, for a specified rotary, the number of
+    ports to order so that the demand in ports is always satisfied over a
+    specific horizon period at minimum cost.  Most of the information used
+    by the program can either be done automatically or be input by the user
+    manually (see section 2.1 for required and optional files).  For a more
+    in-depth look at the model used in this program, see An Economic Order
+    Quantity Model for Local Rotaries (Memo No. MK002, September 1987). 
+ 
+ 
+    2.0  Implementation and Usage 
+ 
+         This section will cover the files used by the program and
+    step-by-step instructions on how to run the program. 
+ 
+         2.1  Files 
+ 
+         The files used by the program are broken into two categories:
+    required and optional.  Without the REQUIRED files, the program will not
+    be able to be executed.  Although the OPTIONAL files are desirable to
+    have, the information obtained from these may be input by the user
+    manually. 
+ 
+              2.1.1     Required Files 
+ 
+         MILGE.CST contains the traveling/holding costs for unmanned sites.
+    The format of the file is as follows: 
+ 
+         Column    Data Type           Description 
+ 
+         01-05     5 digit integer     lower bound on distance 
+         06-10     5 digit integer     upper bound on distance 
+         11-15     5 digit integer     cost (in dollars) 
+ 
+         The program finds the appropriate cost by comparing the traveling
+    distance to the entries in the file MILGE.CST. 
+ 
+ 
+         INSTL.CST contains the cost of installing an order by FE(s) as a
+    function of the number of lines to be installed.  The format of the file
+    is as follows: 
+ 
+         Column    Data Type           Description 
+ 
+         01-05     5 digit integer     lower bound on number of lines 
+         06-10     5 digit integer     upper bound on number of lines 
+         11-15     5 digit integer     cost in dollars 
+ 
+         The program finds the appropriate cost by comparing the number of
+    lines to be installed to the entries in the file INSTL.CST. 
+ 
+ 
+         For the above two files, all values are right justified. 
+ 
+ 
+              2.1.2     Optional Files 
+ 
+         FEMILE.DMS is a 1022 database file containing the mileage between a
+    given site and its nearest FE site (if the site is unmanned).  Also, the
+    site identification is given.  The format is as follows: 
+ 
+         Column    Var Name  Data Type           Description 
+ 
+         03-05*    NPA       3 characters        site area code 
+         07-09*    NXX       3 characters        site number prefix 
+         11-14*    XXXX      4 characters        site number suffix 
+         15-29     CITY      15 characters       site city name 
+         30-32     STATE     3 characters        site state name 
+         38-40     FENPA     3 digit integer     FE site number area code 
+         42-44     FENXX     3 digit integer     FE site number prefix 
+         45-59     FECITY    15 characters       FE city name 
+         60-62     FESTATE   3 characters        FE state name 
+         63-66     FEMILES   4 digit integer     mileage between sites 
+         41-44     SITEID    4 digit integer     site identification 
+ 
+    *  used as key for searching for the desired record 
+ 
+ 
+         (NETENG)EOQCON.DAT is a data file containing information on
+    the forecasts for specific sites for the next year, at two month
+    intervals.  This data file is produced by FRCST.FTF; for more
+    information on the forecasting procedures, see document G Site
+    Forecasting Models and Statistical Validation. The format for this file
+    is: 
+ 
+         Column    Data Type           Description 
+ 
+         002-013*  12 characters       site pilot number 
+         016-031   16 characters       site city and state 
+         034-038   5 digit integer     site current connect hours 
+         041-045   5 digit integer     E-site forecast (2 months) 
+         047-051   5 digit integer     E-site forecast (4 months) 
+         053-057   5 digit integer     E-site forecast (6 months) 
+         059-063   5 digit integer     E-site forecast (8 months) 
+         065-069   5 digit integer     E-site forecast (10 months) 
+         071-075   5 digit integer     E-site forecast (12 months) 
+         077-082   5 digit integer     G-site forecast (2 months) 
+         084-088   5 digit integer     G-site forecast (4 months) 
+         090-094   5 digit integer     G-site forecast (6 months) 
+         096-100   5 digit integer     G-site forecast (8 months) 
+         102-106   5 digit integer     G-site forecast (10 months) 
+         108-112   5 digit integer     G-site forecast (12 months) 
+         114       1 character         flag for unreliability of  
+                                            forecast 
+ 
+    *  used as key for searching for the desired record 
+ 
+ 
+         (NEWPRT)PORTS.DMS, a 1022 data base file, is used to obtain the
+    following information: 
+ 
+         Column    Var Name  Data Type           Description 
+ 
+         001-005   NODE      5 digit integer     node number 
+            . 
+            . 
+         030-049   NCITY     20 character        city of node 
+         050-052   NSTATE    3 character         state of node 
+            . 
+            . 
+         127-140*  PILOT     14 character        pilot number of node 
+ 
+    *  used as key for searching for the desired record 
+ 
+ 
+         (NETSTAT)CKTS.DMS is accessed to obtain a site's identification
+    number: 
+ 
+         Column    Var Name  Data Type           Description 
+ 
+            . 
+            .
+         064-067   SITE1     4 digit integer     site identification number 
+            . 
+            . 
+         194-196*  NPA1      3 digit integer     site area code 
+         198-200*  NXX1      3 digit integer     site prefix 
+            . 
+            . 
+ 
+    *  used as key for searching for the desired record 
+ 
+         NOTE: This file is not accessed for the site identification number
+    if it is found in the file FEMILE.DMS, which is accessed first. 
+ 
+ 
+         (DBTARIFF)LATA.DMS is used to obtain the V and H coordinates for a
+    specific site: 
+ 
+         Column    Var Name  Data Type           Description 
+ 
+         01-05     V         5 digit integer     V coordinate 
+         06-10     H         5 digit integer     H coordinate 
+           . 
+           . 
+         32-34*    NPA       3 digit integer     site area code 
+         35-37*    NNX       3 digit integer     site prefix 
+           . 
+           . 
+ 
+    *  used for key for searching for the desired record 
+ 
+ 
+         (PGRADE)EOQ.INF is a report file that is accessed to obtain the
+    average daily connect hours for a specific site. This file will be
+    created month for the entire network, for the calendar month period. 
+ 
+ 
+         2.2  Step-by-step Instructions 
+ 
+         The program and the files it requires are on system 38.  Log in,
+    and type in at the prompt: 
+ 
+              - RUN EOQ 
+ 
+         The program will give you a startup screen; hit any key to
+    continue.  Next, you must type in the type of terminal you are using
+    (follow screen instructions). 
+ 
+         There are two types of program input: manual by the user, and
+    automatic through a file. 
+ 
+              2.2.1     Manual by User 
+ 
+         The program will prompt you for the following information: 
+ 
+         .  rotary pilot number 
+         .  area code/prefix of closest manned FE site (this only if the 
+            rotary has not been previously reviewed since a record does not 
+            exist for the site in the file FEMILE.DMS) 
+         .  forecast preferred (exponential smoothing vs. G-site) 
+         .  horizon period and review frequency 
+ 
+         When all the information has been received by the program (except
+    for the horizon period and review frequency) the user will then have the
+    opportunity to change any of the values, which will be displayed on the
+    screen.  When there are no changes to be made, the user will input the
+    horizon period and review frequency; the EOQ report for that site will
+    then be produced.  
+ 
+         Although most of the information the program uses come from
+    existing files, the user may input these manually: 
+ 
+         .  mileage between site and FE site (vs. FEMILE.DMS) 
+         .  forecast for site (vs. EOQCON.DAT) 
+         .  current number of ports (vs. the number of ports found in the 
+              file (NEWPRT)PORTS.DMS) 
+         .  average peak rate of rotary (vs. EOQ.INF) 
+ 
+              2.2.2     Automatic through a File 
+ 
+         The input for the program may be contained in a flat file.  The
+    user will be prompted for the file name if this option is chosen.  The
+    format of this file must be as follows: 
+ 
+                                                 Columns        Format 
+ 
+         Line 1:   rotary pilot number #1        01-10          I3,I3,I4 
+         Line 2:   rotary average peak %         01-05          F5.1 
+         Line 3:   rotary review frequency       01             I1 
+         Line 4:   rotary horizon period         01-02          I2 
+         Line 5:   rotary pilot number #2        01-10          I3,I3,I4 
+         Line 6:   rotary average peak %         01-05          F5.1 
+            .                .                     . 
+            .                .                     . 
+ 
+         For automatic input, all the information needed by the program must
+    be contained in files; the optional files become required when this
+    option is chosen.  If some information is missing for a particular
+    rotary, the user will be notified.  An error message will be printed
+    instead of the EOQ report.  This will occur if: 
+ 
+              1.   pilot number does not exist in PORTS.DMS 
+              2.   no matching record in FEMILE.DMS 
+              3.   no forecast in EOQCON.DAT 
+              4.   forecast does exist in EOQCON.DAT, but all the 
+                   forecast values were zeroes 
+ 
+ 
+    3.0  Sample Runs 
+                                          
+         This section contains an actual run of the EOQ program.  The dotted
+    line signifies a new screen. 
+ 
+    -run eoq 
+ 
+    LOADING
+    EXECUTION
+ 
+ 
+ 
+ 
+ 
+            ******************************************
+            *                                          *
+            *  WELCOME    TO    THE    EOQ    PROGRAM  *
+            *                                          *
+            *                                          *
+            *    FOR    LOCAL    ROTARY    UPGRADE     *
+            *                                          *
+            *                                          *
+            *               VERSION 1.0                *
+            ********************************************
+ 
+ 
+ 
+ 
+     PLEASE ENTER YOUR TERMINAL TYPE:
+                        1.  MODEL 425
+                        2.  MODEL 444
+                        3.  OTHER    ->3
+ 
+    --------------------------------------------------------------------- 
+ 
+    INPUT FOR THIS RUN OF THE EOQ PROGRAM WILL BE:
+ 
+ 
+ 
+ 
+        1.  MANUAL- USER SUPPLIED
+ 
+        2.  A USER SUPPLIED  FILE
+ 
+ 
+       => 1 
+ 
+    ENTER THE PILOT NUMBER   (NPANXXXXXX;10 DIGITS) ->2135877514
+ 
+    --------------------------------------------------------------------- 
+ 
+                                 FORECASTS:
+ 
+ 
+             MONTH     1. EXPONENTIAL          2. G SITE
+             -----     --------------          ---------
+ 
+ 
+                2            114                   123
+                4            126                   135
+                6            138                   147
+                8            150                   160
+               10            162                   173
+               12            174                   187
+ 
+ 
+             WHICH FORECAST (1/2) : 1 
+ 
+    --------------------------------------------------------------------- 
+ 
+          CURRENT VALUES FOR PILOT: 213/587-7514
+ 
+     1. CITY:VERNON                     2. STATE: CA
+ 
+     3. NODE(S): 6575                   4. SITE ID: 6773
+ 
+     5. FE(S) TRAVELING DIST.:    0     6. CURRENT NO. OF PORTS:   23
+        FE CITY, STATE: VERNON         CA
+ 
+     7. CURRENT NUMBER OF CONNECT HOURS:  107
+ 
+     8. CURRENT PERCENTAGE OF CALLS DURING
+        HEAVIEST TRAFFIC HOUR OF DAY       : 11.5
+ 
+     9. FORECAST
+             NOV     110    MAY     144
+             DEC     114    JUN     150
+             JAN     120    JUL     156
+             FEB     126    AUG     162
+             MAR     132    SEP     168
+             APR     138    OCT     174
+ 
+    SELECT THE PARAMETER TO BE CHANGED:
+                      0 FOR NO CHANGES ->8 
+ 
+    ENTER NEW PERCENTAGE FOR PEAK HOUR: ->10.5
+ 
+    --------------------------------------------------------------------- 
+ 
+          CURRENT VALUES FOR PILOT: 213/587-7514
+ 
+     1. CITY:VERNON                     2. STATE: CA
+ 
+     3. NODE(S): 6575                   4. SITE ID: 6773
+ 
+     5. FE(S) TRAVELING DIST.:    0     6. CURRENT NO. OF PORTS:   23
+        FE CITY, STATE: VERNON         CA
+ 
+     7. CURRENT NUMBER OF CONNECT HOURS:  107
+ 
+     8. CURRENT PERCENTAGE OF CALLS DURING
+        HEAVIEST TRAFFIC HOUR OF DAY       : 10.5
+ 
+     9. FORECAST
+             NOV     110    MAY     144
+             DEC     114    JUN     150
+             JAN     120    JUL     156
+             FEB     126    AUG     162
+             MAR     132    SEP     168
+             APR     138    OCT     174
+ 
+    SELECT THE PARAMETER TO BE CHANGED:
+                      0 FOR NO CHANGES ->0 
+ 
+    ---------------------------------------------------------------------
+ 
+        FREQUENCY OF REVIEW - HORIZON PERIOD COMBINATIONS ALLOWED
+ 
+ 
+ 
+    CHOICE     FREQENCY (MONTHS)    HORIZON(MONTHS)
+    ------     -----------------     --------------
+        1.            3                   6
+        2.            3                   9
+        3.            3                  12
+        4.            4                   8
+        5.            4                  12
+        6.            6                  12
+ 
+ 
+    GROWTH FORECAST FOR NEXT  6 MONTHS:   29.0%
+    GROWTH FORECAST FOR NEXT 12 MONTHS:   62.6%
+ 
+ 
+    ENTER THE COMBINATION CHOICE:  ->3
+    IS YOUR PRINTER READY?
+    TYPE ANY KEY WHEN READY 
+ 
+    --------------------------------------------------------------------- 
+ 
+    PILOT: 213/587-7514               CITY, STATE: VERNON    , CA
+    SITE ID:  6773                    NODE(S):   6575
+ 
+    SITE IS MANNED
+    CURRENT DATE:      27-OCT-87
+ 
+    CURRENT NO. OF PORTS:  23
+    CURRENT NO. OF CONNECT HOURS:  107
+    CURRENT % OF CALLS DURING HEAVIEST TRAFFIC HOUR:   10.5
+ 
+    REVIEW FREQUENCY:   3 MONTHS
+    HORIZON:           12 MONTHS
+ 
+ 
+    EXPECTED MONTHLY COST OVER THE NEXT 12 MONTHS: $    136.33
+ 
+ 
+              *** FORECAST OF PORTS FROM NOV-87 TO OCT-88 ***
+ 
+     MONTH/   !  CONNECT HRS/ !   NUMBER OF   !   PGRADE   !
+      YEAR    !  BUSINESS DAY !  PORTS NEEDED ! PERCENTAGE !
+    ------------------------------------------------------
+     NOV/87              110            20           .7
+     DEC/87              114            20          1.0
+     JAN/88              120            21           .9
+     FEB/88              126            22           .8
+     MAR/88              132            23           .7
+     APR/88              138            24           .6
+     MAY/88              144            24           .9
+     JUN/88              150            25           .8
+     JUL/88              156            26           .7
+     AUG/88              162            27           .6
+     SEP/88              168            27           .9
+     OCT/88              174            28           .8
+ 
+    **** EXPONENTIAL SMOOTHING FORECAST VALUES USED
+ 
+ 
+                     ***NEXT REVIEW DATE***
+                           27-JAN-88
+ 
+ 
+                      ***ORDER QUANTITY***
+ 
+    NUMBER OF PORTS TO BE INSTALLED:     1   DUE DATE: JAN-88
+    NUMBER OF PORTS TO BE INSTALLED:     4   DUE DATE: APR-88
+    NUMBER OF PORTS TO BE INSTALLED:     0   DUE DATE: JUL-88
+ 
+               *** REMARKS ***
+ 
+    TROUBLE TICKET ISSUED (Y/N)?
+ 
+    TICKET #:
+ 
+    DATE ISSUED:
+ 
+    --------------------------------------------------------------------- 
+ 
+    EXIT? (1=Y/0=N)
+ 
+    0
+    ENTER THE PILOT NUMBER   (NPANXXXXXX;10 DIGITS) ->2135870030
+ 
+    --------------------------------------------------------------------- 
+ 
+                                 FORECASTS:
+ 
+ 
+             MONTH     1. EXPONENTIAL          2. G SITE
+             -----     --------------          ---------
+ 
+ 
+                2            800                   840
+                4            825                   840
+                6            850                   840
+                8            876                   840
+               10            901                   840
+               12            926                   840
+ 
+ 
+             WHICH FORECAST (1/2) : 1
+ 
+    ENTER THE PERCENTAGE OF CALL THAT OCCURS DURING
+    THE HEAVIEST TRAFFIC HOUR OF THE  DAY:         ->10.7
+ 
+    --------------------------------------------------------------------- 
+ 
+          CURRENT VALUES FOR PILOT: 213/587-0030
+ 
+     1. CITY:VERNON                     2. STATE: CA
+ 
+     3. NODE(S): 5241 5242              4. SITE ID: 6773
+ 
+     5. FE(S) TRAVELING DIST.:    0     6. CURRENT NO. OF PORTS:  139
+        FE CITY, STATE: VERNON         CA
+ 
+     7. CURRENT NUMBER OF CONNECT HOURS:  741
+ 
+     8. CURRENT PERCENTAGE OLS DURING
+        HEAVIEST TRAFFIC HOUR OF DAY       : 10.7
+ 
+     9. FORECAST
+             NOV     770    MAY     863
+             DEC     800    JUN     876
+             JAN     812    JUL     888
+             FEB     825    AUG     901
+             MAR     837    SEP     913
+             APR     850    OCT     926
+ 
+    SELECT THE PARAMETER TO BE CHANGED:
+                      0 FOR NO CHANGES ->0
+ 
+    ---------------------------------------------------------------------
+ 
+        FREQUENCY OF REVIEW - HORIZON PERIOD COMBINATIONS ALLOWED
+ 
+ 
+ 
+    CHOICE     FREQENCY (MONTHS)    HORIZON(MONTHS)
+    ------     -----------------     --------------
+        1.            3                   6
+        2.            3                   9
+        3.            3                  12
+        4.            4                   8
+        5.            4                  12
+        6.            6                  12
+ 
+ 
+    GROWTH FORECAST FOR NEXT  6 MONTHS:   14.7%
+    GROWTH FORECAST FOR NEXT 12 MONTHS:   25.0%
+ 
+ 
+    ENTER THE COMBINATION CHOICE:  ->3 
+ 
+    IS YOUR PRINTER READY?
+    TYPE ANY KEY WHEN READY 
+ 
+    --------------------------------------------------------------------- 
+ 
+    PILOT: 213/587-0030               CITY, STATE: VERNON    , CA
+    SITE ID:  6773                    NODE(S):   5241  5242
+ 
+    SITE IS MANNED
+    CURRENT DATE:      27-OCT-87
+ 
+    CURRENT NO. OF PORTS: 139
+    CURRENT NO. OF CONNECT HOURS:  741
+    CURRENT % OF CALLS DURING HEAVIEST TRAFFIC HOUR:   10.7
+ 
+    REVIEW FREQUENCY:   3 MONTHS
+    HORIZON:           12 MONTHS
+ 
+ 
+    EXPECTED MONTHLY COST OVER THE NEXT 12 MONTHS: $    347.92
+ 
+ 
+              *** FORECAST OF PORTS FROM NOV-87 TO OCT-88 ***
+ 
+     MONTH/   !  CONNECT HRS/ !   NUMBER OF   !   PGRADE   !
+      YEAR    !  BUSINESS DAY !  PORTS NEEDED ! PERCENTAGE !
+    ------------------------------------------------------
+     NOV/87              770            99           .9
+     DEC/87              800           102           .9
+     JAN/88              812           103          1.0
+     FEB/88              825           105           .9
+     MAR/88              837           106          1.0
+     APR/88              850           108           .9
+     MAY/88              863           109          1.0
+     JUN/88              876           111           .9
+     JUL/88              888           112           .9
+     AUG/88              901           114           .9
+     SEP/88              913           115           .9
+     OCT/88              926           116          1.0
+ 
+    **** EXPONENTIAL SMOOTHING FORECAST VALUES USED
+ 
+ 
+                     ***NEXT REVIEW DATE***
+                           27-JAN-88
+ 
+ 
+                      ***ORDER QUANTITY***
+ 
+    NUMBER OF PORTS TO BE INSTALLED:     0   DUE DATE: JAN-88
+    NUMBER OF PORTS TO BE INSTALLED:     0   DUE DATE: APR-88
+    NUMBER OF PORTS TO BE INSTALLED:     0   DUE DATE: JUL-88
+ 
+               *** REMARKS ***
+ 
+    TROUBLE TICKET ISSUED (Y/N)?
+ 
+    TICKET #:
+ 
+    DATE ISSUED:
+ 
+    --------------------------------------------------------------------- 
+ 
+    EXIT? (1=Y/0=N)
+ 
+    0
+    ENTER THE PILOT NUMBER   (NPANXXXXXX;10 DIGITS) ->6172266441
+ 
+    ENTER NEAREST FE PILOT NUMBER
+              0 IF SITE IS MANNED:-> 617439 
+ 
+    --------------------------------------------------------------------- 
+ 
+                                 FORECASTS:
+ 
+ 
+             MONTH     1. EXPONENTIAL          2. G SITE
+             -----     --------------          ---------
+ 
+ 
+                2             38                    37
+                4             40                    39
+                6             43                    41
+                8             47                    43
+               10             50                    45
+               12             53                    47
+ 
+ 
+             WHICH FORECAST (1/2) : 2 
+ 
+    ENTER THE PERCENTAGE OF CALL THAT OCCURS DURING
+    THE HEAVIEST TRAFFIC HOUR OF THE  DAY:         ->10.9
+ 
+    --------------------------------------------------------------------- 
+ 
+          CURRENT VALUES FOR PILOT: 617/226-6441
+ 
+     1. CITY:ATTLEBORO                  2. STATE: MA
+ 
+     3. NODE(S): 7735                   4. SITE ID:
+ 
+     5. FE(S) TRAVELING DIST.:   30     6. CURRENT NO. OF PORTS:   12
+        FE CITY, STATE: BOSTON         MA
+ 
+     7. CURRENT NUMBER OF CONNECT HOURS:   34
+ 
+     8. CURRENT PERCENTAGE OF CALLS DURING
+        HEAVIEST TRAFFIC HOUR OF DAY       : 10.9
+ 
+     9. FORECAST
+             NOV      35    MAY      42
+             DEC      37    JUN      43
+             JAN      38    JUL      44
+             FEB      39    AUG      45
+             MAR      40    SEP      46
+             APR      41    OCT      47
+ 
+    SELECT THE PARAMETER TO BE CHANGED:
+                      0 FOR NO CHANGES ->0
+ 
+    ---------------------------------------------------------------------
+ 
+        FREQUENCY OF REVIEW - HORIZON PERIOD COMBINATIONS ALLOWED
+ 
+ 
+ 
+    CHOICE     FREQENCY (MONTHS)    HORIZON(MONTHS)
+    ------     -----------------     --------------
+        1.            3                   6
+        2.            3                   9
+        3.            3                  12
+        4.            4                   8
+        5.            4                  12
+        6.            6                  12
+ 
+ 
+    GROWTH FORECAST FOR NEXT  6 MONTHS:   20.6%
+    GROWTH FORECAST FOR NEXT 12 MONTHS:   38.2%
+ 
+ 
+    ENTER THE COMBINATION CHOICE:  ->6 
+ 
+    IS YOUR PRINTER READY?
+    TYPE ANY KEY WHEN READY
+ 
+    --------------------------------------------------------------------- 
+ 
+    PILOT: 617/226-6441               CITY, STATE: ATTLEBORO , MA
+    SITE ID:                          NODE(S):   7735
+ 
+    UNMANNED SITE; FE(S) TRAVELING DISTANCE IS:  30 MILES
+         FE CITY, STATE: BOSTON    , MA
+ 
+    CURRENT DATE:      27-OCT-87
+ 
+    CURRENT NO. OF PORTS:  12
+    CURRENT NO. OF CONNECT HOURS:   34
+    CURRENT % OF CALLS DURING HEAVIEST TRAFFIC HOUR:   10.9
+ 
+    REVIEW FREQUENCY:   6 MONTHS
+    HORIZON:           12 MONTHS
+ 
+ 
+    EXPECTED MONTHLY COST OVER THE NEXT 12 MONTHS: $     18.75
+ 
+ 
+              *** FORECAST OF PORTS FROM NOV-87 TO OCT-88 ***
+ 
+     MONTH/   !  CONNECT HRS/ !   NUMBER OF   !   PGRADE   !
+      YEAR    !  BUSINESS DAY !  PORTS NEEDED ! PERCENTAGE !
+    ------------------------------------------------------
+     NOV/87               35            10           .4
+     DEC/87               37            10           .6
+     JAN/88               38            10           .7
+     FEB/88               39            10           .8
+     MAR/88               40            10           .9
+     APR/88               41            11           .4
+     MAY/88               42            11           .5
+     JUN/88               43            11           .6
+     JUL/88               44            11           .6
+     AUG/88               45            11           .7
+     SEP/88               46            11           .8
+     OCT/88               47            11          1.0
+ 
+    **** G SITE FORECAST VALUES USED
+ 
+ 
+                     ***NEXT REVIEW DATE***
+                           27-APR-88
+ 
+ 
+                      ***ORDER QUANTITY***
+ 
+    NUMBER OF PORTS TO BE INSTALLED:     0   DUE DATE: APR-88
+ 
+               *** REMARKS ***
+ 
+    TROUBLE TICKET ISSUED (Y/N)?
+ 
+    TICKET #:
+ 
+    DATE ISSUED:
+ 
+    --------------------------------------------------------------------- 
+ 
+    EXIT? (1=Y/0=N)
+ 
+    1
+ 
+    EXIT
+ 
+    -
+fP{e$
