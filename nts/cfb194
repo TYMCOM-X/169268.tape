@@ -1,0 +1,524 @@
+
+
+
+CFB NO.:  194                                        DATE:  JULY  9, 1991     
+
+REV LEVEL:  0                                DATE CHANGED:  JULY  9, 1991     
+
+TYPE:  HARDWARE
+HARDWARE:  TURBO ENGINE
+SUBJECT:  TURBO ENGINE DESCRIPTION AND STRAPPING
+
+
+The Turbo Engine product line (referred to as "Turbo" in this CFB) is
+available in three basic models, based on cabinet size.  All three models
+use the same boardset, cables and strapping.  This CFB describes the
+basic configuration and strapping of the boards.  It also describes
+basic configuration notes.
+
+
+Each Turbo is composed of a number of chassis within a cabinet.  Each
+chassis consists of a cardcage with strappable backplane, General
+Processor (GP) boards, Input Output Controller (IOC) 4 and 8 port boards,
+paddlecards (RS232, V.35, RS422), breakout panels to let the cables out of
+the chassis, and a disk drive.  Each chassis provides cooling, power, and
+cable outlets.   The cabling to a turbo is done through breakout panels.
+
+CONFIGURATION LIMITATIONS
+
+HARDWARE:
+
+The T4800 contains four chassis, and the  T2400 has 2 and the T1200 one.
+Each chassis  can hold 20 boards, or 17 boards and a T1200 disk unit.
+Due to addressing limitations, only 16 of one type of board can be in
+any chassis.  Each chassis is an individual node; multiple chassis cannot
+be connected to make one node, and Multi Node Code (MNC) has multiple
+instances of node code, not multiple nodes.  One board (GP.128) must
+be configured as the File Server Board, and cannot run any other slots.
+It is recommended that one GP be assigned to backup the other slots.
+
+IOC4 boards are paired with V.35 paddle cards and RS-422 paddlecards.
+They will perform up to 256 kb/s throughput for the overall board-
+more in some configurations (this is software limited.)  IOC8's are
+paired with RS-232 paddlecards, and have 72 kb/s throughput, with
+a maximum speed per channel of 16 kb/s.  This will improve with a
+future software release.
+
+Breakout panels are available in a large number of configurations.
+Up to 64 lines can be configured on a chassis.  The breakout mix
+determines the exact number.
+
+PERFORMANCE
+
+Contact Product Marketing (Ned Chini) for exact performance numbers.
+
+ASSEMBLY
+
+The Turbo is based on the VME buss for board communication, and SCSI buss
+for disk communication.  Each chassis has its own disk that it loads the
+software from, including the firmware adjuncts (SCPG AND SCPI) and Node
+Code and slot code.  The VME buss connects the GP's and IOC's on the front
+of the machine, and the IOC's to the paddlecards on the back.  The paddlecards
+then break out using various internal cables to sheetmetal panels called
+breakout plates.  Internodal cabling is run from the breakout plates.
+A large variety of connections are thus possible.
+
+POWER SUPPLIES
+
+Turbo power is provided by multiple power supplies in parallel, using
+load sharing techniques.  The power is distributed through a buss bar
+(T4800 and T2400) or directly (T1200) and can be measured either at the
+back of the unit next to the chassis DC breaker or at a power measurement
+card at the front.  The voltage tolerances are:
+
+  +5     5.00  + OR - .25
+  +12  +12.50  + OR - .5
+  -12  -12.00  + OR  -.5
+
+Adjustment is a complicated process.  Please refer to the maintenance
+manual.
+
+Replacement of the power supplies while the machine is still powered
+on is possible ("hot swap of power supplies").  If a power supply goes
+into over voltage condition because it is shorted, or the demand on it
+is too great, the +12 volt red LED on the DC switching
+box will go out.  The DC switching box is above the lower power
+supplies.  If it is neccesary to swap power supplies:
+
+The order in removing a power supply is:
+
+1. Remove the sensing cable.
+
+2. Remove the +5 volt power cable, being very careful not to touch the
+   metal on either the power supply or the cable.
+
+3. Turn off the power supply at the DC switching block.
+
+4. Remove the + and - 12 volt cable from the DC switching block.
+
+5. Remove the ground return line.
+
+6. The power supply may now be removed.
+   The supply is mounted on a tray, secured by a screw in the front.
+
+To replace a power supply, reverse these steps.
+
+POWER SWITCH LOCATIONS:
+
+There are three power switches that affect the turbo: the main AC breaker,
+located in the back of the machine near the power plug, the switch for
+each power supply, located in the DC switching block, and the chassis
+DC breaker, hidden behind the breakout panel.  Unless the whole turbo
+needs to be taken down for moving, it is recommended that the only
+switch to be used be the chassis DC breaker.
+
+CHASSIS STRAPPING:
+
+The backplane of the chassis presents a variety of jumpers.  At the
+current time, the only two in use are the buss grant level 2 and level 3
+jumpers.  These need to be in (jumpers on) for empty slots, and removed
+when a card is inserted into the slot.  These are the bottom two jumpers
+of a block of four, in the center between the boards, to the left of the
+slot.
+
+
+GENERAL PROCESSOR STRAPPING:  (470301-001)
+FILE SERVER STRAPPING:        (470300-001)
+
+GP addressing:  The GP board is addressed on the VME buss using SW1 and
+LK9 (LinK or Jumper 9).  The range of addresses is from 128 to 143.  This
+is a four bit binary address with a base of 128.  The order of the bits is
+LK9 SW1P1 SW1P2 SW1P3.  (SW1P1 is Switch one, position one.)  ON or closed,
+which is towards the card edge, is a binary zero, and OFF or open a binary
+one.  This is more fully explained in the maintenance manual.
+
+The first (leftmost) GP in the chassis is the master board for the buss
+and the disk controller board.  This board, known as the File Server, has
+4 different straps from the standard GP: it has LK15, LK16, LK17 and LK18
+on.  Note that there are three levels of board artwork in the field: 1.1,
+1.2 and 1.3.  The 1.3 artwork will be most common; it has LK1, which the
+other two do not.  The orientation of the board is with the front edge to
+the left, looking at the component side.
+
+There are a number of other straps.
+
+	STRAP 		LOCATION 	USE		ON/OFF
+	-----		--------	---		------
+
+	LK1		Between 68020 and PMMu		Jumper 1-2
+							(Artwork 1.3 and later)
+	LK9		Lower Right	Adressing	On below VME 136
+	LK 10		Lower Right	Not Used	No Jumper
+	LK11		Lower Left	SCSI ID 0	Jumper on 1-2
+	LK12		Lower Left	SCSI ID 1	Jumper 1-2
+	LK13		Lower Left 	SCSI ID 2	Jumper 1-2
+	LK15		Upper Right	Buss Grant Enable Jumper 1-2 for FS
+							No jumper for GP
+	LK16		Center Right	Buss Sysclock	Jumper 1-2 for FS
+							No jumper for GP
+	LK17		Center Right	Buss Clear	Jumper 1-2 for FS
+							No jumper for GP
+	LK18		Upper Rightish	Buss Error	Jumper 1-2 for FS
+							No jumper for GP
+	LK24		Upper Center	Buss Grant 3	Jumper 2-3
+	LK25		Upper Center	Buss Grant 3	Jumper 1-2 3-4
+	LK26		Upper Center	Buss Grant 3	Jumper 2-3
+	LK27		Upper Center	Buss Grant 3	Jumper 2-3
+	LK28		Center Center	Buss Grant 3	3-3A
+	LK29		Center Center			No Jumper
+	LK30		Center Center			No Jumper
+	LK31		Center Center	Delay		Jumper 1-2
+	LK32		Center Left Edge Handling	Jumper 1-2
+	LK33		Center Left	Timing		Jumper 2-3
+	LK34		Center Left	Error		Jumper 1-2
+
+
+
+IOC 4 and 8 STRAPPING:
+PADDLECARD STRAPPING:
+
+There is no hardware strapping on the IOC as the strapping is done on
+the paddlecards.  Software strapping is done on the IOC's in the MONITOR.
+
+On any paddlecard, there will be an 8 position switch
+and a number of jumpers.  The switch controls the VME address of the board,
+with a base of 80, OPEN being a 1 and CLOSED being a 0, using binary
+addressing.  Note that position 8 is used in some versions of firmware
+to enable TEDS (Turbo Engine Diagnostic System) and should allways be open.
+
+Note that it is prefered that the Turbo provide both clocks to an engine,
+and in Turbo-Turbo connections, one side should provide both clocks,
+and one side recieve them.  This will minimize the number of HDLC aborts
+and reduce clocking problems.
+
+SOFTWARE STRAPPING:
+
+Software strapping is accomplished using the IOC Monitor on the IOC
+to be strapped.  Log into from SKYSAP the IOC board that is being strapped:
+
+CONN IOC4.82:MONITOR  (Using IOC4.82 as an example)
+
+and then use the monitor to check the configurations:
+
+DPC will display the full port configuration, in the form
+
+IOC4.82:MONITOR> DPC 0  (IOC4.82:MONITOR> is the prompt, 0 is the port example)
+
+If you receive the "Access denied" error message you are not on the Good Guy
+list for the Monitor.
+
+Full instructions can be found in the IOCP manual for all the commands.
+
+To actually strap the port, type MPC <port number> and follow the options.
+
+The first option is always the protocol.  The protocols are ASYNC, TYMSYNC,
+HDLC, HDLC With DMA Data Transfers.  If the line is sync rather than Async,
+pick option C (HDLC) for an IOC8 and option D for an IOC4.
+
+The second option is the baud rate available.  Select the appropriate speed
+from the list: J (9600), (L) 19.2k, etc.
+
+The third option is whether SCLP is enabled.  Unless the line is to be used
+for emergency downloads, enter A (No), as having SCLP on limits the performance
+of the machine.
+
+The final options are the clocking.  The responses are shown on the timing
+charts.  In general, the options should be entered A B A (turbo receiving
+clocks) or B C C A (Turbo sending both clocks.)
+
+All of these options can be put on the command line with the MPC:
+
+MPC 0 D O A A B A
+
+as an example.
+
+Once the port has been reset, check it using DPC to see if it is sending
+or recieving information, and set up correctly.  Then use the WNV (Write Non-Vol
+command to store the configuration in permanent memory.
+
+HARD STRAPPING:
+
+RS232 Strapping
+
+RS-232 PADDLE CARD (A/W 420291-001) REV "C" OR GREATER STRAPPING OPTIONS:
+=============================================================
+
+ ---------------------------------------------------------
+ Case 1              Case 2              Case 3
+ ---------------------------------------------------------
+ Monitor options     Monitor options     Monitor options
+ XXXBCCA             XXXBCCA             XXXABA
+ ---------------------------------------------------------
+ Turbo TC> Network | Turbo TC> Network | Turbo TC <Network
+ Turbo RC <Network | Turbo RC> Network | Turbo RC <Network
+ ---------------------------------------------------------
+ E1,E2 OFF           E1,E2 OFF          E1,E2 ON
+ E3,E4 OFF           E3,E4 ON           E3,E4 OFF
+ E5,E6 ON            E5,E6 ON           E5,E6 OFF     0
+ --------------------------------------------------------
+ E25,E26 OFF         E25,E26 OFF        E25,E26 ON
+ E27,E28 OFF         E27,E28 ON         E27,E28 OFF
+ E29,E30 ON          E29,E30 ON         E29,E30 OFF   1
+ ---------------------------------------------------------
+E7,E8 OFF           E7,E8 OFF          E7,E8 ON
+E9,E10 OFF          E9,E10 ON          E9,E10 OFF
+E11,E12 ON          E11,E12 ON         E11,E12 OFF   2
+---------------------------------------------------------
+E31,E32 OFF         E31,E32 OFF        E31,E32 ON
+E33,E34 OFF         E33,E34 ON         E33,E34 OFF
+E35,E36 ON          E35,E36 ON         E35,E36 OFF   3
+---------------------------------------------------------
+E13,E14 OFF         E13,E14 OFF        E13,E14 ON
+E15,E16 OFF         E15,E16 ON         E15,E16 OFF
+E17,E18 ON          E17,E18 ON         E17,E18 OFF   4
+---------------------------------------------------------
+E37,E38 OFF         E37,E38 OFF        E37,E38 ON
+E39,E40 OFF         E39,E40 ON         E39,E40 OFF
+E41,E42 ON          E41,E42 ON         E41,E42 OFF   5
+---------------------------------------------------------
+E19,E20 OFF         E19,E20 OFF        E19,E20 ON
+E21,E22 OFF         E21,E22 ON         E21,E22 OFF
+E23,E24 ON          E23,E24 ON         E23,E24 OFF   6
+---------------------------------------------------------
+E43,E44 OFF         E43,E44 OFF        E43,E44 ON
+E45,E46 OFF         E45,E46 ON         E45,E46 OFF
+E47,E48 ON          E47,E48 ON         E47,E48 OFF   7
+---------------------------------------------------------
+
+
+V35 STRAPPING:
+
+                V35 PADDLE CARD JUMPER CONFIGURATION TABLES
+=========================================================================
+                           FOR REV D & E ARTWORK
+                         --------------------------
+
+PORT #        TC OUT >         TC OUT >        TC IN <
+              RC OUT >         RC IN  <        RC IN <
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
+  0           E1 1-2          E1 1-2          E1 9-10
+                 3-4             3-4
+                 5-6
+                 7-8
+
+              E5 1-2          E5 1-2          E5 2-3
+                 4-5             5-6             5-6
+---------------------------------------------------------------------
+  1           E2 1-2          E2 1-2          E2 9-10
+                 3-4             3-4
+                 5-6
+                 7-8
+
+              E6 1-2          E6 1-2          E6 2-3
+                 4-5             5-6             5-6
+---------------------------------------------------------------------
+  2           E3 1-2          E3 1-2          E3 9-10
+                 3-4             3-4
+                 5-6
+                 7-8
+
+              E7 1-2          E7 1-2          E7 2-3
+                 4-5             5-6             5-6
+---------------------------------------------------------------------
+  3           E4 1-2          E4 1-2          E4 9-10
+                 3-4             3-4
+                 5-6
+                 7-8
+
+              E8 1-2          E8 1-2          E8 2-3
+                 4-5             5-6             5-6
+
+=========================================================================
+
+
+
+
+
+
+
+RS422 STRAPPING:
+
+                 RS422 PADDLE CARD (470299-001) JUMPERING TABLE
+                 ----------------------------------------------
+                                                            Michael Derrick
+                                                            5-21-91
+
+ FOR ARTWORKS (420299-001) REV C & D ; SCHEMATIC (440299-001) REV C & D
+ ----------------------------------------------------------------------
+ ----------------------------------------------------------------------
+  PORT #        TC OUT          TC OUT          TC IN
+                RC OUT          RC IN           RC IN
+ ----------------------------------------------------------------------
+    0           PT0 3-4(+)      PT0 3-4(+)      PT0 1-2
+                PT0 5-6(-)      PT0 5-6(-)
+                PT0 7-8 (-)
+                PT0 9-10(+)
+ ----------------------------------------------------------------------
+    1           PT1 3-4(+)      PT1 3-4(+)      PT1 1-2
+                PT1 5-6(-)      PT1 5-6(-)
+                PT1 7-8 (-)
+                PT1 9-10(+)
+ ----------------------------------------------------------------------
+    2           PT2 3-4(+)      PT2 3-4(+)      PT2 1-2
+                PT2 5-6(-)      PT2 5-6(-)
+                PT2 7-8 (-)
+                PT2 9-10(+)
+ ----------------------------------------------------------------------
+    3           PT3 3-4(+)      PT3 3-4(+)      PT3 1-2
+                PT3 5-6(-)      PT3 5-6(-)
+                PT3 7-8 (-)
+                PT3 9-10(+)
+ ----------------------------------------------------------------------
+
+
+BOARD REVISION LEVELS:
+
+              Latest Board Revision Levels and
+              Pal and Firmware Checksums for Turbo
+
+    This is the list of PROM and PAL levels and the release revision
+    levels for the PCB's in the Turbo Engine release.  PROM firmware
+    changes quickly and is easy to update, as the old proms can be
+    erased and reburned from a master set.  The PAL changes are
+    usually coupled with other board rework and are infrequent.
+
+    Maps of the boards can be found in the individual manuals,
+    such as the "Tymnet Turbo-Engine Board Description File Server
+    Board Description" manual.
+
+    General Processing Unit - GP
+
+    479300-001   TP21V rev 1.0, 1.1, 1.2  Rev G  or,
+    479300-001   TP21V rev 1.3  Rev F
+
+    Firmware       Location     Date      Checksum
+    Rodney 5.2     U6           3/19/89   AD2203
+
+    PAL            Location        PN
+    790297-001     U45             790297-001
+    790298-001     U69             790298-001
+
+   -------------------------------------------------------
+
+    I/O Controller II, 4 Port
+    470304-001   rev G
+
+    Firmware       Location     Date      Checksum         PN
+    IOC2-4-2.5
+    RODNEY 5.3     9A           3/27/89   12A0FB0 EVEN     370729-200
+
+    IOC2-4-2.5
+    RODNEY 5.3     9B           3/27/89   13E6C13 ODD      370729-200
+
+    PAL            Location        PN
+    ADDR4          11D             790317-001
+    AMDQP           4B             790319-001
+    IDAP            8E             790321-001
+    IODEP4         11C             790322-001
+    MBP             2E             790324-001
+    MEMSELC         8A             790326-001
+    MUX            16C             790327-001
+    DAP             7E             790320-001
+    PADTACK         5E             790330-001
+    PHYSDEC         3E             790331-001
+    PRIENC          6E             790332-001
+    SCC4P           4E             790333-001
+    VADTACK         7C             790335-001
+    VCSP            6C             790336-001
+
+
+    ----------------------------------------------
+
+    I/O Controller II, 8 Port
+    470305-001   rev H
+
+    Firmware       Location     Date      Checksum         PN
+    IOC2-8-2.92
+    RODNEY 5.54      9B          3/27/89   13AF4F1 ODD      370729-200
+
+    IOC2-8-2.92
+    RODNEY 5.54     10B          3/27/89   124C42B EVEN     370729-200
+
+
+    PAL            Location        PN
+    ADDR8          11D             790318-001
+    AMDQP           4B             790319-001
+    IDAP            8E             790321-001
+    IODEP8         11C             790323-001
+    MBP             2E             790324-001
+    MEMSELC         8A           326-001
+    MUX            16C             790327-001
+    MUX2           13C             790328-001
+    PADTACK         5E             790330-001
+    PHYSDEC         3E             790331-001
+    PRIENC          6E             790332-001
+    SCC8P           4E             790334-001
+    VADTACK         7C             790335-001
+    VCSP            6C             790336-001
+
+    ------------------------------------------------
+
+    Paddlecard, RS-232C (V.24)
+    470291-001 ABC rev H  Assy Rev D
+
+    No programmable parts.
+
+    ------------------------------------------------
+
+    Paddle Card, V.35
+    470346-001  ABC rev B Assembly rev  P
+
+    No programmable parts.
+
+    ------------------------------------------------
+
+    Paddle Card, RS422
+    470299-001  ABC rev F Assy Rev  H
+
+    No programmable parts.
+	
+    ------------------------------------------------
+
+
+
+
+
+
+
+
+
+  --------------------------------------------------------------------------
+
+                     INSTALLATION OF OCL IN THE TURBO
+                     --------------------------------
+
+OCL capability in the Turbo is added by installing a modified IOC4 board, a
+OCL paddlecard, and OCL breakout plate.  
+
+The IOC4 board must have the following four jumpers:
+   U16A pin 32 to VME P2-2A.
+   U16A pin 33 to VME P2-4A.
+   U15A pin 32 to VME P2-8A.
+   U15A pin 33 to VME P2-6A.
+
+The IOC4 board must have firmware version 4.00 or higher.  This modified IOC4
+board should be labelled as 470304-002.
+
+Next, the OCL paddlecard (p/n 470435-001) should be set for the correct VME
+address in the same manner as the other paddlecards are set up.  Set up the
+E1 and E2 jumpers to the "S" (standard speed) position.  Install the OCL
+paddlecard in the Turbo in the same slot you have installed the modified 
+IOC4 board.  
+
+Now install the Turbo OCL breakout plate and connect the four wires with the
+RJ45 connectors to the OCL paddlecard.  Port 0 is the upper RJ45 connector on
+the OCL paddlecard.
+
+Now connect to the MONITOR of the IOC4 board by giving the command:
+      CONN IOC4.8X:M*  (carraige return)    (the "X" denotes the address)
+Set up each port as if it was going to be receiving TX and RX clock from a
+modem.  (i.e. ABA).  Set the speed to 56kb for each port.
+
+The DB9 connectors on the Turbo OCL paddlecards mate with a standard 160526-tab
+OCL cable.
+wi0Zä
