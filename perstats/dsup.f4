@@ -1,0 +1,1540 @@
+******************************************************************************
+*                                                                            *
+*               PROGRAM : DELAY (NETWORK DELAY MEASUREMENT FOR SUP)          *
+*                                                                            *
+*               SOURCE FILE   :   (PERSTATS:28)DDEV.F4                       *
+*               CREATED       :   JANUARY 1986                               *
+*               AUTHOR        :   RAIKI HUANG (446-7298)                     *
+*               LAST UPDATED  :   JANUARY 15, 1986                           *
+*                                                                            *
+*                               VERSION 1.0                                  *
+*                                                                            *
+*       THE DELAY PROGRAM MEASURES ROUND TRIP NETWORK DELAY (IN MILLI-       *
+*       SECONDS) FOR ALL CIRCUITS ORIGINATING ON A GIVEN LIST OF TYMSATS.    *
+*       IN ADDITION, THE PROGRAM TRACES THE PATH OF THE CIRCUIT              *
+*       THROUGH THE NETWORK. BOTH THE DELAY MEASUREMENT AND THE CIRCUIT      *
+*       PATH  ARE OBTAINED OVER ONLY THE T-II SEGMENT OF THE CIRCUIT.        *
+*                                                                            *
+*       CONSIDER A CIRCUIT ORIGINATING ON TYMSAT 3360 AND HAVING THE FOLL-   *
+*       OWING PATH 3360-4133-3543-3132-202. THE ROUND-TRIP DELAY MEASURE-    *
+*       MENT IS THE TIME TAKEN BY A CHARACTER ORIGINATING IN TYMSAT 3360     *
+*       TO TRAVERSE THE NODES 4133,3543 AND 3132 VIA THE LINKS CONNECT-      *
+*       ING THEM AND RETRACE ITS PATH BACK TO 3360 . THE DELAY INCLUDES NODE *
+*       PROCESSING, QUEUING AND TRANSMISSION TIME AT EACH T-II NODE ALONG    *
+*       THE PATH. NOTE THAT IT DOES NOT INCLUDE THE FINAL HOP 3132-202       *
+*       BECAUSE 202 IS A T-I NODE.                                           *
+*                                                                            *
+*       THE PROGRAM OBTAINS THE ROUND TRIP DELAY BY BUILDING AN AUXILIARY    *
+*       CIRCUIT TO THE XRAY PROCESS OF THE SPECIFIED TYMSAT AND EXECUTING    *
+*       THE 'PM' COMMAND FOR EACH ACTIVE CIRCUIT. THE CIRCUIT PATH IS        *
+*       OBTAINED BY BUILDING AN AUXILIARY CIRCUIT TO PROBE VIA TMCS          *
+*       AND EXECUTING THE 'TRACE' COMMAND.                                   *
+*                                                                            *
+*       THE DELAY PROGRAM ASKS THE USER FOR AN INPUT FILE NAME. THIS         *
+*       FILE SHOULD CONTAIN THE NODE AND KERNEL HOST NUMBERS OF THE          *
+*       TYMSATS WHOSE CIRCUIT PERFORMANCE IS TO BE EVALUATED. FOLLOWING      *
+*       THE KERNEL HOST NUMBER, THE USER MAY SPECIFY A 20 CHARACTER          *
+*       DESCRIPTIVE LABEL FOR THE TYMSAT (E.G. LOCATION OF TYMSAT). THE      *
+*       FORMAT USED FOR READING THE INPUT FILE IS (2I,4A5).                  *
+*                                                                            *
+*       THE DELAY PROGRAM ALSO ASKS THE USER FOR AN OUTPUT FILE NAME IN      *
+*       WHICH ALL MEASUREMENTS AND CIRCUIT PATHS ARE STORED. IN              *
+*       ADDITION, THE PROGRAM INCLUDES RUN TIME DIAGNOSTIC INFORMATION       *
+*       IN THE FILE 'DELAY.LOG'.                                             *
+*                                                                            *
+*       OUTPUT FILE FIELD DESCRIPTIONS :                                     *
+*                                                                            *
+*       PRT     :       PORT # (IN OCTAL) OF CIRCUIT ORIGINATION. THIS       *
+*                       INFORMATION WILL OCCASIONALLY BE OUT-DATED.          *
+*                                                                            *
+*       HOP     :       # OF T-II LINKS IN CIRCUIT PATH.                     *
+*                                                                            *
+*       CKT.TIME:       # OF SECONDS (IN HEX) THE CIRCUIT HAS BEEN ACTIVE.   *
+*                                                                            *
+*       DLAY    :       ROUND TRIP DELAY (IN MILLISECONDS) OVER T-II         *
+*                       SEGMENT OF CIRCUIT PATH.                             *
+*                                                                            *
+*       T       :       = 0 INDICATES AN ALL T-II PATH.                      *
+*                       = 1 INDICATES HYBRID CIRCUIT. THE FIRST T-I          *
+*                           NODE NUMBER IS SHOWN IN THE CIRCUIT PATH.        *
+*                                                                            *
+*       T-II                                                                 *
+*       CIRCUIT                                                              *
+*       PATH    :       NODE NUMBERS  TRACING T-II CIRCUIT PATH              *
+*                       THROUGH NETWORK.                                     *
+*                                                                            *
+******************************************************************************
+
+        INTEGER NODES(5),HOSTS(5),NAME1(2),PORT,MTRPOS,PROMPT,ERRCKT,
+     X          LOGPOS,OUTFIL,OFLNAM(2),ACTIVE,COMAND(13),LOGFIL(2)
+        INTEGER APORTS(3000),CHANNL(3000),NLINKS(3000),HTIME(2),OCHANL
+        INTEGER IDATE(2),CIRC,APORT,ROUTES(17),T1,PCHANL,NAME2(2)
+        INTEGER STAR,EXIT(5),QUIT(6),LOC1(5),LOC2(5),LOC3(5)
+        INTEGER VERSN(5),MENGIN,KERN(5),LOC4(5),DIGIT(10),DTIME
+
+        COMMON /AUX/ PORT
+        COMMON /OUTPOS/ MTRPOS
+        DATA PROMPT/62/,STAR/42/
+        DATA ACTIVE/4HAS U/
+        DATA EXIT/4,69,88,73,13/,QUIT/5,81,85,73,84,13/
+
+*       ACCEPT NAME OF FILE FOR OUTPUT
+        TYPE 12
+12      FORMAT(1X,'ENTER NAME OF FILE FOR STORAGE OF OUTPUT: ',$)
+        ACCEPT 13,NAME2
+13      FORMAT(2A5)
+
+22      OPEN(23,NAME2,RANDIO(1),ERR=1110)
+        OPEN(22,'DLAY.LOG',RANDOUT,ERR=1120)
+*	OPEN(24,'DLAY.GRF',RANDOUT,ERR=1110)
+        MTRPOS = SIZE(22) + 1
+        IF (MTRPOS .EQ. 0) MTRPOS = MTRPOS + 1
+	NREC = SIZE(23) + 1
+	IF (NREC .EQ. 0) NREC = NREC + 1
+
+*       BUILD CIRCUIT TO PROBE THROUGH TMCS
+        CALL XPROBE(CIRC,ERR)
+        IF (ERR .EQ. 0) GOTO 27
+        WRITE(23#NREC,26,ERR=1190)ERR
+        TYPE 26,ERR
+26      FORMAT(1X,'UNABLE TO ESTABLISH CIRCUIT TO PROBE THROUGH TMCS.',
+     X' STATUS ',I4)
+        GOTO 1200
+
+27      TYPE 28
+        WRITE(23#NREC,28,ERR=1190)
+28      FORMAT(/,1X,75(1H-),//)
+
+*       GET DATE AND TIME AND PREPARE BANNER
+        CALL DATE(IDATE)
+        CALL TIME(ITIME)
+	NREC = SIZE(23) + 1
+        WRITE(23#NREC,50,ERR=1190)IDATE,ITIME
+        TYPE 50,IDATE,ITIME
+50      FORMAT('  DATE ',2A5,1X,A5,' TRACING SUP COMMAND CIRCUITS',/)
+
+210     DO 220 I=1,3000
+        APORTS(I) = I
+220     CONTINUE
+
+	CALL SYSNO(CIRC,ISUP)
+	IF (CIRC .EQ. -1) GOTO 1150
+
+	NREC = SIZE(23) + 1
+	WRITE(23#NREC,300,ERR=1190)
+        TYPE 300
+300     FORMAT(//,1X,' PORT  HOP ',2X,'COMMAND CIRCUIT PATH',//)
+
+311     DO 321 I=1,3000
+*	ILOOPS = MOD(I,50)
+*	IF (ILOOPS .NE. 0) GOTO 312
+*	CALL SYSNO(CIRC,ISUP)
+*	IF (CIRC .EQ. -1) GOTO 1150
+
+*       LOOP THROUGH EACH ACTIVE PORT . 
+
+312     CALL TRACE(CIRC,ISUP,APORTS(I),ROUTES,T1)
+
+        IF (T1 .EQ. -1) GOTO 320
+        IF (CIRC .EQ. -1) GOTO 1150
+
+	NREC = SIZE(23) + 1
+*	NUMREC = SIZE(24) + 1
+313     TYPE 315,APORTS(I),ROUTES(17),(ROUTES(J),J=1,11)
+	WRITE(23#NREC,315,ERR=1190)APORTS(I),ROUTES(17),(ROUTES(J),J=1,11)
+
+315     FORMAT(I5,2X,I3,3X,11A5)
+*	WRITE(24#NUMREC,316,ERR=1190) ISUP,ROUTES(17)
+*316	FORMAT(I5,2X,I3)
+        GOTO 320
+
+320     IZAP = 0
+321     CONTINUE
+
+322     CALL ZAP(PORT)
+	NREC = SIZE(23) + 1
+325     TYPE 355
+        WRITE(23#NREC,355,ERR=1190)
+355     FORMAT(/,1X,75(1H-),//)
+*       GOTO THE TOP OF THE LOOP TO PROCESS ANOTHER NODE.
+	CLOSE(22)
+	CLOSE(23)
+	CLOSE(24)
+        GOTO 1200
+
+*       ZAP CIRCUIT TO PROBE AND TMCS.
+400     PORT = CIRC
+        CALL SEND(EXIT)
+        CALL SCAN(STAR,IRSLT)
+        IF (IRSLT .NE. 1) GOTO 500
+        CALL SEND(QUIT)
+*       TYPE 450
+450     FORMAT(/,1X,'CIRCUIT TO PROBE AND TMCS ZAPPED',/)
+500     CALL ZAP(PORT)
+        CLOSE(22)
+        CLOSE(23)
+	CLOSE(24)
+        GOTO 1200
+
+1150    TYPE 1155
+1155    FORMAT(1X,'LOST PROBE CIRCUIT.UNABLE TO RE-BUILD CONNECTION.')
+        CLOSE(22)
+        CLOSE(23)
+	CLOSE(24)
+        GOTO 1200
+
+1000    TYPE 1005
+1005    FORMAT(1X,'UNABLE TO OPEN NODE-HOST FILE FOR READING',/)
+1100    TYPE 1105
+1105    FORMAT(1X,'UNABLE TO COMPLETE READ OPERATION',/)
+        GOTO 1200
+
+1110    TYPE 1115
+1115    FORMAT(1X,'UNABLE TO OPEN OUTPUT FILE',/)
+        GOTO 1200
+
+1120    TYPE 1125
+1125    FORMAT(1X,'UNABLE TO OPEN PROGRAM MONITOR FILE',/)
+        CLOSE(23)
+        GOTO 1200
+
+1190    TYPE 1195
+1195    FORMAT(1X,'UNABLE TO WRITE ON OUTPUT FILE',/)
+        CLOSE(22)
+        CLOSE(23)
+	CLOSE(24)
+
+1200    END
+C                     (MSREPORT) XRLIB.FTF
+C    A LIBRARY FILE OF ROUTINES FOR EXTRACTING DATA FROM XRAY WITH AUX.
+C    CKTS. AND WRITING THE XRAY OUTPUT TO A LOG FILE OR (IN THE CASE OF
+C    A 'KS' COMMAND) TO A 1022 DATA BASE.
+C
+C    SUBROUTINES:
+C        XRCIR -- BUILDS THE AUX. CKT. TO XRAY;
+C        XRFOUT -- WRITES THE XRAY OUTPUT TO A FILE;
+C        XRGLIN -- GETS ONE LINE OF XRAY OUTPUT, PASSES IT TO XRFOUT;
+C        KSDBLD -- LOADS THE DATA FROM A 'KS' COMMAND INTO A 1022 D/B.
+C
+C  IN ORDER TO RUN THE MAIN PROGRAM IN DETACHED MODE, ALL TERMINAL-TYPE
+C  OUTPUT IS WRITTEN TO A MONITOR LOG FILE (DEVICE NO. 22).  THIS FILE
+C  MUST BE IN RANDOM-ACCESS OUTPUT MODE.
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                    C
+C                       SUBROUTINE: XRCIR                            C
+C                                                                    C
+C    BUILDS AN AUX CKT TO XRAY.  PLACES PORT NUMBER IN COMMON:       C
+C                   /AUX/PORT                                        C
+C                                                                    C
+C       FORMAT:     CALL XRCIR(KERNEL,IERR,NVERSN)                   C
+C       ARGUMENTS:                                                   C
+C          KERNEL : VARIABLE CONTAINING THE KERNEL NUMBER TO         C
+C                   LOGIN TO.                                        C
+C          IERR   : ERROR FLAG.                                      C
+C                   IERR =  0:  NO ERROR. CIRCUIT BUILT.             C
+C                   IERR >  0:  UNABLE TO BUILD CIRCUIT.  VALUE =    C
+C                               CREAUX ERROR CODE:  < 10 = SUP ERROR C
+C                               CODE; > 10 = XEXEC ERROR CODE + 50   C
+C                   IERR = -1:  BAD RESPONSE FROM XRAY DURING LOGIN  C
+C                   NVERSN   :  DISTINGUISH VERSION NUMBER           C
+C                                                                    C
+C                                                                    C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        SUBROUTINE XRCIR(KERNEL,IERR,NVERSN)
+
+        INTEGER KERNEL, IERR, XRAY(3), NOECHO(4), PORT, PROMPT, IERR2,
+     +    RESLT1, RESLT2, NERR
+        INTEGER NVERSN
+
+C PLACE THE PORT NUMBER INTO COMMON.  INITIALIZE 'PROMPT' AS A
+C RIGHT-ARROW.  INITIALIZE 'NOECHO' AS 'LE', FOR XRAY COMMAND.
+C INITIALIZE 'IERR' AND 'IERR2' AS 0 FOR EACH CALL TO THIS SUBROUTINE.
+
+        COMMON /AUX/ PORT
+        DATA PROMPT /62/
+        DATA NOECHO/3,76,69,13/
+        NERR = 0
+        IERR = 0
+        IERR2 = 0
+
+C BUILD THE XRAY LOGIN STRING USING THE KERNEL NUMBER FROM THE CALLER.1
+C BUILD THE AUXILIARY CIRCUIT TO XRAY.  IF ERROR RETURN IS NON ZERO,
+C SKIP TO ERROR PROCESSING.
+
+*       NSOLO = MOD(NVERSN,10000)
+        NVER = NVERSN/10000
+        NSOLO = NVERSN - (NVER*10000)
+        IF (NSOLO .GE. 506) GOTO 100
+
+        ENCODE (12,4000,XRAY)KERNEL
+ 4000      FORMAT ('XRAY:', I4, ';')
+        GOTO 110
+
+100     ENCODE (12,5000,XRAY)KERNEL
+ 5000      FORMAT ('TIIDEV:', I4, ';')
+
+110     CALL FBCIR(XRAY,PORT,IERR2)
+
+        IF (IERR2 .NE. 0) GOTO 200
+
+C XRAY SHOULD GIVE THE NODE AND KERNEL NUMBER, THE DATE AND THEN
+C THE PROMPT.  IF NO PROMPT, PROBABLY WRONG HOST:  RETURN ERROR TO
+C CALLER.   RESULT1:  1 = FOUND; 2 = NOT FOUND.
+
+        CALL SCAN(PROMPT,RESLT1)
+        IF (RESLT1 .NE. 1) GOTO 150
+
+
+C TURN OFF ECHO, THEN LOOK FOR THE PROMPT.  IF PROMPT IS THERE, DO A
+C SIMPLE RETURN.
+
+        CALL SEND(NOECHO)
+        CALL SCAN(PROMPT,RESLT2)
+        IF (RESLT2.EQ.1) RETURN
+
+C ERROR. BAD RESPONSE FROM HOST (RIGHT-ARROW NOT FOUND); PROBABLY NOT
+C XRAY, OR HOST DOWN.
+
+  150   IERR = -1
+        RETURN
+
+C ERROR.  NO LOGIN.  RETURN TO CALLER A CODED VERSION OF THE ERROR
+C NUMBER RECEIVED FROM XEXEC:  IF ERROR CODE IS IN THE RIGHT HALF-WORD,
+C MASK OUT THE LEFT HALF-WORD.  IF ERROR CODE IS IN LEFT HALF-WORD, EXTRACT
+C ERROR VALUE AND ADD 50 TO IT, TO DISTINGUISH FROM ERROR CODES FROM
+C RIGHT HALF-WORD.
+
+  200   IF (IERR2 .LT. "777777) IERR = IAND (IERR2, "777777)
+        IF (IERR2 .GT. "777777) IERR = (IERR2 / (2**18)) + 50
+
+        RETURN
+        END
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                    C
+C                       SUBROUTINE: XRFOUT                           C
+C                                                                    C
+C       WRITES THE OUTPUT FROM AN AUXILIARY CIRCUIT ONTO THE         C
+C        SPECIFIED FILE.                                             C
+C                                                                    C
+C       FORMAT:     CALL XRFOUT(PROMPT,FILNUM,LOGPOS)                C
+C       ARGUMENTS:                                                   C
+C          PROMPT : VARIABLE CONTAINING PROMPT CHARACTER, FLAGGING   C
+C                   END OF XRAY OUTPUT.                              C
+C          FILNUM : THE VARIABLE CONTAINING THE DISC DEVICE NUMBER   C
+C                   TO WHICH THE OUTPUT IS TO BE WRITTEN.            C
+C          LOGPOS : VARIABLE CONTAINING THE NUMBER OF THE LAST LINE  C
+C                   ALREADY IN THE OUTPUT LOG FILE.                  C
+C                                                                    C
+C       ACCESSES:  COMMON /AUX/ PORT, /OUTPOS/ MTRPOS                C
+C                                                                    C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        SUBROUTINE XRFOUT(PROMPT, FILNUM, LOGPOS)
+
+        INTEGER PROMPT, FILNUM, LOGPOS, PORT, MTRPOS, ARRAY(50,80),
+     +    LARRAY(80), ERR, LINCNT, LINNO
+
+C GET AUX. CKT'S. PORT NUMBER AND LINE ON MONITOR FILE TO WRITE ON.
+C INITIALIZE 'ARRAY' TO BLANKS, 'LINCNT' TO 0, AND 'LINNO' TO THE
+C NUMBER OF THE FIRST LINE ON THE OUTPUT FILE FOR WRITING ON:  IF THE
+C OUTPUT FILE IS THE RANDOM-ACCESS UNIVERSAL FILE, 'LINNO' IS SET TO
+C THE NUMBER OF THE LAST LINE OF THE FILE, PLUS 1; IF THE OUTPUT FILE
+C IS A SEQUENTIAL FILE THAT IS LOADED INTO A 1022 DATA-BASE BY THIS
+C PROGRAM, 'LINNO' IS SET TO 1.
+
+        COMMON /AUX/ PORT
+        COMMON /OUTPOS/ MTRPOS
+
+        DATA ARRAY /4000*'     '/
+        LINCNT = 0
+
+        LINNO = LOGPOS
+        IF (FILNUM .EQ. 23) LINNO = 1
+C RESET 'LARRAY' TO BLANKS, READ EACH LINE OF OUTPUT FROM XRAY INTO 'LARRAY'.
+C WRITE IT TO 'ARRAY' (FOR WRITING TO OUTPUT LOG FILE).
+C*******************************************************
+
+        DO 100 I = 1,50
+
+C RE-INITIALIZE 'LARRAY' TO BLANKS.
+
+        DO 30 J = 1,80
+        LARRAY(J) = '     '
+   30   CONTINUE
+
+C GET ONE LINE OF XRAY OUTPUT.
+
+        CALL XRGLIN (PROMPT, LARRAY, ERR)
+
+
+C ERROR:  0 = NORMAL, LOAD INTO 'ARRAY';  1 = TRUNCATED LINE, PRINT
+C WARNING ON MONITOR FILE AND LOAD INTO 'ARRAY';  2 = XRAY FINISHED,
+C WRITE OUTPUT TO LOG FILE;  3 = CKT. ZAPPED OR 60 SEC. TIMEOUT,
+C RETURN WITHOUT WRITING TO FILE.
+
+        IF (ERR .EQ. 0) GOTO  50
+        IF (ERR .EQ. 2) GOTO 200
+        IF (ERR .EQ. 3) RETURN
+
+        WRITE (22#MTRPOS, 5000) LINNO
+ 5000      FORMAT ('BAD LINE.  #', I5, ' TOO LONG!  TRUNCATED.  ',
+     +     'POSSIBLE DATA LOSS!')
+        MTRPOS = SIZE (22) +1
+
+C INCREMENT LINE COUNTERS: NUMBER OF LINES TO WRITE TO LOG FILE, AND
+C THE NUMBER OF THE LOG FILE LINE WHERE TRUNCATION OCCURRED.
+C LOAD LINE INTO OUTPUT ARRAY.
+
+   50   LINCNT = LINCNT + 1
+        LINNO = LINNO + I
+
+        DO 100 J = 1,80
+        ARRAY (I,J) = LARRAY (J)
+  100   CONTINUE
+
+C END LOOP.
+C*******************************************************
+
+C TRUNCATED OUTPUT.  PRINT WARNING ON MONITOR FILE.
+
+        WRITE (22#MTRPOS, 5005) LINNO
+ 5005      FORMAT ('BAD OUTPUT FROM XRAY.  .GE. 50 LINES, ',
+     +     'AT LINE', I6, '.  POSSIBLE LINES LOST!')
+
+C WRITE OUTPUT TO LOG FILE.
+C**********************
+
+  200   DO 300 I = 1, LINCNT
+        IF(FILNUM.EQ.21) WRITE(FILNUM#LOGPOS,5010)(ARRAY(I,J),J=1,80)
+        IF (FILNUM.NE.21) WRITE (FILNUM,5010) (ARRAY(I,J),J=1,80)
+ 5010      FORMAT (80A1)
+        IF (FILNUM .EQ. 21) LOGPOS = LOGPOS + 1
+  300   CONTINUE
+
+
+  900   RETURN
+        END
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                    C
+C                       SUBROUTINE: XRGLIN                           C
+C                                                                    C
+C   GETS ONE LINE (MAX 78 CHARS) OF OUTPUT FROM AN AUX CKT TO XRAY.  C
+C                                                                    C
+C       FORMAT:     CALL XRGLIN (PROMPT, LARRAY, ERR)                C
+C       ARGUMENTS:                                                   C
+C          PROMPT : VARIABLE WITH THE PROMPT CHARACTER FOR TESTING   C
+C                   FOR END OF OUTPUT.                               C
+C          LARRAY : ARRAY CONTAINING THE OUTPUT LINE FROM XRAY       C
+C          ERR    : VARIABLE INING ERROR FLAG.                  C
+C                   O = NO ERROR.                                    C
+C                   1 = OVER-LONG LINE ( > 79 CHARACTERS).           C
+C                   2 = END OF OUTPUT FROM XRAY.                     C
+C                   3 = ERROR:  CKT ZAPPED OR 30 SEC. TIMEOUT.       C
+C                                                                    C
+C       ACCESSES:   COMMON/AUX/PORT                                  C
+C                                                                    C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        SUBROUTINE XRGLIN (PROMPT, LARRAY, ERR)
+
+        INTEGER PROMPT, LARRAY (79), ERR, PORT, CHAR, WTCNT, CR, LF,WAIT
+
+C GET THE AUX. CKT'S. PORT NUMBER FOR EXTRACTING DATA, AND INITIALIZE
+C CONSTANTS FOR TESTING FOR END OF LINE, AND INITIALIZE ERROR CODE.
+
+        COMMON /AUX/ PORT
+        DATA CR /13/, LF /10/
+        ERR = 0
+        WTCNT = 0
+
+C READ EACH CHAR. IN LINE OF XRAY OUTPUT, AND LOAD THEM INTO AN ARRAY
+C FOR PASSING BACK TO THE CALLING SUBROUTINE (XRFOUT).
+C*******************************************************
+
+        DO 100 I = 1,80
+   25   CALL GTCHAR (PORT, CHAR)
+
+C TEST FOR ERROR RETURNS: -1 = NO CHAR; -2 = AUX. CKT. ZAPPED.
+
+        IF (CHAR.EQ.-1) GOTO  50
+        IF (CHAR.EQ.-2) GOTO 600
+
+C MASK FOR ONLY THE LAST 7 BITS.
+
+        CHAR=IAND(CHAR,"177)
+
+C TEST FOR END OF LINE AND FOR END OF OUTPUT FROM HOST.  IGNORE
+C CARRIAGE RETURN THEN END READING DATA AT LINE FEED, AND SEND LINE OF
+C DATA (WITHOUT CR/LF PAIR) TO CALLING ROUTINE AND RETURN TO CALLER.
+C DO NOT SEND THE PROMPT AT END OF OUTPUT, BUT SET END-OF-OUTPUT FLAG
+C AND RETURN TO CALLER.
+
+        IF (CHAR .EQ. CR) GOTO 25
+        IF (CHAR .EQ. LF) RETURN
+        IF (CHAR .EQ. PROMPT) GOTO 500
+
+C MOVE THE CHAR TO THE LEFTMOST 8 BITS AND PAD THE WORD WITH BLANKS.
+C LOAD THE CHARACTER INTO THE PROPER ARRAY ELEMENT.
+
+        CHAR=LSH(CHAR,29)
+        CHAR=IOR(CHAR,"1004020100)
+
+        LARRAY(I)=CHAR
+        GOTO 100
+
+C TIMEOUT HAS OCCURRED.  IF 60 SEC. WITH NO CHAR., DO ERROR RETURN.
+
+50      CALL WAIT(1.0)
+        WTCNT = WTCNT + 1
+        IF (WTCNT .GE. 60) GOTO 600
+        GOTO 25
+
+  100   CONTINUE
+
+C END OF LOOP.
+C*******************************************************
+
+C MORE THAN 80 CHARS. IN LINE.
+
+        ERR = 1
+        RETURN
+
+C END OF OUTPUT FROM XRAY:  PROMPT WAS RECEIVED.
+
+  500   ERR = 2
+        RETURN
+
+C CKT. ZAPPED OR 60 SEC. TIMEOUT.
+
+  600   ERR = 3
+        RETURN
+
+        END
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                      C
+C                    SUBROUTINE : SYSNO                                C
+C                                                                      C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        SUBROUTINE SYSNO(CIRC,ISUP)
+        INTEGER NODE,HOST,STAR,CIRC,COMAND(5)
+        INTEGER SAVE,COLON,LARRAY(80),COMPTR,BLANK,CR,ERR,IDATE(2)
+        INTEGER PROBE(7),PRLOST,CHAR,PORT,POT
+
+        DATA PROBE/6,80,82,79,66,69,13/
+        DATA STAR/42/,CR/13/,COLON/58/,BLANK/32/
+        COMMON /AUX/ PORT
+        COMMON /OUTPOS/MTRPOS
+
+        TYPE 1
+1       FORMAT(' SYSNO::')
+10      IFINS = 0
+        SAVE = PORT
+        PORT = CIRC
+
+*       BUILD PROBE SYS CIRCUIT COMMAND
+        ENCODE(3,50,COMM)
+50      FORMAT('SYS')
+        DO 60 I=2,4
+        CALL RTC(CHAR,COMM,I-1)
+        CHAR = LSH(CHAR,-29)
+        COMAND(I) = CHAR
+        COMPTR = I
+60      CONTINUE
+
+        COMAND(5) = CR
+        COMAND(1) = 4
+
+110     CALL SEND(COMAND)
+
+*       INITIALIZE LARRAY TO BLANKS
+111     DO 120 J=1,80
+        LARRAY(J) = '     '
+120     CONTINUE
+
+
+        CALL XRGLIN(COLON,LARRAY,ERR)
+        TYPE 3333, (LARRAY(I),I=1,78)
+3333    FORMAT(' ',78A1)
+
+        IF (ERR .EQ. 0 .OR. ERR .EQ. 1) GOTO 200
+        IF (ERR .EQ. 2) GOTO 600
+        IF (ERR .EQ. 3) GOTO 900
+
+200     ENCODE(5,210,LINE)(LARRAY(J),J=1,5)
+210     FORMAT(5A1)
+
+        IF (LINE .EQ. '     ' .AND. IFINS .EQ. 0) GOTO 111
+
+*       IF LINE IS BLANK OR AN ECHO, THEN GET ANOTHER LINE.
+*       IF PROBE CIRCUIT HAS BEEN LOST, THEN RE-ESTABLISH IT.
+*       OTHERWISE, EXTRACT PORT NUMBER
+        IF (LINE.EQ.'SYS  ' .OR. LINE.EQ.'     ' .OR. LINE.EQ.'BUSY ')
+     X          GOTO 111
+        IF (LINE .EQ. PRLOST) GOTO 800
+        IF (LINE .EQ. '?    ') GOTO 999
+
+        NCBEG = 1
+250     IF (NCEND .EQ. 78) GOTO 999
+        ENCODE(1,265,NWORD)(LARRAY(M),M=NCBEG,NCBEG)
+265     FORMAT(A1)
+        CALL RTC(ICHAR,NWORD,1)
+        ICHAR = LSH(ICHAR,-29)
+        IF (ICHAR .GE. 48 .AND. ICHAR .LE. 57) GOTO 270
+        GOTO 300
+270     NCEND = NCBEG + 2
+        ENCODE(3,275,NUMSUP)(LARRAY(M),M=NCBEG,NCEND)
+275     FORMAT(3A1)
+        DECODE(3,285,NUMSUP)ISUPS
+285     FORMAT(I3)
+
+        INODE = MOD(ISUPS,120)
+        GOTO (2001,2002,2003,2004,2005), INODE
+300     NCBEG = NCBEG + 1
+        GOTO 250
+2001    ISUP = 2001
+        GOTO 550
+2002    ISUP = 2002
+        GOTO 550
+2003    ISUP = 2003
+        GOTO 550
+2004    ISUP = 2004
+        GOTO 550
+2005    ISUP = 2005
+550	TYPE 555,ISUP
+555	FORMAT('  ISUP : ',I) 
+	GOTO 111
+*       PROBE OUTPUT FINISHED. EXIT.
+600	IFINS = 1
+	GOTO 200
+
+*       PROBE CIRCUIT LOST BUT TMCS CIRCUIT ACTIVE. RE-ISSUE PROBE CMND.
+800     CALL SCAN(STAR,IRESUL)
+        IF (IRESUL .NE. 1) GOTO 900
+        CALL DATE(IDATE)
+        CALL TIME(ITIME)
+        WRITE(22#MTRPOS,810)IDATE,ITIME
+810     FORMAT(' TMCS LOST PROBE CIRCUIT',18X,2A5,5X,A5)
+        MTRPOS = SIZE(22) + 1
+        CALL WAIT(5.0)
+811     CALL SEND(PROBE)
+        CALL SCAN(COLON,IRESUL)
+        IF (IRESUL .NE. 1) GOTO 900
+        CALL DATE(IDATE)
+        CALL TIME(ITIME)
+        WRITE(22#MTRPOS,820)IDATE,ITIME
+820     FORMAT(' TMCS GOT BACK PROBE CIRCUIT',14X,2A5,5X,A5)
+        MTRPOS = SIZE(22) + 1
+        GOTO 999
+
+*       PROBE CIRCUIT ZAPPED OR 30 SEC. TIMEOUT.
+900     CALL DATE(IDATE)
+        CALL TIME(ITIME)
+        WRITE(22#MTRPOS,910)IDATE,ITIME
+910     FORMAT(' TMCS CIRCUIT ZAPPED OR 30 SEC. TIMEOUT',3X,2A5,5X,A5)
+        MTRPOS = SIZE(22) + 1
+
+*       RE-ESTABLISH PROBE CIRCUIT
+920     CALL ZAP(CIRC)
+        CALL XPROBE(CIRC,ERR)
+        IF (ERR .NE. 0) GOTO 950
+        CALL DATE(IDATE)
+        CALL TIME(ITIME)
+        WRITE(22#MTRPOS,930)IDATE,ITIME
+930     FORMAT(' TMCS CIRCUIT RE-ESTABLISHED',14X,2A5,5X,A5)
+        MTRPOS = SIZE(22) + 1
+        GOTO 999
+
+*       TRY TO ESTABLISH TMCS 3 TIMES. IF FAIL, EXIT.
+950     ICNT = ICNT + 1
+        CALL WAIT(5.0)
+        IF (ICNT .LE. 2) GOTO 920
+        CIRC = -1
+
+999     PORT = SAVE
+        RETURN
+        END
+
+**********************************************************************
+*                                                                    *
+*                     SUBROUTINE  :   ISCHAN                         *
+*                                                                    *
+*             CONVERT ISIS OCTAL PORT NUMBER TO HEX                  *
+*                                                                    *
+*                                                                    *
+**********************************************************************
+
+
+
+        SUBROUTINE ISCHAN(APORT,CHANL,NVERSN)
+        INTEGER DIGIT(8),HEXNUM,APORT,CHANL
+
+        COMMON /AUX/ PORT
+        COMMON /OUTPOS/ MTRPOS
+        IF (NVERSN .GT. 20000) NUMBER = APORT + 64
+        IF (NVERSN .LT. 20000) NUMBER = APORT + 96
+        ILEN = 0
+        IFLAG = 1
+10      ILEN = ILEN + 1
+        MND = MOD(NUMBER,16)
+        NQO = NUMBER/16
+        IF (MND .GT. 9) GOTO 50
+        IF (MND .NE. 0) GOTO 55
+        DIGIT(ILEN) = '0'
+        GOTO 500
+50      ITEMP = MND
+        GOTO 600
+55      ITEMP = MND
+        GOTO 700
+
+200     IF (NQO .LE. 15) GOTO 210
+        NUMBER = NQO
+        GOTO 10
+
+210     IFLAG = 2
+        ILEN = ILEN + 1
+        IF (NQO .GT. 9) GOTO 250
+        IF (NQO .NE. 0) GOTO 255
+        DIGIT(ILEN) = '0'
+        GOTO 500
+250     ITEMP = NQO
+        GOTO 600
+255     ITEMP = NQO
+        GOTO 700
+
+500     IF (IFLAG .EQ. 1) GOTO 200
+        IF (IFLAG .EQ. 2) GOTO 999
+
+600     NN = ITEMP-9
+        GOTO (610,611,612,613,614,615), NN
+
+601     DIGIT(ILEN) = '1'
+        GOTO 500
+602     DIGIT(ILEN) = '2'
+        GOTO 500
+603     DIGIT(ILEN) = '3'
+        GOTO 500
+604     DIGIT(ILEN) = '4'
+        GOTO 500
+605     DIGIT(ILEN) = '5'
+        GOTO 500
+606     DIGIT(ILEN) = '6'
+        GOTO 500
+607     DIGIT(ILEN) = '7'
+        GOTO 500
+608     DIGIT(ILEN) = '8'
+        GOTO 500
+609     DIGIT(ILEN) = '9'
+        GOTO 500
+610     DIGIT(ILEN) = 'A'
+        GOTO 500
+611     DIGIT(ILEN) = 'B'
+        GOTO 500
+612     DIGIT(ILEN) = 'C'
+        GOTO 500
+613     DIGIT(ILEN) = 'D'
+        GOTO 500
+614     DIGIT(ILEN) = 'E'
+        GOTO 500
+615     DIGIT(ILEN) = 'F'
+        GOTO 500
+
+700     GOTO (601,602,603,604,605,606,607,608,609), ITEMP
+
+999     ENCODE(5,1000,CHANL)(DIGIT(K),K=ILEN,1,-1)
+1000    FORMAT(1X,4A1)
+C       DECODE(5,1100,HEXNUM)CHANL
+C1100   FORMAT(A5)
+        RETURN
+        END
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                      C
+C                    SUBROUTINE : GTCHAN                               C
+C                                                                      C
+C       GIVEN A CHANNEL NUMBER OBTAIN  THE OPPOSITE CHANNEL NUMBER     C
+C       AND THE NUMBER OF SECONDS(IN HEX) THE CIRCUIT BETWEEN          C
+C       THE TWO CHANNEL NUMBERS HAS BEEN ACTIVE. IF NO CIRCUIT EXISTS  C
+C       THE OPPOSITE CHANNEL NUMBER RETURNED WILL BE ' '. IGNORE THE   C
+C       THE SECONDS PARAMETER IN THIS CASE.                            C
+C                                                                      C
+C       FORMAT :  CALL GTCHAN(CHANL,OCHANL,HTIME)                      C
+C                                                                      C
+C       ARGUMENTS :                                                    C
+C       CHANL : FOUR HEX CHARACTERS(RIGHT JUSTIFIED) REPRESENTING      C
+C               CHANNEL NUMBER PASSED TO GTCHAN.                       C
+C       OCHANL:  OPPOSITE CHANNEL NUMBER . FOUR HEX CHARACTERS         C
+C               (RIGHT JUSTIFIED) RETURNED BY GTCHAN.                  C
+C       HTIME:  ARRAY OF SIZE 2 CONTAINING 8 HEX CHARACTERS (RIGHT     C
+C               JUSTIFIED) RETURNED BY GTCHAN. REPRESENTS CIRCUIT      C
+C               LIFETIME IN SECONDS.                                   C
+C                                                                      C
+C       ERROR RETURNS: IN CASE OF CIRCUIT ZAP,OCHANL = 'FFFFF'         C
+C                                                                      C
+C       ACCESSES:  COMMON /AUX/PORT , /OUTPOS/MTRPOS                   C
+C                                                                      C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        SUBROUTINE GTCHAN(CHANL,OCHANL,HTIME)
+*       TYPE 999
+999     FORMAT(1X,'GTCHAN')
+
+        INTEGER COMM(2),COMAND(10),CHANL,OCHANL,HTIME(2),COMPTR,ERR,CHAR
+        INTEGER LINE(3),LARRAY(80),CR,TEST,VERJUN,DONE,MSG(2)
+
+        DATA PROMPT /62/
+        DATA CR/13/
+        DATA MSG(1)/'  UNA'/, MSG(2)/'VAIL.'/
+
+        COMMON /AUX/ PORT
+        COMMON /OUTPOS/ MTRPOS
+
+*       BUILD 'QUERY CHANNEL' COMMAND STRING
+        ENCODE(8,10,COMM)CHANL
+10      FORMAT('QC ',A5)
+
+        DO 20 I=2,9
+        CALL RTC(CHAR,COMM,I-1)
+        CHAR = LSH(CHAR,-29)
+        COMAND(I) = CHAR
+        COMPTR = I
+20      CONTINUE
+
+        COMPTR = COMPTR + 1
+        COMAND(COMPTR) = CR
+        COMAND(1) = COMPTR - 1
+
+*       INITIALISE SUBROUTINE COUNTERS
+        LINNO = 1
+        VERJUN = 0
+        OCHANL = '     '
+        HTIME(1) = '     '
+        HTIME(2) = '     '
+        DONE = 0
+
+*       SEND 'QUERY CHANNEL ' COMMAND ON XRAY CIRCUIT
+        CALL SEND(COMAND)
+*       RE-INITIALISE LARRAY TO BLANKS
+
+30      DO 35 J=1,80
+        LARRAY(J) = '     '
+35      CONTINUE
+
+        CALL XRGLIN(PROMPT,LARRAY,ERR)
+*       TYPE 3333, (LARRAY(I),I=1,78)
+*3333   FORMAT(' ',78A1)
+
+        IF (ERR .EQ. 0) GOTO 50
+        IF (ERR .EQ. 1) GOTO 100
+        IF (ERR .EQ. 2) GOTO 150
+        IF (ERR .EQ. 3) GOTO 200
+
+*       IF SUCCESSFUL LINE OBTAINED FROM XRAY, PARSE LINE AND BRANCH
+*       ACCORDING TO THE VERSION OF THE X-RAY CODE
+50      IF (VERJUN .EQ. 404) GOTO 404
+        IF (VERJUN .EQ. 405) GOTO 405
+        ENCODE(5,52,TEST)(LARRAY(I),I=1,4)
+52      FORMAT(1X,4A1)
+
+*       IF TEST CONTAINS 'LINK' --> VERSION 404; IF TEST = 'CHAN' VERSION 405
+        IF (TEST .EQ. ' CHAN') VERJUN = 405
+        IF (TEST .EQ. ' LINK')  VERJUN = 404
+        GOTO 70
+
+405     ENCODE(15,62,LINE)(LARRAY(I),I=17,20),(LARRAY(I),I=69,76)
+62      FORMAT(1X,4A1,2X,8A1)
+        GOTO 67
+
+404     ENCODE(15,66,LINE)(LARRAY(I),I=11,14),(LARRAY(I),I=63,70)
+66      FORMAT(1X,4A1,2X,8A1)
+
+67      IF (DONE .EQ. 1) GOTO 70
+        IF (LINE(2) .EQ. '     ' .OR. LINE(3).EQ. '     ') GOTO 75
+
+        OCHANL = LINE(1)
+        HTIME(1) = LINE(2)
+        HTIME(2) = LINE(3)
+        DONE = 1
+70      LINNO = LINNO + 1
+        GOTO 30
+
+75      HTIME(1) = MSG(1)
+        HTIME(2) = MSG(2)
+        LINNO = LINNO + 1
+        GOTO 30
+
+*       XRAY LINE TOO LONG; WRITE ERROR MESSAGE
+100     WRITE(22#MTRPOS,5000)LINNO
+5000    FORMAT('BAD LINE. #',I5,'  TOO LONG. TRUNCATED!')
+        MTRPOS = SIZE(22) + 1
+        GOTO 30
+
+*       XRAY OUTPUT FINISHED. EXIT
+150     GOTO 300
+
+*       XRAY CIRCUIT ZAPPED. WRITE ERROR MESSAGE
+200     CALL TIME(ITIME)
+        WRITE(22#MTRPOS,5005)LINNO,ITIME
+5005    FORMAT('LINE',I5,2X,'XRAY CIRCUIT ZAPPED OR 30 SEC. TIMEOUT!',
+     X' FROM GTCHAN',2X,A5)
+        MTRPOS = SIZE(22) + 1
+        OCHANL = 'FFFFF'
+*       TYPE 250
+250     FORMAT(1X,'ZAPPED OR TIMEOUT FROM GTCHAN')
+
+300     RETURN
+        END
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                      C
+C                       SUBROUTINE : GPOWER                            C
+C                                                                      C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+        SUBROUTINE GPOWER(KERNEL,NERR)
+*       TYPE 999
+*999    FORMAT(' GPOWER :')
+        INTEGER KERNEL,COMM(2),COMAND(10),COMPTR,CR,CHAR,RESULT
+        INTEGER LARRAY(80)
+        DATA PROMPT /62/
+        DATA CR /13/
+
+        COMMON /AUX/ PORT
+        COMMON /OUTPOS/ MTRPOS
+
+        NERR=0
+*       ACQUIRE PRIVILEGE
+        ENCODE (8,10,COMM)KERNEL
+10      FORMAT('GP0 ',I4)
+
+        DO 20 I=2,9
+        CALL RTC(CHAR,COMM,I-1)
+        CHAR = LSH(CHAR,-29)
+        COMAND(I) = CHAR
+        COMPTR = I
+20      CONTINUE
+
+        COMPTR = COMPTR + 1
+        COMAND(COMPTR) = CR
+        COMAND(1) = COMPTR - 1
+*       SEND 'GET POWER TO ACQUIRE PRIVILEGE' ON XRAY CIRCUIT
+*       DO 23 K=1,9
+*       TYPE 22, COMAND(K)
+*22     FORMAT(' GET POWER',I)
+*23     CONTINUE
+
+        CALL SEND(COMAND)
+
+        CALL SCAN(PROMPT,RESULT)
+        IF (RESULT .EQ. 1) GOTO 300
+        NERR=1
+
+300     RETURN
+        END
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                      C
+C                       SUBROUTINE : GTPM                              C
+C                                                                      C
+C       OBTAIN ROUND TRIP DELAY OF THE T-II SEGMENT OF THE CIRCUIT     C
+C       CURRENTLY ORIGINATING ON SPECIFIED CHANNEL.                    C
+C                                                                      C
+C       FORMAT :  CALL GTPM(CHANL,RSPONS)                              C
+C                                                                      C
+C       ARGUMENTS :                                                    C
+C       CHANL : FOUR HEX CHARACTERS,RIGHT JUSTIFIED,REPRESENTING       C
+C               CHANNEL NUMBER ON WHICH DELAY MEASUREMENT IS           C
+C               TO BE PERFORMED.                                       C
+C       RSPONS: INTEGER VARIABLE IN WHICH ROUND TRIP DELAY             C
+C               MEASUREMENT (IN MILLISECONDS) IS RETURNED.             C
+C                                                                      C
+C       ERROR RETURNS : CIRCUIT ZAP INDICATED BY RSPONS = -1.          C
+C                       BAD OR NO INPUT INDICATED BY RSPONS = 0        C
+C                                                                      C
+C       ACCESSES :  COMMON /AUX/ PORT ,  /OUTPOS/ MTRPOS               C
+C                                                                      C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        SUBROUTINE GTPM(CHANL,RSPONS)
+*       TYPE 999
+999     FORMAT(1X,'GTPM')
+
+	INTEGER RSPONS,CHANL,COMM(2),COMAND(10),COMPTR,ERR,CHAR,LARRAY(80)
+	INTEGER CR
+
+        DATA PROMPT /62/
+        DATA CR /13/
+
+        COMMON /AUX/ PORT
+        COMMON /OUTPOS/ MTRPOS
+
+*       BUILD 'PERFORMANCE MEASUREMENT' COMMAND
+        ENCODE (8,10,COMM)CHANL
+10      FORMAT('PM ',A5)
+        DO 20 I=2,9
+        CALL RTC(CHAR,COMM,I-1)
+        CHAR = LSH(CHAR,-29)
+        COMAND(I) = CHAR
+        COMPTR = I
+20      CONTINUE
+
+        COMPTR = COMPTR + 1
+        COMAND(COMPTR) = CR
+        COMAND(1) = COMPTR - 1
+
+        LINNO = 1
+        RSPONS = 0
+        IFLAG = 0
+
+*       SEND 'PERFORMANCE MEASUREMENT' COMMAND ON XRAY CIRCUIT
+        CALL SEND(COMAND)
+
+*       THIS IS THE TOP OF THE LOOP FOR PARSING XRAY RESPONSE.RE-INITIALISE
+30      DO 35 J=1,80
+        LARRAY(J) = '     '
+35      CONTINUE
+
+        CALL XRGLIN(PROMPT,LARRAY,ERR)
+*       TYPE 3333,(LARRAY(I),I=1,78)
+*3333   FORMAT(' ',78A1)
+
+        IF (ERR .EQ. 0) GOTO 50
+        IF (ERR .EQ. 1) GOTO 75
+        IF (ERR .EQ. 2) GOTO 100
+        IF (ERR .EQ. 3) GOTO 200
+
+*       IF SUCCESSFUL, PARSE LINE AND EXTRACT ROUND TRIP DELAY
+50      ENCODE(5,52,ITEMP)(LARRAY(I),I=32,36)
+52      FORMAT(5A1)
+
+*       PERFORM SANITY CHECK ON CHARACTERS REPRESENTING DELAY IN MSEC.
+        IF (ITEMP .EQ. '     ') GOTO 70
+        IBLNK = 0
+        OK = 0
+        DO 520 K=1,5
+                CALL RTC(CHAR,ITEMP,K)
+                CHAR = LSH(CHAR,-29)
+                IF (CHAR .EQ. 32 .AND. IBLNK .EQ. 0) GOTO 520
+                IBLNK = 1
+                IF (CHAR .GE. 48  .AND. CHAR .LE. 57) GOTO 520
+                OK = 1
+520     CONTINUE
+        IF (OK .NE. 0) GOTO 70
+        DECODE(5,54,ITEMP)RSPONS
+54      FORMAT(I5)
+*       PERFORM SANITY CHECK ON ACCEPTED VALUE OF RSPONS
+        IF (RSPONS .LT. 0 .OR. RSPONS .GT. 9999) RSPONS = 0
+
+70      LINNO = LINNO + 1
+        GOTO 30
+
+*       XRAY LINE TOO LONG; WRITE ERROR MESSAGE
+75      WRITE(22#MTRPOS,5000)LINNO
+5000    FORMAT('BAD LINE. #',I5,' TOO LONG. TRUNCATED!')
+        MTRPOS = SIZE(22) + 1
+        GOTO 30
+
+*       XRAY OUTPUT FINISHED. EXIT
+100     GOTO 300
+
+*       XRAY CIRCUIT ZAPPED. WRITE ERROR MESSAGE
+200     CALL TIME(ITIME)
+        WRITE(22#MTRPOS,5005)LINNO,ITIME
+5005    FORMAT('LINE',I5,2X,'XRAY CIRCUIT ZAPPED OR 30 SEC. TIMEOUT!',
+     X' FROM GTPM',4X,A5)
+*       IF NO RESPONSE IN 30 SEC. GIVE IT ANOTHER 30  SEC.
+        IFLAG = IFLAG + 1
+        MTRPOS = SIZE(22) + 1
+        IF (IFLAG .LE. 4) GOTO 30
+        RSPONS = -1
+*       TYPE 250
+250     FORMAT(1X,'ZAPPED OR TIMEOUT FROM GTPM')
+
+300     RETURN
+        END
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                      C
+C               SUBROUTINE : XPROBE                                    C
+C                                                                      C
+C   ESTABLISHES AN AUXILIARY CIRCUIT TO PROBE AND RETURNS PORT #.      C
+C                                                                      C
+C       FORMAT : CALL XPROBE(CIRC,ERR)                                 C
+C       ARGUMENTS:                                                     C
+C               CIRC : INTEGER IN WHICH AUXILIARY CIRCUIT NUMBER IS    C
+C                       RETURNED TO CALLING ROUTINE.                   C
+C               ERR : ERROR CODE                                       C
+C                       0 = NO ERROR                                   C
+C                       1 = UNABLE TO ESTABLISH CIRCUIT TO TMCS        C
+C                       2 = USERNAME NOT VALID ON TMCS                 C
+C                       3 = PASSWORD NOT VALID ON TMCS                 C
+C                       4 = PROBE CIRCUIT NOT ESTABLISHED              C
+C                                                                      C
+C       ACCESSES :  COMMON /AUX/ PORT (USED IN SCAN SUBROUTINE)        C
+C                                                                      C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        SUBROUTINE XPROBE(CIRC,ERR)
+*       TYPE 999
+999     FORMAT(1X,'XPROBE')
+
+        INTEGER TMCS(3),CIRC,PROBE(7),STAR,COLON,RESULT,PASSWD(10)
+        INTEGER CR,LF,ERR,SAVE,PORT,LARRAY(80),USERNA(8),PRIVAT(9)
+
+        DATA COLON/58/,STAR/42/,CR/13/,LF/10/
+        DATA USERNA/7,83,72,65,82,77,65,13/
+        DATA PASSWD/9,80,76,65,78,78,73,78,71,13/
+        DATA PRIVAT/8,80,82,73,86,65,84,69,13/
+        DATA PROBE/6,80,82,79,66,69,13/
+        COMMON /AUX/PORT
+
+*       BUILD TMCS COMMAND STRING
+	ITMCS = 1
+77	GOTO (1,2,3,4,5,6), ITMCS
+1       ENCODE(12,11,TMCS)
+11      FORMAT('SHARMA:401; ')
+	GOTO 10
+2	ENCODE(12,12,TMCS)
+12	FORMAT('SHARMA:1400;')
+	GOTO 10
+3	ENCODE(12,13,TMCS)
+13	FORMAT('SHARMA:5325;')
+	GOTO 10
+4	ENCODE(12,14,TMCS)
+14	FORMAT('SHARMA:4783;')
+	GOTO 10
+5	ENCODE(12,15,TMCS)
+15	FORMAT('SHARMA:7334;')
+	GOTO 10
+6	ENCODE(12,16,TMCS)
+16	FORMAT('SHARMA:1819;')
+	ITMCS = 0
+
+*       BUILD CIRCUIT TO THE TMCS HOST
+10      IER = 0
+        CALL FBCIR(TMCS,CIRC,IER)
+        IF (IER .EQ. 0) GOTO 50
+        IF (IER .NE. 4) GOTO 20
+        TYPE 17
+17      FORMAT(1X,'TMCS HOST OUT OF PORTS. TRYING AGAIN!')
+        CALL ZAP(CIRC)
+        CALL WAIT(5.0)
+18	ITMCS = ITMCS + 1
+        GOTO 77
+
+20      ERR = -1
+        IF (IER .EQ. 524288)TYPE 25
+25      FORMAT(1X,'NO AUXILIARY CIRCUIT LICENSE.',/)
+        GOTO 150
+
+*       SWAP VALUES OF PORT AND CIRC. RESWAP AT END OF ROUTINE.
+50      SAVE = PORT
+        PORT = CIRC
+
+*       SCAN FOR A COLON, THE APPROPRIATE TMCS RESPONSE
+        CALL SCAN(COLON,RESULT)
+        IF(RESULT .EQ. 1) GOTO 100
+        ERR = 1
+        GOTO 150
+
+*       ISSUE USERNAME AND SCAN FOR COLON AGAIN
+100     CALL SEND(USERNA)
+        CALL SCAN(COLON,RESULT)
+        IF (RESULT .EQ. 1) GOTO 109
+        ERR = 2
+        GOTO 150
+
+*       ISSUE PASSWORD AND SCAN FOR ASTERISK THIS TIME
+109     CALL SEND(PASSWD)
+        CALL SCAN(STAR,RESULT)
+        IF (RESULT .EQ. 1) GOTO 112
+        ERR = 3
+        GOTO 150
+
+*       ISSUE PROBE COMMAND WITHIN TMCS AND SCAN FOR COLON AGAIN
+112     CALL SEND(PROBE)
+        CALL SCAN(COLON,RESULT)
+        IF (RESULT .EQ. 1) GOTO 120
+        ERR = 4
+	CALL ZAP(CIRC)
+        GOTO 18
+
+120     ERR = 0
+        GOTO 155
+
+150     CALL ZAP(CIRC)
+155     PORT = SAVE
+        RETURN
+        END
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                      C
+C                       SUBROUTINE  : TRACE                            C
+C                                                                      C
+C       GIVEN THE NODE HOST AND PORT NUMBERS, OBTAIN THE CIRCUIT       C
+C       PATH FRON THE ACTIVE SUPERVISOR. COMMUNICATE THE THE ACTIVE    C
+C       SUPERVISOR USING AUXILIARY CIRCUIT STORED IN 'CIRC'            C
+C                                                                      C
+C       FORMAT :  CALL TRACE(CIRC,NODE,HOST,APORT,ROUTES,T1,ENGIN)     C
+C       ARGUMENTS :                                                    C
+C       CIRC : INTEGER VARIABLE CONTAINING AUX. CIRCUIT PORT           C
+C              NUMBER TO BE USED FOR COMMUNICATING WITH THE SUP.       C
+C       NODE : INTEGER VARIABLE CONTAINING NODE NUMBER OF CIRCUIT      C
+C              ORIGINATION.                                            C
+C       HOST : INTEGER VARIABLE CONTAINING KERNEL HOST NUMBER OF       C
+C              CIRCUIT ORIGINATION.                                    C
+C       APORT: INTEGER VARIABLE CONTAINING PORT NUMBER (IN OCTAL)      C
+C              OF CIRCUIT ORIGINATION.                                 C
+C       ROUTES: INTEGER ARRAY OF LENGTH 17, IN WHICH THE CIRCUIT       C
+C               PATH CONTAINING UPTO 16 NODE NUMBERS IS RETURNED.      C
+C               ROUTES(17) CONTAINS THE NUMBER OF TII LINKS.           C
+C       T1 :   INTEGER VARIABLE RETURNED BY SUBROUTINE INDICATING      C
+C              WHETHER CIRCUIT PATH IS HYBRID,T-I AND T-II NODES       C
+C               (T1= 1) OR FULLY T-II (T1 = 0)                         C
+C                                                                      C
+C       ERROR RETURNS : AUX CIRCUIT TO PROBE ZAPPED AND CANNOT         C
+C                       BE RE-BUILT (CIRC = -1)                        C
+C                       BAD DATA FROM PROBE (T1 = -1)                  C
+C                                                                      C
+C       ACCESSES : COMMON /AUX/ PORT , /OUTPOS/ MTRPOS                 C
+C                  'AUX' USED BY SUBROUTINE XRGLIN.                    C
+C                                                                      C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        SUBROUTINE TRACE(CIRC,ISUP,APORT,ROUTES,T1)
+*       TYPE 999
+999     FORMAT(1X,'TRACE')
+
+	INTEGER NODE,HOST,STAR,APORT,CIRC,DPORT,COMM(4),COMAND(22),COMPTR
+        INTEGER SAVE,COLON,LARRAY(80),PORT,BLANK,CR,ERR,T1,IDATE(2)
+	INTEGER ROUTES(17),CHAR,PROBE(7),TLINE(160),PRLOST,ENGIN,BONES(2)
+
+        DATA PROBE/6,80,82,79,66,69,13/
+        DATA STAR/42/,CR/13/,COLON/58/,BLANK/32/
+        COMMON /AUX/ PORT
+        COMMON /OUTPOS/MTRPOS
+
+*       SAVE PORT NUMBER AND SUBSTITUTE CIRC FOR PORT. CAPTURE SYMBOLIC NODE #
+        SAVE = PORT
+        PORT = CIRC
+	ENCODE(5,10,INODE)ISUP
+10	FORMAT(I5)
+
+*       SAVE THE FOLLOWING INTEGER IN PRLOST. IN CHARACTERS THIS CORRESPONDS
+*       TO PRLOST = '***PR' (NOTE : P & R ARE LOWER CASE) . USED TO INTERPRET
+*       A SPECIFIC TMCS ERROR MESSAGE
+        PRLOST = 22726144228
+
+*       BUILD TRACE CIRCUIT COMMAND TO TRACE SUP COMMAND CIRCUIT
+40      ENCODE(20,50,COMM)ISUP,APORT
+50      FORMAT('TRACE ',I4,' S',I4)
+
+        DO 60 I=2,21
+        CALL RTC(CHAR,COMM,I-1)
+        CHAR = LSH(CHAR,-29)
+        COMAND(I) = CHAR
+        COMPTR = I
+60      CONTINUE
+
+        COMPTR = COMPTR + 1
+        COMAND(COMPTR) = CR
+        COMAND(1) = COMPTR - 1
+
+*       THE 'TRACE' COMMAND REQUIRES A CHARACTER STRING HAVING NO MORE THAN 1
+*       ' ' (BLANK) SEPARATING THE ARGUMENTS. ACCOMPLISH THIS!
+*       IF BLANKS EXIST IN POSITIONS 14,15,16,19 OR 20 REMOVE THEM.
+
+        DO 72 K=22,1,-1
+           IF ((K.NE.14).AND.(K.NE.15).AND.(K.NE.16).AND.(K.NE.19)
+     X        .AND.(K.NE.20))  GOTO 72
+           IF (COMAND(K) .NE. BLANK) GOTO 72
+           DO 70 J=K,22
+70           COMAND(J) = COMAND(J+1)
+           COMAND(1) = COMAND(1) - 1
+72      CONTINUE
+
+75      IFINIS = 0
+        ICNT = 0
+        IFLAG = 0
+        ILENG5 = 0
+
+*       SEND 'TRACE  CIRCUIT ' COMMAND DOWN PROBE CIRCUIT
+        CALL SEND(COMAND)
+
+76      DO 77 J=1,16
+        ROUTES(J) = '     '
+77      CONTINUE
+        ROUTES(17) = -1
+        T1 = -1
+
+*       INITIALISE TLINE (DOUBLE LINE) ARRAY
+        DO 78 J=1,160
+        TLINE(J) = '     '
+78      CONTINUE
+
+*       RE-INITIALISE LARRAY TO BLANKS
+80      DO 100 J=1,80
+        LARRAY(J) = '     '
+100     CONTINUE
+        IF (IFINIS .EQ. 1) GOTO 300
+
+        CALL XRGLIN(COLON,LARRAY,ERR)
+*        TYPE 3333,(LARRAY(J),J=1,78)
+*3333    FORMAT('  ',78A1)
+
+        IF (ERR .EQ. 0 .OR. ERR .EQ. 1) GOTO 102
+        IF (ERR .EQ. 2) GOTO 160
+        IF (ERR .EQ. 3) GOTO 180
+
+102     ENCODE(5,103,LINE)(LARRAY(J),J=1,5)
+103     FORMAT(5A1)
+
+        IF (LINE .EQ. '     ' .AND. IFINIS .EQ. 0)GOTO 80
+
+*       SHIFT OLD LINE INTO FIRST HALF OF 'TLINE' ARRAY. INCLUDE
+*       NEW LINE INTO SECOND HALF OF 'TLINE' ARRAY.
+105     DO 110 J=1,72
+                TLINE(J) = TLINE(J+72)
+                TLINE(J+72) = LARRAY(J)
+110     CONTINUE
+
+*       PARSE STRING RETURNED FROM PROBE.
+        ENCODE(5,123,TAIL)(TLINE(J),J=21,25)
+123     FORMAT(5A1)
+        ENCODE(5,125,LINE)(TLINE(J),J=1,5)
+125     FORMAT(5A1)
+*       IF LINE IS BLANK OR AN ECHO,GET ANOTHER LINE. IF PROBE CIRCUIT
+*       HAS BEEN LOST, RE-ESTABLISH IT. OTHERWISE EXTRACT NODE NUMBERS.
+        IF (LINE .EQ. 'TRACE' .OR. LINE .EQ. '     ' .OR.
+     X      LINE .EQ. 'BUSY ')GOTO 80
+        IF (LINE .EQ. PRLOST) GOTO 170
+        IF (LINE .EQ. 'HOST ') GOTO 130
+	IF (LINE .EQ. 'SUP P' .AND. TAIL .EQ. 'O CIR') GOTO 1260
+        IF (LINE .EQ. 'SUP P' .AND. TAIL .EQ. ' CIRC') GOTO 1260
+	IF (LINE .EQ. 'SUP P' .AND. TAIL .EQ. 'CIRCU') GOTO 1260
+	IF (LINE .EQ. 'SUP P' .AND. TAIL .EQ. 'IRCUI') GOTO 1260
+        IF (LINE .EQ. 'SUP P') GOTO 130
+
+1250    CALL DATE(IDATE)
+        CALL TIME(ITIME)
+        IF (T1 .NE. -1) IFLAG = IFLAG + 1
+        IF (IFLAG .NE. 1)WRITE(22#MTRPOS,126)IDATE,ITIME,TLINE
+126     FORMAT('UNEXPECTED RESPONSE FROM PROBE',2X,2A5,5X,A5,/,80A1,
+     X  /,80A1)
+        MTRPOS = SIZE(22) + 3
+        IF (IFINIS .EQ. 1) GOTO 300
+        GOTO 80
+
+1260    CALL DATE(IDATE)
+        CALL TIME(ITIME)
+        IF (T1 .NE. -1) IFLAG = IFLAG + 1
+        IF (IFLAG .NE. 1)WRITE(22#MTRPOS,1261)APORT,IDATE,ITIME,TLINE
+1261    FORMAT(1X,'PORT ',I5,' NO CIRCUIT',2X,2A5,5X,A5,/,80A1,
+     X  /,80A1) 
+        MTRPOS = SIZE(22) + 3
+        TYPE 5555,(TLINE(J),J=1,78)
+5555    FORMAT(' ',78A1)
+        IF (IFINIS .EQ. 1) GOTO 300
+        GOTO 80
+
+130     ISTRT = 0
+*	TYPE 5556,(TLINE(J),J=1,78)
+*5556	FORMAT(' ',78A1)
+
+        DO 127 J=1,156
+        J1 = J+ 4
+        ENCODE(5,1270,ITEST)(TLINE(K),K=J,J1)
+1270    FORMAT(5A1)
+        IF (ITEST .EQ. INODE) GOTO 1271
+127     CONTINUE
+        GOTO 1250
+
+1271    ISTRT = J
+        DO 1272 J = ISTRT,156
+        J1 = J + 4
+        ENCODE(5,1273,ITEST)(TLINE(K),K=J,J1)
+1273    FORMAT(5A1)
+        IF (ITEST .EQ. ' LEP ') GOTO 12733
+1272    CONTINUE
+        GOTO 1250
+
+*       NO CIRCUIT OR CIRCUIT TOO LONG.
+12731   J1 = ISTRT + 5
+        J2 = ISTRT + 45
+        ENCODE(41,12732,ROUTES)(TLINE(K),K=J1,J2)
+12732   FORMAT(41A1)
+        IF (IFINIS .EQ. 1) GOTO 300
+        GOTO 80
+
+12733   T1 = 0
+12741   IEND = J-1
+        ILENG = IEND - ISTRT + 1
+        ILENG5 = ILENG/5
+        DO 1276 K=1,ILENG5
+        J = ISTRT + (K-1)*5
+        J1 = J + 4
+        ENCODE(5,1275,ROUTES(K))(TLINE(L),L=J,J1)
+1275    FORMAT(5A1)
+        ROUTES(17) = ROUTES(17) + 1
+1276    CONTINUE
+        IF (T1 .EQ. 1) GOTO 12760
+        IF (IFINIS .EQ. 1) GOTO 300
+        GOTO 80
+
+*       EXTRACT TYMNET 1 NODE NUMBER.
+12760   J1 = IEND + 7
+        DO 1277 J=J1,156
+        IF (TLINE(J) .EQ. '     ') GOTO 1279
+        IF (TLINE(J) .EQ. 'C    ') GOTO 1279
+1277    CONTINUE
+        GOTO 1250
+
+1279    ILENG = J - J1
+        IF (ILENG .LE. 4) GOTO 12790
+*       IF 5 DIGIT IT IS A TERMINAL, THEN IGNORE AS A NODE
+*       J= J1 + 3
+*       ILENG = 4
+        T1=0
+        GOTO 13001
+
+12790   ILENG2 = 5-ILENG
+        ENCODE(8,12791,BONES)ILENG2,ILENG
+12791   FORMAT('(',I1,'X,',I1,'A1)')
+        J2 = J-1
+        ENCODE(5,BONES,ROUTES(ILENG5+1))(TLINE(K),K=J1,J2)
+
+*       A T1 NODE IS DEFINED AS NODE NUMBER < 2000
+
+        DECODE(5,12792,ROUTES(ILENG5+1))ITEMP
+12792   FORMAT(I5)
+        IF (ITEMP .LT. 2000) GOTO 13001
+        T1=0
+        ROUTES(17) = ROUTES(17) + 1
+13001   IF (IFINS .EQ. 1) GOTO 300
+        GOTO 80
+
+*       PROBE OUTPUT FINISHED. EXIT
+160     IFINIS = 1
+        GOTO 102
+
+*       PROBE CIRCUIT LOST BUT TMCS CIRCUIT ACTIVE. RE-ISSUE PROBE CMND.
+170     CALL SCAN(STAR,IRSLT)
+        IF (IRSLT .NE. 1) GOTO 180
+        CALL DATE(IDATE)
+        CALL TIME(ITIME)
+        WRITE(22#MTRPOS,175)IDATE,ITIME
+175     FORMAT('TMCS LOST PROBE CIRCUIT',18X,2A5,5X,A5)
+        MTRPOS = SIZE(22) + 1
+        CALL WAIT(5.0)
+        CALL SEND(PROBE)
+        CALL SCAN(COLON,IRSLT)
+        IF (IRSLT .NE. 1) GOTO 180
+        CALL DATE(IDATE)
+        CALL TIME(ITIME)
+        WRITE(22#MTRPOS,178)IDATE,ITIME
+178     FORMAT('TMCS GOT BACK PROBE CIRCUIT',14X,2A5,5X,A5)
+        MTRPOS = SIZE(22) + 1
+        GOTO 300
+
+*       PROBE CIRCUIT ZAPPED OR 30 SEC. TIMEOUT
+180     CALL DATE(IDATE)
+        CALL TIME(ITIME)
+        WRITE(22#MTRPOS,5005)IDATE,ITIME
+5005    FORMAT('TMCS CIRCUIT ZAPPED OR 60 SEC. TIMEOUT',3X,2A5,5X,A5)
+        MTRPOS = SIZE(22) + 1
+
+*       RE-ESTABLISH PROBE CIRCUIT
+5002    CALL ZAP(CIRC)
+        CALL XPROBE(CIRC,ERR)
+        IF (ERR .NE. 0) GOTO 200
+        CALL DATE(IDATE)
+        CALL TIME(ITIME)
+        WRITE(22#MTRPOS,5010)IDATE,ITIME
+5010    FORMAT('TMCS CIRCUIT RE-ESTABLISHED',14X,2A5,5X,A5)
+        MTRPOS = SIZE(22) + 1
+        GOTO 300
+
+*       TRY TO ESTABLISH TMCS CIRCUIT 3 TIMES. IF UNSUCCESSFUL,EXIT
+200     ICNT = ICNT + 1
+        CALL WAIT(5.0)
+        IF (ICNT .LE. 2) GOTO 5002
+        CIRC = -1
+
+*       REPLACE VALUE OF PORT AND EXIT.
+300     PORT = SAVE
+        RETURN
+        END
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                   C
+C                 SUBROUTINE : CONVERT HEX TO DECIMAL               C
+C                                                                   C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        SUBROUTINE HEXDEC(HTIME,DTIME)
+        INTEGER HTIME(2),DIGIT(10),DTIME
+        DECODE(10,101,HTIME)DIGIT
+101     FORMAT(10A1)
+*
+        DTIME = 0
+        DO 500 M = 3,10
+        IF (DIGIT(M) .EQ. ' ') GOTO 300
+        IF (DIGIT(M) .EQ. '0') GOTO 300
+        IF (DIGIT(M) .EQ. '1') GOTO 301
+        IF (DIGIT(M) .EQ. '2') GOTO 302
+        IF (DIGIT(M) .EQ. '3') GOTO 303
+        IF (DIGIT(M) .EQ. '4') GOTO 304
+        IF (DIGIT(M) .EQ. '5') GOTO 305
+        IF (DIGIT(M) .EQ. '6') GOTO 306
+        IF (DIGIT(M) .EQ. '7') GOTO 307
+        IF (DIGIT(M) .EQ. '8') GOTO 308
+        IF (DIGIT(M) .EQ. '9') GOTO 309
+        IF (DIGIT(M) .EQ. 'A') GOTO 310
+        IF (DIGIT(M) .EQ. 'B') GOTO 311
+        IF (DIGIT(M) .EQ. 'C') GOTO 312
+        IF (DIGIT(M) .EQ. 'D') GOTO 313
+        IF (DIGIT(M) .EQ. 'E') GOTO 314
+        IF (DIGIT(M) .EQ. 'F') GOTO 315
+300     NUM = 0
+        GOTO 350
+301     NUM = 1
+        GOTO 350
+302     NUM = 2
+        GOTO 350
+303     NUM = 3
+        GOTO 350
+304     NUM = 4
+        GOTO 350
+305     NUM = 5
+        GOTO 350
+306     NUM = 6
+        GOTO 350
+307     NUM = 7
+        GOTO 350
+308     NUM = 8
+        GOTO 350
+309     NUM = 9
+        GOTO 350
+310     NUM = 10
+        GOTO 350
+311     NUM = 11
+        GOTO 350
+312     NUM = 12
+        GOTO 350
+313     NUM = 13
+        GOTO 350
+314     NUM = 14
+        GOTO 350
+315     NUM = 15
+*
+350     DTIME = DTIME + NUM*(16**(10-M))
+500     CONTINUE
+        RETURN
+        END
+    	}Tq
