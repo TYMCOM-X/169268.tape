@@ -1,0 +1,506 @@
+C       PROGRAM TITLE/FILENAME - (NETSTAT)NP.F4
+C       PROGRAMMER - NORM SMOTHERS 446-7133
+C       DATE 7/13/78
+C       ** CHANGES MADE 9/29/78 BY J.JOELS
+C          ADDED CODE TO FURTHER BREAK DOWN REPORT INTO
+C          CATEGORIES DEFINED BY MODUM TYPE
+
+C       PURPOSE
+C               TO PROVIDE AN EXCEPTION REPORT OF PORT CODE GROUPS
+C               ON NODES - THE REPORT FLAGS  PORT GROUPS
+C               WHICH ARE OVERLY CONGESTED
+
+C       SUBROUTINES CALLED
+C               PGRADE.F4 - COMPUTES THE PROBABILITY OF A BUSY IN %
+
+C       FILES REQUIRED
+C               'INFILE' - INPUT FILE CONTAINING DETAILS
+C                       OF EVERY PORT ON EVERY NODE
+C               'OFILE' - AN OUTPUT FILE WHOSE NAME IS SPECIFIED
+C                       BY THE USER
+
+C       STATEMENT NUMBER CONVENTION
+C               1000-1999 = DO LOOP DELIMITERS
+C               2000-2999 = STRUCTURED IF DELIMITERS
+C               8000-8999 = ERROR TRANSFER POINTS
+C               9000-9999 = FORMAT STATEMENTS
+
+C       DICTIONARY
+C               IR---- = INTEGER RECORD VALUE OF ----
+C               IP---- = COUNT BY PORT OF ----
+C               RP---- = REAL VALUE COUNT BY PORT OF ----
+C               IN---- = INTEGER COUNT BY NODE OF ----
+C               RN---- = REAL VALUE COUNT BY NODE OF ----
+C               IM---- = INTEGER COUNT BY MODUM TYPE OF ----
+C               RM---- = REAL COUNT BY MODUM TYPE OF ----
+C               IG---- = INTEGER GRAND TOTAL COUNT OF ----
+C               RG---- = REAL VALUE GRAND TOTAL COUNT OF ----
+C               --PAVA = COUNT OF NUMBER PORTS AVAILABLE
+C               --PUSE = COUNT OF NUMBER PORTS USED
+C               --SES = COUNT OF SESSIONS
+C               --HRS = COUNT OF HOURS
+C               --KIO = COUNT OF KILO CHARS I/O
+C               NNUM = NODNUM
+C               IPC = PORT CODE
+C               IMT = MODUM TYPE
+C               LNNUM = CURRENT NODE BEING PROCESSED
+C               LPC = CURRENT PORT CODE BEING PROCESSED
+C               LMT = CURRNET MODUM TYPE
+C               PG = PGRADE % PROB OF BUSY
+C               ANS- = YES 'Y' OR NO 'N'
+C               IPNUM = PORT NUMBER
+C               IREC = COUNT OF NUMBER OF RECORDS PROCESSED
+C               MPSES = MIN SESS COUNT WITHIN A PORT CODE
+C               RMPHR = MIN HR 
+C               RMPKIO = MIN KIO
+C               MMSES = MIN. SESS COUNT WITHIN A MODUM TYPE
+C               RMMHR = MIN. HRS WITHIN A MODUM TYPE
+C               RMMKIO = MIN. KILO-CHARS WITHIN A MODUM TYPE
+C               PEAK = % OF TOTAL DAYS TRAFFIC IN THE BUSYIEST HR
+C               PRATIO = RATIO MAX PORTS USED / PORTS AVAILABLE
+C               RNRATO = SAME AS PRATIO BUT AT NODE LEVEL
+C               RMRATO = SAME AS PRATIO BUT AT MODUM LEVEL
+C               THRUP = ACHIEVED THROUGHPUT IN CHAR PER SES SEC
+C               N__ = NUM PORTS REQ TO DELIVER A PGRADE OF __
+C               I = DO LOOP INDEX
+
+C       XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+        DIMENSION
+     X          INFILE(5), OFILE(5), HEAD(100, 15), PCODE(100)
+
+        CALL DBSTRT (5,-1,-1,1,-4,0,21,-1,22,-1)
+
+C       LETS TELL THE USER WHAT PROGRAM HE HAS GOTTEN INTO
+        TYPE 9000
+9000    FORMAT (1X, 'NODE-PORT EXCEPTION REPORT - VERSION 3.0',/)
+
+C       LETS GET THE NAME OF THE INPUT FILE
+        TYPE 9130
+9130    FORMAT (1X, 'ENTER INPUT DATA BASE FILENAME: ', $)
+        ACCEPT 9132, (INFILE(I), I = 1, 5)
+9132    FORMAT (5A5)
+
+C       LETS SEE HOW MANY DAYS DATA ARE IN THE FILE
+96      TYPE 9136
+9136    FORMAT (1X, 'ENTER THE REAL NUMBER OF DAYS IN THE '
+     X          , 'INPUT FILE: ', $)
+        ACCEPT 9138, DAYS
+9138    FORMAT (F)
+        IF ((DAYS .GE. 1) .AND. (DAYS .LE. 31)) GO TO 98
+                TYPE 9140, DAYS
+9140            FORMAT (1X, 'ERROR - NUMBER OF DAYS = ',F10.3,
+     X                  /, 1X, 'PLEASE ENTER A REAL NUMBER ',
+     X                  'BETWEEN 1 AND 31 ',/)
+                GO TO 96
+98      CONTINUE
+
+C       LETS GET THE NAME OF THE OUTPUT FILE
+        TYPE 9014
+9014    FORMAT (1X, 'ENTER OUTPUT FILENAME: ', $)
+        ACCEPT 9016, (OFILE(I), I = 1, 5)
+9016    FORMAT (5A5)
+
+C       LETS OPEN THE FILES
+        CALL DBOPEN (INFILE)
+        OPEN (22, OFILE, OUTPUT)
+
+C       LETS SORT IT 
+        TYPE 9160
+9160    FORMAT (1X, 'SORTING . . . ', /)
+        CALL DBFIND ('ALL')
+        CALL DBSORT ('NODNUM', 'PORTCODE','MODUM')
+
+C       LETS GET A HEADDING TO PRINT
+        WRITE (22, 9018)
+9018    FORMAT (///, 10X, 111('*'), /)
+        TYPE 9002
+9002    FORMAT (1X, 'DO YOU WANT TO ENTER A REPORT HEADDING?',
+     X          '(Y OR N): ', $)
+        ACCEPT 9004, ANSH
+9004    FORMAT (A1)
+
+        IF (ANSH .NE. 'Y') GO TO 100
+
+        DO 1000 LINE = 1, 100
+                TYPE 9006, LINE
+9006            FORMAT (1X, 'LINE', I2, ' : ', $)
+                ACCEPT 9008, (HEAD(LINE, I), I = 1, 15)
+9008            FORMAT (15A5)
+                WRITE (22, 9020) (HEAD(LINE, I), I = 1, 15)
+9020            FORMAT (20X, 15A5)
+                TYPE 9010
+9010            FORMAT (1X, 'MORE?(Y OR N): ', $)
+                ACCEPT 9012, ANS
+9012            FORMAT (A1)
+                IF (ANS .NE. 'Y') GO TO 100
+1000    CONTINUE
+100     CONTINUE
+
+
+        WRITE (22, 9021)
+9021    FORMAT (//, 20X,
+     X  'NODE-PORT EXECPTION REPORT - VERSION 3.0',/,10X, 111('*'),//)
+
+        WRITE (22, 9180) (INFILE(I), I = 1,5), DAYS
+9180    FORMAT (///, 20X, 'INPUT DATABASE FILENAME = ',
+     X          5A5, /, 20X, 'NUMBER OF DAYS DATA IN THE ',
+     X          'INPUT DATABASE (USER SPECIFIED) = ', F10.3,
+     X          //, 20X, 'PORT CODE DESCRIPTION: ', /, 30X,
+     X          'PRI = PRIVATE', /, 30X, 'FX = FX', /, 30X,
+     X          'WAT = WATS3', /, 30X, 'PUB = PUBLIC', /, 30X,
+     X          'WTS = WATS5', /, 30X, 'DED = DEDICATED PRIVATE', /, 30X,
+     X          'BAD = BAD PORT', /, 30X, 'UNP = UNUSED PORT', /, 30X,
+     X          'ERR = ERROR', /)
+
+        WRITE (22, 9182)
+9182    FORMAT (/, 20X, 'NOTE: THE PGRADE IS COMPUTED USING THE ',
+     X  'ERLANG-B FORMULA AND THE PEAK HOUR S  TRAFFIC LOAD',
+     X  /, 20X, 'WHERE THE PEAK = 16% OF THE TOTAL HOURS DIVIDED',
+     X  ' BY THE (USER SPECIFIED) NUMBER OF DAYS.', /)
+
+        WRITE (22, 9019)
+C       '123......1.........2.........3.........4.........5.'
+C       '........6.........7.........8.........9.........1.'
+C       '........1.........2.........3..'
+9019    FORMAT (///, 1X, 131('*'), /, 1X,
+     X  '                                                   ', 
+     X  '              ************************      ****', 
+     X  '****************************** ', /, 1X,
+     X  '                                            P1  P5 P10 ',
+     X  'P15       **** LEAST USED PORT ***      ****',
+     X  '* ALL PORTS IN CODE GROUP **** ', /, 1X,
+     X  '                  MAX      MAX/       P    PTS PTS PTS ',
+     X  'PTS        PRT               KILO           ',
+     X  '                       CHARS/  ')
+        WRITE (22, 9119)
+9119    FORMAT (1X,
+     X  'NODE  PC MOD AVA USE        AVA      GRADE REQ REQ REQ ',
+     X  'REQ        NUM   SES  HRS     I/O           S',
+     X  'ES     HRS  KILO-I/O  SES SEC ', /, 1X,
+     X  131('*'), /)
+
+C       XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+C       LETS INITIALIZE SOM VARS
+        IREC = 0
+        LNNUM = 0
+        LPC = 0
+        LMT = 0
+        MPSES = 999999999
+        RMPHR = 999999999
+        RMPKIO = 999999999
+        MMSES = 999999999
+        RMMHR = 999999999
+        RMMKIO = 999999999
+C       LETS GIVE THE ALPHA VARS SOME VALUES
+        PCODE(1) = 'PRI'
+        PCODE(2) = 'FX '
+        PCODE(3) = 'WAT'
+        PCODE(4) = 'PUB'
+        PCODE(5) = 'WAT'
+        PCODE(6) = 'DED'
+        PCODE(7) = 'BAD'
+        PCODE(8) = 'UNP'
+        PCODE(99) = 'ERR'
+
+
+C       LETS INFORM THE TERMINAL USER WHATS GOING ON
+        TYPE 9190
+9190    FORMAT (1X, 'PROCESSING . . . ', /)
+
+C       LETS TRANSFER HERE FOR EACH NEW PORT REC WITHIN ONE CODE
+200     CALL DBGREC ($500)
+        IREC = IREC + 1
+
+        CALL DBVAL ('NODNUM',NNUM, 'PORTNUM',IPNUM, 'SESSIONS',
+     X          IRSES, 'TOTMIN',IRMIN, 'TOTCHAR',IRCHAR,
+     X          'PORTCODE',IPC,'MODUM',IMT)
+
+C       LETS SEE IF THE NODE,PORTCODE, OR MODUM HAS CHANGED AND IF WE
+C               ARE BEYOND THE FIRST REC - AND IF SO THEN LETS
+C               GO PRINT SOME OUTPUT
+        IF (((NNUM .NE. LNNUM) .OR. (IPC .NE. LPC) .OR. (IMT.NE.LMT))
+     X          .AND. (IREC .GT. 1)) GO TO 210
+
+C       LETS TRANSFER HERE AFTER PRINTING SOME OUTPUT AND CONTINUE 
+201     CONTINUE
+
+C       LETS IDENTIFY THE CURRENT NODE ,PORTCODE, AND MODUM
+        LNNUM = NNUM
+        LPNUM = IPNUM
+        LPC = IPC
+        LMT=IMT
+
+C       LETS BUMP THE MODUM COUNTS
+        IMPAVA=IMPAVA+1
+        IF (IRSES.LE.0) GO TO 202
+                IMPUSE=IMPUSE+1
+
+202     CONTINUE
+        IMSES=IMSES+IRSES
+        RMHRS=RMHRS+(FLOAT(IRMIN)/60)
+        RMKIO=RMKIO+(FLOAT(IRCHAR)/1000)
+
+C       LETS KEEP TRACK OF COUNTS ON THE LEAST USED PORT WITHIN THIS
+C       MODUM TYPE
+        IRHR=FLOAT(IRMIN)/60
+        IF ((IRHR.GE.RMMHR).OR.(IRSES.LE.0)) GO TO 203
+                MMSES = IRSES
+                RMMHR = FLOAT(IRMIN) / 60
+                RMMKIO = FLOAT(IRCHAR)/1000
+                MMPRT = LPNUM
+
+C       LETS BUMP THE PORT COUNTS
+203     IPPAVA = IPPAVA + 1
+        IF (IRSES .LE. 0) GO TO 204
+                IPPUSE = IPPUSE + 1
+204     CONTINUE
+        IPSES = IPSES + IRSES
+        RPHRS = RPHRS + (FLOAT(IRMIN) / 60)
+        RPKIO = RPKIO + (FLOAT(IRCHAR) / 1000)
+
+C       LETS KEEP TRACK OF COUNTS ON THE LEAST USED PORT
+        IF ((IRHR .GE. RMPHR) .OR. (IRSES .LE. 0)) GO TO 206
+                MPSES = IRSES
+                RMPHR = FLOAT(IRMIN) / 60
+                RMPKIO = FLOAT(IRCHAR) / 1000
+                MPPRT = LPNUM
+206     CONTINUE
+
+C       LETS GO PROCESS THE NEXT RECORD
+        GO TO 200
+
+C       XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+C       LETS TRANSFER HERE AT THE END OF FILE
+500     EOF = 1
+        NNUM = -999
+        IPC = -999
+
+C       LETS TRANSFER HERE AT END OF EACH MODUM TYPE
+210     CONTINUE
+
+C       LETS COMPUTE SOME STUFF AT MODUM LEVEL
+        THRUP = 0.
+        IF (RMHRS.LE.0.000001) GO TO 212
+                THRUP = (RMKIO*1000)/(RMHRS*60*60)
+
+212     CONTINUE
+        IF (MMSES.LT.999999999) GO TO 214
+                MMSES = 0
+                MMPRT = 0
+                RMMHR = 0
+                RMMKIO = 0
+
+214     CONTINUE
+        IF (IMPAVA.LE.0) GO TO 216
+                RMRATO = FLOAT(IMPUSE)/FLOAT(IMPAVA)
+
+216     CONTINUE
+C       LETS COMPUTE PGRADE
+        PEAK = 0.16*(RMHRS/DAYS)
+        CALL PGRADE(PEAK,IMPAVA,PG,N1,N5,N10,N15,ERR)
+        IF (ERR.EQ.0) GO TO 218
+                TYPE 9022
+                STOP
+
+218     CONTINUE
+C       LETS COMPUTE THE FLAGS
+        AFLG = ' '
+        UFLG = ' '
+        RFLG = ' '
+        PGFLG = ' '
+        N1FLG = ' '
+        HRFLG = ' '
+        THUFLG = ' '
+        IF (IMPUSE.GT.IMPAVA) UFLG = '*'
+        IF ((IMPUSE.LT.IMPAVA).AND.(PG.GT.10)) UFLG = '*'
+        IF (RMRATO.GT.0.95) RFLG = '*'
+        IF (PG.GT.10) PGFLG = '*'
+        IF (RMMHR.GT.10) HRFLG = '*'
+        IF ((THRUP.LT.1.0).AND.(THRUP.NE.0)) THUFLG = '*'
+        IF (IMPAVA.LE.0) AFLG = '*'
+        IF (IMPAVA.GT.N1)N1FLG = '*'
+        IF (IMPUSE.LE.0) UFLG = '*'
+
+C       LETS PRINT A LINE FOR MODUM STUFF
+        WRITE (22,9023)LNNUM,PCODE(LPC),LMT,IMPAVA,AFLG,IMPUSE,UFLG,
+     XRMRATO,RFLG,PG,PGFLG,N1,N1FLG,N5,N10,N15,MMPRT,MMSES,RMMHR,HRFLG,
+     XRMMKIO,IMSES,RMHRS,RMKIO,THRUP,THRFLG
+9023    FORMAT (1X, (I4, 1X, 2(A3, 1X), I3, A1, I3, A1),
+     X          5X, (F4.2, A1), 5X, (F5.2, A1,
+     X          1X, I3, A1, I3, 1X, I3, 1X, I3, 1X ),
+     X          5X, (2X, I3, 1X, I5, F5.1, A1, F7.0, 1X),
+     X          4X, (2X, I6, 1X, F8.1, 1X, F10.2, 1X, F6.2, A1, 1X) )
+
+C       LETS RESET THE MODUM COUNTS
+        IMPAVA = 0
+        IMPUSE = 0
+        RMRATO = 0
+        PG = 0
+        IMSES = 0
+        RMHRS = 0
+        RMKIO = 0
+        MMSES = 999999999
+        RMMHR = 999999999
+        RMMKIO = 999999999
+
+C       LETS SEE IF WE ARE STILL ON THE SAME PORT AND BEYOND THE 1ST REC.
+        IF ((NNUM.EQ.LNNUM).AND.(IPC.EQ.LPC).AND.(IREC.GT.1)) GO TO 201
+
+C       IF YES - GO PRCESS ANOTHER RECORD
+C       OTHERWISE - DROP THROUT TO OUTPUT PORT STUFF
+300     CONTINUE
+
+C       XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+C       LETS COMPUTE SOME STUFF AT PORT LEVEL
+        THRUP = 0
+        IF (RPHRS .LE. 0.0000001) GO TO 312
+                THRUP = (RPKIO*1000)/(RPHRS*60*60)
+312     CONTINUE
+        IF (MPSES .LT. 999999999) GO TO 310
+                MPSES = 0
+                MPPRT = 0
+                RMPHR = 0
+                RMPKIO = 0
+310     CONTINUE
+        IF (IPPAVA .LE. 0) GO TO 301
+        PRATIO = FLOAT(IPPUSE) / FLOAT(IPPAVA)
+301     CONTINUE
+
+C       LETS COMPUTE THE PGRADE
+C               NOTE: THE PEAK HOUR CARRIES 16% OF THE TOTAL
+C                       TRAFFIC FOR A 10-HOUR WORKDAY
+        PEAK = 0.16 * (RPHRS / DAYS)
+        CALL PGRADE (PEAK, IPPAVA, PG, N1, N5, N10, N15, ERR)
+                IF (ERR .EQ. 0) GO TO 302
+                        TYPE 9022
+9022                    FORMAT (1X, 'ERROR - IN PGRADE')
+                        STOP
+302             CONTINUE
+
+C       LETS COMPUTE THE FLAGS
+        AFLG = ' '
+        UFLG = ' '
+        RFLG = ' '
+        PGFLG = ' '
+        N1FLG = ' '
+        HRFLG = ' '
+        THUFLG = ' '
+        IF (IPPUSE .GT. IPPAVA) UFLG = '*'
+
+        IF ((IPPUSE .LT. IPPAVA) .AND. (PG .GT. 10)) UFLG = '*'
+        IF (PRATIO .GT. 0.95) RFLG = '*'
+        IF (PG .GT. 10) PGFLG = '*'
+        IF (RMPHR .GT. 10) HRFLG = '*'
+        IF ((THRUP .LT. 1.0) .AND. (THRUP .NE. 0)) THUFLG = '*'
+        IF (IPPAVA .LE. 0) AFLG = '*'
+        IF (IPPAVA .GT. N1) N1FLG = '*'
+        IF (IPPUSE .LE. 0) UFLG = '*'
+
+
+C       LETS PRINT A LINE FOR PORT CODE STUFF
+        WRITE (22, 9024) LNNUM, PCODE(LPC), IPPAVA, AFLG, IPPUSE, UFLG,
+     X          PRATIO, RFLG, PG, PGFLG, N1, N1FLG, N5, N10, N15,
+     X          MPPRT,MPSES, RMPHR, HRFLG, RMPKIO, IPSES,
+     X          RPHRS, RPKIO, THRUP, THUFLG
+9024    FORMAT (1X,131('-'),/,
+     X          1X, (I4, 1X, A3, 5X, I3, A1, I3, A1), 
+     X          5X, (F4.2, A1), 5X, (F5.2, A1, 
+     X          1X, I3, A1, I3, 1X, I3, 1X, I3, 1X),
+     X          5X, (2X, I3, 1X, I5, F5.1, A1, F7.0, 1X), 
+     X          4X, (2X, I6, 1X, F8.1, 1X, F10.2, 1X, F6.2, A1, 1X), /)
+
+C       LETS BUMP THE NODE COUNTS
+        INPAVA = INPAVA + IPPAVA
+        INSES = INSES + IPSES
+        RNHRS = RNHRS + RPHRS
+        RNKIO = RNKIO + RPKIO
+        INPUSE = INPUSE + IPPUSE
+
+C       LETS RESET THE PORT LEVEL COUNTS
+        IPPAVA = 0
+        IPPUSE = 0
+        PRATIO = 0
+        PG = 0
+        IPSES = 0
+        RPHRS = 0
+        RPKIO = 0
+        MPSES = 999999999
+        RMPHR = 999999999
+        RMPKIO = 999999999
+
+C       LETS SEE IF WE ARE STILL ON THE SAME NODE AND BEYOND FIRST REC
+        IF ((NNUM .EQ. LNNUM) .AND. (IREC .GT. 1)) GO TO 201
+
+C       IF YES - GO PROCESS NEXT REC
+C       IF OTHERWISE - DROP THROUGH TO OUTPUT NODE STUFF
+
+C       XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+C       LETS DO THE FOLLOWING AT THE END OF PROCESSING EACH NODE
+
+C       LETS COMPUTE A RATIO
+        IF (INPAVA .LE. 0) GO TO 304
+        RNRATO = FLOAT(INPUSE) / FLOAT(INPAVA)
+304     CONTINUE
+
+C       LETS PRINT A LINE FOR THE NODE SUBTOTALS
+        WRITE (22, 9026) LNNUM, INPAVA, INPUSE, RNRATO,
+     X          INSES, RNHRS, RNKIO
+9026    FORMAT (1X, 131('-'), /, 1X,131('-'),/,1X,
+     X  (I4, 1X, 'ALL', 5X, I3, 1X, I3, 1X),
+     X  5X, (F4.2, 1X), 5X, (22X), 5X, (26X), 4X,
+     X  (2X, I6, 1X, F8.1, 1X, F10.2, 1X, 6X, 2X), ///)
+
+C       LETS BUMP THE GRAND TOTALS
+        IGPAVA = IGPAVA + INPAVA
+        IGPUSE = IGPUSE + INPUSE
+        IGSES = IGSES + INSES
+        RGHRS = RGHRS + RNHRS
+        RGKIO = RGKIO + RNKIO
+
+C       LETS RESET THE NODE COUNTS
+        INPAVA = 0
+        INPUSE = 0
+        INSES = 0
+        RNHRS = 0
+        RNKIO = 0
+        RNRATO = 0
+
+C       LETS GO PROCESS THE CURRENT RECORD UNLESS EOF
+        IF (EOF .NE. 1) GO TO 201
+
+C       XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+C       LETS DROP THROUGH TO HERE WHEN WE REACH END OF FILE
+
+C       LETS COMPUTE THE OVERALL RATIO FOR ALL NODES
+        IF (IGPAVA .LE. 0) GO TO 306
+        GRATIO = FLOAT(IGPUSE) / FLOAT(IGPAVA)
+306     CONTINUE
+
+C       LETS OUTPUT THE GRAND TOTALS
+        WRITE (22, 9028) IGPAVA, IGPUSE, GRATIO, IGSES, 
+     X          RGHRS, RGKIO
+9028    FORMAT (//, 1X, 131('-'), /, 10X, 'GRAND TOTALS', /,1X,
+     X  131('-'),
+     X  //, 1X, 'ALL  ALL',4X,I4,1X, I4, 5X, F4.2, 5X, 22X, 5X, 27X, 4X, 
+     X  (1X, I7, 1X, F8.1, 1X, F10.2, 1X, 6X, 2X), //)
+        WRITE (22, 9029)
+9029    FORMAT (///, 2(1X, 131('*'), /), /, 10X, 'END OF REPORT',
+     X  /, 2(1X, 131('*'), /) )
+
+C       LETS TELL THE TERMINAL USER THAT WE ARE DONE
+        TYPE 9030
+9030    FORMAT (1X, 'NODE-PORT REPORT - COMPLETED OK')
+
+        CLOSE (22)
+        CALL DBCLOS
+        CALL DBEND
+        END
+
+
+  
