@@ -1,0 +1,226 @@
+C
+C
+C  ATTENTION!!!!   SET 'TTY FORM'  BEFORE TYPING OUT THIS FILE TO GET IT
+C  IN THE RIGHT FORMAT.
+C
+C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                         C
+C                       PORTS ANALYSIS PROGRAM                            C
+C                            VERSION 5.0                                  C
+C                                                                         C
+C  AUTHOR : G.P. RAVIKUMAR                              JUNE 15, 1983     C
+C           MANAGEMENT SCIENCES                                           C
+C                                                                         C
+C                                                                         C
+C  THIS VERSION IS A COMPLETE RE-WRITE OF VERSION 4.1, IN ORDER TO MAKE   C
+C  IT MORE USER-FRIENDLY.  IN ADDITION, PRINTING OF THE DETAILED LINE     C
+C  LOADING INFORMATION HAS BEEN SUPPRESSED IN THIS VERSION.               C
+C                                                                         C
+C                                                                         C
+C  THIS PROGRAM CALCULATES THE PGRADE FOR A GIVEN TRAFFIC AND A GIVEN     C
+C  NUMBER OF PORTS USING THE ERLANG'S B FORMULA.  CONVERSELY, FOR A       C
+C  A SPECIFIED PGRADE LEVEL, IT CAN ALSO CALCULATE THE NUMBER OF PORTS    C
+C  REQUIRED TO ACHIEVE THIS LEVEL.                                        C
+C                                                                         C
+C                                                                         C
+C  TYPE OUT THE FILE (ANALYSIS:28) PORTS.DOC   FOR DOCUMENTATION ON HOW   C
+C  TO RUN THIS PROGRAM AND OTHER INFORMATION.                             C
+C                                                                         C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+
+
+        /ENTRY 5
+
+        INTEGER DAYHRS
+
+        DIMENSION PEAK(24,24)
+
+        DATA PEAK/100.,23*0.,
+     +0.,0.,22*0.,
+     +0.,0.,0.,21*0.,
+     +0.,0.,0.,0.,20*0.,
+     +27.,25.,22.,17.,9.,19*0.,
+     +23.,21.,19.,16.,13.,8.,18*0.,
+     +19.,18.,17.,16.,14.,9.,7.,17*0.,
+     +17.,16.,15.,14.,13.,12.,8.,5.,16*0.,
+     +17.,16.,14.,13.,12.,11.,9.,5.,3.,15*0.,
+     +16.,15.,14.,13.,12.,11.,8.,6.,3.,2.,14*0.,
+     +15.,14.,13.,12.,11.,10.,9.,6.,4.,3.,3.,13*0.,
+     +14.,13.,12.,12.,10.,9.,9.,6.,5.,4.,3.,3.,12*0.,
+     +14.,13.,12.,11.,10.,9.,8.,7.,6.,4.,3.,2.,1.,11*0.,
+     +13.,12.,12.,11.,10.,9.,8.,7.,6.,4.,3.,2.,2.,1.,10*0.,
+     +13.,12.,11.,11.,10.,9.,8.,7.,6.,4.,3.,2.,2.,1.,1.,9*0.,
+     +12.,12.,11.,11.,10.,9.,8.,7.,6.,5.,2.,2.,2.,1.,1.,1.,8*0.,
+     +192*0./
+
+
+        IRUNSW = 0
+        GOTO 9
+
+5       CALL ONINT($999)
+        IRUNSW = 1
+
+9       CONTINUE
+
+C        CALL TTYFOR
+
+
+
+
+
+        TYPE 10
+ 10     FORMAT(/,5X,'PORTS ANALYSIS PROGRAM VERSION 5.0  JUNE 1983',//,
+     -           5X,'ATTENTION!!!! THIS IS A MODIFIED VERSION.  BE SURE'
+     -        ,/,5X,'TO READ  DOCUMENTATION IN (ANALYSIS)PORTS.DOC '
+     -        ,/,5X,'BEFORE RUNNING THIS PROGRAM',//)
+
+
+
+ 20     TYPE 30
+ 30     FORMAT(//' DO YOU WANT TO COMPUTE  1.NO.OF PORTS ',
+     -' OR  2.PGRADE? ',/,8X,'(ENTER ''1'' OR ''2'' ; CR TO EXIT)',
+     -  14X,': ',$)
+
+        READ(5,40) ICHOIC
+ 40     FORMAT(5G)
+        IF(ICHOIC.EQ.0) GOTO 999
+        IF(ICHOIC.NE.1.AND.ICHOIC.NE.2) GO TO 20
+
+
+
+        TYPE 50
+ 50     FORMAT(' ENTER NUMBER OF CALLS PER DAY        ',
+     -          '               : ',$)
+        READ (5,40) ICALLS
+
+
+
+        TYPE 60
+ 60     FORMAT(' ENTER TOTAL CONNECT HOURS PER DAY',19X,': ',$)
+        READ (5,40) HOURS
+
+
+
+ 70     TYPE 71
+ 71     FORMAT(' DO YOU KNOW THE PERCENTAGE OF CALLS THAT OCCUR',
+     -       /,' DURING THE HEAVIEST TRAFFIC HOUR OF THE DAY?',
+     -       /,'             (ENTER ''Y'' OR ''N'')',
+     -           '                      : ',$)
+        READ (5,75) IANS
+ 75     FORMAT(A1)
+        IF (IANS.NE.'Y'.AND.IANS.NE.'N') GO TO 70
+        IF (IANS.EQ.'N') GO TO 90
+
+ 79       TYPE 80
+ 80       FORMAT (' ENTER THE PERCENTAGE               ',
+     -              '                 : ',$)
+          READ (5,40) PKPRCT
+          IF (PKPRCT.GE.0.0.AND.PKPRCT.LE.100.0) GO TO 100
+            TYPE 81
+ 81         FORMAT(' *** PERCENTAGE SHOULD BE BETWEEE 0 & 100 ***'/)
+            GO TO 79
+
+
+
+
+
+
+ 90     TYPE 95
+ 95     FORMAT (' ENTER NO. OF BUSINESS HOURS IN A DAY',/,
+     -          '     (SHOULD BE BETWEEN 5 AND 16)',20X,': ',$)
+        READ (5,40) DAYHRS
+        IF (DAYHRS.LT.5.OR.DAYHRS.GT.16) GO TO 90
+
+
+
+ 100    TYPE 105
+ 105    FORMAT (' ENTER OPERATOR DELAY PER CALL (IN SECONDS)',
+     -            10X,': ',$)
+        READ (5,40) OPTIME
+
+        OPCONN = ICALLS*OPTIME/3600.
+
+
+
+        IF (IANS.EQ.'N') PKPRCT=PEAK(1,DAYHRS)
+
+        ERLANG = (HOURS+OPCONN)*(PKPRCT/100.)
+
+
+
+        IF (ICHOIC.EQ.2) GO TO 160
+
+
+ 110    TYPE 111
+ 111    FORMAT(' ENTER DESIRED PERCENTAGE PGRADE',21X,': ',$)
+        READ (5,40) GRADE
+        IF (GRADE.GT.0.0.AND.GRADE.LT.100.0) GO TO 115
+          TYPE 112
+ 112      FORMAT(' *** THE PERCENTAGE FIGURE SHOULD BE GREATER THAN ',
+     -           '0.0 AND LESS THAN 100.0',/)
+          GO TO 110
+
+ 115    GRADE=GRADE/100.0
+
+
+
+C  DETERMINE NUMBER OF LINES FOR A GIVEN PGRADE
+
+        NPRT1=1
+        PGRDE1=1.0
+ 150    PGRDE1 = (ERLANG*PGRDE1)/(FLOAT(NPRT1)+ERLANG*PGRDE1)
+        IF (PGRDE1.LE.GRADE) GO TO 155
+          NPRT1 = NPRT1+1
+          GO TO 150
+
+ 155    NPRT=NPRT1
+        PGRADE=PGRDE1*100.0
+        GO TO 190
+
+
+
+
+
+
+
+C  DETERMINE PGRADE FOR A GIVEN NUMBER OF LINES
+
+ 160    TYPE 161
+ 161    FORMAT (' ENTER NUMBER OF PORTS ',30X,': ',$)
+        READ (5,40) IPORTS
+
+
+
+        NPRT2 = 0
+        PGRDE2 = 1.0
+ 170    IF (NPRT2.EQ.IPORTS) GO TO 175
+          NPRT2=NPRT2+1
+          PGRDE2=(ERLANG*PGRDE2)/(FLOAT(NPRT2)+ERLANG*PGRDE2)
+          GO TO 170
+
+ 175    NPRT=NPRT2
+        PGRADE=PGRDE2*100.0
+
+
+
+
+
+ 190    TYPE 191, NPRT,PGRADE
+ 191    FORMAT(/////10X,'******************************************',
+     -             /10X,'*',40X,'*',
+     -             /10X,'*',9X,'NUMBER OF PORTS  = ',I3,9X,'*',
+     -             /10X,'*',40X,'*',
+     -             /10X,'*',9X,'EFFECTIVE PGRADE =', F5.1,' %',6X,'*',
+     -             /10X,'*',40X,'*',
+     -             /10X,'******************************************'//)
+
+
+        GO TO 20
+
+999     IF (IRUNSW .EQ. 1)
+     -     CALL RUN('DSK','SALES','ACCSTOR',1)
+        STOP
+
+        END
