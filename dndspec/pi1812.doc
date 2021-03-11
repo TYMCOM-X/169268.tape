@@ -1,0 +1,987 @@
+                                                                   July 2, 1986
+
+
+
+
+
+
+
+
+                            GENERAL EXTERNAL DESIGN
+                                      for
+                            3270 TERMINAL INTERFACE
+                             STORED LOGON SECURITY
+                          NETWORK TECHNOLOGY DIVISION
+                                 July 2, 1986
+
+
+
+
+
+
+
+
+
+
+     ====================================================================
+     |     Tymnet, Inc,'s proprietary rights are included in the        |
+     |     information disclosed herein.  The recipient, by receiving   |
+     |     this document, agrees that neither this document nor the     |
+     |     information disclosed herein nor any part thereof shall be   |
+     |     reproduced or transferred to other documents or used or      |
+     |     disclosed to others for manufacturing or for any other       |
+     |     purpose except as specifically authorized in writing by      |
+     |     Tymnet, Inc.                                                 |
+     ====================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                               G.E.D. for STORED LOGON SECURITY
+                                                                   July 2, 1986
+
+
+
+
+
+
+
+                                   TABLE OF CONTENTS
+
+        Section                                                            Page
+
+
+
+        1.   Objective                                                        1
+
+
+        2.   Consideration                                                    2
+
+
+        3.   Logon procedure                                                  3
+          3.1   Normal logon procedure                                        3
+          3.2   Error messages                                                5
+
+
+        4.   Macro                                                           11
+          4.1   MENOPT - logon menu option                                   11
+          4.2   DEFOPT - default logon menu option                           12
+          4.3   USRNAM - user name                                           12
+          4.4   MENU - logon menu                                            13
+          4.5   DEFMEN - default logon menu                                  13
+
+
+        5.   Example                                                         14
+
+
+        6.   Referenced Documentation                                        15
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                               G.E.D. for STORED LOGON SECURITY
+        Objective                                                  July 2, 1986
+
+
+
+
+
+
+                                    1 -  Objective
+
+
+             In the current 3270 Terminal Interface, a predefined  stored logon
+        menu is linked to a certain device.  An end user can hit  the attention
+        key to  bring up  the logon menu  and then  selects the  desired stored
+        logon string.
+
+             There  is  one  restriction  and  one  security  exposure  to this
+        implementation.
+
+             Restriction:  If manual  logon  is not  provided, the  users  on a
+        particular  terminal  are  limited  to  those  hosts  that   have  been
+        predefined in the stored logon menu and the other hosts that are not on
+        this logon menu can never be accessed by these users.
+
+             Security concern:  Unauthorized users may  get on the  Network and
+        login to any host that has been predefined in the stored logon menu.
+
+             To  eliminate the  above  problems, a  procedure  of authorization
+        checking  is  added  to  the  current  3270  Terminal  Interface  logon
+        procedure.  The  user has  to enter  username and  password to  get the
+        stored logon menu.   After the validation  of username and  password by
+        the  Network supervisor  and  the validation  of username  by  the 3270
+        Terminal Interface,  a predefined logon  menu for this  particular user
+        will then be displayed on the terminal.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        1                                      G.E.D. for STORED LOGON SECURITY
+        Consideration                                              July 2, 1986
+
+
+
+
+
+
+                                  2 -  Consideration
+
+
+             (1) The valid usernames  and the logon menus for  these authorized
+        usernames can be defined in  the TYMFILE.  For the purpose  of clarity,
+        the authorized usernames and the logon menus for these usernames can be
+        defined in a seperate file.
+
+             (2) A predefined logon menu  can be linked to a  particular device
+        or a particular username.  If a device has a predefined logon  menu, an
+        end user  can bring  up the logon  menu by  hitting the  attention key;
+        otherwise, the end user has  to enter the username and the  password to
+        get the logon menu for this particular username.
+
+             (3) A  logon menu must  be defined for  the devices which  will be
+        logged in with the Permanent Virtual Circuit (PVC).
+
+             (4) If there is no  predefined logon menu for a  particular dvice,
+        the end user of this device must enter a valid 3270  Terminal Interface
+        username, a valid network  username, and a correct password.   When the
+        Terminal Interface  receives the username,  it will check  whether this
+        username is allowed to access  this Terminal Interface.  If it  is, the
+        Terminal interface will send the username, password and the host number
+        of the  Terminal Interface  slot to the  Network Supervisor  to request
+        building a  circuit to the  Terminal Interface itself.   Otherwise, the
+        message "INVALID USERNAME" will be displayed on the terminal.
+
+             (5)  When the  Network Supervisor  receives the  request  from the
+        Terminal Interface,  it will  validate the  username and  the password.
+        After  the  validation of  the  username and  password  by  the Network
+        Supervisor, a predefined logon menu for this username will be displayed
+        on  the terminal.   If an  invalid username  and/or password  have been
+        received, an error message will be displayed on the terminal.  Refer to
+        section 3.2 for the descriptions of logon error messages.
+
+             (6) If  the username validation  time out has  occured, or  if the
+        user has tried the maximum number of retries that are  permitted during
+        the username validation, the message "USERNAME VALIDATION  FAILED" will
+        be  displayed on  the  terminal and  the  user must  restart  the logon
+        procedure.
+
+
+
+
+
+
+
+
+
+
+        2                                      G.E.D. for STORED LOGON SECURITY
+        Logon procedure                                            July 2, 1986
+
+
+
+
+
+
+                                 3 -  Logon procedure
+
+
+
+
+
+
+
+                              3.1  Normal logon procedure
+
+
+             To log on  the Network from a  3270 terminal, the user  must first
+        enter an attention key other  than the network services key  (PFi, PAi,
+        ENTER or CLEAR).  If this device does not have a predefined logon menu,
+        then the following screen will appear:
+
+         ---------------------------------------------------------------------
+        | PLEASE TYPE YOUR IDENTIFICATION                                     |
+        | USERNAME:_                                                          |
+        | PASSWORD:                                                           |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+         ---------------------------------------------------------------------
+
+             The user must enter  his/her username after the  USERNAME: prompt,
+        and then enter the  password after the PASSWORD: prompt.   The password
+        will not be displayed on the  screen.  After the user has made  all the
+        entries on the screen, the user must press either the ENTER or  PF1 key
+        and  then  the  message  "USERNAME  VALIDATION  IN  PROGRESS"  will  be
+        displayed on the terminal. No futher input is allowed at this time.
+
+
+
+
+
+
+
+
+
+
+
+        3                                      G.E.D. for STORED LOGON SECURITY
+        Logon procedure                                            July 2, 1986
+
+
+         ---------------------------------------------------------------------
+        | PLEASE TYPE YOUR IDENTIFICATION                                     |
+        | USERNAME:XXXXXXXX                                                   |
+        | PASSWORD:                                                           |
+        |                                                                     |
+        | USERNAME VALIDATION IN PROGRESS                                     |
+        | USERNAME VALIDATION IN PROGRESS                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+         ---------------------------------------------------------------------
+
+             The first "USERNAME VALIDATION IN PROGRESS" message indicates that
+        the 3270  Terminal Interface  is vadidating  the username.   The second
+        "USERNAME VALIDATION  IN PROGRESS" message  indicates that  the network
+        supervisor is validating the username and password.
+
+             After the  validation of username  by the 3270  Terminal Interface
+        and the validation of username and password by the  network supervisor,
+        the logon  menu for this  username will be  displayed.  A  sample logon
+        menu is shown as follows:
+
+         ---------------------------------------------------------------------
+        | SELECT LOGON PROCEDURE                                              |
+        | _ MANUAL                                                            |
+        |   TO ASCII HOST                                                     |
+        |   TO ONTYM                                                          |
+        |   TO DEMO HOST                                                      |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+         ---------------------------------------------------------------------
+
+             User can move the cursor to the desired logon string, and then hit
+        the ENTER or PF1  key.  The 3270 Terminal Interface  will automatically
+        send  the  predefined  logon  string  out  and  the  message  "LOGON IN
+        PROGRESS" will be displayed on the terminal.
+
+
+
+
+
+
+
+        4                                      G.E.D. for STORED LOGON SECURITY
+        Logon procedure                                            July 2, 1986
+
+
+                                  3.2  Error messages
+
+
+             This  section  describes  the  error  messages  in   the  username
+        validation process.  The 3270  Terminal Interface will not  support 480
+        and 960 characters screens during the username validation process.  All
+        the error messages described in  this section are for 1920,  2560, 3400
+        and 3564 characters screens.
+
+             (1)  If  the  user  enters  an  invalid  3270  Terminal  Interface
+        username, the messages "INVALID  USERNAME" and "TYPE USERNAME"  will be
+        displayed on  the terminal  and the cursor  will be  moved back  to the
+        USERNAME: field.
+
+
+         -------------------------------------------------------------------
+        | PLEASE TYPE YOUR IDENTIFICATION                                   |
+        | USERNAME:_                                                        |
+        | PASSWORD:                                                         |
+        |                                                                   |
+        | USERNAME VALIDATION IN PROGRESS                                   |
+        | INVALID USERNAME                                                  |
+        | TYPE USERNAME                                                     |
+        |                                                                   |
+        |                                                                   |
+        |                                                                   |
+        |                                                                   |
+        |                                                                   |
+        |                                                                   |
+         -------------------------------------------------------------------
+
+             (2) If the  user enters an  invalid network username,  the message
+        "TYPE USERNAME" will be displayed  on the terminal and the  cursor will
+        be moved back to the USERNAME: field.
+
+         --------------------------------------------------------------------
+        | PLEASE TYPE YOUR IDENTIFICATION                                    |
+        | USERNAME:_                                                         |
+        | PASSWORD:                                                          |
+        |                                                                    |
+        | USERNAME VALIDATION IN PROGRESS                                    |
+        | USERNAME VALIDATION IN PROGRESS                                    |
+        | TYPE USERNAME                                                      |
+        |                                                                    |
+        |                                                                    |
+        |                                                                    |
+        |                                                                    |
+        |                                                                    |
+        |                                                                    |
+        |                                                                    |
+        |                                                                    |
+         --------------------------------------------------------------------
+
+
+        5                                      G.E.D. for STORED LOGON SECURITY
+        Logon procedure                                            July 2, 1986
+
+
+             (3) If the user enters a valid username but an incorrect password,
+        the message "TYPE PASSWORD" will  be displayed on the terminal  and the
+        cursor will be moved back to the PASSWORD: field.
+
+         --------------------------------------------------------------------
+        | PLEASE TYPE YOUR IDENTIFICATION                                    |
+        | USERNAME:XXXXXX                                                    |
+        | PASSWORD:_                                                         |
+        |                                                                    |
+        | USERNAME VALIDATION IN PROGRESS                                    |
+        | USERNAME VALIDATION IN PROGRESS                                    |
+        | TYPE PASSWORD                                                      |
+        |                                                                    |
+        |                                                                    |
+        |                                                                    |
+        |                                                                    |
+        |                                                                    |
+        |                                                                    |
+         --------------------------------------------------------------------
+
+             (4) If  the user  enters a  valid network  username and  a correct
+        password, but this username  does not have access authorization  to the
+        requested host, the messaACCESS NOT PERMITTED" and "TYPE USERNAME"
+        will be displayed on the  terminal.  The cursor will moved back  to the
+        USERNAME: field.
+
+         ---------------------------------------------------------------------
+        | PLEASE TYPE YOUR IDENTIFICATION                                     |
+        | USERNAME:_                                                          |
+        | PASSWORD:                                                           |
+        |                                                                     |
+        | USERNAME VALIDATION IN PROGRESS                                     |
+        | USERNAME VALIDATION IN PROGRESS                                     |
+        | ACCESS NOT PERMITTED                                                |
+        | TYPE USERNAME                                                       |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+         ---------------------------------------------------------------------
+
+             (5)  During  the  username  validation  process,  if  the  network
+        supervisor  is unable  to  find a  path  through the  network  from the
+        origination node to the destination node, the messages  "CIRCUITS BUSY"
+        and "TYPE USERNAME" will be displayed on the terminal.  The cursor will
+        be moved back to the USERNAME: field.
+
+
+
+
+
+
+
+
+        6                                      G.E.D. for STORED LOGON SECURITY
+        Logon procedure                                            July 2, 1986
+
+
+         ---------------------------------------------------------------------
+        | PLEASE TYPE YOUR IDENTIFICATION                                     |
+        | USERNAME:_                                                          |
+        | PASSWORD:                                                           |
+        |                                                                     |
+        | USERNAME VALIDATION IN PROGRESS                                     |
+        | USERNAME VALIDATION IN PROGRESS                                     |
+        | CIRCUITS BUSY                                                       |
+        | TYPE USERNAME                                                       |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+         ---------------------------------------------------------------------
+
+             (6)  During  the  username  validation  process,  if  the  network
+        supervisor  can  not successfully  read  the disk  file  containing the
+        Master User Directory (MUD), the messages "BAD MUD" and "TYPE USERNAME"
+        will be displayed  on the terminal.  The  cursor will be moved  back to
+        the USERNAME: field.
+
+         ---------------------------------------------------------------------
+        | PLEASE TYPE YOUR IDENTIFICATION                                     |
+        | USERNAME:_                                                          |
+        | PASSWORD:                                                           |
+        |                                                                     |
+        | USERNAME VALIDATION IN PROGRESS                                     |
+        | USERNAME VALIDATION IN PROGRESS                                     |
+        | BAD MUD                                                             |
+        | TYPE USERNAME                                                       |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+         ---------------------------------------------------------------------
+
+             (7)  During  the  username  validation  process,  if  the  network
+        supervisor  is  unable to  read  the MUD  block  containing  the user's
+        profile, the messages "MUD ERROR" and "TYPE USERNAME" will be displayed
+        on the terminal.  The cursor will be moved to the USERNAME: field.
+
+
+
+
+
+
+
+
+
+
+
+
+
+        7                                      G.E.D. for STORED LOGON SECURITY
+        Logon procedure                                            July 2, 1986
+
+
+         ---------------------------------------------------------------------
+        | PLEASE TYPE YOUR IDENTIFICATION                                     |
+        | USERNAME:_                                                          |
+        | PASSWORD:                                                           |
+        |                                                                     |
+        | USERNAME VALIDATION IN PROGRESS                                     |
+        | USERNAME VALIDATION IN PROGRESS                                     |
+        | MUD ERROR                                                           |
+        | TYPE USERNAME                                                       |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+         ---------------------------------------------------------------------
+
+             (8)  During  the  username  validation  process,  if  the  network
+        supervisor is extremely busy, the messages "TRY AGAIN IN 2 MINUTES" and
+        "TYPE USERNAME" will be displayed on the terminal.  The cursor  will be
+        moved back to the USERNAME: field.
+
+         --------------------------------------------------------------------
+        | PLEASE TYPE YOUR IDENTIFICATION                                    |
+        | USERNAME:_                                                         |
+        | PASSWORD:                                                          |
+        |                                                                    |
+        | USERNAME VALIDATION IN PROGRESS                                    |
+        | USERNAME VALIDATION IN PROGRESS                                    |
+        | TRY AGAIN IN 2 MINUTES                                             |
+        | TYPE USERNAME                                                      |
+        |                                                                    |
+        |                                                                    |
+        |                                                                    |
+        |                                                                    |
+        |                                                                    |
+         --------------------------------------------------------------------
+
+             (9) During the username validation process, if the screen  is full
+        and there  is an  error, the  Terminal Interface  will flush  the logon
+        messages which are located between line 5 and the bottom of  the screen
+        and display the error message for the current error on line 5.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        8                                      G.E.D. for STORED LOGON SECURITY
+        Logon procedure                                            July 2, 1986
+
+
+        The screen before the messages are flushed:
+
+         ---------------------------------------------------------------------
+        | PLEASE TYPE YOUR IDENTIFICATION                                     |
+        | USERNAME:                                                           |
+        | PASSWORD:                                                           |
+        |                                                                     |
+        | USERNAME VALIDATION IN PROGRESS                                     |
+        | INVALID USERNAME                                                    |
+        | USERNAME VALIDATION IN PROGRESS                                     |
+        | USERNAME VALIDATION IN PROGRESS                                     |
+        | TYPE USERNAME                                                       |
+        | USERNAME VALIDATION IN PROGRESS                                     |
+        | USERNAME VALIDATION IN PROGRESS                                     |
+         ---------------------------------------------------------------------
+
+        The screen after the messages are flushed:
+
+         ---------------------------------------------------------------------
+        | PLEASE TYPE YOUR IDENTIFICATION                                     |
+        | USERNAME:                                                           |
+        | PASSWORD:_                                                          |
+        |                                                                     |
+        | TYPE PASSWORD                                                       |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+         ---------------------------------------------------------------------
+
+             (10) If the username validation time out has occurred, or the user
+        has tried  the maximum  number of times  permitted during  the username
+        validation process,  all the logon  messages displayed on  the terminal
+        will be flushed  and the message  "USERNAME VALIDATION FAILED"  will be
+        displayed on the terminal.  The user must restart the logon procedure.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        9                                      G.E.D. for STORED LOGON SECURITY
+        Logon procedure                                            July 2, 1986
+
+
+         ---------------------------------------------------------------------
+        | PLEASE TYPE YOUR IDENTIFICATION                                     |
+        | USERNAME:XXXXXX                                                     |
+        | PASSWORD:_                                                          |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        |                                                                     |
+        | USERNAME VALIDATION FAILED                                          |
+        |                                                                     |
+        |                                                                     |
+         ----------------------------------------------------------------------
+
+             Refer to Supervisor Reference Manual for the description  of logon
+        status.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        10                                     G.E.D. for STORED LOGON SECURITY
+        Macro                                                      July 2, 1986
+
+
+
+
+
+
+                                      4 -  Macro
+
+
+             A logon menu can be assigned to a specific device and/or username.
+        This section gives a description of the macros which are used to define
+        the logon menu for a specific device and/or username.
+
+
+
+
+
+
+                            4.1  MENOPT - logon menu option
+
+
+        Syntax: MENOPT(arg)
+                where arg = YES or NO
+        Default: If this macro is omitted, the defualt value is the
+                 value defined by the previous DEFOPT macro.
+        Description: This macro is a sub-macro of the macro DEVICE 
+                     specifing whether a logon menu is linked to
+                     the current device.  If yes, it means that an
+                     end user can hit the attention to get the logon
+                     menu.  If no, it means that an end user must
+                     enter a valid username and password to get the
+                     logon menu for this username.  The values of 
+                     the argument are the following:
+                     YES = a logon menu is linked to the current device
+                     NO  = a logon menu is not linked to the current device
+        Example: DEVICE(40)
+                    MENOPT(NO)
+                 The logon menu is not linked to the device 40.
+
+
+
+
+
+
+                        4.2  DEFOPT - default logon menu option
+
+
+
+
+
+
+
+
+
+
+
+        11                                     G.E.D. for STORED LOGON SECURITY
+        Macro                                                      July 2, 1986
+
+
+        Syntax: DEFOPT(arg)
+                where arg = YES or NO
+        Default: If this macro is omitted, the initial default value
+                 is "YES".
+        Description: This macro defines the default value for the
+                     macro MENOPT.  The values of the argument are 
+                     the following:
+                     YES = a logon menu is linked to the device
+                     NO  = a logon menu is not linked to the device
+        Example: DEFOPT(NO)
+                 The default logon menu option for each device is
+                 a logon meun is not linked to each device.
+
+
+
+
+
+
+                                4.3  USRNAM - user name
+
+
+        Syntax: USRNAM(arg)
+                where arg = a valid username
+        Description: This macro defines a username that is valid
+                     in the 3270 Terminal Interface.  The first 8 
+                     characters of the username entered by the user 
+                     are checked by the 3270 Terminal Interface.
+                     They must be matched with the name defined in 
+                     this macro unless a wildcard character ("00)
+                     is specified.  All the characters of the username
+                     will be treated as upper case and no control
+                     character can be embeded in the username.
+        Example: USRNAM(NTD)
+                 The 3-character username "NTD" is a valid username
+                 in the 3270 Terminal Interface.
+                 USERNAM(NTD"00"00"00"00"00)
+                 Any name beginning with "NTD" will be considered a
+                 valid name.  For example, "NTDXYZABCD" is a valid 
+                 one.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        12                                     G.E.D. for STORED LOGON SECURITY
+        Macro                                                      July 2, 1986
+
+
+                                4.4  MENU - logon menu
+
+
+        Syntax: MENU(arg)
+                where arg = a label that refers to a logon menu
+        Default: If this macro is omitted, the default logon 
+                 menu for the current device or username is defined 
+                 by the DEFMEN macro.
+        Description: This macro is a sub-macro of the macro DEVICE
+                     and macro USRNAM specifying the label which 
+                     refers to the logon menu for the current device
+                     or username.  The value of the argument is the 
+                     following:
+                     label = label defined in the macro LOGMEN
+                             which refers to the menu for the 
+                             current device or username.
+        Example: USRNAM(NTDBUBB)
+                    MENU(MENU1)
+                 The logon menu for the username "NTDBUBB"
+                 is the logon menu with the label MENU1.
+
+                 DEVICE(0C1)
+                   TYPE(C1920);MENOPT(YES);MENU(MENU2)
+                 The logon menu "MENU2" is linked to the
+                 device 0C1.         
+
+        Refer to the 3270 Terminal Interface TYMFILE Manual
+        for the description of defining the logon menu.
+
+
+
+
+
+
+                           4.5  DEFMEN - default logon menu
+
+
+        Syntax: DEFMEN(arg)
+                where arg = a label that refers to a logon menu
+        Default: If this macro is omitted, the initial default 
+                 is the first logon menu.
+        Description: This macro defines the default logon menu 
+                     for the macro MENU.  The value of the argument 
+                     is the following:
+                     label = a label defined in the macro LOGMEN
+                             which refers to the default logon 
+                             menu.
+        Example: DEFMEN(MENU1)
+                 The default logon menu is the menu with the label
+                 "MENU1".
+
+
+
+
+        13                                     G.E.D. for STORED LOGON SECURITY
+        Example                                                    July 2, 1986
+
+
+
+
+
+
+                                     5 -  Example
+
+
+             This section gives  an example defining  a valid username  and the
+        logon menu for an authorized user in the 3270 Terminal Interface.
+
+        The username : all the usernames begin with "NTD".
+        The logon menu for this username :  MANUAL
+                                            TO ASCII HOST
+                                            TO ONTYM
+                                            TO DEMO HOST
+
+        : define the logon element
+
+        NETSCR(ELE0)
+           ELEUNA(GATEWAY)
+
+        NETSCR(ELE1)
+           ELEUNA(ONTYM)
+
+        NETSCR(ELE2)
+           ELEUNA(USERNAME1); ELEHST(HOSTNO1); ELEPWD(PASSWORD1)
+
+        NETSCR(ELE3)
+           ELEUNA(USERNAME2); ELEHST(HOSTNO2); ELEPWD(PASSWORD2)
+
+        NATDSP(ELE4)
+           ELECRM(CRMNO); ELEARD(ADDRESS)
+           ELEAPP(APPID); ELECUA(CUADR); ELEDVA(DVADR)
+
+        : define the logon string
+
+        LOGSTR(STR0,MANUAL)
+        LOGSTR(STR1,TO ASCII HOST,ELE0,ELE2)
+        LOGSTR(STR2,TO ONTYM,ELE1)
+        LOGSTR(STR3,TO DEMO HOST,ELE0,ELE3,ELE4)
+
+        : define the logon menu
+
+        LOGMEN(MENU0,STR0,STR1,STR2,STR3)
+
+        : define the vaild usernames and the logon menu for these usernames
+
+        USRNAM(NTD"00"00"00)                    
+           MENU(MENU0)
+
+
+
+
+
+        14                                     G.E.D. for STORED LOGON SECURITY
+        Referenced Documentation                                   July 2, 1986
+
+
+
+
+
+
+                             6 -  Referenced Documentation
+
+
+         
+         . 3270 Terminal Interface TYMFILE Manual
+
+         . Supervisor Reference Manual
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        15                                     G.E.D. for STORED LOGON SECURITY
+    ?ab+
