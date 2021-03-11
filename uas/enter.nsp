@@ -1,0 +1,416 @@
+%   ENTER.NSPC                         NSPTER.PR1     11  %
+PROCEDURE ENTER.NSPC    % By Dan Lemberg, August 13, 1980
+Version 11.0, By Dan Lemberg, August 21, 1980
+Fix bugs for putting in price code for bill method.
+Version 10, August 15, 1980, by Dan Lemberg
+Ability to modifiy old batches. 
+Version 9, July 30, 1980, by Dan Lemberg
+Added new batch number routine (letter + 2 numbers)
+Version 8, March 11, 1980, by VEV
+Added WECO-EPLANS to both WECO and EPLANS type MRD entries.
+Version 7, Dec. 28, 1979, by VEV
+Now appends to output data files.
+Version 6, Sept. 28, 1979, by SHALE
+Changed PDP-20 to PDP-10.
+Version 4.0, Sept. 27, 1978, by VEV
+Added entry of "ERROR" under billing method to delete last entry and
+also allowed old entry to be changed by select and delete
+on PC.CHANGES.
+Version 3.1, June 29, 1978, by VEV
+Added COEES to MRD output file
+Version 3.0, Nov. 10, 1977, by Mark Weisler
+*
+Used to enter non-standard price request data for
+making source data files which are then used to update the customer database
+with corrected price codes.
+%
+BEGIN
+
+FIELDS
+  RLEASE               AS "20C",
+  RELDATA               AS "20C",
+  NUM.X                 AS "2N",
+  OUT.NAM               AS "20C",
+  CTL                   AS "3C",
+  FIRST.LINE            AS "80C",
+  OLDORNEW              AS "C",
+  LETTER                AS "C",  % First letter of batch # %
+  NUMBER                AS "2N", %  2 numbers of batch %
+  LNTH                  AS "2N", %  length of file name %
+  NUM                   AS "2N", 
+  WECO.MCN              SAME AS MASTER.CUS.NUM,  %The Weco MCN %
+  WECO.EPLANS.MCN       SAME AS MASTER.CUS.NUM,  %The WECO-EPLANS MCN %
+  COEES.MCN             SAME AS MASTER.CUS.NUM,  %The Coees MCN %
+  LAST.VALID.AST        SAME AS ACTG.SYS.TYP,  % Setup initially %
+  PRICE.CHANGE.FILE     AS "14C",       %Contain PRICHG.ccc file%
+  CCI.FILE              AS "14C",       % MCCUS.ccc file %
+  MRD.FILE             AS "14C",       % MRD.ccc file %
+  EFFECTIVE.DATE        AS DATE "ZM/ZD/YY",
+  STG.AST               AS "15C",       % String acct. sys. type %
+  MRD.CTR              AS "3Z"         % Counter for no. of MRD records %
+
+REPORT OUT TO OUT.NAM
+  PAGE.SIZE 0
+REPORT BATCH.NO TO RPT.FNAM
+  PAGE.SIZE 0
+
+
+
+
+% current master contract info%
+RELATION T.MCI IS
+  KEY   BILL.METHOD
+  DATA  MASTER.CUS.NUM, DSTOP
+
+% Price codes for each bill method and AST %
+RELATION PC IS
+  KEY   MASTER.CUS.NUM, ACTG.SYS.TYP
+  DATA  PRIC.CODE
+
+% Price change data %
+RELATION PC.CHANGES IS
+  KEY   CUS.NUM, ACTG.SYS.TYP
+  DATA  PRIC.CODE, DSTART, BILL.METHOD
+
+% Customers being assigned to a Master contract %
+RELATION T.CCI IS
+  KEY   CUS.NUM, ACTG.SYS.TYP
+  DATA  MASTER.CUS.NUM, DSTART, DSTOP
+
+
+SOURCE INP FROM RELDATA
+  FREE FORM
+  INPUT CTL,
+  CONDITIONAL ON CTL
+  BEGIN
+  "REL" OR "NSP" OR "99": FIRST.LINE
+  "D": CUS.NUM, ACTG.SYS.TYP, PRIC.CODE, DSTART, BILL.METHOD, MASTER.CUS.NUM, DSTOP
+  END
+SOURCE BATCH.N FROM SRC.FNAM
+  FIXED FORM
+  INPUT LETTER, NUMBER
+
+SOURCE MCCON FROM "(UAS)MCCON.DAT"
+  FREE FORM
+  INPUT BILL.METHOD, MASTER.CUS.NUM, DSTART, CONTRACT.ID, DSTOP
+
+SOURCE MCPC FROM "(UAS)MCPC.DAT"
+  FREE FORM
+  INPUT MASTER.CUS.NUM, ACTG.SYS.TYP, PRIC.CODE
+
+
+% Start of procedure, do initial setups %
+
+
+MOVE 3 TO LAST.VALID.AST        % Controls range of tests for valid AST's.%
+MOVE DEFAULT TO ACTG.SYS.TYP, STG.AST, MRD.CTR, DSTOP, MASTER.CUS.NUM
+
+
+%Load temporary relations from master data files while taking input %
+
+FOR EACH MCCON
+  INSERT INTO T.MCI
+
+FOR EACH MCPC
+  INSERT INTO PC
+
+SELECT T.MCI VIA BILL.METHOD = "WECO-EPLANS" THEN
+  MOVE MASTER.CUS.NUM TO WECO.EPLANS.MCN
+ELSE
+  ABORT "NO WECO-EPLANS MASTER.CUS.NUM", @CR
+
+SELECT T.MCI VIA BILL.METHOD = "WECO" THEN
+  MOVE MASTER.CUS.NUM TO WECO.MCN
+ELSE
+  ABORT "NO WECO MASTER.CUS.NUM", @CR
+
+SELECT T.MCI VIA BILL.METHOD = "COEES" THEN
+  MOVE MASTER.CUS.NUM TO COEES.MCN
+ELSE
+  ABORT "NO COEES MASTER.CUS.NUM", @CR
+
+
+
+
+
+
+LET STRG = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+DO BEGIN
+  TYPE "ENTER NAME: "
+    ACCEPT AUTHOR
+   END
+WHILE LENGTH(AUTHOR) LT 7
+
+MOVE LENGTH(AUTHOR) TO LNTH
+LET NUM.X = 9 - LNTH
+
+LET AUTHOR = SUBSTR(AUTHOR,1,6) + "." + SUBSTR(AUTHOR,7,LNTH-6)+NUM.X*"X"
+LET SRC.FNAM = AUTHOR
+
+IF FILE(SRC.FNAM) EXISTS THEN
+  NOTHING
+ELSE
+  ABORT "*** YOU ARE NOT A VALIDATED USER."
+DO
+  BEGIN
+  TYPE "OLD OR NEW BATCH [O/N] : "
+    ACCEPT OLDORNEW
+  END
+WHILE OLDORNEW NE "O" AND "N"
+
+IF OLDORNEW = "O" THEN
+  BEGIN
+  TYPE "BATCH NUMBER : "
+    ACCEPT BATCH.NUM
+LET RELDATA = SUBSTR(AUTHOR,1,6) + "." + BATCH.NUM
+FOR EACH INP
+  CONDITIONAL ON CTL
+  BEGIN
+  "REL":
+    ABORT "*** BATCH ALREADY RELEASED."
+  "99":
+    ABORT "*** ILLEGAL BATCH TYPE"
+  "D": 
+    BEGIN
+    INSERT INTO PC.CHANGES
+    INSERT INTO T.CCI
+    END
+  "NSP" OR "99":
+    NOTHING
+  END
+  LET SRC.FNAM = SUBSTR(AUTHOR,1,6) + "." + BATCH.NUM
+  END
+
+ELSE
+FOR EACH BATCH.N
+  BEGIN
+  IF NUMBER LT 99 THEN
+    LET NUMBER = NUMBER + 1
+  ELSE
+    IF LETTER EQ "Z" THEN
+      BEGIN
+      MOVE 0 TO NUMBER
+      MOVE "A" TO LETTER
+      END
+    ELSE
+      BEGIN
+      LET NUM = POSITION(STRG, LETTER) + 1
+      LET LETTER = SUBSTR(STRG, NUM, 1)
+      MOVE 0 TO NUMBER
+      END
+  LET BATCH.NUM = LETTER + NUMBER AS "2C"
+    TYPE"New Batch number is ",BATCH.NUM, @CR
+  LET RPT.FNAM = SRC.FNAM + "-ANY"
+  WRITE REPORT BATCH.NO
+    BEGIN
+    PRINT TO BATCH.NO
+      BATCH.NUM, @CR
+    END
+  END % of for each %
+
+%Make file names with control no.%
+LET PRICE.CHANGE.FILE = "PRICHG." + BATCH.NUM + "-ANY"
+LET CCI.FILE          = "MCCUS."  + BATCH.NUM + "-ANY"
+LET MRD.FILE         = "MRD."   + BATCH.NUM + "-ANY"
+
+%Now loop on Actg. sys.  type%
+DO
+  BEGIN
+  MOVE DEFAULT TO STG.AST
+  WHILE STG.AST = DEFAULT DO
+    BEGIN
+    TYPE @CR, "Accounting system type: "
+    ACCEPT STG.AST
+    IF STG.AST IS "3Z" THEN
+      BEGIN
+      LET ACTG.SYS.TYP = STG.AST AS "3Z"
+      IF ACTG.SYS.TYP LE 0 OR GT LAST.VALID.AST THEN
+        MOVE DEFAULT TO STG.AST
+      ELSE NOTHING
+      END
+    ELSE
+      IF STG.AST = DEFAULT OR "END" OR "ALL" THEN NOTHING ELSE
+        MOVE DEFAULT TO STG.AST
+    IF STG.AST = DEFAULT THEN
+      BEGIN
+      MOVE DEFAULT TO STG.AST
+      TYPE
+"Valid responses are: ", @CR,
+"1 for PDP-10", @CR,
+"2 for 940's", @CR,
+"3 for 370's", @CR,
+"ALL for all of the above", @CR,
+"END to end the data entry sessions", @CR, @CR
+      END
+    IF STG.AST = "END" THEN
+      BEGIN
+      TYPE @CR, "Recheck data entered", @CR, @CR,
+"AST Eff.Date  CID  Bill.Method   P.C.",@CR,@CR
+      FOR EACH PC.CHANGES
+        TYPE
+ACTG.SYS.TYP, DSTART AS DATE " ZM/ZD/YY ", CUS.NUM, "  ", BILL.METHOD,
+  PRIC.CODE, @CR
+      TYPE @CR, "If OK, type Y: "
+      ACCEPT TYM
+      IF TYM = "Y" THEN NOTHING ELSE
+        MOVE DEFAULT TO STG.AST
+      END
+    END
+
+  %Now we have a valid STG.AST%
+  IF STG.AST = "END" THEN NOTHING ELSE
+    BEGIN
+    MOVE DEFAULT TO EFFECTIVE.DATE
+    WHILE EFFECTIVE.DATE = DEFAULT DO
+      BEGIN
+      TYPE "Effective Date: "
+      ACCEPT EFFECTIVE.DATE
+      IF EFFECTIVE.DATE = DEFAULT THEN
+        TYPE
+"Enter date as MM/DD/YY", @CR, @CR
+      END
+
+    %have date go ahead%
+    MOVE DEFAULT TO CUS.NUM
+    WHILE CUS.NUM = DEFAULT DO
+      BEGIN
+      TYPE "Customer no. (CID): "
+      ACCEPT CUS.NUM
+      END
+
+    MOVE DEFAULT TO BILL.METHOD
+    WHILE BILL.METHOD = DEFAULT DO
+      BEGIN
+      TYPE "Billing Method: "
+      ACCEPT BILL.METHOD
+      IF BILL.METHOD IS "3Z" THEN NOTHING ELSE
+      IF BILL.METHOD = "ERROR" THEN
+        TYPE @CR, "This entry is being deleted.",@CR,@CR
+      ELSE
+        SELECT T.MCI VIA KEY THEN NOTHING ELSE
+          BEGIN
+          TYPE
+"Valid billing methods are a Price code (a number from 1 to 80) or:",@CR
+          FOR EACH T.MCI
+            TYPE " ", TRIM(BILL.METHOD), @CR
+          TYPE @CR, " or type ERROR to delete last entry.", @CR, @CR
+          MOVE DEFAULT TO BILL.METHOD
+          END
+      END
+
+    IF BILL.METHOD = "ERROR" THEN NOTHING ELSE  BEGIN %Skip processing block%
+    %We now have a valid billing method%
+    
+    %Set up loop for possible multiple accounting sys. types (ALL) %
+    IF STG.AST = "ALL" THEN
+      MOVE 1 TO ACTG.SYS.TYP
+    ELSE
+      NOTHING
+
+    DO
+      BEGIN
+      %Get Master customer number%
+      IF BILL.METHOD IS "3Z" THEN
+        SELECT T.MCI VIA BILL.METHOD = "STANDARD" THEN
+          MOVE MASTER.CUS.NUM TO MASTER.CUS.NUM OF ENTER.NSPC 
+        ELSE ABORT "MISSING 'STANDARD' FROM 'MCCON.DAT'", @CR
+      ELSE
+        SELECT T.MCI VIA KEY THEN
+          BEGIN
+          MOVE MASTER.CUS.NUM TO MASTER.CUS.NUM OF ENTER.NSPC
+          MOVE DSTOP TO DSTOP OF ENTER.NSPC
+          END
+        ELSE ABORT "MAGNUM FAILURE #1", @CR
+      %Now see if current ACTG.SYS.TYP is one we want to use%
+      MOVE DEFAULT TO PRIC.CODE
+      SELECT PC VIA KEY THEN
+      IF PRIC.CODE = DEFAULT THEN
+        IF BILL.METHOD IS "3Z" THEN
+          TYPE "The Acct. Sys. type is not valid at this time.", @CR, @CR
+        ELSE NOTHING
+      ELSE
+        BEGIN   %We have a valid Actg. sys. type%
+        MOVE PRIC.CODE TO PRIC.CODE OF ENTER.NSPC
+        IF BILL.METHOD IS "3Z" THEN
+          MOVE BILL.METHOD AS "3Z" TO PRIC.CODE, PRIC.CODE OF ENTER.NSPC
+        ELSE NOTHING    % Since price code was obtained just above from PC %
+        MOVE EFFECTIVE.DATE TO DSTART
+        SELECT PC.CHANGES VIA KEY THEN
+          BEGIN
+          IF PRIC.CODE = PRIC.CODE OF ENTER.NSPC AND
+             DSTART = DSTART OF ENTER.NSPC THEN
+              BEGIN
+              TYPE @CR, "Old entry being deleted", @CR
+              DELETE FROM PC.CHANGES VIA KEY
+              DELETE FROM T.CCI VIA KEY
+              END
+          ELSE
+            BEGIN
+            IF DSTART NE DSTART OF ENTER.NSPC THEN
+              SELECT T.CCI VIA KEY THEN
+                BEGIN
+                ALTER T.CCI
+                END
+              ELSE NOTHING
+            ELSE NOTHING
+            ALTER PC.CHANGES
+            TYPE @CR, "Old entry fields being changed to new values", @cr
+            SELECT T.CCI VIA KEY THEN
+              IF BILL.METHOD IS "3Z" OR BILL.METHOD = "STANDARD" THEN
+                DELETE FROM T.CCI VIA KEY
+              ELSE
+              BEGIN
+              ALTER T.CCI
+              END
+            ELSE
+              IF BILL.METHOD IS "3Z" OR BILL.METHOD = "STANDARD" THEN
+                NOTHING
+              ELSE
+                INSERT INTO T.CCI
+            END
+          END
+        ELSE
+          BEGIN
+          INSERT INTO PC.CHANGES
+          IF BILL.METHOD IS "3Z" OR BILL.METHOD = "STANDARD" THEN
+            NOTHING       % Since not with any Master Contract %
+          ELSE
+            INSERT INTO T.CCI     % Customers for Master Contracts %
+          END
+        END
+
+      IF STG.AST NE "ALL" THEN
+        MOVE LAST.VALID.AST TO ACTG.SYS.TYP
+      ADD 1 TO ACTG.SYS.TYP
+      END       WHILE ACTG.SYS.TYP LE LAST.VALID.AST
+
+    END         % Skipped all processing since STG.AST = "END"%
+
+                                                END  % Skipped for "ERROR"%
+
+
+  END           WHILE STG.AST NE "END"
+
+
+TYPE @CR
+
+
+LET OUT.NAM = SUBSTR(AUTHOR,1,6) + "." + BATCH.NUM + "-ANY"
+
+WRITE REPORT OUT                  BEGIN
+PRINT TO OUT
+"NSP,", TODAY, @TAB 5, SUBSTR(AUTHOR,1,6), @CR
+FOR EACH PC.CHANGES
+  BEGIN
+  PRINT TO OUT
+"D,", CUS.NUM, ",", ACTG.SYS.TYP, ",", PRIC.CODE, ",", DSTART,",", BILL.METHOD
+  SELECT T.CCI VIA KEY THEN
+    PRINT TO OUT
+",", MASTER.CUS.NUM OF T.CCI, ",", DSTOP OF T.CCI, @CR
+  ELSE
+    PRINT TO OUT ",", ",", @CR
+  END
+                                   END % of write report %
+END
+   
