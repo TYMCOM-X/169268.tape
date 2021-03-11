@@ -1,0 +1,2636 @@
+
+
+
+
+
+
+
+
+
+
+
+
+              VIP Host and Terminal Interfaces
+
+
+                        Version 3.0
+
+
+              External Reference Specification
+
+
+
+
+
+                          10/12/87
+
+                         MDC-TYMNET
+
+
+               Network Technology Development
+
+
+                Tymnet  Interconnect  System
+
+
+
+
+
+
+MDC-TYMNET's  proprietary  rights are  included in  the information
+disclosed  herein.  The  recipient,  by  receiving  this  document,
+agrees  that  neither  this document nor the information  disclosed
+herein   nor any  part thereof  shall be  reproduced or transferred
+to other documents or used or disclosed to others for manufacturing
+or  any other  purpose except as specifically authorized in writing
+by MDC-TYMNET. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+                      1.  INTRODUCTION
+
+
+
+1.1  SCOPE
+
+The scope of this document is to provide a functional
+description of the VIP Synchronous Interfaces developed for
+customers using the following Honeywell equipment :
+
+-   VIP 77XX terminals,
+
+-   VIP 78XX terminals,
+
+-   VIP DPS6 FTF stations.
+
+
+1.2  HOST AND TERMINAL INTERFACES/ISO OSI MODEL
+
+
+The  VIP extension cord is comprised of two processes:  a
+Host Interface (HIF) and a Terminal Interface (TIF).
+
+In terms of the ISO OSI model, the Interface functions
+encompass layers 2 through 5 as illustrated below:
+
+     LAYER               OSI LAYERED ARCHITECTURE
+     -----               ----------------------------
+     2- Link             - Manage the link connection
+                         - Supervise data interchange
+                         - Synchronize and delimit
+                         - Link flow control
+                         - Abnormal condition recovery
+
+     3- Network          - Routing and switching
+                         - Network connections
+                         - Logical channel control
+                         - Sequencing and flow control
+
+     4- Transport        - Multiplexing messages on a
+                         virtual circuit
+                         - End to end flow regulation
+
+     5- Session          - Binding and unbinding connections
+
+
+
+
+
+
+
+
+
+
+                          Page 1
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+1.3  VIP PROTOCOL BACKGROUND
+
+
+The exchange of data in the VIP system is accomplished via
+synchronous, two-way alternate (half- duplex), multidrop
+lines at speeds of 1200, 2400, 4800 or 9600 bps using the
+Honeywell VIP protocol.  The central processor (Honeywell
+host) issues commands and the VIP terminal responds to the
+commands.
+
+The terminal interface can support VIP77XX, VIP78XX
+terminals and DPS6 - File to File transfer station.
+
+The 77XX/78XX terminal is a keyboard/display station that
+can control serial printer devices.  The terminal address
+can be chosen from one of 32 unique poll/select addresses
+per line.
+
+The DPS6 is a Honeywell station, which can transfer files
+to/from Honeywell hosts.
+
+The host controls the transmission of information by using
+poll and select messages.  There are two basic types of
+messages:  one for status and text transfer, and the other a
+quiescent message, used when no information is to be
+exchanged.  In this environment, the terminal must be polled
+to transmit data and must be selected to receive data.  (For
+more details, see the Honeywell publication "Terminals VIP
+7700/7705", AL29, Rev 2, December 1978. And "Terminals
+VIP7800 Family display terminals", document # 71010397,
+April 1985.)
+
+
+1.4  PROJECT PURPOSE
+
+
+The purpose of this project is to develop a system which
+will transport data between VIP 77XX/78XX/DPS6 terminals and
+VIP hosts and between VIP terminals and Async hosts via
+customer's private Tymnet network.  This system consists of
+two processes:  a Host Interface which simulates terminal
+functions in its communications with the VIP hosts, and a
+Terminal Interface which simulates a central processor in
+its communications with the VIP 77XX/78XX/DPS6 terminals.
+
+
+
+
+
+
+
+
+
+
+                          Page 2
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+1.5  FUNCTIONAL OVERVIEW
+
+
+
+1.5.1  Terminal Interface
+
+The Terminal Interface communicates with the terminal user
+via a synchronous, full duplex, multidrop line connection
+using the Honeywell VIP 77XX/78XX protocol.  The Terminal
+Interface performs the following functions:
+
+
+-  Provides the host's functions, i.e., it polls and selects
+   the terminal.
+
+-  Routes the text messages from the terminal to the Host
+   Interface via the network using the ICAP protocol,
+   internally developed by ICA (described in section  ).
+
+-  Provides Packet Assembler/Disassembler (PAD) functions to
+   allow the VIP terminals to communicate with asynchronous
+   hosts (ONTYME) in a manner similar to asynchronous
+   terminals.
+
+-  Provides recovery functions and link flow control.
+
+-  Enables terminal users to switch dynamically between
+   different VIP hosts and asynchronous hosts.
+
+-  Contains configuration tables that define the poll and
+   select terminal addresses per line.
+
+
+1.5.2  Host Interface
+
+The Host Interface communicates with the central processor
+via a synchronous, two-way alternate (half-duplex) line.
+The Host Interface performs the following functions:
+
+-  Responds to the polls from the host.
+
+-  Routes the host data messages via the network to the
+   appropriate Terminal Interface.
+
+-  Provides recovery functions and link flow control.
+
+-  Contains tables that define the terminal addresses to
+   which it must respond.
+
+
+
+
+
+
+                          Page 3
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+1.5.3  Asynchronous Hosts
+
+The Terminal Interface allows VIP terminals to communicate
+with an Asynchronous Host.  The technical definition of
+Asynchronous Host as used in this document is as follows: An
+Asynchronous Host is any host or host interface that is
+capable of accepting a login from a non-block mode Ascii
+asynchronous terminal via a Tymnet virtual circuit.
+
+ONTYME is an asynchronous host.  For the remainder of this
+document the generic term asynchronous host may be
+considered equivalent to Ontyme Host.
+
+
+1.6  OPERATING ENVIRONMENT
+
+
+Both the Host and the Terminal Interface reside in slots on
+nodes in customer's private Tymnet network.  Each node is a
+Tymnet Engine; the Engine is partitioned into slots in which
+programs can be run.  The Engine operating system, ISIS
+(Internally Switched Interface System), decides which slot
+will run and when using a time-slicing technique.  ISIS is a
+slot's only contact with the outside world.  It controls the
+slot's use of external input and output on the Engine and
+provides for the slot communication path into the network.
+Each external (VIP) line is physically connected to the
+Engine and associated with a Terminal or Host Interface.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 4
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+                2.  VIP MESSAGE TRANSMISSION
+
+
+
+2.1  MESSAGE AND FRAME STRUCTURE
+
+
+Message transmission within the system is in the form of
+either of the two message types:  Type 1 (status and text)
+and Type 2 (quiescent).  Type 1 is used between the central
+processor and the terminal for status and text transfer
+while the other, Type 2, is the quiescent message
+transmitted by the terminal when there is no message to send
+in response to a poll.
+
+A transmission frame may consist of only the quiescent
+message or may contain multiple messages. Transmission
+frames originate from both the central processor and the
+terminal.  Each message in the frame starts with four SYN
+characters followed by the SOH character and ends with the
+checksum character.  The end frame consists of 4 SYN
+characters and an EOT character.
+
+
+2.2  FRAME TRANSMISSION
+
+
+
+2.2.1  Transmission from the Terminal
+
+A transmission frame generated by a polled terminal may
+contain one non-text message (ACK,NAK or BSY) and one text
+message from the CRT device.  The frame may also include
+ACK, NAK or BSY message from the receive-only printer.
+
+-  ACK or NAK must precede the other messages in the frame.
+
+-  BSY must precede a NUL message in the frame.
+
+-  The terminal will ignore messages received from the
+   central processor while transmitting.
+
+
+2.2.2  Transmission from the Central Processor
+
+-  One frame may contain multiple messages. Only one text
+   message per terminal can be present in one frame.  If the
+   text message is embodied in the acknowledgement message,
+   another text for the same terminal within the same frame
+   will not be accepted.
+
+
+
+
+                          Page 5
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+-  The host does not acknowledge a terminal's ACK, NAK, BSY
+   or PGO messages.
+
+-  An ACK should precede a text message when both are in the
+   same frame and addressed to the same terminal.
+
+-  A NAK and text message should not be addressed to the
+   same terminal in the same frame.
+
+-  Only one poll may be included in a frame.
+
+-  When a poll message is included in a frame it must be the
+   last message within the frame and be followed by the end
+   of frame characters (SYN SYN SYN SYN EOT).
+
+-  If a terminal has been selected, it must be polled before
+   it can be selected again.
+
+
+2.3  POLLING AND SELECTING RULES
+
+
+Frame transmission to and from the terminal is controlled by
+the software in the Terminal Interface.  Each terminal must
+be polled to transmit data, and selected to receive data.
+
+
+2.3.1  Selecting a Terminal
+
+A valid select message is identified by the terminal when
+the terminal detects a NUL status character and a ADR
+character that matches the terminal select address.  A
+selected terminal remains selected until one of the
+following occurs:
+
+  - an EOT character is received
+  - an error is detected
+  - a select or poll for a different terminal is detected
+
+
+2.3.2  Polling of a Terminal
+
+A valid poll message is identified by the terminal when the
+terminal detects a NUL status character and a ADR character
+that matches the terminal poll address.  The terminal enters
+a de-polled condition when one of the following occurs:
+
+  - its transmission is complete
+  - it detects a select or poll message for another terminal
+  - an error occurs
+
+
+
+
+                          Page 6
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+                   3.  SYSTEM INTERFACES
+
+
+The Host and the Terminal Interfaces are tailored to a
+specific application by making entries in a file called the
+slot configuration file.  Polling and routing
+characteristics depend on the entries in the slot
+configuration file.  They are defined at assembly time and
+cannot be changed during execution time.
+
+
+3.1  VIP TERMINAL INTERFACE FUNCTIONS
+
+
+The Terminal Interface is capable of driving one or more
+multidrop VIP lines.  Each line can serve one or more VIP
+terminals.
+
+
+3.1.1  Polling
+
+For each external line that the Terminal Interface is to
+drive, the following parameters are to be set in the slot
+configuration file.
+    The poll and select address of each terminal.
+
+2.  T1: the maximum time to wait for a response after
+    polling a terminal and before polling the next terminal
+    (poll timeout period).
+
+3.  N1: the number of times to try polling a terminal which
+    is not responding, before putting the terminal into
+    "slow ".  (Slow poll refers to the reduced frequency of
+    polls during a period when polls are not answered; fast
+    poll refers to the normal polling frequency during a
+    period when polls are answered.)
+
+4.  T2-1: the slow poll time period (how long to wait before
+    polling a terminal that is in slow poll).
+
+5.  T2-2: the fast poll period (how long to wait before
+    polling a terminal that is in fast poll).
+
+
+3.1.2  Routing
+
+
+
+
+
+
+
+
+
+                          Page 7
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+3.1.2.1  VIP Extension Cord Routing
+
+For every multidrop line connected to the Terminal
+Interface, the Terminal Interface builds one Tymnet
+permanent virtual circuit to every Host Interface.  The list
+of Host Interfaces to which this Terminal Interface must
+have a connection is specified in the slot configuration
+file.  Data messages are multiplexed over the virtual
+circuit.  The terminal user can specify the host to be
+connected to during the log on procedure.  The Terminal
+Interface validates the user's selection and starts routing
+the user's data over the circuit if the circuit to the
+required Host Interface is already built.
+
+3.1.2.2  Asynchronous Host Routing
+
+Virtual circuits to asynchronous hosts (Ontyme) are built on
+demand.  A terminal may only have one circuit to an
+asynchronous host at a time.
+
+The Terminal Interface builds a non-protocol virtual circuit
+to the chosen asynchronous host using preconfigured login
+data.  The preconfigured login data is specified in the slot
+configuration file and may be different per VIP chain.
+
+3.1.3  Packet Assembly/Disassembly
+
+3.1.3.1  Disassembly
+
+The Terminal Interface strips the VIP protocol envelope from
+a text message before sending it to an asynchronous host.
+No characters are transmitted on the virtual circuit until
+the entire VIP message is received and validated.
+
+The terminal user may cause a temporary halt of his display
+by sending "$*$BRK" (M8) as a text message.  A subsequent
+"$*$BRK" releases the display.  This is analogous to typing
+control S and control Q on an asynchronous terminal.  The
+user may also release a frozen display by sending any text
+message.  The difference is that the "$*$BRK" command
+releases the frozen display but does not send any data to
+the asynchronous host (Ontyme) while a normal text message
+releases the frozen display and is then sent to the
+asynchronous host.
+
+The Terminal Interface sends a break signal to the
+asynchronous host if it receives "$*$DIS" (M9) from a VIP
+terminal.  The break signal is analogous to pressing the
+break key on an asynchronous terminal.  The break signal
+causes Ontyme to abort the current command.
+
+
+
+
+                          Page 8
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+The "$*$BRK" or "$*$DIS" string must be at the beginning of
+a VIP text message.  The Terminal Interface does not
+recognize the string if it is in any other position.  A text
+message that starts with either string is never transmitted
+to the asynchronous host (Ontyme).  Both these text messages
+are translated into ISIS control messages.  Note that these
+two messages are interpreted by the Terminal Interface only
+when the originating terminal is logically connected to an
+asynchronous host.
+
+The effect of "$*$BRK" and "$*$DIS" (M8 and M9) is not
+always immediate due to data already in transit.
+
+The Terminal Interface may be optionally configured to
+follow each disassembled packet with an arbitrary Ascii
+string.  This option is configured per destination
+asynchronous host.  Most asynchronous hosts require input to
+be terminated by a carriage return character.
+
+
+3.1.3.2  Assembly
+
+As characters arrive at the Terminal Interface from an
+asynchronous host, the Terminal Interface creates VIP text
+packets addressed to the associated VIP terminal.
+
+There are two distinct events that cause the Terminal
+Interface to complete and forward a VIP text packet to the
+VIP terminal.  One is the accumulation of a configurable
+number of characters and the other is the passing of a
+configurable time period without receipt of additional
+characters.
+
+
+3.2  VIP HOST INTERFACE FUNCTIONS
+
+
+The Host Interface appears as a terminal to an external
+central processor.  It answers the host poll messages with
+the terminal data received from the Terminal Interface, or
+with the quiescent message if no data was received from the
+polled terminal.  The Host Interface communicates with each
+central processor by one or more external lines.
+
+
+3.2.1  Routing Configurations
+
+For every host line there are pools with the associated
+terminal addresses for which the Host Interface should
+receive poll and select messages.
+
+
+
+
+                          Page 9
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+Each pool contains addresses related to one terminal type
+(77XX, 78XX or FTF). The HIF supports both dynamic and
+static allocation of addresses. The "Login Request" message
+which arrives from the TIF contains the
+
+   - terminal type,
+
+   - address assignment information.
+
+If the address is to be assigned dynamically then the first
+available address is taken out of the pool; otherwise a
+specific address is assigned to this session.
+
+
+3.3  Circuit Regeneration
+
+The VIP External Cord Service has an automatic circuit
+regeneration feature called REGEN. This feature will cause
+virtual circuits between the Terminal Interface and the Host
+Interface to be automatically zapped and rebuilt, according
+to the current network 'least cost path' at a configured
+time interval. REGEN is described in Appendix-C.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 10
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+ 4.  HOST AND TERMINAL INTERFACES EXTERNAL MESSAGE HANDLING
+
+
+The Host Interface communicates with the central processor
+and the Terminal Interface communicates  with the terminals
+via the VIP 77XX/78XX protocol.
+
+
+4.1  MESSAGE FORMATS
+
+
+The formats of the Interface's external messages are listed
+below.  The values of the specific ASCII characters are
+defined in Appendix B (page ).  Parenthetical values
+indicate non-predefined  characters.  All addresses
+represent one ASCII character.
+
+The messages passed from the central processor to the Host
+Interface are as follows:
+
+-Poll
+  SYN SYN SYN SYN SOH (POLL_ADDR) NUL STX ETX (LPC)
+
+-Select
+  SYN SYN SYN SYN SOH (SELECT_ADDR) NUL STX ETX (LPC)
+
+-Text
+  SYN SYN SYN SYN SOH (DEV_ADDR) NUL FC1 FC2 STX (TEXT) ETX (LPC)
+
+  the text message can also have this format:
+
+  SYN SYN SYN SYN SOH (DEV_ADDR) PRT FC1 FC2 STX (TEXT) ETX (LPC)
+
+-ACK
+  SYN SYN SYN SYN SOH (DEV_ADDR) ACK FC1 FC2 STX ETX (LPC)
+
+  the ACK message can also have this format:
+
+  SYN SYN SYN SYN SOH (DEV_ADDR) ACK FC1 FC2 STX (TEXT) ETX (LPC)
+
+-NAK
+  SYN SYN SYN SYN SOH (DEV_ADDR) NAK FC1 FC2 STX ETX (LPC)
+
+  A typical generated frame is shown below:
+
+  SYN SYN SYN SYN SOH (TERM1_SEL_ADDR) NUL STX ETX (LPC)
+  SYN SYN SYN SYN SOH (TERM1_DEV_ADDR) ACK FC1 FC2 STX ETX LPC
+  SYN SYN SYN SYN SOH (TERM2_SEL_ADDR) NUL STX ETX LPC
+  SYN SYN SYN SYN SOH (TERM2_DEV_ADDR) NUL FC1 FC2
+  STX (TEXT) ETX LPC
+  SYN SYN SYN SYN EOT
+
+
+
+                          Page 11
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+  The messages passed from the terminals to the Terminal
+  Interface are as follows:
+
+-ACK
+  SYN SYN SYN SYN SOH (DEV_ADDR) ACK FC1 FC2 STX ETX LPC
+
+-NAK
+  SYN SYN SYN SYN SOH (DEV_ADDR) NAK FC1 FC2 STX ETX LPC
+
+-Busy
+  SYN SYN SYN SYN SOH (DEV_ADDR) BSY FC1 FC2 STX ETX LPC
+
+-Text
+  SYN SYN SYN SYN SOH (DEV_ADDR) NUL FC1 FC2 STX (TEXT) ETX LPC
+
+  The text message can also have the format:
+
+  SYN SYN SYN SYN SOH (CRT_ADDR) PRT FC1 FC2 STX (TEXT) ETX LPC
+
+-Page Overflow
+  SYN SYN SYN SYN SOH (DEV_ADDR) PGO FC1 FC2 STX ETX LPC
+
+-Not Available
+  SYN SYN SYN SYN SOH (DEV_ADDR) NA FC1 FC2 STX ETX LPC
+
+-Quiescent message
+  SYN SYN SYN SYN EOT
+
+  The Quiescent message can also have the format:
+
+  SYN SYN SYN SYN SOH EOT
+
+  The typical Terminal generated transmission frame is:
+
+  SYN SYN SYN SYN SOH (DEV_ADDR) ACK FC1 FC2 STX ETX LPC
+  SYN SYN SYN SYN SOH (DEV_ADDR) NUL FC1 FC2 STX (TEXT) ETX LPC
+  SYN SYN SYN SYN EOT
+
+
+4.2  MESSAGE HANDLING
+
+
+
+4.2.1  Host Interface Handling of Messages from Host
+
+
+
+Poll           A poll message is answered by sending a text
+               message from the polled terminal or a
+               quiescent message.  The generated quiescent
+               message will always contain the SOH
+
+
+
+                          Page 12
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+               character.
+
+Select         The Terminal Address from the Select message
+               is stored for use with the accompanying text,
+               ACK or NAK message.
+
+Text           If the CRT text message is received with no
+               checksum or other errors, it is acknowledged
+               by the Host Interface and routed to the
+               Terminal Interface as one or more ICAP
+               packets (see section ).  If the text message
+               is addressed to the printer or contains a PRT
+               status character, the Host Interface does not
+               acknowledge it.  It becomes the terminal's
+               responsibility to respond to this message
+               with either ACK, NAK, BSY or NA.  The
+               Terminal Interface then routes this response
+               to the Host Interface.  This kind of message
+               exchange is called an "end-to-end"
+               acknowledgment.
+
+ACK & NAK      When the Host Interface receives a positive
+               acknowledgment to the message, it discards it
+               from its buffer.  If a negative
+               acknowledgment is received, the Host
+               Interface retransmits the message N2 times.
+               N2 is a configurable parameter.
+
+
+4.2.2  Terminal Interface Handling of Terminal Messages
+
+
+
+Text           The Terminal Interface sends a positive
+               acknowledgment as an answer to the CRT
+               messages received with no errors and sends a
+               negative acknowledgment if an error was
+               discovered.
+
+ACK & NAK      When the Terminal Interface receives a
+               positive ACK to the CRT message, it discards
+               it from its buffer.  If the negative
+               acknowledgment is received, the Terminal
+               Interface retransmits the message N3 times
+               before discarding the message.  N3 is a
+               configurable parameter.  If the ACK or NAK is
+               received from the printer, the Terminal
+               Interface sends it to the Host Interface.
+               The printer message is discarded from the
+               buffer right after it has been sent without
+               waiting for an ACK from the terminal.
+
+
+
+                          Page 13
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+Busy           If the Terminal Interface receives the Busy
+               message from the CRT in response to a
+               previously sent data message, it retransmits
+               this data message after T3 seconds.  T3 is a
+               configurable parameter.  If the Busy message
+               is received from the printer, the Terminal
+               Interface passes the message to the Host
+               Interface.  The Host Interface sends it to
+               the central processor.
+
+Not Available  The Not Available message is always passed to
+               the Host Interface.  The Host Interface sends
+               it to the central processor.
+
+Page Overflow  The Page Overflow message received from the
+               printer is passed unchanged to a host.  The
+               CRT Page Overflow is handled the following
+               way:
+
+               1.  The Terminal Interface holds the
+                   previously sent data message in its
+                   buffer
+
+               2.  The terminal and the Terminal Interface
+                   exchange a series of poll and quiescent
+                   messages
+
+               3.  The terminal user sends a Null Transmit
+                   message
+
+               4.  The Terminal Interface retransmits the
+                   held message
+
+Quiescent      No action is taken other than marking the
+               last polled terminal address as being ready-
+               to-poll again.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 14
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+                   5.  VIP EXTENSION CORD
+
+
+The Host and Terminal Interfaces operate somewhat
+independently but in "close cooperation".  They exchange
+various information including reports about any abnormal
+conditions that might be occurring on the external line.
+All the text messages are transmitted between the Host
+Interface and the Terminal Interface.  Polls and Select
+messages never go through the network.  ACK, NAK, BSY and
+PGO messages related to CRT traffic never go through the
+network.  ACK, NAK, BSY, PGO and NA messages related to the
+printer are sent by the Terminal Interface to the Host
+Interface and by the Host Interface to the central
+processor.
+
+For each external line that the Terminal Interface serves,
+it builds one or more circuits to every Host Interface it
+has to communicate with.  Communication between the Host
+Interface and Terminal Interface is achieved via the ICAP
+protocol.
+
+
+5.1  ICAP PROTOCOL
+
+
+The general message format of the ICAP protocol is (except
+the logon request message) :
+
+    SOP res cmd seq ia ta text EOP
+
+  where:
+
+
+    SOP  is a hexadecimal "DF"
+
+    res  is a unique number assigned to each line connected
+         between the Host Interface and the central
+         processor
+
+    cmd  is the command number (see below)
+
+    seq  is an entry not currently used
+
+    ia   is the terminal address
+
+    ta   is the device address
+
+    text is an optional field containing VIP data characters
+         or other data (see below)
+
+
+
+
+                          Page 15
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+    EOP  is a hexadecimal "0D"
+
+All values are single 8 bit characters except for "text"
+which can be 0 to 350 characters in length.  Every character
+has the high-order bit set on except for EOP.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 16
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+The following terminology is used:
+
+
+   Address pool - the central processor can poll up to 32
+    addresses per line.  The set of addresses per line is
+    called the "address pool".  This set is configured at
+    assembly time in the Host Interface.
+
+
+   Terminal address - the central processor can poll up to
+    32 different addresses per line.  The address defining a
+    terminal in the line is called "terminal address".  The
+    set of the terminal addresses is configured in the
+    Terminal Interface at assembly time.
+
+When a terminal user issues a request for a new session with
+the central processor, the Host Interface maps the received
+terminal address to an address from the address pool, if one
+is available, and sends a "user disconnected" (M9) message
+to a host.
+
+
+5.1.1  Host Interface to Terminal Interface ICAP Messages
+
+The following is the description of the ICAP messages
+exchanged between the Terminal Interface and the Host
+Interface and vice versa.
+
+The message type is described by the command in the "cmd"
+field.  All of the fields are present in every ICAP message
+issued by either the Terminal Interface or the Host
+Interface.  If a specific value for a particular field is
+not mentioned in the description it means that a default (or
+dummy) value is used.
+
+
+Purple ball (cmd=0) - a Purple Ball is sent periodically by
+    the Host Interface to determine if the Terminal
+    Interface is still active.  If the Terminal Interface
+    does not respond to the message within a defined timeout
+    period T6 (by sending another Purple Ball) then the Host
+    Interface will zap (tear down) the virtual circuit.
+
+
+Text (cmd=1) -  this message carries in the "text" field the
+    data characters that have arrived from the central
+    processor.
+
+
+Startup ACK (cmd= 3) - the Host Interface sends this message
+    in response to an ICAP "Startup" message received from
+
+
+
+                          Page 17
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+    the Terminal interface.
+
+
+Pool address assigned (cmd= 5) - this message is sent by the
+    Host Interface in response to a log on request from the
+    Terminal Interface.  The log on request is generated by
+    the Terminal Interface when a terminal user issues a
+    request to log into a particular central processor.  If
+    there is an available address in the address pool, the
+    Host Interface maps it to the terminal address and sends
+    the "pool address assigned message" to the Terminal
+    Interface and a "user disconnected" (M9) message to the
+    host.  The "ia" character contains the terminal address
+    of the user who issued the log on request.
+
+
+Address pool not available (cmd= 6) - this message is sent
+    by the Host Interface in response to a log on request
+    from the Terminal Interface when all the pool addresses
+    are already assigned to other terminal users.  Since
+    there can be more than one line between the Host
+    Interface and the host, there can be more than one
+    address pool associated with these lines.  All of these
+    pools are checked for an available address before a
+    "Address pool not available" message is sent to the
+    Terminal Interface.  The "ia" character contains the
+    address of the terminal user who issued the request.
+    When the Terminal Interface receives the message, it
+    sends a message M1 to the terminal that means "central
+    processor is busy".
+
+
+Terminal address down (cmd= 7) - this message is sent when
+    the Host Interface discovers that an assigned pool
+    address has not been polled for a defined period T8.
+    The "ia" character contains the user's terminal address
+    corresponding to the assigned pool address.  When the
+    Terminal Interface receives this ICAP message, it sends
+    a message M2 to the terminal user and presents the user
+    with the host list (see section 6).  If the Terminal
+    Interface fails to acknowledge this message within a
+    timeout period T10 and continues sending data messages
+    to the Host Interface, the Host Interface keeps
+    responding to them with the "Pool address down" message.
+
+
+Terminal address down ACK (cmd= 8) - this message is sent by
+    the Host Interface when the Host Interface recognizes a
+    "Terminal address down" message from the Terminal
+    Interface.  The Terminal Interface can not accept a new
+    log on request from the terminal while waiting for the
+
+
+
+                          Page 18
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+    "terminal address down" acknowledgment.
+
+
+Terminal Unbusy ACK (cmd= 0B) - this message is sent by the
+    Host Interface in response to a Terminal Unbusy message
+    from Terminal Interface.
+
+
+Printer message (cmd= 0C) - this message is used to transmit
+    to the Terminal Interface any kind of printer message
+    received from the central processor.
+
+Text message with PRT Status(cmd= 0D) - this message is used
+    to transmit text message with PRT status.
+
+Regen Startup ACK(cmd= 10) - Regen message (see Appendix-C).
+
+Clear Request ACK(cmd= 12) - Regen message (see Appendix-C).
+
+
+5.1.2  Terminal Interface to Host Interface ICAP Messages
+
+
+
+Purple Ball (cmd= 0) - the Terminal Interface sends this
+    message in response to a Purple Ball message received
+    from the Host Interface.
+
+
+Text (cmd= 1) - this message carries the data characters
+    arriving from the terminal user.
+
+
+Startup (cmd= 2) - a startup message is sent by the Terminal
+    Interface when:
+
+    -  the Terminal Interface detects that a virtual circuit
+       has been built.
+
+    -  the Terminal Interface detects that polls are being
+       sent on a line by an external central processor when
+       previously no polls were being sent.
+
+    If the Host Interface does not respond to the start up
+    message with an Startup ACK message within a defined
+    timeout period T7, the Terminal Interface will zap the
+    circuit.
+
+
+Log on request (cmd= 4)  - this message is sent by the
+    Terminal Interface when it receives a user response to a
+
+
+
+                          Page 19
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+    previously sent host list.  The Host Interface answers
+    either with a "Pool address assigned" message or a
+    "Address pool not available" message.  If the Host
+    Interface detects that the terminal address issuing the
+    request is already mapped to a pool address, the Host
+    Interface discards all the messages belonging to the
+    terminal address from its buffers. Starting with V3.0,
+    the logon request message includes two more fields : the
+    terminal type and destined IA address. This allows the
+    user to select a specific address on the HIF's side to
+    be assigned to a specific device on TIF's side.  The
+    format is :
+
+    SOP res cmd seq ia ta terminal_type destinated_IA EOP
+
+  where:
+
+
+    SOP      is a hexadecimal "DF"
+
+    res      is a unique number assigned to each line
+             connected between the Host Interface and the
+             central processor
+
+    cmd      is the command number (see below)
+
+    seq      is an entry not currently used
+
+    ia       is the terminal address
+
+    ta       is the device address
+
+    terminal_type is the terminal type of the requesting
+             address in FTF
+
+    destinated_IA is a HIF's IA address.
+
+    EOP      is a hexadecimal "0D"
+
+
+
+Terminal address down (cmd= 7) - this message is sent by the
+    Terminal Interface when one of the following occurs:
+
+    -  a terminal stops answering polls during a active
+       session between the user and the host.
+
+    -  the terminal line goes down.
+
+    The Host Interface must acknowledge this message with a
+    "Terminal address down ACK" message and must send a
+
+
+
+                          Page 20
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+    "user disconnected" (M6) message to the host.  The
+    Terminal Interface does not issue a new "Log on request"
+    message for the same terminal address until either it
+    receives the acknowledgement from the Host Interface or
+    a timeout period T5 has elapsed.
+
+
+Terminal Busy (cmd= 9) - this message is sent by the
+    Terminal Interface when it wants to halt the message
+    flow for a particular terminal address.
+
+
+Terminal Unbusy (cmd= 0A) - this message is sent by the
+    Terminal Interface when it want to continue the message
+    flow for a particular terminal address.
+
+
+Printer message (cmd= 0C) - this message is used to transmit
+    to the Host Interface any kind of printer message
+    received from the terminal.
+
+Text message with PRT status(cmd= 0D) - this message is used
+    to transmit text messages with PRT status.
+
+Function Code message(cmd= 0E) - this message carries
+    function codes typed by the user.
+
+Regen Startup(cmd= 0F) - Regen message (see Appendix-C).
+
+Clear Request(cmd= 11) - Regen message (see Appendix-C).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 21
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+             6.  NORMAL SEQUENCE OF OPERATIONS
+
+
+
+6.1  File-To-File transfer Device DPS6
+
+
+Due to the operational characteristics of the file transfer
+device, each address, which is assigned to the same device,
+is pre_configured to a different host service. When one of
+the addresses assigned to the FTF responses to a poll, the
+TIF will make a virtual connection with the pre_defined host
+and the response will be sent to the host to establish a
+session between the responding address and the host service.
+
+For every FTF device's address, there is a non_displayable
+configured menu which contains only one synchronous service
+for this address. As a result, when the first FTF device's
+response arrives, the TIF will not send the menu to the
+device, instead it will automatically establish the
+connection with the configured host service specified in the
+non_displayable menu.
+
+The session establishment for a FTF's address is done in
+this way: when the TIF receives the first response (which is
+a data message) from an address assigned to a FTF device, it
+is not sent to the HIF but hold in a queue. Then the TIF
+sends the 'LOGON REQUEST' message through the PVC circuit
+connected to the host and waits for the 'ADDRESS ASSIGNED'
+message from the HIF. Upon receiving the 'ADDRESS ASSIGNED'
+message, the 'virtual connection' between the FTF device and
+the host is established and the session begins.  Now, the
+TIF can send the received message to the host.
+
+Note that the HIF will not send a "Disconnect" (M9) message
+to the host when the session is established or terminated
+for a FTF device's address.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 22
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+6.2  Terminal Device 77XX/78XX
+
+
+
+6.2.1  LOG ON PROCEDURE
+
+When a terminal starts answering polls, the Terminal
+Interface sends the user a list of all the hosts to which he
+can be connected.  This list can be different for each user
+(by the terminal address) and is configurated at assembly
+time.  Each host is defined by a number.  The user types the
+number corresponding to the host he wishes to select and the
+Terminal Interface sends an ICAP "Log on request" message to
+the Host Interface.  If there are no available pool
+addresses, the terminal user is notified with a message M1
+and the host list is presented again.  The user can request
+to be connected to another host.  If the Host Interface has
+an available pool address, it sends a message M6 to the host
+thus establishing a connection.
+
+
+6.2.2  LOG OFF PROCEDURE
+
+When the Host Interface receives a message M5 ("Line
+terminated") from the central processor, it frees the
+assigned pool address and sends an ICAP "Pool address
+disconnected" message to the Terminal Interface.  The
+Terminal Interface sends the host list to the terminal.
+
+
+6.2.3  SWITCHING CAPABILITY
+
+The VIP Terminal user may logically connect to any of the
+available VIP and asynchronous hosts.  When the Terminal
+Interface receives a "$*$MN" (M7) command from a VIP
+Terminal it terminates the terminal's current connection and
+sends a new logon menu to the terminal.  It is the
+responsibility of the terminal user to correctly end his
+host session before sending the "$*$MN" command to the
+Terminal Interface.
+
+This logon menu can be different for each terminal address
+and is configured at system generation time.  The menu must
+fit on one display screen.
+
+The user selects a logon menu entry by typing in the
+corresponding entry number.
+
+The subsections below explain the different switching
+actions that are performed for the two host types (VIP and
+asynchronous).
+
+
+
+                          Page 23
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+6.2.3.1  Switching to a VIP Host
+
+If a user selects a VIP host that does not currently have a
+connection to this Terminal Interface the user is advised to
+try again at a later time (M2) and the logon menu is
+presented again.
+
+If the selected VIP host has a connection to this Terminal
+Interface then a "log on request" ICAP message is sent to
+the Host Interface.  If the Host Interface responds with
+"Pool address assigned" message then a logical connection
+has been established and text data is transferred between
+the host and the terminal.
+
+The Host Interface sends a "Disconnect" (M6) message to the
+host whenever it assigns an address.  Any messages arriving
+from the host addressed to the newly assigned terminal
+address before the Host Interface sends the first user input
+to the host is discarded by the Host Interface.
+
+If the Host Interface responds with a "address pool not
+available" message then the user is advised (M2) and again
+presented with the logon menu.
+
+
+6.2.3.2  Switching from a VIP Host
+
+If a terminal is logically connected to a VIP host and the
+user sends a "$*$MN" (M7) command the Terminal Interface
+sends a "terminal address down" message to the Host
+Interface.  The logon menu is not presented to the user
+until the Host Interface acknowledges the the "terminal
+address down" messages or a timeout (T5) has elapsed.
+
+The Host Interface sends a "Disconnect" (M6) message to the
+host whenever it receives the "terminal address down"
+message from the Terminal Interface.  The Host Interface
+then deallocates the terminal address and puts it back into
+its free address pool.  Once the address is deallocated the
+Host Interface acknowledges the Terminal Interface's
+"terminal address down".  Any message arriving from the host
+addressed to an unassigned terminal address is discarded by
+the Host Interface.
+
+
+6.2.3.3  Switching to an Asynchronous Host
+
+Since virtual circuits to asynchronous hosts are always non-
+multiplexed and built on demand, selection of an
+asynchronous host from the logon menu always results in an
+attempt to build a virtual circuit.
+
+
+
+                          Page 24
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+The Terminal Interface may have up to 253 simultaneous
+virtual circuits including the multiplexed ICAP circuits.
+If there are already 253 circuits built then the user is
+advised that there are no circuits available (M4) and the
+logon menu is presented again.
+
+If there are less than 253 circuits already built then the
+Terminal Interface attempts to build a new virtual circuit
+using preconfigured data associated with the menu selection.
+If the circuit building fails then the user is advised (M5)
+and the logon menu is presented again.
+
+
+6.2.3.4  Switching from an Asynchronous Host
+
+If the Terminal Interface receives a "$*$MN" (M7) command
+from a terminal that has a virtual circuit to an
+asynchronous host then it zaps the circuit.
+
+In most cases the proper way for a user to switch away from
+an asynchronous host is to first end the session with the
+host and then send the "$*$MN" command.  An Ontyme user
+should always send an ":EXIT" command to Ontyme before
+sending the M7 command to the Terminal Interface.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 25
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+        7.  ABNORMAL CONDITIONS CONTROL AND RECOVERY
+
+
+
+7.1  TERMINAL STOPS ANSWERING POLLS
+
+If a terminal stops answering polls during an active session
+with a VIP host, the Terminal Interface sends an ICAP
+"terminal address down" message to the Host Interface.  The
+Host Interface frees the pool address assigned to that
+terminal address and sends a message M6 to the host.
+
+If the terminal had a connection to an asynchronous host
+then the virtual circuit is zapped.
+
+
+7.2  CENTRAL PROCESSOR STOPS POLLING AN ADDRESS
+
+If the central processor stops polling the address assigned
+by the Host Interface to an active terminal during the
+session with the host, the Host Interface sends an ICAP
+"Pool address down" message to the Terminal Interface.  The
+Terminal Interface sends a message M2 and presents the logon
+menu to the terminal user.
+
+
+7.3  LINE FAILURE
+
+7.3.1  Terminal Line Goes Down
+
+If the terminal line goes down, the Terminal Interface sends
+an ICAP "Terminal address down" message to the Host
+Interface for each terminal address that has a connection to
+a VIP host.  The Host Interface frees the pool address
+assigned to the terminals and sends M6 messages for each
+pool address to the hosts.
+
+The Terminal Interface zaps any virtual circuits built to
+asynchronous hosts that belong to terminals on the disabled
+line.
+
+7.3.2  Host Line Goes Down
+
+If the host line goes down, an ICAP "Line down" message is
+sent by the Host Interface to the Terminal Interface.  The
+Terminal Interface sends a message M2 to each of the users
+connected to this host and presents them with the logon
+menu.
+
+
+
+
+
+
+                          Page 26
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+7.4  CIRCUIT ZAPPED
+
+If a circuit gets zapped, the Terminal Interface immediately
+notifies active terminal users with a message M3.  The Host
+Interface notifies the central processors with the message
+M6 and frees all the assigned addresses.
+
+Circuits may get zapped for various reasons including
+network failures, interface failures, and asynchronous host
+session termination.  The last reason (asynchronous host
+session termination) is not really an abnormal condition.
+For example Ontyme normally zaps a circuit when it receives
+an ":EXIT" command or if there is no user activity during a
+specific timeout interval.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 27
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+                    8.  MONITOR FACILITY
+
+Both the Host and Terminal Interfaces have a Monitor
+facility.  This facility detects and makes diagnoses of the
+software and hardware problems that may affect the Interface
+operations.
+
+The Host and Terminal Interface are slots in a Tymnet Node.
+In order to operate in the Monitor environment, the user has
+to log in to the Kernel Host of the Node and connect to the
+slot in which the Interface is running.
+
+The Monitor supports the following commands:
+
+HELP          this command displays a list of valid Monitor
+              commands and a one line explanation of what
+              that command does.
+
+CONF          this command displays information regarding
+              the configuration of the Interface.  Included
+              in the display are the host number, lines and
+              circuit configurations.
+
+CRASH         this command displays the crash counter for
+              the Interface since the last code download.
+              It also displays information about the last
+              crash.
+
+CNT           this command displays the current value of
+              some important counters.  These include the
+              count of message input and output on each
+              line, the count of input messages with invalid
+              checksums and the count of input messages that
+              had an invalid address.
+
+POLL          this command displays information relevant to
+              polling activity in this Interface.
+
+IRING/ORING   these commands display part of the contents of
+              the buffers used by the Interface to exchange
+              messages with the network.
+
+SYNC          this command requires the line number as an
+              argument.  It will display the entire line
+              input buffer for the specified line.
+
+TRACE         this command saves certain current statuses
+              and counts and then checks if there are any
+              changes to these indicators after a time
+              period, defined at assembly time, has expired.
+All the displayed information is related to the slot to
+
+
+
+                          Page 28
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+which the user is connected.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 29
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+          9.  SUMMARY OF THE TAILORABLE PARAMETERS
+
+
+
+9.1  TERMINAL INTERFACE
+
+
+_T_i_m_e_o_u_t_s:
+
+
+-   T1: the maximum time to wait for a response after
+    polling an address and before polling the next address.
+
+-   T2-1: the slow poll time period.
+
+-   T2-2: the fast poll time period.
+
+-   T3: the minimum time to wait before sending a message,
+    if a busy condition is detected.
+
+-   T4: the time period for a timeout routine to send an
+    ICAP "Terminal address down" message.
+
+-   T5: the maximum time to wait for an ICAP "Terminal
+    address down ACK message.
+
+
+_C_o_u_n_t_e_r_s
+
+-   N1: number of times to try polling a terminal address
+    which is not responding before putting the address in
+    slow poll.
+
+-   N2: the number of times to retransmit a message after
+    receiving a negative acknowledgement to a previously
+    sent message before discarding the message.
+
+
+9.2  HOST INTERFACE
+
+
+_T_i_m_e_o_u_t_s
+
+-   T6: the time period to wait for a response to an ICAP
+    "Purple Ball" message.
+
+-   T7: the time period to wait for an ICAP "ACK startup"
+    message after issuing an ICAP startup message.
+
+-   T8: the time period for a timeout routine to send an
+    ICAP "Pool address down" message.
+
+
+
+                          Page 30
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+-   T9: the time period for a timeout routine before sending
+    an ICAP "Line down" message.
+
+-   T10: the timeout period to wait for an ACK to the ICAP
+    "Pool address down" message.
+
+
+_C_o_u_n_t_e_r_s
+
+-   N3: the number of times to retransmit a message after
+    receiving a negative acknowledgement to a previously
+    sent message before discarding the message.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 31
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+                10.  SUMMARY OF THE MESSAGES
+
+10.1  MESSAGES SENT TO THE TERMINAL USER
+
+M1   "Central processor is busy" generated when there are no
+     pool addresses available in the pool.
+
+M2   "Central processor is not available" generated when a
+     pool address is not polled or the line is down.
+
+M3   "Virtual circuit down" generated when the virtual
+     circuit has been zapped.
+
+M4   "No Async Circuits currently available - try again in 2
+     min" generated when the Terminal Interface has 253
+     virtual circuits and a terminal user selects an
+     asynchronous host from the logon menu.
+
+M5   "Failure in building a new virtual circuit" generated
+     when the Terminal Interface fails in an attempt to
+     build a virtual circuit to an asynchronous host.
+
+
+10.2  MESSAGES SENT TO THE CENTRAL PROCESSOR
+
+M6  is the combination of two messages $*$BRK and $*$DIS.
+
+
+10.3  MESSAGES SENT BY THE VIP TERMINALS
+
+M7  is the "Call Menu" command "$*$MN".
+
+M8  is the "Halt Display" command when a terminal is
+    connected to an asynchronous host (Ontyme).  Message M8
+    is "$*$BRK".
+
+M9  is the "Send Break Signal" command when a terminal is
+    connected to an asynchronous host (Ontyme).  Message M9
+    is "$*$DIS".
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 32
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+                      11.  APPENDIX A
+
+
+MESSAGE TYPES
+
+Type 1
+
+SYN,SYN,SYN,SYN,SOH,ADR,STA,FC1,FC2,STX,(text),ETX,LP,SYN,SYN,
+SYN,SYN,EOT
+
+ADR can be:
+
+  1. Terminal Poll Address
+  2. Controller Poll Address
+  3. Terminal Selection Address
+  4. Display Address
+
+STA can be:
+
+  NUL, ACK, NAK, PRT, BSY, NA, PGO
+
+
+Type 2
+
+SYN,SYN,SYN,SYN,SOH,EOT
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 33
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+                      12.  APPENDIX B
+
+
+CHARACTER DEFINITION
+
+SYN (16)hex    SYN is used to achieve message
+               synchronization.  SYN codes received by the
+               terminal and located between STX and ETX
+               codes are not included either in the
+               longitudinal parity calculation or parity
+               check by the terminal.
+
+SOH (01)hex    SOH designates the start of the message header.
+
+ADR            ADR is the character following the SOH, and
+               indicates the address as follows:
+
+               01XXXXX (2) = terminal polling address
+               10XXXXX (2) = terminal selection address
+               1100000 (2) = display address
+               1101000 (2) = printer address
+               XXXXX (2) = one of 32 possible terminal addresses
+
+STA            STA defines the message status or message
+               type.  The valid status character are:
+
+               NUL, ACK, NAK, PRT, NA and PGO.
+
+FC1, FC2       FC1 and FC2 are the function codes.
+
+STX (02)hex    STX designates the start of the message text.
+
+ETX (03)hex    ETX designates the end of the message text.
+
+LP             LP is the character immediately following the
+               ETX character.  Each of bit 1-7 of the LP are
+               the modulo 2 sum of the corresponding bits of
+               each of the preceding characters in the
+               message after SOH.  Bit 8 is the lateral
+               parity for the LP character.  Note that
+               lateral parity is the inverse of the modulo 2
+               sum of bits 1-7, i.e., odd parity.
+
+EOT (04)hex    EOT designates the end of a transmission
+               frame, and must be preceded by four SYN
+               characters.
+
+NUL (00)hex    NUL is used in conjunction with the ADR
+               (address) character to indicate one of the
+               three conditions:
+
+
+
+
+                          Page 34
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+               the message is a selection message
+               the message is a poll message
+               the message contains a text for the addressed device
+
+ACK (06)hex    ACK indicates that the last text message (NUL
+               or PRT status) was received correctly.
+
+NAK (15)hex    NAK indicates that the last message was
+               received with detectable error.
+
+PRT (1A)hex    PRT identifies the message as print message.
+
+BSY (6F)hex    BSY indicates that the device is busy and
+               that a time out interval should occur before
+               the next message is transmitted to the
+               terminal (device).
+
+NA (6D)hex     NA indicates that the printer is not operable
+               from the communications interface.
+
+PGO (6E)hex    PGO indicates that a message overflow error
+               condition has occurred.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 35
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+                      13.  APPENDIX C
+
+
+
+13.1  Dynamic Circuit Regeneration
+
+This is a short description of the VIP Interface circuit
+regeneration capability.  With circuit regeneration, an
+VIP-HIF/TIF will periodically find a better route through
+the network.  The supervisor uses its ability to adjust to
+current traffic conditions, finding the least-cost path for
+a given destination.  The ICAP Protocol switches from the
+old to the new circuit in order to prevent data loss.
+
+The basic steps are as follows:
+
+
+1.  The circuit originator decides on a timeout basis, to
+    regenerate a circuit.
+
+2.  When the circuit is built the originator sends a regen-
+    startup ICAP message.  In the current implementatin, the
+    Regen Startup message carries a dummy res number.
+
+3.  When the circuit terminator receives a needle that
+    contains a username that already has an active circuit,
+    it assumes that the originator is trying to regenerate
+    the circuit.  It then expects to receive a Regen Startup
+    message.  When the Regen Startup arrives, it sends a
+    Regen Startup ACK and expects a Clear Request message.
+
+4.  When the originator receives Regen Startup ACK, it sends
+    a Clear Request message on the circuit that it is
+    replacing, not on the newly created circuit.  The
+    circuit originator also sets a flag indicating that no
+    further traffic is to go out on this circuit.
+
+5.  When the circuit terminator receives the Clear Request,
+    it responds with a Clear Request ACK message.  It also
+    sets a flag indicating that no further traffic is to go
+    out on this circuit.
+
+6.  When the originator receives the Clear Request ACK, it
+    modifies internal variables to switch association of the
+    new ISIS port from the special local key to the circuit
+    being regenerated.  It then sends a Tymnet Zap message
+    on the old port, and makes the circuit again available
+    for traffic.
+
+7.  When the circuit terminator receives the Tymnet Zap, it
+    also makes the port switch and makes the circuit
+
+
+
+                          Page 36
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, ERS          10/12/87
+
+
+
+    available for traffic.
+
+This method allows for the organized cleaning of the old
+Tymnet circuit before the new one is used for data traffic.
+
+Only one circuit may be regenerated at one time.  This
+restriction applies for both circuit originators (VIP-HIF)
+and circuit terminators (VIP-TIF).
+
+All steps of the process are timed out if the expected
+response does not arrive.  Allowances are also made for
+receiving unexpected zaps at all stages of the process.
+
+A new paramater has been added to the SETCIR macro.  The
+values associated with the parameter are REGEN and NOREGEN.
+The parameter has meaning only in the circuit originator.
+Default values are REGEN.
+
+There are two timeout values associated with the routine
+that starts a circuit regeneration.  The first, NCYCTO is
+the number of minutes between cycles.  The recommended value
+is 60 minutes.  The second, NCIRTO is the number of seconds
+between each circuit within a cycle.  The recommended value
+is 300 seconds (5 minutes).  These values are defined in the
+host file of the circuit originator.  Values for error
+timeouts are also defined in the host files.  In general,
+these response timeouts should be approximatly 30 seconds.
+
+Both Clear Request and Clear Request ACK messages are not
+sent in between a multiple packet text message. In this way
+the Interface which receives one of these messages can
+process it immediately.  If it had not been like this, a
+situation could occur where one of these messages is stuck
+in the bufferlets waiting for the last packet of the text
+message to arrive.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 37
+
+
+
+
+
+
+
+
+
+
+
+                          CONTENTS
+
+
+ 1.  INTRODUCTION  .....................................................1
+     1.1   SCOPE  ......................................................1
+     1.2   HOST AND TERMINAL INTERFACES/ISO OSI MODEL  .................1
+     1.3   VIP PROTOCOL BACKGROUND  ....................................2
+     1.4   PROJECT PURPOSE  ............................................2
+     1.5   FUNCTIONAL OVERVIEW  ........................................3
+           1.5.1  Terminal Interface  ..................................3
+           1.5.2  Host Interface  ......................................3
+           1.5.3  Asynchronous Hosts  ..................................4
+     1.6   OPERATING ENVIRONMENT  ......................................4
+
+ 2.  VIP MESSAGE TRANSMISSION  .........................................5
+     2.1   MESSAGE AND FRAME STRUCTURE  ................................5
+     2.2   FRAME TRANSMISSION  .........................................5
+           2.2.1  Transmission from the Terminal  ......................5
+           2.2.2  Transmission from the Central Processor  .............5
+     2.3   POLLING AND SELECTING RULES  ................................6
+           2.3.1  Selecting a Terminal  ................................6
+           2.3.2  Polling of a Terminal  ...............................6
+
+ 3.  SYSTEM INTERFACES  ................................................7
+     3.1   VIP TERMINAL INTERFACE FUNCTIONS  ...........................7
+           3.1.1  Polling  .............................................7
+           3.1.2  Routing  .............................................7
+                  3.1.2.1  VIP Extension Cord Routing  .................8
+                  3.1.2.2  Asynchronous Host Routing  ..................8
+           3.1.3  Packet Assembly/Disassembly  .........................8
+                  3.1.3.1  Disassembly  ................................8
+                  3.1.3.2  Assembly  ...................................9
+     3.2   VIP HOST INTERFACE FUNCTIONS  ...............................9
+           3.2.1  Routing Configurations  ..............................9
+     3.3   Circuit Regeneration  ......................................10
+
+ 4.  HOST AND TERMINAL INTERFACES EXTERNAL MESSAGE HANDLING  ..........11
+     4.1   MESSAGE FORMATS  ...........................................11
+     4.2   MESSAGE HANDLING  ..........................................12
+           4.2.1  Host Interface Handling of Messages from Host  ......12
+           4.2.2  Terminal Interface Handling of Terminal Messages ....13
+
+ 5.  VIP EXTENSION CORD  ..............................................15
+     5.1   ICAP PROTOCOL  .............................................15
+           5.1.1  Host Interface to Terminal Interface ICAP Messages ..17
+           5.1.2  Terminal Interface to Host Interface ICAP Messages ..19
+
+ 6.  NORMAL SEQUENCE OF OPERATIONS  ...................................22
+     6.1   File- To- File transfer Device DPS6  .......................22
+     6.2   Terminal Device 77XX/78XX  .................................23
+
+
+
+                            - i -
+
+
+
+
+
+
+
+
+
+
+
+           6.2.1  LOG ON PROCEDURE  ...................................23
+           6.2.2  LOG OFF PROCEDURE  ..................................23
+           6.2.3  SWITCHING CAPABILITY  ...............................23
+                  6.2.3.1  Switching to a VIP Host  ...................24
+                  6.2.3.2  Switching from a VIP Host  .................24
+                  6.2.3.3  Switching to an Asynchronous Host  .........24
+                  6.2.3.4  Switching from an Asynchronous Host  .......25
+
+ 7.  ABNORMAL CONDITIONS CONTROL AND RECOVERY  ........................26
+     7.1   TERMINAL STOPS ANSWERING POLLS  ............................26
+     7.2   CENTRAL PROCESSOR STOPS POLLING AN ADDRESS  ................26
+     7.3   LINE FAILURE  ..............................................26
+           7.3.1  Terminal Line Goes Down  ............................26
+           7.3.2  Host Line Goes Down  ................................26
+     7.4   CIRCUIT ZAPPED  ............................................27
+
+ 8.  MONITOR FACILITY  ................................................28
+
+ 9.  SUMMARY OF THE TAILORABLE PARAMETERS  ............................30
+     9.1   TERMINAL INTERFACE  ........................................30
+     9.2   HOST INTERFACE  ............................................30
+
+10.  SUMMARY OF THE MESSAGES  .........................................32
+     10.1  MESSAGES SENT TO THE TERMINAL USER  ........................32
+     10.2  MESSAGES SENT TO THE CENTRAL PROCESSOR  ....................32
+     10.3  MESSAGES SENT BY THE VIP TERMINALS  ........................32
+
+11.  APPENDIX A  ......................................................33
+
+12.  APPENDIX B  ......................................................34
+
+13.  APPENDIX C  ......................................................36
+     13.1  Dynamic Circuit Regeneration  ..............................36
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                           - ii -
+ T\;Z'
