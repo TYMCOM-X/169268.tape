@@ -1,0 +1,429 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+! For the documentation on (how to run) this program, please see 
+! (SYSDAT:28)TRFAUT.DOC.
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+	o (dbtariff)lata (netstat)ckts (newprt)ports &
+	(netstat)60516a (netstat)60516b (netstat)60516c.
+	init 1 trf236.out.
+
+	dbs 1.
+	f lata 236.
+	getrec.
+	let thelata eq lata.
+	f last.
+
+	dbs 4.
+	f sysid le 10.
+	getrec.
+	let thedate eq enddate.
+	f last.
+
+	dbs 1.
+	map 2 npa npa1 and nnx nxx1.
+	sea pty1 nct 'HOST' and nct 'SWITCHER'.
+	sort pt1.
+
+!Get "TOTAL FROM LATA":
+	type format / 'LOOKING FOR TOTAL TRAFFIC!' / end.
+
+	map 3 pt1 node.
+	map 4 host orighost.
+	ev tases eq tot 1.
+	ev tamin eq tot totmin.
+	ev tacha eq tot totalchars.
+	dump trfa.tem.
+
+	dbs 3.
+	map 5 host orighost.
+	ev tbses eq tot 1.
+	ev tbmin eq tot totmin.
+	ev tbcha eq tot totalchars.
+	dump trfb.tem.
+
+	dbs 3.
+	map 6 host orighost.
+	ev tcses eq tot 1.
+	ev tcmin eq tot totmin.
+	ev tccha eq tot totalchars.
+	dump trfc.tem.
+
+	let tses eq tases+tbses+tcses.
+	let tmin eq tamin+tbmin+tcmin.
+	let tcha eq tacha+tbcha+tccha.
+
+! Get total "WITHIN THE LATA":
+	type format / 'LOOKING FOR TOTAL W/I THE LATA AND ITS %!' / end.
+
+	dbs 4.
+	close.
+	dbs 5.
+	close.
+	dbs 6.
+	close.
+
+	o noclose trfa.tem trfb.tem trfc.tem.
+	dbs 4.
+	key orighost termhost.
+	dbs 5.
+	key orighost termhost.
+	dbs 6.
+	key orighost termhost.
+
+	dbs 3.
+	map 4 host termhost.
+	ev wases eq tot 1.
+	ev wamin eq tot totmin.
+	ev wacha eq tot totalchars.
+
+	dbs 3.
+	map 5 host termhost.
+	ev wbses eq tot 1.
+	ev wbmin eq tot totmin.
+	ev wbcha eq tot totalchars.
+
+	dbs 3.
+	map 6 host termhost.
+	ev wcses eq tot 1.
+	ev wcmin eq tot totmin.
+	ev wccha eq tot totalchars.
+
+	let wses eq wases+wbses+wcses.
+	let wmin eq wamin+wbmin+wcmin.
+	let wcha eq wacha+wbcha+wccha.
+
+! Compute "PERCENTAGE  (%)" within the LATA:
+	let pses eq 100.*wses/tses.
+	let pmin eq 100.*wmin/tmin.
+	let pcha eq 100.*wcha/tcha.
+
+Print on 1 thelata thedate format 21x 'TRAFFIC ANALYSIS FOR LATA ' I3 / &
+		  21x 'IN THE STATE(S) OF __________' / &
+		  21x '    (SAMPLE DATE: ' I6 ')' /// end.
+Print on 1 format 21x ' SESSIONS        MINUTES     CHARACTERS' / &
+		  21x ' ========        =======     ==========' // end.
+Print on 1 tses tmin tcha format 'TOTAL FROM LATA' 3(5X F9.0) / end.
+Print on 1 wses wmin wcha format 'WITHIN THE LATA' 3(5X F9.0) end.
+Print on 1 pses pmin pcha format 'PERCENTAGE  (%)' 3(8X F3.2 '%') / end.
+
+Print on 1 format / '-----------------------------------------------------' &
+                 '-------' // end.
+
+
+! We just finished processing the intra-LATA totals.  We now begin
+! processing THE four types of intra-LATA traffic.
+
+! (1) Get the intra-LATA total of "ASYNC TO X25/75" and its "% W/IN THE LATA" &
+! (3)     the intra-LATA total of "ASYNC TO ASYNCH" and its "% W/IN THE LATA":
+	type format / 'LOOKING FOR ASYNC TO X25/75 TRAFFIC!' end.
+	type format 'LOOKING FOR ASYNC TO ASYNCH TRAFFIC ALSO!!' / end.
+
+	dbs 3.
+	f last.
+	sea nhcode 12 or 14 or 16 or 20 or 25 or 30 or 32.
+	map 4 host orighost.
+	dump trfa.tem.
+	dbs 3.
+	map 5 host orighost.
+	dump trfb.tem.
+	dbs 3.
+	map 6 host orighost.
+	dump trfc.tem.
+
+	dbs 4.
+	close.
+	dbs 5.
+	close.
+	dbs 6.
+	close.
+
+	o noclose trfa.tem trfb.tem trfc.tem.
+	dbs 4.
+	key termhost.
+	dbs 5.
+	key termhost.
+	dbs 6.
+	key termhost.
+
+	dbs 3.
+	map 4 host termhost.
+	ev t3ases eq tot 1.
+	ev t3amin eq tot totmin.
+	ev t3acha eq tot totalchars.
+
+	dbs 3.
+	map 5 host termhost.
+	ev t3bses eq tot 1.
+	ev t3bmin eq tot totmin.
+	ev t3bcha eq tot totalchars.
+
+	dbs 3.
+	map 6 host termhost.
+	ev t3cses eq tot 1.
+	ev t3cmin eq tot totmin.
+	ev t3ccha eq tot totalchars.
+
+	let t3ses eq t3ases+t3bses+t3cses.
+	let t3min eq t3amin+t3bmin+t3cmin.
+	let t3cha eq t3acha+t3bcha+t3ccha.
+	let p3ses eq 100.*t3ses/wses.
+	let p3min eq 100.*t3min/wmin.
+	let p3cha eq 100.*t3cha/wcha.
+
+	dbs 2.
+	map 3 pt1 node.
+	sea nhcode 67 or 68 or 75.
+	map 4 host termhost.
+	ev t1ases eq tot 1.
+	ev t1amin eq tot totmin.
+	ev t1acha eq tot totalchars.
+
+	dbs 3.
+	map 5 host termhost.
+	ev t1bses eq tot 1.
+	ev t1bmin eq tot totmin.
+	ev t1bcha eq tot totalchars.
+
+	dbs 3.
+	map 6 host termhost.
+	ev t1cses eq tot 1.
+	ev t1cmin eq tot totmin.
+	ev t1ccha eq tot totalchars.
+
+	let t1ses eq t1ases+t1bses+t1cses.
+	let t1min eq t1amin+t1bmin+t1cmin.
+	let t1cha eq t1acha+t1bcha+t1ccha.
+	let p1ses eq 100.*t1ses/wses.
+	let p1min eq 100.*t1min/wmin.
+	let p1cha eq 100.*t1cha/wcha.
+
+Print on 1 t1ses t1min t1cha format 'ASYNC TO X25/75' 3(5X F9.0) end.
+Print on 1 p1ses p1min p1cha format '% W/IN THE LATA' 3(8X F3.2 '%') / end.
+
+Print on 1 t3ses t3min t3cha format 'ASYNCH TO ASYNC' 3(5X F9.0) end.
+Print on 1 p3ses p3min p3cha format '% W/IN THE LATA' 3(8x F3.2 '%') / end.
+
+
+! (4) Get the intra-LATA total of "X25/75 TO X2575" and its "% W/IN THE LATA":
+	type format / 'LOOKING FOR X25/75 TO X25/75 TRAFFIC!' / end.
+
+	dbs 4.
+	close.
+	dbs 5.
+	close.
+	dbs 6.
+	close.
+
+	o noclose (netstat)60516a (netstat)60516b (netstat)60516c.
+
+	DPL START.
+	dbs 3.
+	map 4 host orighost.
+		getr x1.
+		f last.
+		dump trfa.tem.
+		let flag1 eq 0.
+x2:	dbs 3.
+	map 5 host orighost.
+		getr x3.
+		f last.
+		dump trfb.tem.
+		let flag2 eq 0.
+x4:	dbs 3.
+	map 6 host orighost.
+		getr x5.
+		f last.
+		dump trfc.tem.
+		let flag3 eq 0.
+		goto x6.
+x1:	let flag1 eq 1.
+	dbs 4.
+	f sysid le 10.
+	dump trfa.tem.
+	goto x2.
+x3:	let flag2 eq 1.
+	dbs 4.
+	f sysid le 10.
+	dump trfb.tem.
+	goto x4.
+x5:	let flag3 eq 1.
+	dbs 4.
+	f sysid le 10.
+	dump trfc.tem.
+
+x6:	dbs 4.
+	close.
+	dbs 5.
+	close.
+	dbs 6.
+	close.
+	DPL STOP.
+	DPL END.
+
+	o noclose trfa.tem trfb.tem trfc.tem.
+	dbs 4.
+	key termhost.
+	dbs 5.
+	key termhost.
+	dbs 6.
+	key termhost.
+
+	DPL START.
+	if flag1 eq 1 goto x7.
+	dbs 3.
+	map 4 host termhost.
+	ev t4ases eq tot 1.
+	ev t4amin eq tot totmin.
+	ev t4acha eq tot totalchars.
+
+x8:	if flag2 eq 1 goto x9.
+	dbs 3.
+	map 5 host termhost.
+	ev t4bses eq tot 1.
+	ev t4bmin eq tot totmin.
+	ev t4bcha eq tot totalchars.
+
+x10:	if flag3 eq 1 goto x11.
+	dbs 3.
+	map 6 host termhost.
+	ev t4cses eq tot 1.
+	ev t4cmin eq tot totmin.
+	ev t4ccha eq tot totalchars.
+	goto x12.
+
+x7:	let t4ases eq 0 t4amin eq 0 t4acha eq 0.
+	goto x8.
+x9:	let t4bses eq 0 t4bmin eq 0 t4bcha eq 0.
+	goto x10.
+x11:	let t4cses eq 0 t4cmin eq 0 t4ccha eq 0.
+	goto x12.
+
+x12:	let t4ses eq t4ases+t4bses+t4cses.
+	let t4min eq t4amin+t4bmin+t4cmin.
+	let t4cha eq t4acha+t4bcha+t4ccha.
+	let p4ses eq 100.*t4ses/wses.
+	let p4min eq 100.*t4min/wmin.
+	let p4cha eq 100.*t4cha/wcha.
+
+Print on 1 t4ses t4min t4cha format 'X2575 TO X25/75' 3(5X F9.0) end.
+Print on 1 p4ses p4min p4cha format '% W/IN THE LATA' 3(8x F3.2 '%') / end.
+
+
+! (2) Get the intra-LATA total of "3270 NATIVE MOD" and its "% W/IN THE LATA":
+	type format / 'LOOKING FOR 3270 NATIVE MODE TRAFFIC! ' / end.
+
+	dbs 4.
+	close.
+	dbs 5.
+	close.
+	dbs 6.
+	close.
+	DPL STOP.
+	DPL END.
+
+	o noclose (netstat)60516a (netstat)60516b (netstat)60516c.
+
+	DPL START.
+	dbs 2.
+	map 3 pt1 node.
+	sea nhcode 44 or 54 or 55.
+	map 4 host orighost.
+		getr n1.
+		f last.
+		dump trfa.tem.
+		let flag1 eq 0.
+n2:	dbs 3.
+	map 5 host orighost.
+		getr n3.
+		f last.
+		dump trfb.tem.
+		let flag2 eq 0.
+n4:	dbs 3.
+	map 6 host orighost.
+		getr n5.
+		f last.
+		dump trfc.tem.
+		let flag3 eq 0.
+		goto n6.
+n1:	let flag1 eq 1.
+	dbs 4.
+	f sysid le 10.
+	dump trfa.tem.
+	goto n2.
+n3:	let flag2 eq 1.
+	dbs 4.
+	f sysid le 10.
+	dump trfb.tem.
+	goto n4.
+n5:	let flag3 eq 1.
+	dbs 4.
+	f sysid le 10.
+	dump trfc.tem.
+	goto n6.
+
+n6:	dbs 4.
+	close.
+	dbs 5.
+	close.
+	dbs 6.
+	close.
+	DPL STOP.
+	DPL END.
+
+	o noclose trfa.tem trfb.tem trfc.tem.
+	dbs 4.
+	key termhost.
+	dbs 5.
+	key termhost.
+	dbs 6.
+	key termhost.
+
+	DPL START.
+	if flag1 eq 1 goto n7.
+	dbs 3.
+	map 4 host termhost.
+	ev t2ases eq tot 1.
+	ev t2amin eq tot totmin.
+	ev t2acha eq tot totalchars.
+
+n8:	if flag2 eq 1 goto n9.
+	dbs 3.
+	map 5 host termhost.
+	ev t2bses eq tot 1.
+	ev t2bmin eq tot totmin.
+	ev t2bcha eq tot totalchars.
+
+n10:	if flag3 eq 1 goto n11.
+	dbs 3.
+	map 6 host termhost.
+	ev t2cses eq tot 1.
+	ev t2cmin eq tot totmin.
+	ev t2ccha eq tot totalchars.
+	goto n12.
+
+n7:	let t2ases eq 0 t2amin eq 0 t2acha eq 0.
+	goto n8.
+n9:	let t2bses eq 0 t2bmin eq 0 t2bcha eq 0.
+	goto n10.
+n11:	let t2cses eq 0 t2cmin eq 0 t2ccha eq 0.
+	goto n12.
+
+n12:	let t2ses eq t2ases+t2bses+t2cses.
+	let t2min eq t2amin+t2bmin+t2cmin.
+	let t2cha eq t2acha+t2bcha+t2ccha.
+	let p2ses eq 100.*t2ses/wses.
+	let p2min eq 100.*t2min/wmin.
+	let p2cha eq 100.*t2cha/wcha.
+
+Print on 1 t2ses t2min t2cha format '3270 NATIVE MOD' 3(5X F9.0) end.
+Print on 1 p2ses p2min p2cha format '% W/IN THE LATA' 3(8X F3.2 '%') / end.
+
+Print on 1 SYSDATE format / 16X 'PREPARED BY J.L.M. / E.G.B. ' D2 end.
+
+	Release 1.
+	DPL STOP.
+	DPL END.
+   
