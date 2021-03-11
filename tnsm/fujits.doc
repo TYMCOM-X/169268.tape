@@ -1,0 +1,233 @@
+      KATAKANA AND KANJI 3270 EMULATION                           August 5, 1987
+
+
+                     6.19  IBM ORDERS AND READ BUFFER PROCESSING
+
+
+           Attribute related orders from IBM may be Start Field (SF Order),
+      Start Field  Extended (SFE Order),  Set Attribute (SA  Order), Modify
+      Field (MF Order)  or Set Buffer Address  (SBA Order).  CMTI  does not
+      currently support the SA order,  MF Order or the SFE Order,  but will
+      be receiving them from  some applications.  Of these three,  only the
+      MF  and  SFE Orders, in  addition to the  existing SF order,  will be
+      supported. It  is therefore  necessary  that CMTI at  least recognize
+      the SFE and MF orders, so that the field attributes  can  be modified
+      in the  screen buffer.
+
+
+
+
+
+                  6.19.1  ATTRIBUTE TYPES
+
+           The  attribute types  that follow  are those  used in  the start
+      field extended and modify field orders.
+
+
+              FIELD ATTRIBUTE: protection status,A/N,display status
+              FIELD VALIDATION: validation properties
+              FIELD OUTLINING: framing the field with lines
+              EXTENDED HIGHLIGHTING: highlighting properties
+              COLOR: color properties
+              CHARACTER SET: identifies character set to be used:
+                             A/N-KATAKANA-KANJI-APL
+
+
+
+
+
+                  6.19.2  START FIELD EXTENDED
+
+           The start field extended attribute order is used to indicate the
+      start of a field and contains information on the  field's properties.
+      These  are described  in  the extended  field attribute  and  will be
+      partially  processed but  not stored.   Of the  Start  Field Extended
+      attribute types, only  field attributes(C0), character  sets(43), and
+      A/N-Katakana-Kanji(FE) attribute  types will  be supported.   The C1,
+      C2, 41, and 42 types  will simply be ignored.  This means  that field
+      validation and outlining, extended highlighting and color will not be
+      supported.
+
+           If a  Kanji only  (43F8) attribute type  is detected,  the field
+      will  be  set  to  display  and  protected  and  if  a  A/N-Katakana-
+      Kanji(FE01)  type  is  detected  the  field  will  be  set  to normal
+      unprotected, unless the field was previously specified as Kanji only.
+      A  nondisplay field  specification will  override any  other extended
+
+
+      126                        Preliminary CMTI ERS                   CMTI.ERS
+      KATAKANA AND KANJI 3270 EMULATION                           August 5, 1987
+
+
+      field attributes that are related to display features,  so nondisplay
+      fields may not be specified as color or Kanji only, for example.  Any
+      unspecified types  will remain as  previously set and  character sets
+      other than A/N, Katakana and Kanji will be ignored.
+
+           An SFE order can have multiple attribute assignments, and in the
+      case of  duplicates the  last occurrence  of a  given type  will take
+      effect.
+
+
+
+
+
+                  6.19.3  MODIFY FIELD
+
+           The  Modify  Field  Order allows  the  redefining  of  field and
+      extended field  attributes at the  current buffer address.   By using
+      this order, a field's attributes may be changed  selectively, instead
+      of needing to redefine all attributes for the given field as  the SFE
+      order requires.  If the number of  value type pairs is 0 and  a field
+      attribute  is at  the  current address  then the  values  will remain
+      unchanged.   If there  is no  field attribute  at that  position,  an
+      error message will be sent and the circuit will be zapped.
+
+           All descriptions regarding the attribute types and  values given
+      for the SFE order also applies to the MF order.
+
+
+
+
+
+                  6.19.4  SET ATTRIBUTE
+
+           The Set Attribute Order allows the specification of  the graphic
+      rendition on  a byte-by-byte  basis. The Set  Attribute Order  is not
+      required and so will not  be supported.  If received from a  host, it
+      will be ignored.
+
+
+
+
+
+                  6.19.5  READ BUFFER
+
+           The Read buffer  command will cause  all the screen  buffer data
+      (including the  attributes), from the  current cursor address  to the
+      last buffer location, to be transmitted to the host.  Since CMTI will
+      not be  supporting blink, color,  extended highlighting  , outlining,
+      etc.,  neither  the   extended field   nor  character  modes  will be
+      supported.
+
+           Thus if a host creates a screen using extended  field attributes
+      CMTI will answer a read buffer command using normal field attributes.
+
+      127                        Preliminary CMTI ERS                   CMTI.ERS
+      KATAKANA AND KANJI 3270 EMULATION                           August 5, 1987
+
+
+                                6.20  FUJITSU SUPPORT
+
+
+
+
+
+
+                  6.20.1  TYMFILE CHANGES
+
+           FUJITSU uses the  same graphic characters for  addressing lines,
+      control units, and devices  on control units as IBM.  Therefore there
+      will be no  Tymfile changes for accessing  a FUJITSU host  other than
+      the DEFELE host type indication.
+
+
+
+
+
+                  6.20.2  AID'S
+
+           FUJITSU  AID'S have  the  same hex  values  as IBM  and  will be
+      handled in the  same manner as it  is currently.  They have  the same
+      functions keys and so forth that IBM has.
+
+
+
+
+
+                  6.20.3  FUJITSU COMMANDS
+
+           FUJITSU  commands  are  essentially  like  those  of  IBM.   CMT
+      currently  supports  the  erase/write,  erase  all  unprotected, read
+      buffer, read modified, write and copy commands and will  support them
+      for  FUJITSU in  the  same way.   Read modified  all  and erase/write
+      alternate are  be processed by  a FUJITSU host  as read  modified and
+      erase/write.   There  are  also  distinctions  for   whether  certain
+      commands are used in BSC or FNA, but CMTI will not check for this; we
+      either receive the command or not.
+
+           FUJITSU has no WSF command form.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      128                        Preliminary CMTI ERS                   CMTI.ERS
+      KATAKANA AND KANJI 3270 EMULATION                           August 5, 1987
+
+
+                  6.20.4  FUJITSU ORDERS
+
+           FUJITSU orders are essentially the same as IBM orders.  CMT will
+      support the set buffer  address, start field, insert  cursor, program
+      tab, repeat to address, erase unprotected to address, and start field
+      extended orders  that it  currently supports  now.  However,  the set
+      attribute and modify field orders are not used by the FUJITSU host.
+
+
+
+      6.20.4.1  EXTENDED ATTRIBUTES
+
+           Extended attributes from the FUJITSU host differ in  format from
+      that of  IBM in that  they contain two  attribute bytes.   The second
+      attribute in each FUJITSU  extended attribute order will  be ignored.
+      The  host will   send screens  either composed  entirely  of extended
+      attributes or normal attributes.  They  cannot be mixed as in  an IBM
+      datastream.  The extended attributes will be processed as as they are
+      in  an IBM  datastream  currently.  They  will be  decoded  for field
+      attribute components and the rest will be ignored.
+
+           If a  screen composed  of extended attributes  is sent  from the
+      host, CMT will set  a flag to indicate this  and if a read  buffer is
+      requested by the host, CMT will send all the extended attributes with
+      a second  dummy attribute, "40",  which selects a/n,  unprotected and
+      display, appended.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      129                        Preliminary CMTI ERS                   CMTI.ERS
+    
