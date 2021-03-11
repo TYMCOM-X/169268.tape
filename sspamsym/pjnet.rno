@@ -1,0 +1,642 @@
+.page
+.title
+^^NETWORK PJ\\ - 5/31/79
+.number 1
+.left margin 2
+.right margin 72
+.spacing 1
+.paragraph
+^^PJ\\ is a user name that should always be logged in on the ^^DEC\\ systems.
+^It stands for ^Phantom ^Job.
+^The supervisor tries to login a job under the user name ^^PJ\\ whenever a system goes from a shut state to an up state.
+^^PJ\\ is set up with an initialization file, ^^PAM\\, which automatically runs whenever ^^PJ\\ is logged in.
+^The first thing ^^PAM\\ does is to see if there are any other jobs logged in under ^^PJ\\.
+^If there are, the job logs itself out.
+^If there are no other jobs running under ^^PJ, PAM\\ then reads the file (^^PJ)JOBS.DAT.\\
+^The following information is included in the file:
+.skip 1
+.indent 10
+the logged in system number
+.break
+.indent 10
+a list of jobs to be run (numbered 1 through 10)
+.break
+.indent 10
+time interval to run each job in the list
+.break
+.indent 10
+a table of systems and their attributes (system table)
+.skip 1
+^^PAM\\ sets up tables in core so it can determine the next job to be run, and when it should be run, according to the information in ^^JOBS.DAT\\.
+^It computes how much time should elapse before the next job is to be executed and goes to sleep for that amount of time.
+^When it wakes up, it tries to run the job described in the job table.
+^It looks for the file ^^(PJ)JOB00\\x.^^HGH, where x = the job number to run next.
+^When that job has been completed ^^PJ\\ computes when the job should be run again, saves that information, and looks for the next job to run.
+.skip 3
+^^JOBS.DAT\\
+.paragraph
+^The format of (^^PJ)JOBS.DAT\\ is as follows:
+.skip 1
+^^WORD 0\\#######525252000101#####control word to identify the file
+.break
+^^WORD 1\\#######system number
+.break
+^^WORD 2\\#######job control word
+.break
+.indent 13
+bits 1 through 10 determine which jobs to run
+.break
+^^WORDS 3-12###\\time interval in minutes for each job in word 2
+.break
+^^WORDS 13-####\\system number in right half
+.break
+.indent 13
+description bits in left half
+.break
+.indent 13
+last word in list = -1
+.skip 1
+^^DESCRIPTION BITS:\\
+.SKIP 1
+^^BIT 0###CUD\\ system
+.break
+^^BIT 1###MUD\\ system
+.break
+^^BIT 5###DEC\\ accounting system
+.break
+^^BIT 6\\###master password system
+.break
+^^BIT 8###DEC\\ system
+.paragraph
+^See documentation on ^^MAKJOB\\ for information on how to create and update ^^JOBS.DAT\\.
+.skip 2
+.paragraph
+^^PJ\\ writes errors to a file called ^^(PJ)PAM.ERR.
+^The following is recorded for each error:
+.skip 1
+^^WORD 0\\####error number in left half
+.break
+.indent 10
+job number in right half
+.break
+^^WORD 1\\####system number
+.break
+^^WORD 2\\####time of error in left half
+.break
+.indent 10
+date of error in right half
+.skip 1
+^See documentation on ^^RDERR\\ for information on how to type out errors.
+.PAGE
+.CENTER
+^^NETWORK MAKJOB\\ - 5/30/79
+.PARAGRAPH
+^The ^^MAKJOB\\ program is used to set up and maintain the file ^^(PJ)JOBS.DAT\\.
+^There are 4 commands:
+.skip 1
+.indent 5
+^^R##(READ)\\#######types all information from ^^JOBS.DAT\\
+.break
+.indent 5
+^^S##(SET)\\########sets the system number
+.break
+.indent 5
+^^M##(MODIFY)\\#####modifies various information in ^^JOBS.DAT\\
+.break
+.indent 5
+^^Q##(QUIT)\\#######exits to system
+.paragraph
+^The command level prompt is:
+.skip 1
+^^READ, SET OR MODIFY?\\
+.skip 1
+^Control-a may be used to delete the last character input, and a question mark may be entered to return to command level.
+.skip 3
+^^READ\\
+.paragraph
+^The ^^READ\\ command will output all information in ^^JOBS.DAT\\ to the terminal.
+^An example of the output follows:
+.skip 1
+^^SYSTEM 38########################(logged in system number)
+.skip 1
+DOES JOB 1#######################(job list)
+.break
+FREQ.#IN MINS: 17
+.skip 1
+DOES JOB 3
+.break
+FREQ.#IN MINS: 5
+.skip 2
+SYSTEM MAP:######################(system map)
+.skip 1
+33
+.break
+MASTER PASSWORD SYSTEM
+.break
+DEC SYSTEM
+.skip 1
+36
+.break
+DEC ACCTG.#SYSTEM
+.break
+DEC SYSTEM
+.skip 3
+^^SET\\
+.paragraph
+^The ^^SET\\ command is used to change the system number recorded in ^^JOBS.DAT\\.
+^The user is prompted:
+.skip 1
+^^ENTER LOGGED IN
+.break
+SYSTEM NO:\\
+.skip 1
+^The user must input the new system number for the system he is logged in to.
+.skip 3
+^^MODIFY\\
+.paragraph
+^The ^^MODIFY\\ command is used to alter the job list or system map in ^^JOBS.DAT\\.
+^The user is asked:
+.skip 1
+^^MODIFY JOBS OR SYSTEM MAP?\\
+.skip 1
+^The responses are:
+.skip 1
+.indent 5
+^^J##(JOBS)##########\\user wishes to change the job list
+.break
+.indent 5
+^^S##(SYSTEM MAP)####\\user wishes to change the system map
+.paragraph
+^If the user chooses to change the job list, he is asked to describe each job to enter into ^^JOBS.DAT.\\
+^He must answer the following questions for jobs 1 through 10:
+.skip 1
+^^JOB 1?\\###############type '^Y' if job is to be included, otherwise, '^N'
+.skip 1
+^^FREQ.#IN MINS:\\#######enter frequency that job is to be run
+.skip 1
+.paragraph
+^If the user chooses to change the system map, he is first asked what kind of change he wants to make:
+.skip 1
+^^ADD, DELETE OR CHANGE?
+.skip 1
+^Valid responses are:
+.skip 1
+.indent 5
+^^A##(ADD)########\\user wants to add new system(s)
+.break
+.indent 5
+^^D##(DELETE)#####\\user wants to remove system(s)
+.break
+.indent 5
+^^C##(CHANGE)#####\\user wants to alter system(s) already entered
+.skip 2
+.indent 5
+^^ADD\\
+.paragraph
+^If the user wishes to add a system to the map, he is first asked for the system number and then asked the following questions about the system:
+.skip 1
+^^CUD SYSTEM?
+.skip 1
+MUD SYSTEM?
+.skip 1
+DEC ACCTG.#SYSTEM?
+.skip 1
+MASTER PASSWORD SYSTEM?
+.skip 1
+DEC SYSTEM\\?
+.skip 1
+^The user is then asked:
+.skip 1
+^^ANOTHER SYSTEM?
+.skip 1
+^If there are additional systems to be added to the list, answer '^Y', if no more additions are to be made, answer '^N'.
+^After all additions are made, the user is asked:
+.skip 1
+^^ADDITIONAL MODIFICATIONS?\\
+.skip 1
+^If the user wishes to add, change or delete any systems, answer '^Y', and ^^MAKJOB\\ will re-prompt:
+.skip 1
+^^ADD, DELETE OR CHANGE?
+.skip 1
+^If no more changes are to be made, the user should answer '^N' and ^^MAKJOB\\ will return to the command level prompt.
+.skip 2
+.indent 5
+^^DELETE\\
+.paragraph
+^If the user wishes to delete a system from the map, he is merely prompted for the system number:
+.skip 1
+^^SYSTEM NO:\\
+.skip 1
+^Enter the system number that is to be deleted from the map.
+^If the system number entered is illegal, ^^MAKJOB\\ will ask for the system number again.
+^Valid system numbers are less than 130.
+^The user is then allowed additional deletions, as in the ^^ADD\\ command.
+.skip 2
+.indent 5
+^^CHANGE\\
+.paragraph
+^If the user wishes to alter a system already entered in the map, he is first asked for the system number and then asked the same questions as in the ^^ADD\\ command. (see above)
+.skip 1
+^^NOTE:\\ additions, deletions and changes are not recorded in ^^JOBS.DAT\\ until control is returned to the command level prompt.
+.skip 3
+^^QUIT\\
+.paragraph
+^The ^^QUIT\\ command exits ^^MAKJOB\\ and returns the user to the ^^EXEC\\.
+.skip 3
+.paragraph
+^If ^^(PJ)JOBS.DAT\\ does not exist, ^^MAKJOB\\ will prompt the user for the appropriate information to create it, and the user will be notified:
+.skip 1
+^^JOBS.DAT NEEDS TO BE CREATED.\\
+.skip 1
+^The user will be prompted for the job list, the system number and the system map as described above.
+.page
+.CENTER
+^^RDERR\\ - 5/31/79
+.paragraph
+^The ^^RDERR\\ program is used to read ^^(PJ)PAM.ERR\\, and interpret the errors for the user.
+^If ^^(PJ)PAM.ERR\\ does not exist, the following message is output:
+.skip 1
+^^NO ERRORS TO REPORT\\
+.skip 1
+and the program exits to the exec.
+^If the error file does exist, the user is asked to enter the desired output file name by the prompt:
+.skip 1
+^^OUTPUT TO:\\
+.skip 1
+^The user should enter a file name or '^T' to signify that the output should go to the user's terminal.
+^For each error in the file, the date, time, job number, system number and error message is output.
+^If there is no error message assigned to an error number, the following is output:
+.skip 1
+^^ERROR \\n
+.skip 1
+where n is the error number.
+^The current errors defined are:
+.skip 1
+.BREAK
+.indent 10
+^^1###UUO ERROR
+.BREAK
+.indent 10
+2###INIT ERROR
+.BREAK
+.indent 10
+3###LOOKUP ON JOBS.DAT FAILED
+.BREAK
+.indent 10
+4###JOBS.DAT BAD
+.BREAK
+.indent 10
+5###GETSEG ERROR
+.BREAK
+.indent 10
+6###CIRCUIT ZAP
+.BREAK
+.indent 10
+7###TIMEOUT ON CIRCUIT
+.BREAK
+.indent 10
+8###LOOKUP OR ENTER ERROR
+.BREAK
+.indent 10
+9###INPUT OR OUTPUT ERROR
+.BREAK
+.indent 10
+10##CHECKSUM ERROR
+.BREAK
+.indent 10
+11##SYSTEM NOT NOTIFIED
+.BREAK
+.indent 10
+12##CONTROL FILE ERROR
+.BREAK
+.indent 10
+13##RENAME ERROR
+.BREAK
+.indent 10
+14##CANNOT ZERO HIGH SEGMENT
+.BREAK
+.indent 10
+15##HIBER ERROR
+.BREAK
+.indent 10
+16##ERROR IN TRANSFER OF DRWSPR.EPO
+.BREAK
+.indent 10
+17##LTCURT.DAT BAD
+.BREAK
+.indent 10
+18##GETTAB ERROR
+.BREAK
+.indent 10
+19##FILE BUSY
+.BREAK
+.indent 10
+20##NO UFD
+.BREAK
+.indent 10
+21##REQUEST NOT FOUND IN SPOOLING ACCTG.
+.BREAK
+.indent 10
+22##ERROR IN COPYING SPOOLING ACCTG.
+.BREAK
+.indent 10
+23##ERROR IN COPYING REMCNT
+.BREAK
+.indent 10
+24##MUDCHG FILE ERROR
+.BREAK
+.indent 10
+25##ERROR IN BUILDING CIRCUIT
+.BREAK
+.indent 10
+26##ERROR FROM SLAVE\\
+.page
+.CENTER
+^^PJ'S MUD UPDATER\\ - 6/1/79
+.paragraph
+^The ^^MUD\\ updater job is designed to keep all the supervisor ^^MUD\\s up-to-date with the ^^CUD\\.
+^When a change is made to the ^^CUD\\, the validaton program records the change in a file, ^^(PJ)MUDCHG\\.
+^The format of the file follows:
+.skip 1
+^^WORD  \\0########525252000106######control word to identify the file
+.break
+^^WORDS \\1-9#####file address of next update for sups 1 through 9
+.break
+^^WORDS \\10-#####change data
+.skip 1
+^Change data is in the format:
+.skip 1
+^^WORD 0########CUD\\ block number of change in left half
+.break
+##############index into block of change in right half
+.break
+^^WORD 1\\########number of words in change in left half
+.break
+##############zero in right half
+.break
+^^WORDS 2-######CUD\\ words to change
+.skip 1
+^P^J first checks to see if all supervisors have been notified of all changes in ^^MUDCHG\\.
+^P^J uses the system map from ^^JOBS.DAT\\ to determine which supervisors exist in the network.
+^If all supervisors are up-to-date, ^P^J deletes ^^MUDCHG\\.
+.paragraph
+^Next, the job determines if the consistency check has been run for the day for each supervisor.
+^The file ^^(UN1)MUDUPD.DAT\\ contains 1 record for each supervisor as follows:
+.skip 1
+^^WORD \\0#####supervisor number
+.break
+^^WORD \\1#####date of last consistency check for sup
+.break
+^^WORDS \\2-3##spare
+.skip 1
+^If the consistency check has not been run, and the time is before 6:00 ^A.^M., ^P^J will build a circuit back to the same system and start up the program ^^MDCONS\\ for each supervisor necessary.
+^P^J sends ^^MDCONS\\ the supervisor number for which it is supposed to perform the check.
+^^MDCONS\\ detaches itself so that ^P^J may process other jobs.
+.paragraph
+^See documentation on ^^MDCONS\\ for a more detailed discussion of how the consistency check is performed.
+.paragraph
+^Next, the ^^UFD\\ for ^U^N1 is read and for each filename of the format:
+.skip 1
+.indent 20
+^^MUP12n.SAV\\
+.skip 1
+(where n = 1 through 9), a circuit is built back to the system to the username ^U^N1 and that file is started up.
+^P^J first checks to see if a job with that program name is already running, and if so, does not start up another job.
+^The last three digits of the file name represent a supervisor system.
+^The ^^MUP12\\n job detaches itself, so that ^P^J may go on to process other jobs while the ^^MUDS\\ are being updated.
+.paragraph
+^See documentation on ^^MUP\\ for a detailed description of the ^MUD\\ updater.
+.page
+.CENTER
+^^MDCONS\\ - 6/1/79
+.paragraph
+^The ^^MDCONS\\ program builds a circuit to the user name ^U^N2 on the appropriate supervisor system and performs a block by block consistency check.
+^The sup slave is started up automatically, and a handshake is traded.
+^The slave reads the first block on the disk of the ^^MUD\\ and sends the checksum to ^^MDCONS\\.
+^If the checksum matches the ^^CUD\\ block, ^^MDCONS\\ tells the slave that block is ok, and the slave goes on to checksum the next block.
+^If the checksum does not match, ^^MDCONS\\ notifies the slave, and sends the entire block of data to be written to the ^^MUD\\.
+^The data is transmitted as follows:
+.skip 1
+.indent 10
+data (2044 bytes)
+.break
+.indent 10
+checksum (3 bytes)
+.skip 1
+^This process continues until the entire ^^MUD\\ has been checked.
+^^MDCONS\\ then updates the file ^^(UN1)MUDUPD.DAT\\ with the information that the consistency check has been performed for that day.
+.page
+.CENTER
+^^MUP\\ - 6/1/79
+.paragraph
+^The ^^MUP\\ program (saved as ^^MUP121, MUP122, MUP123, \\etc.) notifies the supervisor systems of changes made to the ^^CUD\\.
+^It first builds a circuit to the user name ^U^N2 on the appropriate supervisor system, performs a handshake, and determines the next change to be sent in the ^^MUDCHG\\ file.
+^Next it sends changes to the supervisor system in the following order:
+.skip 1
+.indent 10
+virtual block number (2 bytes)
+.break
+.indent 10
+word position in block of first word of change (2 bytes)
+.break
+.indent 10
+the number of 32 bit words in change (2 bytes)
+.break
+.indent 10
+data (as many words as specified previously)
+.break
+.indent 10
+checksum (3 bytes)
+.skip 1
+^If the slave's checksum of the data matches the one sent with the data, the information is written to the ^^MUD\\, and ^^MUP\\ is notified that the change was completed successfully.
+^If not, the change will be re-transmitted.
+^This process continues until all changes have been successfully sent.
+.page
+.CENTER
+^^PJ'S NETWORK ACCOUNTING COLLECTOR\\ - 5/31/79
+.paragraph
+^The network collection job is designed to collect accounting from supervisor systems for the ^^NETWORK ACCOUNTING MERGER\\ to process.
+^Whenever the job runs, the ^^UFD\\ for the user name \\^^COLLECTR\\ is read, and for each filename of the format:
+.skip 1
+.indent 20
+^^CPN12n.SAV\\
+.skip 1
+(where n = 1 through 9), a circuit is built back to the system to the username ^^COLLECTR\\ and that file started up.
+^^PJ\\ first checks to see if a job with that program name is already running, and if so, does not start up another job.
+^The last three digits of the file name represent a supervisor system.
+^The ^^CPN12\\n job detaches itself, so that ^^PJ\\ may go on to process other jobs while the accounting is being collected.
+^See documentation on ^^COPNET\\ for a detailed description of the collector.
+.page
+.CENTER
+^^COPNET\\ - 5/31/79
+.paragraph
+^The ^^COPNET\\ program (saved as ^^CPN121, CPN122, CPN123, \\etc.) determines whether or not there is accounting to collect from a supervisor, collects it if necessary, and updates control files.
+^The main control file is (^^PJ)NETACC.DAT\\, which has 1 entry for each supervisor as follows:
+.skip 1
+^^WORD 0\\#####supervisor number
+.break
+^^WORD 1\\#####block number of last block transmitted successfully
+.break
+^^WORD 2\\#####checksum of last block transmitted successfully
+.break
+###########=-1 to start transferring at block 0
+.break
+###########=-2 to ignore checksum of last block
+.break
+^^WORD 3\\#####date last data was transmitted in left half
+.break
+###########time last data was transmitted
+.break
+^^WORD 4\\#####zero if sup is not through a gateway
+.break
+###########or gateway host number
+.paragraph
+^^COPNET\\ builds a circuit to the appropriate supervisor system to the user name ^^ACCOUNT\\ and the account slave starts up automatically.
+^^COPNET\\ and ^^ACCOUNT\\ perform a handshake to be sure that each is communicating with the correct program.
+^^ACCOUNT\\ sends ^^COPNET\\ the number of the block into which the supervisor will write next (called 'current block number').
+^^COPNET\\ then requests that the last block that it collected be re-transmitted, along with that block's checksum.
+^If the checksum matches the one saved in ^^NETACC.DAT\\, and the current block number is 1 more than the last block collected, all the data has been collected from this supervisor, and ^^COPNET\\ zaps the circuit and logs itself out.
+.paragraph
+^If the checksum matches, and the current block number is not 1 more than the last block collected, ^^COPNET\\ tells ^^ACCOUNT\\ to start sending data beginning with the block following the the last block transmitted.
+^If the checksum does ^^NOT\\ match, ^^COPNET\\ tells ^^ACCOUNT\\ to start sending data beginning with the current block number plus 1.
+.paragraph
+^For each block transmitted, the checksum must match, or it will be re-transmitted.
+^After 5 re-transmissions, ^^COPNET\\ gives up and records an error (see ^^NETERR.LOG\\).
+.paragraph
+^When ^^ACCOUNT\\ has transmitted all blocks up to the current block number, ^^ACCOUNT\\ notifies ^^COPNET\\ that it has caught up, and the collection is over.
+.paragraph
+^When ^^COPNET\\ has collected 200 disk pages, or has been notified that it has caught up, ^^COPNET\\ closes the data file it has been writing into, and updates  a list of filenames, ^^(COLLECTR)NETACC.DIR\\.
+.paragraph
+^The data files are named in the format:
+.skip 1
+.indent 10
+^^SSHHMM.DAY\\
+.skip 1
+where ^S^S = last 2 digits of supervisor, ^H^H = hour of the day of the collection in ^^GMT\\, ^M^M = minute of the hour of the collection, and ^^DAY\\ = julian day of the year of the collection.
+.paragraph
+^The format of the symbolic file ^^NETACC.DIR\\ is as follows:
+.skip 1
+^^COLUMNS\\ 1 - 10#####file name (ex. 251712.150)
+.break
+^^COLUMNS\\ 11 - 14####first supervisor block number in file
+.break
+^^COLUMNS 15 - 18####last supervisor block number in file
+.break
+^^COLUMNS \\19 - 28####first block time of data
+.break
+^^COLUMNS\\ 29 - 38####zero
+.break
+^^COLUMNS\\ 39 - 40####carriage return and line feed
+.paragraph
+^^COPNET\\ updates ^^NETACC.DAT\\ when eun is completed.
+.paragraph
+^Errors are written to ^^(COLLECTR)NETERR.LOG\\, which has entries of the following format:
+.skip 1
+^^WORD\\ 0#####date of error
+.break
+^^WORD 1\\#####time of day in minutes of error
+.break
+^^WORD 2\\#####error number
+.break
+^^WORD 3\\#####supervisor number
+.skip 1
+^See documentation of ^^RDNERR\\ for a discussion of how to type out errors, and a complete description of error messages.
+.page
+.CENTER
+^^RDNERR\\ - 5/31/79
+.paragraph
+^The ^^RDNERR\\ program is used to read ^^(COLLECTR)NETERR.LOG\\, and interpret the errors for the user.
+^If ^^(COLLECTR)NETERR.LOG\\ does not exist, the following message is output:
+.skip 1
+^^NO ERRORS TO REPORT\\
+.skip 1
+and the program exits to the exec.
+^If the error file does exist, the user is asked to enter the desired output file name by the prompt:
+.skip 1
+^^OUTPUT TO:\\
+.skip 1
+^The user should enter a file name or '^T' to signify that the output should go to the user's terminal.
+^For each error in the file, the date, time, supervisor number and error message is output.
+^If there is no error message assigned to an error number, the following is output:
+.skip 1
+^^ERROR \\n
+.skip 1
+where n is the error number.
+^The current errors defined are:
+.skip 1
+.indent 10
+^^1###ERROR IN (PJ)NETACC.DAT
+.break
+.indent 10
+2###ERROR IN BIO
+.break
+.indent 10
+3###TRIED A BLOCK 5 TIMES WITH NO SUCCESS
+.break
+.indent 10
+4###TIMED OUT
+.break
+.indent 10
+5###CIRCUIT ZAP
+.break
+.indent 10
+6###CANNOT BUILD CIRCUIT
+.break
+.indent 10
+7###ERROR IN OUTPUT FILE
+.break
+.indent 10
+8###ERROR IN DIRECTORY FILE
+.break
+.indent 10
+9###OUT OF SYNC WITH SLAVE\\
+.page
+.CENTER
+^^RPTNET\\ - 5/31/79
+.paragraph
+^^RPTNET\\ is a program used to determine the status of the network collectors.
+^It builds a circuit to each supervisor in ^^(PJ)NETACC.DAT\\ and types out the last block collected and the current block number for that supervisor.
+^An example of the output follows:
+.skip 2
+#^^SUPNO##PDP##SUP
+.break
+########BLK##BLK
+.SKIP 1
+##0121#0699#0700
+.BREAK
+##0122#0971#NO CIRCUIT BUILT.
+.BREAK
+##0123#3250#3251
+.BREAK
+##0125#1517#1581
+.BREAK
+##0126#0024#CIRCUIT ZAPPED.
+.SKIP 1
+^In the above example, supervisors 121 and 123 are 'caught up.'
+^System 122 is either unavailable or the collector is collecting on that supervisor.
+^Supervisor 125 is 63 blocks behind in its collection, and 126 is inaccessable.
+.page
+.CENTER
+^^PJ'S CLEAR DWNMSG\\ - 6/24/79
+.paragraph
+^THE CLEAR DWNMSG JOB IS DESIGNED TO CLEAR ALL OLD HOST AND REMOTE MESSAGES FROM ALL SUPERVISORS THAT HAVE BEEN SET UP WITH THE ^^DWNMSG\\ PROGRAM.
+^THE FILE ^^(PJ)CLRDWN.DAT\\ CONTAINS THE LAST DATE THAT THIS JOB HAD BEEN RUN.
+^^PJ\\ FIRST READS THE FILE TO DETERMINE WHETHER OR NOT ^^CLRDWN\\ HAS BEEN RUN TODAY.
+^IF IT HAS NOT BEEN RUN, ^^PJ\\ CHECKS TO SEE IF A JOB WITH THAT PROGRAM NAME IS ALREADY RUNNING, AND IF SO, DOES NOT START UP ANOTHER JOB.
+^IF NO OTHER JOB IS RUNNING, ^^PJ\\ BUILDS A CIRCUIT TO THE USER NAME ^^SSPAMBIN\\ ON THE SAME SYSTEM AND STARTS UP THE JOB ^^CLRDWN\\.
+^^CLRDWN\\ DETACHES ITSELF, SO THAT ^^PJ\\ MAY GO ON TO PROCESS OTHER JOBS WHILE IT IS RUNNING.
+^^CLRDWN\\ BUILDS A CIRCUIT TO EACH SUPERVISOR AND DELETES ALL MESSAGES WITH AN EXPIRATION DATE PRIOR TO THE CURRENT DATE AND TIME.
+^AFTER ALL SUPERVISORS HAVE BEEN UPDATED, ^^CLRDWN\\ STORES THE CURRENT DATE IN THE FILE ^^(PJ)CLRDWN.DAT.\\
+.page
+.CENTER
+^^PJ'S COPY CLASS\\ - 6/24/79
+.paragraph
+^THE COPY CLASS JOB IS DESIGNED TO BE SURE THAT THE CLASS AND GROUP TABLES ARE UP-TO-DATE ON ALL NETWORK SUPERVISORS.
+^THE FILE ^^(PJ)COPCLS.DAT\\ CONTAINS THE LAST DATE THAT THIS JOB HAD BEEN RUN.
+^^PJ\\ FIRST READS THE FILE TO DETERMINE WHETHER OR NOT ^^COPCLS\\ HAS BEEN RUN TODAY.
+^IF IT HAS NOT BEEN RUN, ^^PJ\\ CHECKS TO SEE IF A JOB WITH THAT PROGRAM NAME IS ALREADY RUNNING, AND IF SO, DOES NOT START UP ANOTHER JOB.
+^IF NO OTHER JOB IS RUNNING, ^^PJ\\ BUILDS A CIRCUIT TO THE USER NAME ^^SSPAMBIN\\ ON THE SAME SYSTEM AND STARTS UP THE JOB ^^COPCLS.\\
+^^COPCLS\\ DETACHES ITSELF, SO THAT ^^PJ\\ MAY GO ON TO PROCESS OTHER JOBS WHILE IT IS RUNNING.
+^^COPCLS\\ BUILDS A CIRCUIT TO EACH SUPERVISOR AND TRANSMITS THE CLASS AND GROUP TABLE.
+^AFTER ALL SUPERVISORS HAVE BEEN UPDATED, ^^COPCLS\\ STORES THE CURRENT DATE IN THE FILE ^^(PJ)COPCLS.DAT\\.
+  t@g
