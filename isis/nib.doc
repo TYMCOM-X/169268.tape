@@ -1,0 +1,638 @@
+      NAD Image Binary File Specification              November 28, 1978        
+      NAD Image Binary File Specification              November 28, 1978        
+
+
+
+
+
+
+
+
+                     NAD Image Binary File Specification
+
+
+
+
+     NAD  will  read  and   write  image  binary  files   which  contain
+
+     information necessary  to load  and dump  memory images  for TYMNET
+
+     ENGINES.   These  files may  also  contain symbol  table  and macro
+
+     information  so   that  a  user   may  save  and   reconstruct  NAD
+
+     environments.
+
+
+
+
+     This document describes the NAD commands used to create  and access
+
+     these files.  The format of the files is then  specified.  Finally,
+
+     a program for obtaining a formatted dump of the files is described.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       1
+      NAD Image Binary File Specification              November 28, 1978        
+
+
+
+
+
+
+
+
+                                NAD Commands
+
+
+
+
+     Initially,  the  name  of  the  NAD  Image  Binary  (NIB)  file  is
+
+     undefined.   The user  has the  option of  creating a  new  file or
+
+     appending to  an existing one.   The recomended extension  name for
+
+     these files is "NIB" (Nad Image Binary).
+
+
+
+
+     The following commands define the filename to NAD.
+
+
+
+
+             ;F filnam       A  new  file,  "filnam",  is   created  and
+
+                             becomes the current NIB file.   If "filnam"
+
+                             already exists the user is given the option
+
+                             of deleting  the existing file  or aborting
+
+                             the command.
+
+
+
+
+             n%F filnam      An  existing  file,  "filnam",  becomes the
+
+                             current NIB file.   If "n" is 1  (1%F) then
+
+                             new  information  may  be  appended  to the
+
+
+
+
+                                       2
+      NAD Image Binary File Specification              November 28, 1978        
+
+
+                             file.  If "n"  is zero or not  present then
+
+                             the file may  be read from but  not written
+
+                             to.   If  file "filnam"  does  not  exist a
+
+                             warning comment is issued and a new file is
+
+                             opened.
+
+
+
+
+     The following commands append a  range of memory image data  to the
+
+     NIB file.
+
+
+             pad,vad,cnt;P   pad=physical address,  vad=virtual address,
+
+                             cnt=byte count
+
+
+                  ad,cnt;P   ad=address, pad=vad=ad
+
+
+                     cnt;P   pad=vad=0
+
+
+                        ;P   Put entire local image on the NIB file [NOT
+
+                             IMPLEMENTED]
+
+
+
+
+
+
+     The following command  gets a range of  memory image data  from the
+
+     NIB file.
+
+
+             pad,vad,cnt;G   pad=physical address,  vad=virtual address,
+
+                             cnt=byte count
+
+
+
+                                       3
+      NAD Image Binary File Specification              November 28, 1978        
+
+
+                  ad,cnt;G   ad=address, pad=vad=ad
+
+
+                     cnt;G   pad=vad=0
+
+
+                        ;G   Get entire NIB memory image into  NAD local
+
+                             image [NOT IMPLEMENTED]
+
+
+     The range specified in the ;G commands need not  correspond exactly
+
+     to ranges used when the memory  image was put on the NIB  file.  If
+
+     any part of the range requested cannot be found an error message is
+
+     issued.
+
+
+     The following  commands request that  NAD dump/retrieve  all tables
+
+     that it needs to reconstruct a NAD environment.
+
+
+             %P      Put tables on NIB file [NOT IMPLEMENTED]
+
+
+             %G      Get tables from NIB file [NOT IMPLEMENTED]
+
+
+
+
+     The  following  command  specifies  the  program  start  address to
+
+     transfer to after  a node has been  loaded by the  downline loader.
+
+     If this command is not envoked the transfer address is undefined.
+
+
+
+
+             pad;T           pad=physical address for Transfer
+
+
+
+
+
+
+                                       4
+      NAD Image Binary File Specification              November 28, 1978        
+
+
+     If any information given on  a command or found in a  file (tranfer
+
+     address,  range   values,  etc.)   overlaps  or   repeats  previous
+
+     information the  new information  is used.   For example,  assume a
+
+     100,300;P  is  entered  and  later (possible  at  a  later  date) a
+
+     200,10;P is entered.  If the  file is then read using  a 200,100;G,
+
+     then the  range 210  through 300  will be  obtained from  the first
+
+     record and  the range  200 through  20F will  be obtained  from the
+
+     second.
+
+
+
+
+
+
+                               NIB File Format
+
+
+
+
+     A NAD Image  Binary file is  divided into sections  called records.
+
+     For efficient utilization of PDP  I/O, all records must start  on a
+
+     block boundary.  A block is a group of 200 octal 36 bit words.
+
+
+
+
+     The first  block (block  0) on a  file must  contain the  first (or
+
+     only) "ID" record.  This record contains (among other other things)
+
+     an index to  all other records  in the file.   This index is  a two
+
+     word entry  specifying the  record type and  block address  for the
+
+     start of  the record  as well as  some type  dependent information.
+
+     The first  two words of  each record are  the record  header.  This
+
+
+
+                                       5
+      NAD Image Binary File Specification              November 28, 1978        
+
+
+     record header  is an  exact copy of  the record  index from  the ID
+
+     record.  This allows a certain amount of error checking.
+
+
+
+
+     In  the   record  format  descriptions   which  follow,   the  form
+
+     "X Y/Z,Y/Z,..." is  used to  indicate fields of  Y decimal  bits of
+
+     value Z  starting at octal  word address X.   X is relative  to the
+
+     start  of  the record.   If  value Z  is  equal to  "**"  it  is an
+
+     undefined value and is reserved for future use.
+
+
+
+
+     The following abbreviations are used.
+
+
+             rtype   record type
+
+             u       undefined bit (1=undefined)
+
+             tdf     type dependent field
+
+             bad     block address
+
+             pad     physical address
+
+             vad     virtual address
+
+             bcnt    byte count
+
+
+
+
+
+     A record header is defined as follows.
+
+             0       4/rtype, 12/bad, 20/tdf
+
+             1       36/tdf
+
+
+
+                                       6
+      NAD Image Binary File Specification              November 28, 1978        
+
+
+
+
+
+
+                          ID Record (1 block long)
+
+             0       4/1, 12/bad, 20/**      ID header
+                                             bad=0 for first ID record
+             1       36/psa                  program start address,
+                                             minus if undefined
+             2       36/date                 creation date (Sixbit)
+             3       36/time                 creation time in msec
+             4       36*2/username           Sixbit username for this
+                                             file.  If first word is 0,
+                                             2nd word is the AUN, i.e.,
+                                             (GAN,,PPN) in binary.
+             6       36/filename             in Sixbit
+             7       18/extension,18/**      in Sixbit
+             10      36*2/author             Sixbit username of creator
+             12      36*2/record index       format as in record headers
+                     ...     more indexes
+                     ...     terminated by a zero word
+             176     36/0                    always zero
+             177     36/bad of next ID record or zero if none
+
+
+
+
+     Any  additional ID  records have  the same  format.   The following
+
+     should be noted.
+
+
+
+
+             1.  The PSA (if  defined) is always contained in  the block
+
+                zero ID record.  All  other ID records should  contain a
+
+                minus value.
+
+
+
+
+             2.  Creation  date and  time and the  author field  will be
+
+
+
+
+                                       7
+      NAD Image Binary File Specification              November 28, 1978        
+
+
+                different from  previous values only  if this  ID record
+
+                marks appended information.
+
+
+
+
+             3.  The  filename field  may be different  if the  file was
+
+                renamed and an append was performed.
+
+
+
+
+                             Memory Image Record
+
+             0       4/2, 12/bad, 20/pad
+             1       15/bcnt, 1/u, 20/vad
+             2       36/data         image or compression data
+                     ...
+             n       36/data
+
+     Where  image data is 4*(1/0,8/data byte)
+            compression data is 1/1,8/byte1,1/0,8/byte2,18/repeat count
+       and    n = (bcnt+3)/4 - ([sum i=1,m](repeat count(i) -1))/2
+                     where m = number of compression words in record
+
+     A memory image record may span block boundaries.
+
+
+
+
+                             Symbol Table Record
+
+             0       4/3, 12/bad, 20/cnt     cnt=no. of 3 word entries
+             1       36/**
+             2       3 word symbol table entry
+                     ...
+             n       last symbol table entry
+
+
+
+
+     Other record types will be defined as the need arises.
+
+
+
+
+
+                                       8
+      NAD Image Binary File Specification              November 28, 1978        
+
+
+
+
+
+
+
+
+                              NIB Dump Program
+
+
+
+
+     A program which gives a  formatted dump of a NAD Image  Binary file
+
+     is available.  ID records are interpreted in ASCII and HEX.  Memory
+
+     Image records are output in  HEX with the physical and  virtual (if
+
+     defined) addresses  also listed.  An  option exists to  specify the
+
+     number of columns  to use for  memory image output.   The available
+
+     options and a sample output are given below.
+
+             R(ISIS)NIBDMP;infile,outfile/p1p2...pn<CR>
+
+             Where   infile  is the file to dump
+
+                     outfile is  the  dump  listing  file   (default  is
+
+                                     terminal)
+
+                     pi      are options as follows --
+
+                             I       output ID record blocks
+
+                             M       output Memory Image data blocks The
+
+                                     physical  address   (PAD),  virtual
+
+                                     address (VAD)  and data  are output
+
+                                     in hex.   Each line contains  a PAD
+
+                                     and  a  VAD followed  by  words (32
+
+                                     bits) of  data.  If VAD=PAD  or VAD
+
+
+
+                                       9
+      NAD Image Binary File Specification              November 28, 1978        
+
+
+                                     is  undefined,  it  is  not listed.
+
+                                     Each word takes 11 characters.  The
+
+                                     line  length  may  be  specified in
+
+                                     terms  of  columns  of  memory data
+
+                                     words, i.e. ...
+
+                             n       number of columns for MI data
+
+
+     Options may be  seperated by anything  or nothing.  The  default is
+
+     /IM5.
+
+
+     Blanks may be used freely  on the run line.  The output  listing is
+
+     58 lines  per page (i.e.  large 6  or small 8  lines per  inch) The
+
+     number of columns and whether a virtual address is listed determine
+
+     how wide the page is.  Some useful values are as follows.
+         
+                     n       VAD     no VAD
+                     5       68      62      (TTY)
+                     6       79      73
+                     8       102     95      (SMALL)
+                     9       113     106
+                     11      135     128     (LARGE)
+
+
+
+     All  ID records  are  output before  any Memory  Image  records are
+
+     output.
+
+
+     In the following example  "<...>" indicates an explaination  and is
+
+     not part of the output.
+
+
+     The following dump was obtained by entering
+
+
+
+                                       10
+      NAD Image Binary File Specification              November 28, 1978        
+
+
+                     R(ISIS)NIBDMP;FRED.NIB,FRED.DMP/4
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       11
+      NAD Image Binary File Specification              November 28, 1978        
+
+
+         1   NIBDMP OF FRED.NIB      <HEADER LINE PAGE 1>
+        
+        
+          ID RECORD BLOCK 0000
+      PSA=UNDEF                      <pad;T was not entered>
+      78-11-27   9:49:19             <creation date and time>
+      [011334,225365] FRED.NIB       <(GAN,,PPN)file.ext>
+      AUTHOR = MONTAGNA
+        
+       BLK=00001 PAD=00100   <1st Memory image record starts at block 1>
+       CNT= 0300 VAD=00200   <100,200,300;P was entered in NAD>
+        
+       BLK=00002 PAD=00000   <0,10;P was entered in NAD>
+       CNT= 0010 VAD=00000
+        
+      ID CHAIN = 00000       <this is the only ID record>
+        
+        
+               MEMORY IMAGE          <first MI record>
+       PAD=00100 VAD=00200 CNT=0300
+        
+          0001       <block address = 1>
+      <PAD> <VAD>  <data, *177 indicates 2*177 bytes of 00>
+      00100 00200  0000*177   A8C0 0000  0000 4300  0004 0000
+      003FA 004FA  4300 000E  0000
+        
+        
+               MEMORY IMAGE          <second MI record>
+       PAD=00000 VAD=00000 CNT=0010
+        
+          0002       <block address = 2>
+      <PAD>  <DATA>  <VAD is missing because VAD=PAD>
+      00000  0000*2     24A4 4300  4000 30DC  0000 24AE
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       12
+
