@@ -1,0 +1,114 @@
+.	<<	file	ISIS.MAC	>>
+.SEC(|THE INTERDATA MAC|)
+.TOPIC(|MAC|)
+	This chapter is intended to provide a general overview of
+the use, operation, and constraints related to the MAC
+.TOPIC(|Memory Access Controller|)
+(Memory Access Controller).
+.SS(|ADDRESS SPACE|)
+.TOPIC(|address space|)
+.TOPIC(|absolute address space|)
+	All references to addresses are in hexidecimal, of the form
+'XXXXX (an address is a BYTE reference, and is 20 bits long, or 5 hex
+digits).  The address space, for the purposes of this discussion, may
+be considered to be formatted into PAGES of 256 bytes, and an address
+'PPPBB is a reference to byte 'BB in page 'PPP.  When running outside
+of the MAC operation (as an interrupt routine might do), a reference
+to page 'PPP can refer to any of 4096 pages, subject to the actual
+core present in the machine.
+	This un-MAC'ed address space is the ABSOLUTE ADDRESS SPACE,
+and corresponds to the real memory in one-to-one correspondance.
+.TOPIC(|virtual address space|)
+	A job running under the MAC has a VIRTUAL ADDRESS SPACE, which
+is independent of the real absolute address space of the machine.
+All references to virtual address space for a job is translated to
+absolute address space references by the MAC in a mapping process,
+which also imposes access restrictions on the references.
+	Two independent jobs may have the same virtual address for
+independent references, but the MAC will sort these out, and cause
+the references to be to different real addresses.  Likewise, two
+independent jobs may have different virtual addresses for the same
+reference, and the MAC will cause each job to reference the same
+real address.
+.SS(|MAC MAPPING|)
+	When running under the MAC, a reference address is of the form
+.TOPIC(|Segment|)
+'SPPBB, where 'S is a reference to one of 16 SEGMENTS, and 'PP
+references a page within that segment.
+	In practice, the MAC is set up for a job before the job is
+run, and the details need not concern us.  Further discussion is
+based on a properly set MAC, while a job is running.
+.TOPIC(|MAC registers|)
+.TOPIC(|segment registers|)
+	The MAC has a set of 16 segment registers, or DESCRIPTORS.
+Each descriptor
+has a base page 'KKK and a page range 'LL, as well as various sorts
+of protection status.
+	The program references address 'SPPBB:  the MAC intercepts the
+reference, and looks up descriptor # 'S.  Using descriptor 'S, it
+performs two operations in parallel:  it computes absolute page #
+'JJJ = 'PP + 'KKK; and it compares 'PP with 'LL--if 'PP > 'LL, the
+reference is out of range, and the MAC traps the program--otherwise
+it may reference page 'JJJ.
+	In addition to the above, the MAC makes some protection checks
+on the operation to be performed.  If the segment is flagged NOT
+PRESENT, the reference is illegal, and the MAC traps the program.  If
+the page is flagged NOT EXECUTABLE, and this is an instruction
+reference, the MAC traps the program.  If the page is flagged NOT WRITE,
+and this is a write reference, the MAC traps the program (NOT WRITE
+has two aspects, and the trapping may take place before or after the
+write takes place).
+	If all of the above conditions are satisfied, the MAC completes
+the reference to page 'JJJ.
+.SS(|GENERAL CONSIDERATIONS|)
+	A job will typically have at least 3 segments, at least while
+being debugged:  one for variables, one for code, and one for buffer
+storage.
+.SS(|MODULES|)
+.TOPIC(|module, symbol|)
+.TOPIC(|symbol module|)
+	The NAD assembler allows the definition of code modules.  These
+permit the development of specific code functions, without the necessity
+of passing the entire job through the editor.  In some cases, a job may
+be a single module, and will cover three or more MAC segments.  In
+another case, several modules may be concatenated by the assembler,
+and these all operate under one MAC segment.  There need not
+be a one-to-one correspondance between NAD modules and MAC segments.
+.SS(|ISIS USAGE|)
+	Two specific examples may be
+.TOPIC(|DISPATCHER|)
+of interest:   Assume a program (the DISPATCHER) is sharing a machine
+with a particular TYMCOM interface.  The purpose of the DISPATCHER is to
+insulate the interface from the environment, and in particular some
+of the network or node-code conventions which are not specific to
+that interface (such as accounting).  It also serves to protect the
+environment from the interface.
+	CASE a.
+	The interface has a page of configuration parameters which
+it treats as constants, but which the Dispatcher may address (and
+modify).
+.TOPIC(|ICT|)
+This INTERFACE CONTROL TABLE includes such
+parameters as the host number, the number of ports, general option
+control switches, and pointers to the interface's data areas (and their
+sizes) such as buffer descriptors, buffer areas, flag areas, etc.
+.TOPIC(|IST|)
+A second page, the INTERFACE STATE TABLE, contains the current state of
+the interface, as it has itself determined, and thus is writable by
+the interface job.  The IST includes such information as host up/down,
+host answered/shut, etc. in specified locations.  The dispatcher can
+look at the ICT and IST, and, for example, send messages concerning the
+host state to the supervisor, without the interface having to know the
+required format of the messages, or addressing node-functions, such
+as LEPSNU or the node-code's buffers.
+	CASE b.
+	The dispatcher is treating a
+specific host.  It determines that the host is still up, and there
+are active circuits.
+It references the absolute addresses of the interface's output ring,
+and now proceeds
+to move data from the
+interface output ring to the appropriate input rings of the
+corresponding destination interfaces, perhaps applying
+back-pressure on the interface port, by entering a message
+into the interface's input ring.
