@@ -1,0 +1,48 @@
+OPEN (NEEDLEDATA)VAOPT6 (NEEDLEDATA)VAOPT6 (LEONHARD)4E.
+INIT 1 VABPS6.OUT.
+DPL START.
+DEFINE REAL USPNUM BW UPHS UPHR DPHS DPHR SUM1 SUM2 TSUM BPS.
+DEFINE INTEGER CNADD.
+DBSET 1.
+CALL DOWORK.
+DPL STOP.
+
+
+DOWORK: FI COST NE 0.
+        SORT KEY USP.
+        NEXTREC: GETREC ENDREC.
+                LET USPNUM EQ USP CNADD EQ NADD.
+                DBSET 2.
+                FI NADD CNADD.
+                MAP TO 3 VIA USP TO USP.
+                IF SYSNREC EQ 0 THEN NOREC.
+                EVALUATE UPHS EQ TOT PHS UPHR EQ TOT PHR.
+                GOTO DEST.
+
+        NOREC:  LET UPHS = 0.
+                LET UPHR = 0.
+
+        DEST:   DBSET 2.
+                FI NADD EQ CNADD.
+                MAP TO 3 VIA USP TO DSP.
+                IF SYSNREC EQ 0 THEN NOREC2.
+                EVALUATE DPHS EQ TOT PHS DPHR EQ TOT PHR.
+                GOTO FSUM.
+
+        NOREC2: LET DPHS = 0.
+                LET DPHR = 0.
+
+        FSUM:   LET SUM1 EQ UPHS + DPHR.
+                LET SUM2 EQ UPHR + DPHS.
+                LET TSUM EQ SUM1 + SUM2.
+
+
+                COMPUTE: LET BPS = (TSUM* 8 * 1000)/3600..
+
+                PRINT USPNUM SUM1 SUM2 TSUM BPS FORMAT F3.3 3(1X,I6) 1X F7.3 END.
+                DBSET 1.
+                GOTO NEXTREC.
+
+        ENDREC: RETURN.
+
+DPL END.
