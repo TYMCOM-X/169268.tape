@@ -1,0 +1,465 @@
+        Accounting Addenda                                     October 22, 1986
+
+
+
+
+
+
+                                5 -  Accounting Addenda
+
+
+             Accounting Addenda  messages are used  to pass  certain additional
+        data to  the supervisor, for  inclusion in the  accounting information.
+        In  order  to  permit  the  definition  of  an  orderly  structure, for
+        transmitting these data, the following convention is used:
+
+           --.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.--
+           |  14   | stype |                value                          |
+           -----------------------------------------------------------------
+
+
+             STYPE (sub-type) currently may have the values:
+
+
+           0   This has the 24-bit value divided into "msg" and  16-bit values,
+               of format:
+
+           --.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.--
+           |  14   |   0   |      msg      |      value                    |
+           -----------------------------------------------------------------
+
+
+
+
+
+
+                               5.1  Circuit Termination
+
+           Msg 0 is circuit terminated, of form:
+
+           --.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.--
+           |  14   |   0   |       0       |            reason             |
+           -----------------------------------------------------------------
+
+                        value  reason
+                         1     host has gone down (ISIS slot crash)
+                         2     dropped by host
+                         3     dropped by user
+                         4     host not available
+                         5     sub-host down at logon
+                         6     sub-host shut at logon
+                         7     out of ports
+                         8     out of channels
+                         9     terminal does not match available ports
+                        10     circuit origination rejected (based upon node of
+                               origination)
+                        11     user-name rejected (TYMCOM has rejected circuit)
+
+        20                         TYMNET Accounting                 ACOUNT.DOC
+        Accounting Addenda                                     October 22, 1986
+
+
+                        12     illegal usage of foreign origin
+                        13     special camp-on disconnect
+                        14     network disconnect
+                        15     node code out of dispatcher ports
+                        16     ISIS slot out of dispatcher ports
+                        17     ISIS slot zapped, host out of ports -- issued by
+                               ISIS Node Code (Slot  has issued a BE  [Zap with
+                               reason]   message,  and   then  the   node  code
+                               discovers  that the  host has  not  reported "no
+                               ports available" -- the slot is ill-behaved).
+                        18     host not answering
+                        19     host rejected caller
+                        20     protocol violation
+                        21     resource-limit exceeded
+                        22     loss of synchronization
+                        23     MXP out of LAN routes
+                        24     Internal Hosts -- circuit rejected  (bad control
+                               char)
+                        25     Internal  Hosts  --  circuit  timeout  (host not
+                               answering)
+                        26     Internal  Hosts   --  resource   limit  exceeded
+                               (bumped by higher status XRAY user)
+                        27     Outdial unsuccessful - busy
+                        28     Outdial unsuccessful - no modem available
+                        29     Outdial unsuccessful - no ringing
+                        30     Outdial unsuccessful - call  answered;  no  tone
+                               received
+                        31     Outdial unsuccessful - static; unknown tone
+                        32     Outdial unsuccessful - call    failed   (unknown
+                               reason)
+
+                   NOTE   --   Message   type   14.0.0.v  terminates
+                   accounting...if used, it  is in PLACE  of message
+                   types  10,  11,  or  12;   in  this  case,  it is
+                   preceeded by a message type 9!
+
+
+
+
+
+
+                             5.2  Other subtype-0 messages
+
+                   msg  use
+                   1    value is the actual (Physical) port-number assigned (on
+                        destination).
+
+                        The next four msg's apply to called address:
+
+                   2    value is the low four BCD digits of address.
+                   3    value is the next four BCD digits.
+                   4    value is the third group of four BCD digits.
+                   5    1 byte of length and 2 high-order BCD digits.
+
+        21                         TYMNET Accounting                 ACOUNT.DOC
+        Accounting Addenda                                     October 22, 1986
+
+
+                   6    The  value is  4 BCD  digits of  transit  DNIC's.  Last
+                        message sent  is FFnn,  where nn  is number  of transit
+                        nets.
+
+                   7    value is Collect:Origination --
+
+                                 high 8 bits ---
+                                       0 for normal charges,
+                                       1 for reverse charges requested;
+
+                                 low 8 bits ---
+                                       0 for origination from host
+                                       1 for origination from terminal
+
+                   8    value is circuit-Originating Host Number.
+                   9    value is circuit-Originating (Physical) Port Number --
+
+                                 High 4 bits ---
+                                   0 for normal ISIS machines,
+                                   N for  MXP machines; then  N is  the machine
+                                 number within the MXP cluster.
+                                 Next 4 bits ---
+                                       0 for uncontrolled (vanilla) ports,
+                                     1-4 for ASYNC ports,
+                                       5 for SYNC ports,
+                                       6 for SIO ports.
+
+                                 Low 8 bits ---
+                                 Physical port number.
+
+               NOTE   SIO ports specify  physical port number  as 4-bits
+                       of mother-board ID, followed by 4-bits of channel
+                       number.
+
+                        The next four msg's apply to calling address:
+
+                   10   value is the low four BCD digits.
+                   11   value is the next four BCD digits.
+                   12   value is the third group of four BCD digits.
+                   13   1 byte of length and 2 high-order BCD digits.
+
+
+                   14   low order 4 bits  are IRC selected by gateway.   Bit 16
+                        is  indication of  updated session  start time,  due to
+                        call-accepted packet being received.
+                   15   Call_cleared cause and diagnostic.
+                   16   Multiplexed  PVC  count of  port  sessions accumulated.
+                        Reported periodically for MPVC circuits, and at  end of
+                        MPVC session.
+                   17   MPVC count  of port  session time  (minutes).  Reported
+                        periodically  for MPVC  circuits,  and at  end  of MPVC
+                        session.
+
+
+        22                         TYMNET Accounting                 ACOUNT.DOC
+        Accounting Addenda                                     October 22, 1986
+
+
+                   18   value is DATAPAC Tariff Class (non-X.75 Utility) --
+
+                                 Format: SSSSSBBB
+
+                                     BBB ---
+                                     000 Band 1
+                                     001 Band 2
+                                     010 Band 3
+                                     011 Band 4
+                                     100 Band 5;
+
+                                   SSSSS ---
+                                   00000 SNAP Service
+                                   00001 ITI Public Dial
+                                   00010 ITI Private Access
+
+                   19   Terminal address (extended).  Used to identify specific
+                        terminals  on a  multiple-terminal physical  port (e.g.
+                        multi-drop lines).  Format is PROTOCOL-DEPENDENT!
+
+                                 3270 -    Format: CCCCDDDD;  the first byte is
+                                           the  controller address,  the second
+                                           is the device address.
+
+                   20   Message-mode circuit.  Low-order bit  specifies whether
+                        circuit-originator (0) or circuit-destination (1) is in
+                        message-mode.
+                   21   X-25 PVC indication.  Indicates that this circuit is an
+                        X-25 Permanent Virtual Circuit.
+                   22   X-25 Fast-select packet-request facility.  (Provisional
+                        until X.25/X.75  facilities implemented  in Accounting-
+                        II.)
+
+                        The next 8 messages apply to Outdial (NOTE:  the dialed
+                        number  is encoded  as strings  of BCD  digits;  unused
+                        digits are padded with hex F; only as many  message are
+                        sent as are required to contain the digits.):
+
+                   23   Dialed number: high 4 digits.
+                   24   Dialed number: next 4 digits.
+                   25   Dialed number: third group of 4 digits.
+                   26   Dialed number: fourth group of 4 digits.
+                   27   Dialed number: fifth group of 4 digits.
+                   28   Dialed number: sixth group of 4 digits.
+                   29   Dialed number: seventh group of 4 digits.
+                   30   Dialed number: eighth group of 4 digits.
+
+                        The following message  also applies to  outdial:  these
+                        are  various  conditions  which  do  not  terminate the
+                        circuit:
+
+                   31.x.0 Outdial successful - call is completed -- if the low-
+
+
+        23                         TYMNET Accounting                 ACOUNT.DOC
+        Accounting Addenda                                     October 22, 1986
+
+
+                        order 8  bits of  v is  0, then  the high-order  8 bits
+                        contain the  CCT representing the  speed of  the actual
+                        call  completed (which  may be  different than  the CCT
+                        associated with the Outdial circuit).
+                   31.1   Outdial unsuccessful - busy
+                   31.2   Outdial unsuccessful - no modem available
+                   31.3   Outdial unsuccessful - no ringing
+                   31.4   Outdial unsuccessful - no answer
+                   31.5   Outdial unsuccessful - no dial-tone
+                   31.x.255 Outdial successful - call  is completed  --  if the
+                        low-order 8 bits  of v is  255d, then the  high-order 8
+                        bits  contain the  CCT  representing the  speed  of the
+                        actual call completed (which may be different  than the
+                        CCT associated with the Outdial circuit).
+
+                   32   Rebuild-indicator.
+
+
+           1   This contains 24 bits of origination input packet count.
+           2   This contains 24 bits of origination output packet count.
+           3   This contains 24 bits of origination input segment count.
+           4   This contains 24 bits of origination output segment count.
+           5   This contains 24 bits of destination input segment count.
+           6   This contains 24 bits of destination output segment count.
+           7   This contains 24 bits of destination input packet count.
+           8   This contains 24 bits of destination output packet count.
+
+           9   This contains 24  bits of gateway  invoice number (in  a TYMNET-
+               TYMNET gateway, there are independent supervisors in each of the
+               networks,  and each  half of  the circuit  is assigned  a unique
+               invoice number--this message permits the exchange of invoices so
+               that accounting in the two networks may be correlated).
+           10  This contains 24 bits  of server invoice number (with  a server-
+               slot, one circuit is created from origin to server, and a second
+               circuit  is created  from the  server to  the  destination host.
+               This invoice  number permits the  correlation of  the accounting
+               for the two circuits).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        24                         TYMNET Accounting                 ACOUNT.DOC
+        Accounting Addenda                                     October 22, 1986
+
+
+
+
+
+
+
+
+                                     5.3  Example
+
+
+             The use of these elements  is demonstrated in this fragment  of an
+        accounting session (invoice numbers have been stripped out):
+
+           --.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.--
+        1* |   6   |          0            |             -454-             |
+           |-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-|
+           |  14   |   9   |                    -98765-                    |
+           |-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-|
+        2* |   6   |          0            |              -64-             |
+           |-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-|
+           |  14   |   0   |       0       |              -9-              |
+           |-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-|
+        3* |   6   |          0            |             -454-             |
+           |-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-|
+           |  14   |   0   |       8       |             -377-             |
+           |-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-:-.-.-.-.-.-.-.-|
+           |  14   |   0   |       9       |              -14-             |
+           -----------------------------------------------------------------
+
+             Where:
+
+           1*  The originating node (obviously a TYMNET-TYMNET Gateway) reports
+               the invoice number (at the other side of the gateway) as 98765.
+           2*  The destination node reports the session was  terminated because
+               no ports were available for this particular type of terminal.
+           3*  The originating node  continues to report information;   in this
+               case, that the circuit originated on port 14 of host 377.
+
+             Several points should be observed about this session:
+
+           1       The session  was aborted so  early that no  character counts
+               were reported;
+           2       The first  node reporting  was NOT the  TYMCOM to  which the
+               circuit was built;
+           3       Because of queueing  delays within the  network, information
+               arrived  for  this  session  AFTER  the  session  was officially
+               "closed" (reported by message Type 14:0:0:9)!
+
+
+
+
+
+
+
+
+        25                         TYMNET Accounting                 ACOUNT.DOC
+        Summary of Accounting messages                         October 22, 1986
+
+
+
+
+
+
+                     APPENDIX I.   Summary of Accounting messages
+
+
+
+             The accounting messages are of format:
+
+               Type   Usage          format: | t |         value              |
+
+             The types are as follows:
+
+                0       Null                 | 0 |           0                |
+                1       New Logon            | 1 |IRC|    Invoice Number      |
+                1.13    Continuing Session   | 1 |13d|    Invoice Number      |
+                1.14    Invoice-number Gap   | 1 |14d|    Invoice Number      |
+                1.15    New Command-circuit  | 1 |15d|    Invoice Number      |
+                2       Logon Preamble       | 2 |   o-node  |  CCT  | o-prt  |
+                3       Target Data          | 3 |  host no  |     host prt   |
+                4       User Data            | 4 | S |        data            |
+                4.0     User Name            | 4 | 0 |   C1  |   C2  |   C3   |
+                4.1     Destination Node     | 4 | 1 |   0   |    Node no     |
+                4.2     Originating Host     | 4 | 2 |   0   |    Host no     |
+                4.3     Originating Node     | 4 | 3 |   0   |    Node no     |
+                4.4     CCT/Orig. Port       | 4 | 4 |   0   |  CCT  | o-prt  |
+                4.5.0   Destination GSN      | 4 | 5 |   0   | D.MXP | D.Slot |
+                4.5.1   Origination GSN      | 4 | 5 |   1   | O.MXP | O.Slot |
+                4.5.2   Rebuild Node-number  | 4 | 5 |   2   |  Node-number   |
+                4.6     Intermediate-nodes   | 4 | 6 |L . Seq|  Node-number   |
+                5       UUN                  | 5 |0|S|          UUN           |
+                6       Node Number          | 6 |     0     |    Node no     |
+                7       Invoice no report    | 7 |      Invoice Number        |
+                8       Input Char. Count    | 8 |        Input Count         |
+                9       Output Char. Count   | 9 |       Output Count         |
+               10       O.C.C/ Down.         |10 |       t Count         |
+               11       O.C.C/ Host drop     |11 |       Output Count         |
+               12       O.C.C/ User drop     |12 |       Output Count         |
+               13       Project Code         |13 | 0 |   C1  |   C2  |   C3   |
+               14       Accounting Addenda   |14 | S |       fields           |
+               14.0     Accounting Message   |14 | 0 |  msg  |     value      |
+               14.0.0   Termination Reason   |14 | 0 |   0   |     reason     |
+               14.0.1   Dest. Phys. Port #   |14 | 0 |   1   |     port #     |
+               14.0.2-6 BCD address Digits   |14 | 0 |  2-6  |     digits     |
+               14.0.7   Collect/Origination  |14 | 0 |   7   | Col.  | Orig.  |
+               14.0.8   Origination Host     |14 | 0 |   8   |   Orig. Host   |
+               14.0.9   Origination Port     |14 | 0 |   9   |   Orig. Port   |
+               14.0.10-13 Calling BCD Digits |14 | 0 | 10-13 |     digits     |
+               14.0.14  IRC Select           |14 | 0 |  14   |      IRC       |
+               14.0.15  Call Cleared         |14 | 0 |  15   |     cause      |
+               14.0.16  MPVC Session Count   |14 | 0 |  16   |     count      |
+               14.0.17  MPVC Session Time    |14 | 0 |  17   |     time       |
+
+        27                         TYMNET Accounting                 ACOUNT.DOC
+        Summary of Accounting messages                         October 22, 1986
+
+
+               14.0.18  DATAPAC Tarrif Class |14 | 0 |  18   |     class      |
+               14.0.19  Term. Addr. (extend) |14 | 0 |  19   |     addr.      |
+               14.0.20  Message-mode Circuit |14 | 0 |  20   |   orig/dest    |
+               14.0.21  X.25 PVC             |14 | 0 |  21   |     unused     |
+               14.0.22  X.25 Fast-Select     |14 | 0 |  22   |     unused     |
+               14.0.23-30 Outdial BCD Digits |14 | 0 | 23-30 |     digits     |
+               14.0.31  Outdial Status       |14 | 0 |  31   |     status     |
+               14.0.32  Rebuild-indicator    |14 | 0 |  32   |     unused     |
+               14.1     Orig. Inp. Pkt. Cnt  |14 | 1 |       count            |
+               14.2     Orig. Out. Pkt. Cnt  |14 | 2 |       count            |
+               14.3     Orig. Inp. Seg. Cnt  |14 | 3 |       count            |
+               14.4     Orig. Out. Seg. Cnt  |14 | 4 |       count            |
+               14.5     Dest. Inp. Pkt. Cnt  |14 | 5 |       count            |
+               14.6     Dest. Out. Pkt. Cnt  |14 | 6 |       count            |
+               14.7     Dest. Inp. Seg. Cnt  |14 | 7 |       count            |
+               14.8     Dest. Out. Seg. Cnt  |14 | 8 |       count            |
+               14.9     Gateway Invoice #    |14 | 9 |      invoice           |
+               14.10    Server Invoice #     |14 |10 |      invoice           |
+               15       reserved             |15 |        reserved            |
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        28                         TYMNET Accounting                 ACOUNT.DOC
+ @:[
