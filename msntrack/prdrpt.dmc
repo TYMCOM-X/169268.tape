@@ -1,0 +1,283 @@
+!            PROGRAM:       (MSNTRACK)PRDRPT.DMC.
+!            AUTHOR         Rob Nielsen
+!            DATE:          October 2, 1986
+! 
+!            PURPOSE:       To produce reports of ISIS slots, hosts, and
+!                 nodes runnning major Tymnet products for use in trend
+!                 analysis reports.
+! 
+!            DESCRIPTION:   The program as initially written will write 1
+!                 report consisting of two parts: (MSNTRACK)PRDRPT.1.
+!                 The first part will simply list the number of hosts, slots
+!                 and nodes as well as host per slot. The second part will
+!                 the contribution of each product to total slots and total
+!                 hosts.
+! 
+!            NOTATION:
+!                 ALL CAPS: File names, attribute names, & DPL reserved words
+!                 Mixed:    Variables, labels, and subroutines.
+
+             OPEN (MSNTRACK)PRDSUM.
+
+             DPL START.
+             DBSET PRDSUM.
+             LET SYSCASE EQ 1.
+
+             DEFINE INTEGER TotSlot TotNode TotHost Blanks I J ReportDate &
+                          OtherSlot OtherHost OtherNode UnknwnSlot UnusedSlot &
+                          AllSlotDif AllHostDif LastReport &
+                          OthSlotDif OthHostDif OthNodeDif &
+                          OMULTIHOST NMULTIHOST NMULTISLOT NMULTISLOT.
+             DEFINE REAL OldHstSlot NewhstSlot OtherHpsOl OtherHpsNu.
+             DEFINE TEXT 9 OtherProd.
+
+             FIND ALL.
+             EVALUATE ReportDate MAX RUNDATE.
+             FIND RUNDATE LT ReportDate.
+             EVALUATE LastReport MAX RUNDATE.
+
+             CALL Reinit.
+             CALL Report1.
+             CALL Reinit.
+             CALL Report2.
+
+             GOTO TheEnd.
+
+!            *************** SUBROUTINE REPORT1 *********************
+
+Report1:     FIND RUNDATE EQ ReportDate.
+             INIT 1 (MSNTRACK)PRDRPT.1.
+
+!                 Print report header
+             LET Blanks EQ 25.
+             CALL PrntBlanks.
+             PRINT ON 1 FORMAT "TYMNET PRODUCT REPORT" END.
+
+             LET Blanks EQ 20.
+             CALL PrntBlanks.
+             PRINT ON 1 FORMAT "Data Sources: Tymfiles and XRAY" END.
+
+             LET Blanks EQ 19.
+             CALL PrntBlanks.
+             PRINT ON 1 ReportDate LastReport &
+             FORMAT " Data Taken on " I6 " and " I6 / END.
+
+!                 Print header for table 1
+             LET Blanks EQ 10.
+             CALL PrntBlanks.
+             PRINT ON 1 FORMAT "ISIS Slots, Hosts, and Nodes with a " &
+                               "given product" / END.
+
+             PRINT ON 1 FORMAT 2x "Tymnet   " 6X "Slots" 6X "Hosts" 7X $ END.
+             PRINT ON 1 FORMAT "Nodes" END.
+
+       PRINT ON 1 FORMAT 2X "Product" 5x " Tot  Dif" 3X " Tot  Dif" 4X $ END.
+        PRINT ON 1 FORMAT "Tot  Dif" END.
+      PRINT ON 1 FORMAT 1x "----------" 3X "---------" 3X "---------" 4X $ END.
+        PRINT ON 1 FORMAT "--------" END.
+
+
+!                 Print data for table 1
+             FIND LAST AND PRODUCT NCT "NODE CODE" AND PRODUCT NCT "UNKNOWN" &
+                       AND PRODUCT NCT "UNUSED".
+
+             EVALUATE TotNode TOT (NODES).
+             EVALUATE TotHost TOT (HOSTS).
+             EVALUATE TotSlot TOT (SLOTS).
+             EVALUATE AllSlotDif TOT (SLOTDIFF).
+             EVALUATE AllHostDif TOT (HOSTDIFF).
+             LET NewHps EQ REAL(TotHost)/REAL(TotSlot).
+             LET OldHps EQ &
+                 REAL(TotHost-AllHostDif)/REAL(TotSlot-AllSlotDif).
+
+             SORT BY SLOTS DESCENDING.
+
+!                 Print table data one record at a time
+NextProd11:  GETREC LastSlot11.
+!                      Save "Other" slots data for the end of table
+                  IF PRODUCT CT "OTHER" GOTO Other1.
+                  LET Blanks EQ 1.
+                  CALL PrntBlanks.
+                  IF FIRSTMONTH CT "Y" GOTO NewProduct.
+                  LET OldHstSlot EQ REAL(HOSTS-HOSTDIFF)/REAL(SLOTS-SLOTDIFF).
+                  LET NewHstSlot EQ REAL(HOSTS)/REAL(SLOTS).
+
+                  PRINT ON 1 PRODUCT SLOTS SLOTDIFF HOSTS HOSTDIFF NODES &
+                             NODEDIFF &
+                  FORMAT A9 4X I4 1X IS3 3X I4 1X IS3 3X I4 2X &
+                             IS2 END.
+             GOTO NextProd11.
+
+Other1:           LET OtherProd EQ PRODUCT.
+                  LET OtherSlot EQ SLOTS.
+                  LET OtherNode EQ NODES.
+                  LET OtherHost EQ HOSTS.
+                  LET OthSlotDif EQ SLOTDIFF.
+                  LET OthNodeDif EQ NODEDIFF.
+                  LET OthHostDif EQ HOSTDIFF.
+                  LET OtherHpsOl EQ REAL(HOSTS-HOSTDIFF)/REAL(SLOTS-SLOTDIFF).
+                  LET OtherHpsNu EQ REAL(HOSTS)/REAL(SLOTS).
+             GOTO NextProd11.
+
+!                      Mark "new" products
+NewProduct:        PRINT ON 1 PRODUCT SLOTS HOSTS NODES &
+                   FORMAT A9 4X I4 "   --" 3X I4 &
+                          "   --"  3X I4 "   --" END.
+             GOTO NextProd11.
+
+!                      Print "Other" slots as last line before tables
+LastSlot11:       LET Blanks EQ 1.
+                  CALL PrntBlanks.
+                  PRINT ON 1 OtherProd OtherSlot OthSlotDif OtherHost &
+                             OthHostDif OtherNode OthNodeDifN &
+                  FORMAT A9 4X I4 1X IS3 3X I4 1X IS3 3X I4 2X &
+                             IS2 END.
+
+
+!                 Print table totals
+             LET Blanks EQ 1.
+             CALL PrntBlanks.
+            PRINT ON 1 FORMAT "---------" 5X "--------" 4X "--------" 4X $ END.
+            PRINT ON 1 FORMAT "--------" END.
+
+             LET Blanks EQ 1.
+             CALL PrntBlanks.
+
+             PRINT ON 1 "Tot/Ave :" TotSlot AllSlotDif TotHost AllHostDif  &
+             FORMAT A9 4X I4 1X IS3 3X I4 1X IS3 3X "  NA" 1X &
+                             "  NA" / END.
+ 
+             LET Blanks EQ 1.
+             CALL PrntBlanks.
+             PRINT ON 1 FORMAT "KEY:  TOT column is current total, " &
+                            "DIF column is change from last report" / END.
+             RETURN.
+
+
+!            *************** SUBROUTINE REPORT2 *********************
+
+Report2:     DBSET PRDSUM.
+!                 Print report header
+             LET I EQ 1.
+NextLine21:       PRINT ON 1 FORMAT END.
+                  LET I EQ (I+1).
+             IF I LE 1 GOTO NextLine21.
+
+!                 Print header for table 2
+             LET Blanks EQ 10.
+             CALL PrntBlanks.
+
+             PRINT ON 1 FORMAT "Percent of ISIS Slots, Hosts running a " &
+                         "given product" / END.
+
+             LET Blanks EQ 22.
+             CALL PrntBlanks.
+             PRINT ON 1 FORMAT " Product " 6X " Slots" 3X " Hosts" 3X END.
+
+             LET Blanks EQ 22.
+             CALL PrntBlanks.
+             PRINT ON 1 FORMAT "---------" 6X "------" 3X "------" 3X END.
+
+
+!                 Print data for table 2b
+             FIND RUNDATE EQ ReportDate AND PRODUCT NCT "UNKNOWN" AND &
+                  PRODUCT NCT "UNUSED" AND PRODUCT NCT "NODE CODE".
+
+             EVALUATE TotSlot TOT (SLOTS).
+             EVALUATE TotHost TOT (HOSTS).
+
+             SORT BY SLOTS DESCENDING.
+
+
+NextProd21:  GETREC LastSlot21.
+                  IF PRODUCT CT "OTHER" GOTO Other2.
+                  LET Blanks EQ 22.
+                  CALL PrntBlanks.
+                  PRINT ON 1 PRODUCT (REAL(SLOTS)/REAL(TotSlot) * 100.0) &
+                             (REAL(HOSTS)/REAL(TotHost) * 100.0) &
+                  FORMAT A9 6X F3.1 "%" 3X F3.1 "%" END.
+             GOTO NextProd21.
+
+Other2:           LET OtherProd EQ PRODUCT.
+                  LET OtherSlot EQ SLOTS.
+                  LET OtherNode EQ NODES.
+                  LET OtherHost EQ HOSTS.
+             GOTO NextProd21.
+
+LastSlot21:  LET Blanks EQ 22.
+             CALL PrntBlanks.     
+            PRINT ON 1 OtherProd (REAL(OtherSlot)/REAL(TotSlot) * 100.0) &
+                             (REAL(OtherHost)/REAL(TotHost) * 100.0) &
+                  FORMAT A9 6X F3.1 "%" 3X F3.1 "%" END.
+
+             LET Blanks EQ 22.
+             CALL PrntBlanks.
+             PRINT ON 1 FORMAT "---------" 6X "------" 3X "------" 3X END.
+
+             LET Blanks EQ 22.
+             CALL PrntBlanks.
+             PRINT ON 1 "Total    " 100.0 100.0 &
+             FORMAT A9 6X F3.1 "%" 3X F3.1 "%" END.
+
+!                 Print Footer for report 1
+             LET I EQ I.
+NextLine22:       PRINT ON 1 FORMAT END.
+                  LET I EQ (I+1).
+             IF I LE 3 GOTO NextLine22.
+
+!                Print footer for table 1
+             FIND RUNDATE EQ ReportDate AND PRODUCT "UNKNOWN".
+             LET UnknwnSlot EQ SLOTS.
+
+             FIND RUNDATE EQ ReportDate AND PRODUCT "UNUSED".
+             LET UnusedSlot EQ SLOTS.
+
+             PRINT ON 1 FORMAT " NOTE: Above tables exclude: " END.
+             PRINT ON 1 UnusedSlot &
+          FORMAT "  " I4 " slots with no memory allocated " &
+                "in the Tymfiles (UNUSED)" END.
+             PRINT ON 1 UnknwnSlot &
+          FORMAT "  " I4 " slots without an identifiable slot type " &
+                "in the Tymfiles (UNKNOWN)" END.
+
+             RELEASE 1.
+             RETURN.
+
+
+!            *************** SUBROUTINE PRNTBLANKS *********************
+
+PrntBlanks:  LET J EQ 1.
+NextBlank:   PRINT ON 1 FORMAT " " $ END.
+                  LET J EQ (J+1).
+             IF J LE Blanks GOTO NextBlank.
+
+             RETURN.
+
+!            *************** SUBROUTINE REINIT *********************
+
+Reinit:      LET TotNode EQ 0.
+             LET TotSlot EQ 0.
+             LET TotHost EQ 0.
+             LET OtherSlot EQ 0.
+             LET OtherHost EQ 0.
+             LET OtherNode EQ 0.
+             LET UnknwnSlot EQ 0.
+             LET UnusedSlot EQ 0.
+             LET OldHstSlot EQ 0.
+             LET NewHstSlot EQ 0.
+             LET OtherHpsOl EQ 0.
+             LET OtherHpsNu EQ 0.
+             LET AllSlotDif EQ 0.
+             LET AllHostDif EQ 0.
+
+             RETURN.
+
+
+
+!            *************** END OF PROGRAM *********************
+
+TheEnd:      DPL STOP.
+             DPL END.
+
+
+ 
