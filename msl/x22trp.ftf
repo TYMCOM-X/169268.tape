@@ -1,0 +1,318 @@
+****************************************************************
+*
+* THE ROUTINES IN THIS FILE ARE USED TO MAINTAIN AN X22
+* ERROR TRAP ADDRESS STACK. ANY ROUTINE USING THIS SYSTEM OF
+* X22 ERROR TRAPPING CAN PUSH, OR POP AN ADDRESS
+* FROM THE STACK.
+*
+***************************************************************
+*
+*
+*
+****************************************************************
+*
+* SUBROUTINE X22TRP SETS UP THE INITIAL CODE WHICH MUST BE
+* EXECUTED FOR X22 ERROR TRAPPING.
+*
+*       ARGUMENTS:
+*
+*               PSTATE - INDICATES THE STATE X22 ERROR TRAPPING
+*                        IS TO BE SET TO; ENABLE,ABORT,PROCEED.
+*                        1 - ENABLE X22 ERROR TRAPPING.
+*                        0 - ABORT EXECUTION, WITH AN ERROR
+*                            MESSAGE UPON ENCOUNTERING AN X22 ERROR.
+*                       -1 - CONTINUE EXECUTION UPON ENCOUTERING AN
+*                            X22 ERROR. PRINT ERROR MESSAGE, AND 
+*                            PROCEED.
+*
+* **SUBROUTINE X22TRP MUST NOT BE CALLED BEFORE AN X22 ERROR ADDRESS
+* **IS PUSHED ON THE STACK.
+*
+********************************************************************
+*
+*
+*
+        SUBROUTINE X22TRP(PSTATE)
+        IMPLICIT INTEGER (A-Z)
+        DIMENSION X22ADR(20)
+        DATA ENABLE,ABORT,PROCEED /1,0,-1/
+        COMMON /X22ADR/ ITYPE,INUM,STATE,SP,X22ADR
+*
+*
+        IF (PSTATE .EQ. ENABLE) GOTO 100
+        IF (PSTATE .EQ. ABORT)  GOTO 200
+        IF (PSTATE .EQ. PROCEED)GOTO 300
+*
+*                               IF CONTROL FALLS THROUGH, TAKE 
+*                               NO ACTION.
+*
+        GOTO 9999
+*
+*                               ENABLE ERROR TRAPPING.
+*
+ 100    CALL DBERR($1000,ITYPE,INUM,0)
+        GOTO 9000
+*
+*                               ABORT ON ERROR
+*
+ 200    CALL DBERR(0,ITYPE,INUM,1)
+        GOTO 9000
+*
+*                               PROCEED ON ERROR.
+*
+ 300    CALL DBERR(-1,ITYPE,INUM,1)
+        GOTO 9000
+*
+*                               SET THE STATE, AND CLEAR THE 
+*                               ERROR CODES.
+*
+ 9000   STATE = PSTATE
+        ITYPE = 0
+        INUM = 0
+ 9999   RETURN
+*
+*
+*
+********************************************************************
+********************************************************************
+*
+*
+*
+*                               POP AN ADDRESS OF THE X22 ERROR
+*                               STACK, AND TRANSFER CONTROL.
+*
+ 1000   CALL POPX22(ADDR,IERR)
+*
+*                               IF A STACK ERROR IS ENCOUNTERED,
+*                               CALL THE ROUTINE XSTKER.
+*                               NOTE, THAT THE USER CAN ALWAYS
+*                               SUPPLY HIS OWN XSTKER ROUTINE.
+*
+        IF (IERR .EQ. 0) GOTO 1100
+        CALL XSTKER
+*
+*                               AT THIS POINT THERE IS NO ALTERNATVE
+*                               TO STOPPING EXECUTION
+*
+        STOP
+*
+*                               TRANSFER CONTROL TO THE TRAP ADDRESS.
+*
+ 1100   GOTO ADDR
+        END
+*
+*
+*
+***********************************************************************
+*
+* SUBROUTINE PUSHX2 IS USED TO PLACE AN X22 ERROR ADDRESS ON THE STACK.
+* THE ADDRESS ARGUMENT PASSED IN MUST HAVE BEEN ASSIGNED WITH THE 
+* FORTRAN ASSIGN STATEMENT.
+*
+*       ARGUMENTS:
+*               ADDR - ASSIGNED ADDRESS TO BE PUSHED ONTO THE STACK.
+*
+*               IERR - ERROR CONDITION
+*                       0 - NO ERROR
+*                       1 - STACK OVERFLOW
+*
+***********************************************************************
+*
+*
+*
+        SUBROUTINE PUSHX2(ADDR,IERR)
+        IMPLICIT INTEGER(A-Z)
+        DIMENSION X22ADR(20)
+        COMMON /X22ADR/ ITYPE,INUM,STATE,SP,X22ADR
+*
+*                               INITIALIZE THE ERROR CONDITION.
+*
+        IERR = 0
+*
+*                               CHECK FOR STACK OVERFLOW.
+*
+        IF (SP .LT. 20) GOTO 100
+        IERR = 1
+        GOTO 9999
+*
+*
+*                               THE TWO STATEMENTS BELOW ARE ORDERED
+*                               SO THAT THE STACK POINTER NEVER POINTS
+*                               TO A WORD ON THE STACK THAT DOES NOT
+*                               CONTAIN A LEGAL ADDRESS. IF THE STATE-
+*                               MENTS WERE REVERSED, THEN IT WOULD
+*                               BE POSSIBLE FOR AN INTERRUPT BETWEEN
+*                               THE TWO STATEMENTS TO LEAVE THE STACK
+*                               IN A STATE WHICH WOULD CAUSE A CRASH.
+*
+ 100    X22ADR(SP+1) = ADDR
+        SP = SP+1
+*
+ 9999   RETURN
+        END
+*
+*
+*
+********************************************************************
+*
+* SUBROUTINE POPX22 WILL POP AN ADDRESS OFF THE X22 ERROR TRAP STACK.
+*
+*       ARGUMENTS:
+*
+*               ADDR - ARGUMENT TO RECIEVE THE X22 ERROR TRAP ADDRESS.
+*
+*               IERR - ERROR CONDITION
+*                       0 - NO ERROR
+*                       1 - STACK UNDERFLOW
+*
+*******************************************************************
+*
+*
+*
+        SUBROUTINE POPX22(ADDR,IERR)
+        IMPLICIT INTEGER(A-Z)
+        DIMENSION X22ADR(20)
+        COMMON /X22ADR/ ITYPE,INUM,STATE,SP,X22ADR
+*
+*                               INITIALIZE THE ERROR CONDITION.
+*
+        IERR = 0
+*
+*                               CHECK FOR STACK UNDERFLOW.
+*
+        IF(SP .GT. 0) GOTO 100
+        IERR = 1
+        GOTO 9999
+*
+*
+ 100    ADDR = X22ADR(SP)
+        SP = SP-1
+*
+*
+ 9999   RETURN
+        END
+*
+*
+*
+***********************************************************************
+*
+* SUBROUTINE CLRX22 IS USED TO CLEAR ALL ENTRIES IN THE X22 ERROR STACK.
+* CLRX22 SETS X22 ERROR TRAPPING TO ABORT. TO REENABLE ERROR
+* TRAPPING, THE USER MUST PUSH AN X22 ERROR ADDRESS, AND CALL X22TRP.
+*
+************************************************************************
+*
+*
+*
+        SUBROUTINE CLRX22
+        IMPLICIT INTEGER(A-Z)
+        DATA ABORT /0/
+        DIMENSION X22ADR(20)
+        COMMON /X22ADR/ ITYPE,INUM,STATE,SP,X22ADR
+*
+*                               SET THE STATE TO ABORT, AND
+*                               TURN OFF X22 ERROR TRAPPING.
+*
+        CALL DBERR(0,ITYPE,INUM,1)
+        STATE = ABORT
+*
+*                               CLEAR THE STACK
+*
+        SP = 0
+*
+*
+        RETURN
+        END
+*
+*
+*************************************************************************
+*
+* INTEGER FUNCTION IX22ST IS USED TO GET THE STATE OF THE X22 ERROR
+* TRAPPING SYSTEM.
+*
+* FOR THE VALUES RETURNED, SEE THE STATES DEFINED IN THE ROUTINE
+* X22TRP.
+*
+*       ARGUMENTS:
+*
+*               IDUMMY - DUMMY ARGUMENT, NOT USED.
+*
+*       FUNCTION VALUES:
+*
+*               1 - X22 ERROR TRAPPING IS ENABLED.
+*               0 - X22 ERROR TRAPPING IS SET TO ABORT.
+*               1 - X22 ERROR TRAPPING IS SET TO PROCEED.
+*
+*************************************************************************
+*
+*
+*
+        INTEGER FUNCTION IX22ST(IDUMMY)
+        IMPLICIT INTEGER(A-Z)
+        DIMENSION X22ADR(20)
+        COMMON /X22ADR/ ITYPE,INUM,STATE,SP,X22ADR
+*
+*                               RETURN THE STATE.
+*
+        IX22ST = STATE
+*
+*
+        RETURN
+        END
+*
+*
+*
+**********************************************************************
+*
+* SUBROUTINE XSTKER IS USED TO HANDLE A STACK ERROR
+* ENCOUNTERED BY ROUTINE ESCTRP. THIS WILL ALMOST ALWAYS BE A FATAL
+* ERROR. THE USER CAN WRITE HIS OWN XSTKER ROUTINE TO PRIVIDE A 
+* SOFT CRASH.
+*
+***********************************************************************
+*
+*
+*
+        SUBROUTINE XSTKER
+*
+*
+        TYPE 10
+ 10     FORMAT(1H0,'STACK OVERFLOW/UNDERFLOW ERROR IN X22 ERROR TRAP.')
+*
+*
+        RETURN
+        END
+*
+*
+*
+*********************************************************************
+*
+* SUBROUTINE X22COD RETURNS THE VALUES OF THE X22 ERROR
+* TYPE, AND X22 ERROR NUMBER FOR THE LAST X22 ERROR TO OCCUR 
+* WHILE X22 TRAPPING WAS ENABLED. NOTE, A CALL TO X22TRP
+* CLEARS THE ERROR CODES, SO THE USER MUST CALL X22COD BEFORE
+* CALLING X22TRP, AND SETTING THE X22 ERROR TRAP STATE.
+*
+*       ARGUMENTS:
+*
+*               I - VARIABLE TO RECIEVE ERROR TYPE
+*               J - VARIABLE TO RECIEVE ERROR NUMBER
+*
+************************************************************************
+*
+*
+*
+        SUBROUTINE X22COD(I,J)
+        IMPLICIT INTEGER (A-Z)
+        DIMENSION X22ADR(20)
+        COMMON /X22ADR/ ITYPE,INUM,STATE,SP,X22ADR
+*
+*                               RETURN THE ERROR TYPE, AND
+*                               NUMBER.
+*
+        I = ITYPE
+        J = INUM
+*
+*
+        RETURN
+        END
