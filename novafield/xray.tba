@@ -1,0 +1,249 @@
+100 ! added code delay field...11/12/85 da
+200 ! program to get node data automatically...
+300 ! produces file with data in the following order (one line
+400 ! per node):
+500 ! node time exct exlw exhw mprt mpas code hwmo hwmi 
+600 ! where the fields are as per the xray manual for 'ns' command
+700 hdr$="node  time         exct exlw exhw mprt mpas code hwmo     hwmi"
+800 fileid$="xray.lst"  ! output data file name
+900 logical gateway,probe
+1000 on error goto 13700
+1100 on escape goto 13400
+1200 string pact,cr,vact,feep,host$(500),ctrlz,ctrld
+1300 ctrld=char(4)       ! control d for gouging
+1400 ctrlz=char(26)       ! control-z for xray logout
+1500 integer slop,foo
+1600 cr=char(13)
+1700 slop=15   !increase if aux circuit does not work (shouldn't have to)
+1800 !
+1900 ! ******** External procedure definitions **********
+2000 !
+2100 def integer external simpl AUXBLD (string a$)
+2200 def integer external simpl ECOSET (integer i)
+2300 def external simpl AUXTX (integer j, string b$)
+2400 def integer external simpl AUXRX (integer j)
+2500 def external simpl AUXZAP (integer j)
+2600 !
+2700 ! *********** User defined proceedures ************
+2800 def string UCASE(string a$)       ! convert string to upper case
+2900  new$=""
+3000  for ii=1 to length(a$)
+3100    char$=substr(a$,ii,1)
+3200    if char$>="a" and char$<="z" then char$=char(asc(char$)-32)
+3300    new$=new$+char$
+3400  next ii
+3500  exit new$
+3600 endf ucase
+3700 !
+3800 def string AUXIN (integer port, string prompt)
+3900  auxstr$="", chct,watct,sel,erct=0
+4000  ch1=0
+4100  ch1=auxrx(port)
+4200  if ch1=0 then
+4300     watct=watct+1
+4400     if watct>slop*15 then
+4500       print "no characters recieved from aux circuit."
+4600       goto 5300
+4700       endif
+4800     goto 4100
+4900     endif
+5000  if ch1=-1 then
+5100     erct=erct+1
+5200     if erct>slop*2 then   ! slop*2 errors = zap
+5300       call auxzap(-1)
+5400       exit "!ZAP!"
+5500       endif
+5600     goto 4000
+5700     endif
+5800  if ch1>128 then
+5900     ch1=ch1-128
+6000     goto 5800
+6100     endif
+6200  auxstr$=auxstr$+char(ch1), chct=chct+1
+6300  if sel=13 and ch1=10 then ! carriage return & line feed
+6400     goto 7400                 ! normal return
+6500     endif                     ! but don't save linefeed
+6600  if chct>slop*40 then
+6700     goto 7400   ! return if we get a line > slop*40 char
+6800     endif
+6900  if index(auxstr$,prompt)=1 then      ! look for prompts
+7000     goto 7400
+7100     endif
+7200  sel=ch1, watct,erct=0
+7300  goto 4000
+7400  exit auxstr$
+7500 endf auxin
+7600 !
+7700 !  ******* Program starts here *******
+7800 !
+7900 print "XRAY Statistics Monitor Program...v1.06 DA 11/13/85"
+8000 print "Is gateway login required [private net]? (Y/N) ":
+8100 input in form "r":foo$
+8200 foo$=ucase(substr(foo$,1,1))
+8300 if foo$="Y" then
+8400   print "Enter gateway host number: ":
+8500   input in form "r":gateway$
+8600   gateway=1
+8700 orif foo$#"N" then
+8800   goto 8000 ! ask again till they learn to read
+8900 endif
+9000 !
+9100 if gateway then     ! xray password needed for private net
+9200   print "Enter XRAY password: ":
+9300   call ecoset(0)      ! turn off echo
+9400   input in form "r":xraypswd$
+9500   call ecoset(1)      ! turn on echo
+9600 endif
+9700 !
+9800 i=0
+9900 if gateway then
+10000   print "Enter kernal hosts of nodes to check or ALL for all nodes."
+10100 else
+10200   print "Enter kernal hosts of nodes to check."
+10300 endif
+10400 print "[Enter null line or 'end' after last host.]"
+10500 i=i+1
+10600 print "("+str(i)+") ":
+10700 input in form "r":host$(i)
+10800 host$(i)=ucase(host$(i))
+10900 if host$(i)="ALL" then
+11000   probe=1
+11100 orif host$(i)#"" and host$(i)#"END" then
+11200   goto 10500 ! loop
+11300 else
+11400   i=i-1     ! null string, end of list
+11500 endif
+11600 !
+11700 if probe then gosub 15500    ! get list from probe
+11800 !
+11900 if i=0 then end "No hosts entered."
+12000 !
+12100 open fileid$+"-a" for symbolic random io as file 1,err 13100 
+12200 if size(1)=0 then write on 1 in form "r":hdr$
+12300 for j=1 to i 
+12400   print "Logging into kernal host "+host$(j)+"...."
+12500   gosub 19100      ! logon to xray:host$(j)
+12600 next j      ! skip to next node
+12700 !
+12800 call auxzap(-1)
+12900 close 1
+13000 end "** Completed XRAY scan **"
+13100 print "Error opening output file ...."
+13200 end ""
+13300 ! come here on escape
+13400 print "Aborting..."
+13500 goto 12800
+13600 ! come here on error
+13700 print "Error, aborting..."
+13800 goto 12800
+13900 !
+14000 ! routine to logon thru gateway 
+14100 port=auxbld("isistech:"+gateway$)
+14200 if port=-1 then 
+14300   close 1
+14400   end "Cannot build circuit to gateway..."  
+14500 endif
+14600 prompt$=":"       ! network prompt (pli)
+14700 foo$=auxin(port,prompt$) 
+14800 if foo$="!ZAP!"  then 
+14900   close 1
+15000   end "Circuit thru gateway zapped!"
+15100 endif
+15200 return
+15300 !
+15400 ! routine to get list of nodes from probe
+15500 if not gateway then end "You must specify kernal hosts manually for public net!"
+15600 print "Enter probe network password: ":
+15700 call ecoset(0)     ! turn off echo
+15800 input in form "r":probepswd$
+15900 call ecoset(1)     ! turn on echo
+16000 print "Enter probe name: ":
+16100 input in form "r":probename$
+16200 call ecoset(0)     ! turn off echo
+16300 print "Enter password: ":
+16400 input in form "r":namepswd$
+16500 call ecoset(1)     ! turn on echo
+16600 print "Logging into probe for node list..."
+16700 gosub 14100        ! logon thru gateway
+16800 call auxtx(port,"probe:*;"+probepswd$+cr+probename$+cr+namepswd$+cr) 
+16900 prompt$=":"        ! probe prompt
+17000 foo$=auxin(port,prompt$)
+17100 if foo$="!ZAP!"  then end "Circuit to probe zapped!"
+17200 ! trash output till we get to next prompt
+17300 if index(foo$,prompt$)<>1 then goto 17000 else call auxtx(port,"au"+cr) 
+17400 i = 0
+17500 foo$=auxin(port,prompt$)     ! read in node list
+17600 if foo$="!ZAP!"  then end "Circuit to probe zapped!"
+17700 if index(foo$,prompt$)#0 then goto 18700  ! end of list
+17800 foo$=substr(foo$,1,index(foo$,cr)-1)
+17900 if length(foo$)=4 then
+18000   if val(foo$)>2007 then
+18100     i=i+1,host$(i)=str(val(foo$)-1000)      ! kernal host=node-1000
+18200   else
+18300     i=i+1,host$(i)=str(val(foo$)-2000+120)  ! sups
+18400   endif
+18500 endif
+18600 goto 17500        ! loop
+18700 print str(i)+" nodes in list"
+18800 return
+18900 !
+19000 ! routine to logon to xray
+19100 if gateway then 
+19200   gosub 14100
+19300   call auxtx(port,ctrld+"xray:"+host$(j)+";"+xraypswd$+cr) 
+19400 else
+19500   port=auxbld(ctrld+"xray:"+host$(j)+cr) 
+19600   if port=-1 then 
+19700     print "Cannot build circuit to kernal host "+host$(j)+"."
+19800     return 
+19900   endif
+20000 endif
+20100 prompt$=">"        ! xray prompt
+20200 foo$=auxin(port,prompt$)
+20300 if foo$="!ZAP!"  then goto 24700
+20400 ! trash output till we get to next prompt
+20500 if index(foo$,"#")#0 then  ! this is an ATC
+20600   print "You cannot colect data from an ATC!"
+20700   goto 24400       ! bye
+20800 endif
+20900 if index(foo$,prompt$)<>1 then goto 20200 
+21000 call auxtx(port,"ns"+cr) 
+21100 foo$=auxin(port,prompt$)
+21200 if foo$="!ZAP!" then 
+21300   goto 24700
+21400 orif index(foo$,"EXCT")#0 then    ! scan for data we want
+21500   foo$=auxin(port,prompt$)
+21600   if foo$="!ZAP!" then goto 24700     ! lost circuit to node
+21700   exct$=" "+substr(foo$,1,4)      ! add leading blank
+21800   exlw$=substr(foo$,6,5)   ! the rest get it automatically
+21900   exhw$=substr(foo$,12,5)
+22000   eehw$=substr(foo$,30,5)
+22100   mprt$=substr(foo$,48,5)
+22200   mpas$=substr(foo$,54,5)
+22300 orif index(foo$,"HWMO")#0 then    
+22400   foo$=auxin(port,prompt$)
+22500   if foo$="!ZAP!" then goto 24700     ! lost circuit to node
+22600   hwmo$=substr(foo$,18,9)
+22700   hwmi$=substr(foo$,27,9)
+22800 orif index(foo$,"CODE")#0 then    
+22900   foo$=auxin(port,prompt$)
+23000   if foo$="!ZAP!" then goto 24700     ! lost circuit to node
+23100   code$=substr(foo$,4,5)
+23200 orif index(foo$,"**X-RAY**")#0 then
+23300   node$=substr(foo$,17,5)  ! no leading space
+23400   time$=substr(foo$,40,13)
+23500 orif index(foo$,prompt$)<>0 then 
+23600   goto 24100 ! end of info
+23700 else
+23800   goto 21100       ! read some more
+23900 endif
+24000 goto 21100                ! keep reading
+24100 text$=node$+time$+exct$+exlw$+exhw$+mprt$+mpas$+code$+hwmo$+hwmi$
+24200 write on 1 at size(1)+1 in form "r":text$
+24300 call auxtx(port,"nsz"+cr)  ! zero stats
+24400 call auxtx(port,ctrlz)     ! logoff xray
+24500 call auxzap(-1)           ! clear circuit if not already
+24600 return
+24700 print "Circuit lost to kernal host "+host$(j)+"."
+24800 return
+   
