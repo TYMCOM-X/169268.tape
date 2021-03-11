@@ -1,0 +1,203 @@
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C
+C Program:      (DBIBS:28)CNC2ND.FTF
+C
+C Author:       Jason L. Ma (X5010, TYMOPS.J/MA)
+C
+C Date:         September 18, 1986 
+C               January 23, 1987 (Upgrade)
+C
+C Description:  This is the second of the two data-collection programs
+C               of the Host-User Traffic Reporting Package.  Please
+C               refer to (DBIBS:28)CNCTRF.DOC about the package.
+C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+
+CCCCCCC Initiate the program.
+
+        DIMENSION DUMMY(1)
+        INTEGER READY(1), NFILES, THOST, NUMREC, S, M, C, FILNUM
+        INTEGER TS, TM, TC, TOS, TOM, TOC, TMINU, TCHAR
+        INTEGER USER(5), TUSER(5), DAT
+
+
+        CALL DBSTRT(-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1)
+        OPEN (10, 'CNC.HST', INPUT)
+        OPEN (20, 'CNCTRF.DMI', OUTPUT)
+
+        CALL DBOPEN('(NETSTAT)YMMDDA')
+        NFILES = N
+        FILNUM = 1
+
+
+CCCCCCC Check if user is ready to begin.
+
+        TYPE 5
+5       FORMAT (
+     -  15X,'THIS IS THE SECOND OF TWO DATA-COLLECTION PROGRAMS OF',/,
+     -  15X,'THE "HOST-USER TRAFFIC REPORTING PACKAGE."  PLS REFER',/,
+     -  15X,'TO ON-LINE FILE "CNCTRF.DOC" ABOUT THE PACKAGE.')
+
+10      TYPE 15
+15      FORMAT (//,20X,'DO YOU WISH TO CONTINUE (Y/N)?: ',$)
+        READ (5,25,ERR=10) READY(1)
+25      FORMAT (A1)
+        IF (READY(1).EQ.'Y') GOTO 200
+        IF (READY(1).EQ.'N') GOTO 2500
+        GOTO 10
+
+
+CCCCCCC Open up the selected database ("A" file first).
+
+200     TYPE 205
+205     FORMAT (/,15X,'COLLECTING DATA....')
+
+
+CCCCCCC Assign the date to a variable (to be conveniently printed out).
+
+        CALL DBFIND('SYSID',4,200)
+        CALL DBSRCH('ENDTIME',6,10,1,'ENDDATE',6,860000,1,
+     -  'ENDDATE',4,900101)
+        CALL DBEXEC('EV IDAT EQ MAX ENDDATE')
+        CALL DBEXEC('SEA ENDDATE EQ IDAT')
+        CALL DBGREC($500)
+        CALL DBVAL('ENDDATE',DAT)
+
+
+CCCCCCC Obtain a host and let's take off with it.  This is the second
+CCCCCCC of two loops (host by host).  The first loop already started
+CCCCCCC ("A" file then "B" file (if any) then "C" file (if any)).  
+CCCCCCC The first loop contains the second loop.
+
+500     READ (10,505,END=1000) THOST
+505     FORMAT (I5)
+        GOTO 535
+
+
+CCCCCCC Collect data for each host. 
+
+535     TS = 0
+        TM = 0
+        TC = 0
+        TOS = 0
+        TOM = 0
+        TOC = 0
+
+        CALL DBFIND('ORIGHOST','EQ',THOST)
+        CALL DBNREC(NUMREC)
+        IF (NUMREC.LE.0) GOTO 700
+550     CALL DBGREC($552)
+        CALL DBVAL('TOTMIN',TMINU,'TOTALCHARS',TCHAR)
+        TS = TS + 1
+        TM = TM + TMINU
+        TC = TC + TCHAR
+        GOTO 550
+
+552     CALL DBFIND('LAST')
+        CALL DBSORT('USRNAM')
+        CALL DBGREC($560)
+        CALL DBVAL('USRNAM',TUSER,'TOTMIN',TMINU,'TOTALCHARS',TCHAR)
+        USER(1) = TUSER(1)
+        USER(2) = TUSER(2)
+        USER(3) = TUSER(3)
+        USER(4) = TUSER(4)
+        USER(5) = TUSER(5)
+        S = 1
+        M = TMINU
+        C = TCHAR
+
+560     CALL DBGREC($590)
+        CALL DBVAL('USRNAM',TUSER,'TOTMIN',TMINU,'TOTALCHARS',TCHAR)
+        IF (USER(1).EQ.TUSER(1).AND.USER(2).EQ.TUSER(2).AND.
+     -  USER(3).EQ.TUSER(3).AND.USER(4).EQ.TUSER(4).AND.
+     -  USER(5).EQ.TUSER(5)) GOTO 570
+        GOTO 580
+
+570     USER(1) = TUSER(1)
+        USER(2) = TUSER(2)
+        USER(3) = TUSER(3)
+        USER(4) = TUSER(4)
+        USER(5) = TUSER(5)
+        S = S + 1
+        M = M + TMINU
+        C = C + TCHAR
+        GOTO 560
+
+580     WRITE (20,585) DAT,THOST,USER(1),USER(2),USER(3),
+     -  USER(4),USER(5),S,M,C
+585     FORMAT (I6,1X,I5,1X,5A5,3(1X,I10),3(1X,'        -1'))
+        S = 0
+        M = 0
+        C = 0
+        GOTO 570
+
+590     WRITE (20,595) DAT,THOST,USER(1),USER(2),USER(3),
+     -  USER(4),USER(5),S,M,C
+595     FORMAT (I6,1X,I5,1X,5A5,3(1X,I10),3(1X,'        -1'))
+
+
+
+700     WRITE (20,705) DAT,THOST,TS,TM,TC,TOS,TOM,TOC
+705     FORMAT (I6,1X,I5,1X,'WHOLEDAY  ',15X,6(1X,I10))
+        GOTO 500
+
+
+CCCCCCC Determine next database to use.
+
+1000    FILNUM = FILNUM + 1
+        IF (FILNUM.EQ.2) GOTO 1100
+        IF (FILNUM.EQ.3) GOTO 1200
+        IF (FILNUM.EQ.4) GOTO 1300
+        GOTO 2000
+
+1100    IF (NFILES.EQ.1) GOTO 2000
+        CLOSE (10)
+        OPEN (10, 'CNC.HST', INPUT)
+        CALL DBCLOS
+        CALL DBOPEN('(NETSTAT)YMMDDB')
+        GOTO 500
+
+1200    IF (NFILES.EQ.2) GOTO 2000
+        CLOSE (10)
+        OPEN (10, 'CNC.HST', INPUT)
+        CALL DBCLOS
+        CALL DBOPEN('(NETSTAT)YMMDDC')
+        GOTO 500
+
+1300    IF (NFILES.EQ.3) GOTO 2000
+        CLOSE (10)
+        OPEN (10, 'CNC.HST', INPUT)
+        CALL DBCLOS
+        CALL DBOPEN('(NETSTAT)YMMDDD')
+        GOTO 500
+
+
+CCCCCCC Release flatfile.
+
+2000    CLOSE (10)
+        CLOSE (20)
+        CALL DBCLOS
+
+        TYPE 2005
+2005    FORMAT (/,15X,'....DONE.  ALL RELEVANT DATA IS COLLECTED.',//,
+     -  15X,'APPENDING THIS DATA TO DATABASE "CNCTRF.DMS"....',//)
+
+ 
+CCCCCCC Append flatfile to CNCTRF.DMS.
+
+        CALL DBOPEN('(DBIBS)CNCTRF')
+        CALL DBEXEC('APP CNCTRF.DMI')
+
+        TYPE 3005
+3005    FORMAT (
+     -	15X,'....DONE.  THE DATA IS APPENDED TO "CNCTRF.DMS."',/)
+        CALL DBCLOS
+        GOTO 5000
+
+2500    CLOSE (10)
+        CLOSE (20)
+
+5000    CALL DBEND
+        CALL EXIT
+        END
