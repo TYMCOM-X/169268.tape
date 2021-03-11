@@ -1,0 +1,69 @@
+MIS Service Billing and Central System -- PREDAILY (PREDLY.INF)   01/28/85
+
+General information - Customer/User validation and pricing information
+must be moved daily from the validations host to be current with the 
+service data gathered from the hosts.  The data is collected for 
+Tymcom and Tymnet customers.  This data is updated into MAGNUM relations.
+This information is used by each of the separate daily processes for the 
+three Tymcom, one Tymnet, and one Tymuse services.  The processing directory
+is UAS:38 and the approximate run time is two (2) hours.
+
+Step 1.   Set the Billing dates for update of relation INV.TRK.DATES.
+          The Xexec file TRKDAT.DAT is modified by the EDP operators.
+          Magnum program is SET.BILLING.DATES, Schema is CAIS.
+
+Step 2.   Copy the Validation data base from CUD10:38 to the Central
+          System data base in UAS:38.  This is done by the Xexec COPY command.
+
+          CUSTDB.DMS
+          ADDRDB.DMS
+          USERDB.DMS
+          USYSDB.DMS
+          VALDAT.DMS
+          TYMCUS.DMS
+          TYMUSR.DMS
+          TUSRDB.DMS
+          TUPRDC.DAT       to the directory TYMUSEA:38
+
+Step 3.   Convert the Validation X22 files into Xexec files.
+          1022 program CNVERT in directory UAS:38.
+
+          Input file                         Output file
+          ==========                         ===========
+          CUSTDB.DMS                         CUSTDB.DMI
+          USERDB.DMS                         USERDB.DMI
+          USYSDB.DMS                         USYSDB.DMI
+          VALDAT.DMS                         VALDAT.DMI
+          ADDRDB.DMS                         ADDRDB.DMI
+          CUSTDB.DMS  (TYMNET customers)     TCUSDB.DMI
+          TUSRDB.DMS  (TYMNET customers)     TUSRDB.DMI
+          ADDRDB.DMS  (TYMNET customers)     TADRDB.DMI
+          TYMCUS.DMS  (TYMUSE customers)     TYMCUS.DMI  in TYMUSEA:38
+          TYMUSR.DMS  (TYMUSE customers)     TYMUSR.DMI  in TYMUSEA:38
+
+Step 4.   Backup the current MAGNUM relations in Schema CAIS.
+
+          CUSTOMER, CUS.ADDR, UUN.USR.NAM, USER.ACTG.SYS, VAL
+
+Step 5.   Run Magnum program CUS.REL.UPD to update the following relations:
+
+          UUN.USR.NAM     from input file     USERDB.DMI
+          USER.ACTG.SYS   from input file     USYSDB.DMI
+          VAL             from input file     VALDAT.DMI
+          CUSTOMER        from input file     CUSTDB.DMI
+          CUS.ADDR        from input file     ADDRDB.DMI
+
+Step 6.   Run MAGNUM program CUS.DIS.ACC.CHK to check the Customer
+          District for accuracy.
+
+MIS Service Billing and Central System -- PREDAILY (PREDLY.INF)   01/28/85
+
+Step 7.   Delete the current MAGNUM relations in Schema CAIS.
+
+          DIST.UUN, INTERNAL.UUNS
+
+Step 8.   Run the MAGNUM program DIST.UUN.UPD to update the following
+          relations:
+
+          CUSTOMER, UUN.USR.NAM, DIST.UUN, INTERNAL.UUNS
+
