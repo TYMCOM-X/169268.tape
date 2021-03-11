@@ -1,0 +1,4284 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          TYMNET SDLC INTERFACE                          ______ ____ _________
+
+
+                    External Reference Specification
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                             Tymshare, Inc.
+
+
+                       Network Technology Division
+
+
+                              June 28, 1984
+
+
+                               Version 1.4
+
+
+        ---------------------------------------------------------
+        |                                                       |
+        | This document is the sole property and confidential   |
+        | information of Tymshare, Inc., and may not be copied  |
+        | in whole or part, or disclosed to any third party     |
+        | without the prior written consent of TYMSHARE.        |
+        |                                                       |
+        ---------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+                                 PREFACE
+
+
+
+
+     This   manual   describes   the   technical   aspects,   operational
+characteristics,  and application of TYMNET SDLC support.  This manual is
+organized into four  main  sections.   The  first  main  section  is  the
+overview section.
+
+
+     The second main section describes various technical aspects  of  the
+TYMNET  SDLC  interface.  Topics covered include physical interface, data
+link configurations, link level protocol, local procedures,  end  to  end
+procedures, inter-slot message format and protocol, and network services.
+
+
+     The third main section is the  operations  section  and  includes  a
+description  of the handling of local polling, operation scenarios, error
+recovery, system monitoring and Extended DDT.
+
+
+     The fourth main section describes the  application  of  TYMNET  SDLC
+support.   Issues  discussed  are  system  generation,  external host and
+terminal support, hardware interfaces and crash codes.
+
+
+
+
+
+
+
+
+                            Table of Contents                            _____ __ ________
+
+
+
+
+1.0 OVERVIEW.................................................5
+
+   1.1 Application of Support................................5
+
+   1.2 Constraints...........................................7
+
+2.0 TECHNICAL DESCRIPTION....................................7
+
+   2.1 Physical Interface....................................8
+
+   2.2 Data Link Configurations..............................9
+
+   2.3 Link Level Protocol...................................9
+
+   2.4 Local Procedures.....................................11
+
+      2.4.1 RR..............................................11
+
+      2.4.2 RNR.............................................11
+
+      2.4.3 REJ.............................................11
+
+      2.4.4 FRMR............................................12
+
+      2.4.5 Nr and Ns.......................................12
+
+      2.4.6 Poll/Final Bit..................................12
+
+   2.5 End to End Procedures................................14
+
+      2.5.1 RIM.............................................16
+
+      2.5.2 SIM.............................................17
+
+      2.5.3 SNRM............................................18
+
+      2.5.4 DM..............................................20
+
+      2.5.5 DISC............................................21
+
+      2.5.6 UA..............................................22
+
+      2.5.7 FRMR............................................23
+
+      2.5.8 RD..............................................24
+      2.5.9 XID.............................................25
+
+      2.5.10 TEST...........................................27
+
+      2.5.11 I-Frame........................................29
+
+   2.6 Inter-Slot Format and Protocol.......................30
+
+      2.6.1 TYMNET Intra-ISIS Messages......................31
+
+         2.6.1.1 Restart-request (00).......................31
+
+         2.6.1.2 Restart-response (01)......................31
+
+         2.6.1.3 Take Over (02).............................31
+
+         2.6.1.4 Report to Supervisor's Log (03)............31
+
+         2.6.1.5 Report Host Status (04)....................32
+
+         2.6.1.6 Report Accounting (05).....................32
+
+         2.6.1.7 Tell Host Time (06)........................32
+
+         2.6.1.8 Pseudo-needle Request (07).................32
+
+         2.6.1.9 Auxiliary Circuit Request (08).............32
+
+         2.6.1.10 Pseudo-needle Reject (09).................32
+
+         2.6.1.11 Report Host Port Availability (0A)........32
+
+         2.6.1.12 Host Unacceptable (0B)....................32
+
+         2.6.1.13 Report Host Cost (0C).....................32
+
+         2.6.1.14 No Supervisor (0D)........................32
+
+         2.6.1.15 1-Down (0E)...............................33
+
+         2.6.1.16 Report All Hosts (0F).....................33
+
+         2.6.1.17 Extended Report Host Status (10)..........33
+
+      2.6.2 TYMNET ISIS Control and Data Messages...........34
+
+      2.6.3 TYMNET IIX Protocol.............................36
+
+      2.6.4 Global IIX Messages.............................37
+
+         2.6.4.1 Select Dialect Command (8080)..............37
+
+         2.6.4.2 Select Dialect Response (8081).............37
+
+         2.6.4.3 Gateway Reached Smart Host (8082)..........37
+
+         2.6.4.4 Gateway Reached Dumb Host (8083)...........37
+         2.6.4.5 Normal Logon Status (8084).................37
+
+         2.6.4.6 Resynchronize Interface Exchange (8085)....37
+
+         2.6.4.7 Product ID and Version (8086)..............37
+
+         2.6.4.8 Request Product ID and Version (8087)......38
+
+      2.6.5 SDLC IIX Dialect Messages.......................39
+
+         2.6.5.1 Called Address (C087)......................39
+
+         2.6.5.2 Calling Address (C088).....................39
+
+         2.6.5.3 Call User Data (C089)......................39
+
+         2.6.5.4 Interrupt (C08A)...........................40
+
+         2.6.5.5 Interrupt Confirmation (C08B)..............40
+
+         2.6.5.6 Network Utility (C08C).....................41
+
+         2.6.5.7 Facility (C08D)............................41
+
+         2.6.5.8 Reset Confirmation (C091)..................41
+
+         2.6.5.9 Call Accept (C092).........................41
+
+         2.6.5.10 Dialect Level (C093)......................42
+
+         2.6.5.11 Data Packet (C094)........................42
+
+         2.6.5.12 Clear Indication (C095)...................42
+
+         2.6.5.13 Reset Indication (C096)...................43
+
+      2.6.6 SDLC Data and Data Qualified Packets............44
+
+         2.6.6.1 Data Packets ..............................45
+
+         2.6.6.2 Data Qualified Packets.....................45
+
+   2.7 Network Services.....................................46
+
+      2.7.1 Permanent Virtual Circuits......................46
+
+      2.7.2 Split Multipoint Links..........................47
+
+3.0 OPERATIONS..............................................48
+
+   3.1 Operating Characteristics............................48
+
+   3.2 Operation Scenarios..................................50
+
+      3.2.1 Initialization and PVC Building.................50
+
+         3.2.1.1 Initialize Physical Line...................51
+         3.2.1.2 Build PVC..................................52
+
+         3.2.1.3 Dialect Handshake..........................52
+
+      3.2.2 NDM to NRM......................................54
+
+      3.2.3 NRM.............................................55
+
+      3.2.4 NRM to NDM......................................56
+
+   3.3 Error Recovery.......................................57
+
+      3.3.1 Primary Port....................................57
+
+      3.3.2 Secondary Port..................................58
+
+   3.4 Monitoring and Control...............................59
+
+      3.4.1 Logging into the System Monitor.................59
+
+      3.4.2 DISPLAY Commands................................60
+
+         3.4.2.1 DISPLAY HOST...............................60
+
+         3.4.2.2 DISPLAY CONFIG.............................60
+
+         3.4.2.3 DISPLAY STAT...............................61
+
+         3.4.2.4 DISPLAY LOGON..............................62
+
+         3.4.2.5 DISPLAY EIA or DISPLAY RSC.................63
+
+         3.4.2.6 DISPLAY PARAMETER..........................63
+
+      3.4.3 SHUT Command....................................63
+
+      3.4.4 RSHUT Command...................................63
+
+      3.4.5 CHANGE Commands.................................64
+
+         3.4.5.1 CHANGE LOGON...............................64
+
+         3.4.5.2 CHANGE STATION POLLING ADDRESS.............64
+
+         3.4.5.3 CHANGE LOGON DESTINATION STATION ADDRESS...64
+
+         3.4.5.4 CHANGE LOGON DESTINATION LINE ADDRESS......65
+
+         3.4.5.5 CHANGE WINDOW..............................65
+
+         3.4.5.6 CHANGE MAXFRAME............................65
+
+      3.4.6 EXIT Command....................................65
+
+      3.4.7 REFRESH Command.................................66
+
+      3.4.8 LOGTABLE Command................................66
+      3.4.9 WHO Command.....................................66
+
+   3.5 Extended DDT Commands................................66
+
+      3.5.1 Logging into Extended DDT.......................66
+
+      3.5.2 Display Rings Commands..........................67
+
+      3.5.3 Display Symbol Addresses Command................67
+
+      3.5.4 Real Time SDLC Line Display.....................67
+
+      3.5.5 Display Menu Command............................68
+
+      3.5.6 Terminate Extended DDT Mode.....................68
+
+4.0 GENERATION..............................................69
+
+   4.1 Requirements.........................................69
+
+      4.1.1 Software........................................69
+
+      4.1.2 Hardware........................................70
+
+        4.1.2.1 SIO.........................................70
+
+        4.1.2.2 Memory Size.................................70
+
+   4.2 Primary Ports........................................72
+
+   4.3 Secondary Ports......................................72
+
+   4.4 PU_T4 to PU_T4.......................................72
+
+5.0 EXTERNAL SUPPORT........................................74
+
+   5.1 Hosts................................................74
+
+   5.2 Terminals............................................74
+
+   5.3 Computer Systems.....................................75
+
+   5.4 Modem Connections....................................76
+
+   5.5 Direct Connections...................................77
+
+   5.6 Optional Connection for Multipoint Links.............78
+
+6.0 Crash Codes.............................................79
+
+Index.......................................................85
+SDLC Interface Reference Manual                                    Page 5
+
+
+SECTION 1.0 OVERVIEW_______ ___ ________
+
+
+     TYMNET SDLC interfaces with  primary  and  secondary  ports  provide
+access  between  SDLC  protocol terminals and hosts utilizing the packet-
+switching data transmission services of  TYMNET.   Both  Normal  Response
+Mode (NRM) and Normal Disconnect Mode (NDM) are supported.
+
+     No hardware or software changes are normally required  at  the  host
+computer.  Nonswitched, full or half duplex, point-to-point or multipoint
+links to hosts are supported.  A secondary port will appear to  the  host
+computer  as  a single secondary station on a point-to-point link or as a
+number of secondary stations on a multipoint link.
+
+     No hardware or software changes are required at the remote terminal.
+Nonswitched,  full  or half duplex, point-to-point or multipoint links to
+terminals  are  supported.   A  primary  port  will  appear  to  attached
+terminals on a point-to-point or multipoint link as a primary station.
+
+     The TYMNET SDLC interface supports Physical Unit types 1, 2, and  4,
+and is transparent to all Logical Unit types.
+
+
+SECTION 1.1 Application of Support_______ ___ ___________ __ _______
+
+
+     TYMNET SDLC terminal and host interfaces  can  be  used  to  replace
+leased  lines  between hosts using SDLC protocol and SDLC terminals.  The
+following diagram illustrates  the  interconnection  of  SDLC  hosts  and
+terminals using TYMNET.
+SDLC Interface Reference Manual                                    Page 6
+
+
+                        ----------              ----------
+                        |        |              |        |
+                        |  IBM   |              |  IBM   |
+                        |   370  |              |   370  |
+                        |        |              |        |
+                        ----------              ----------
+                             |                       |
+                             |                       |
+                         --------                --------
+                         |      |                |      |
+                         | 370X |                | 370X |
+                         |      |    +++++++     |      |
+                         --------   +       +    --------       --------
+                            |      +         +       /          | 3276 |
+             --------       |     +           +     /           --------
+             |      |       ++++++             +++++++         /
+             | 3274 |-------+                         +       / --------
+             |      |        +                         +--------| 3276 |
+             --------         +                        +        --------
+                               +                       +
+                     --------   +      TYMNET          +        --------
+                     |      |   +                     +---------| 3276 |
+                     | 8100 |---+                  +++          --------
+                     |      |   +                 +
+                     --------   +                +     --------
+                                +                +-----| 3275 |
+                                 +              +      --------
+                                / +        +++++
+             --------          /   +      +     |
+             | 3651 |         /     ++++++      |
+             | LOOP |---------        |         --------
+             | CTLR |                 |         | 3271 |
+             --------                 |         --------
+             |      |              --------
+            *        *             |      |
+            |  CRTs  |             | 3777 |
+            *        *             |      |
+             |      |              --------
+              *----*
+
+
+SDLC Interface Reference Manual                                    Page 7
+
+
+        SECTION 1.2 Constraints        _______ ___ ___________
+
+
+        o SDLC command/response frames not handled  by  the  TYMNET  SDLC
+            Interface include:
+
+                   UI   - unnumbered information
+                   UP   - unnumbered poll
+                   CFGR - configure
+                   BCN  - beacon
+
+        o Direct channel attachment (local 3270  or  3770  mode)  is  not
+            supported.
+
+        o Connection to a loop data link is not supported.
+
+        o Only Normal Response Mode  (NRM)  and  Normal  Disconnect  Mode
+            (NDM) are supported.
+
+        o NRZI (Non-Return to Zero Inverted) transmission coding  is  not
+            supported.
+
+        o A maximum of 16 primary or secondary ports can be supported  by
+            a single TYMNET SDLC interface.
+
+        o A maximum of 32 stations can be supported on a  single  primary
+            or secondary port.
+
+        o ASCII code set is not supported.
+
+
+
+        SECTION 2.0 TECHNICAL DESCRIPTION        _______ ___ _________ ___________
+
+
+             The following subsections provide detailed  descriptions  of
+        various  levels  of TYMNET SDLC support.  Reference manuals which
+        supplement these subsections include:
+
+
+        IBM Synchronous Data Link Control General Information        ___ ___________ ____ ____ _______ _______ ___________
+
+        IBM 3270 Information System Component Description        ___ ____ ___________ ______ _________ ___________
+
+        IBM 3770 Data Communication System Component Description        ___ ____ ____ _____________ ______ _________ ___________
+
+        ECMA Standard ECMA-71 HDLC Selected Procedures        ____ ________ _______ ____ ________ __________
+SDLC Interface Reference Manual                                    Page 8
+
+
+        SECTION 2.1 Physical Interface        _______ ___ ________ _________
+
+
+             Connection to a TYMNET SDLC port (on  either  a  primary  or
+        secondary  interface) is accommodated through a female 25-pin "D"
+        connector.  Each port can  be  ordered  as  either  RS-232-C/V.24
+        compatible or V.35 compatible.
+
+        A.  RS-232-C/V.24 Port            _____________ ____
+
+             o  An RS-232-C/V.24 port outputs the following signals:
+
+               PIN     CCITT   EIA     FUNCTION
+
+               2        103    BA      TRANSMITTED DATA
+               4        105    CA      REQUEST TO SEND
+               15       114    DB      TRANSMITTER CLOCK (SEE NOTE)
+               17       115    DD      RECEIVER CLOCK    (SEE NOTE)
+               20       108    CD      DATA TERMINAL READY
+
+          NOTE - the TYMNET SDLC port can provide 8000  Hz  transmit  and
+               receive clocks via a switch on the interface board.
+
+             o  An RS-232-C/V.24 port inputs the following signals:
+
+               PIN     CCITT   EIA     FUNCTION
+
+               3        104    BB      RECEIVED DATA
+               5        106    CB      CLEAR TO SEND
+               6        107    CC      DATA SET READY
+               15       114    DB      TRANSMITTER CLOCK
+               17       115    DD      RECEIVER CLOCK
+
+        B. V.35 Port           ____ ____
+
+             o  A V.35 compatible port outputs the following signals:
+
+               PINS    CCITT   FUNCTION
+
+                4       105    REQUEST TO SEND
+                20      108    DATA TERMINAL READY
+               11,12    103    TRTTED DATA
+
+             o  A V.35 compatible port inputs the following signals:
+
+               PINS    CCITT   FUNCTION
+
+                5       106    CLEAR TO SEND
+                6       107    DATA SET READY
+               9,10     114    TRANSMITTER CLOCK
+               21,22    104    RECEIVE DATA
+               23,24    115    RECEIVER CLOCK
+SDLC Interface Reference Manual                                    Page 9
+
+
+        SECTION 2.2 Data Link Configurations        _______ ___ ____ ____ ______________
+
+
+             Primary and secondary ports on  the  TYMNET  SDLC  interface
+        support  both point-to-point and multipoint configurations.  Only
+        non-switched connections are supported.  Operation on either full
+        or  half duplex links is supported.  In full duplex operation RTS
+        is always raised by the port.  In half duplex  operation  RTS  is
+        raised  before transmission and lowered after transmission by the
+        port.   To  summarize,   there   are   four   basic   data   link
+        configurations supported by the TYMNET SDLC interface:
+
+            o half duplex, point-to-point, nonswitched
+
+            o full duplex, point-to-point, nonswitched
+
+            o half duplex, multipoint, nonswitched
+
+            o full duplex, multipoint, nonswitched
+
+             Note that these configurations  reflect  only  the  physical
+        capability  of  the  link.   Protocol  capability is discussed in
+        section 2.4, Local Procedures.
+
+
+
+        SECTION 2.3 Link Level Protocol        _______ ___ ____ _____ ________
+
+
+             The link level protocol specifies the formatting of data and
+        the  procedures  for  reliable  transmission between a primary or
+        secondary port and the external systems.  The particular  formats
+        for  SDLC  transmission  blocks  and  a brief description of each
+        field are as follows:
+
+          --------------------------------------------------------
+          |   F    |   A    |   C    |   I      |   FCS    |  F  |
+          --------------------------------------------------------
+
+        F -- Flag Field.  SDLC uses the bit sequence 7E hex for the start
+             and termination of each variable length frame.
+
+        A -- Address Field.  The SDLC address field  is  one  byte  long,
+             permitting  up to 256 stations on a given link.  The station
+             address  always  pertains  to  a  secondary  station  on   a
+             particular link.
+
+        C -- Control Field.  The control field specifies the purpose of a
+             particular  frame.  It permits a single information transfer
+             to serve multiple control functions.  The control field  can
+             be in one of three formats:
+
+             1.  Information transfer format (I),  having  full  sequence
+                control  (with  a  send  sequence  count,  and  a receive
+                sequence count).
+SDLC Interface Reference Manual                                   Page 10
+
+
+             2.  Supervisory format (S), having a receive sequence  count
+                but  not  a  send  sequence count, and used to manage the
+                link in normal operation.
+
+             3.  Unnumbered format (U), having no sequence counts at all,
+                and   used   primarily   for   setting  operation  modes,
+                exchanging  identification,   and   other   miscellaneous
+                operations.
+
+                  Command frames supported include I, RR, RNR, REJ, TEST,
+             XID, SNRM, DISC, and SIM.  Response frames supported include
+             I, RR, RNR, REJ, TEST, XID, UA, DM, FRMR, RD, and  RIM.   In
+             all  three formats, one bit is used as a poll/final bit.  In
+             normal response mode, the poll bit is used  by  the  primary
+             station  to  authorize  the  addressed  secondary station to
+             begin sending.  The final bit is used by a secondary station
+             to indicate the last frame of a transmission.
+
+                  In the SDLC discipline, an acknowledgment  is  required
+             at  least once every seven requests.  When one station sends
+             its receive sequence count to  the  other  station  it  will
+             serve  to  indicate  the  next frame that is expected and to
+             acknowledge  all  the  frames  received  up  to  the   value
+             indicated  by  the  receive  sequence  count.   Window sizes
+             supported range from 1 to 7 frames.
+
+        I -- Information Field.  Following the control field,  there  may
+             or  may  not be an information field.  The contents of the I
+             field  are  transparent  to  the  components  of  data  link
+             control.   Data  must  be  in  8-bit  EBCDIC  character code
+             transmitted low order bit first.  The information frame size
+             which  includes  the address field and the control filed can
+             be from 3 to 2048 bytes.   However,  the  maximum  supported
+             frame size for a particular link must be pre-specified.
+
+        FCS -- Frame Check Sequence Field.  The  FCS  field  contains  16
+             binary  digits  to  validate  transmission accuracy.  In the
+             SDLC application of CRC, a  modified  polynomial  expression
+             (modulo  2)  of the transmission to be checked is divided by
+             the generating polynomial,  X16  +  X12  +  X5  +  X1.   The
+             transmitter  send  the complement of the resulting remainder
+             value as the FCS field.
+SDLC Interface Reference Manual                                   Page 11
+
+
+        SECTION 2.4 Local Procedures        _______ ___ _____ __________
+
+
+             Local procedures are those which are handled locally by  the
+        SDLC  Interface which is transmiting or receiving the SDLC frame,
+        and  not  passed  end-to-end.   These  procedures  include  local
+        handling  of  SDLC Supervisory frames (RR, RNR, ad REJ), the FRMR
+        SDLC Unnumbered frame, and in all types of SDLC  frames  Nr,  Ns,
+        and  P/F  bit.   For  information  on  end-to-end  procedures see
+        section 2.5.
+
+             External terminals and  hosts  are  always  referred  to  as
+        "stations" while a TYMNET SDLC Interface is always referred to as
+        a "port".  As an example, a TYMNET primary port can send  command
+        frames to a (external) secondary station.
+
+
+        2.4.1 RR              __
+
+        This frame is handled the same for both the primary and secondary
+        ports.   When an RR frame is received by the primary or secondary
+        port this is an indication that the sending station  is  able  to
+        receive  from  the  SDLC  port.   This frame can also acknowledge
+        previously received frames.
+
+        This frame is sent by the SDLC port when the SDLC port is able to
+        receive   from   the  station.   The  port  uses  this  frame  to
+        acknowledge previously received frames from the station.
+
+        The SDLC port will also send an RR frame aknowledging  previously
+        received frames, if the port has timedout waiting for an expected
+        Final bit set.
+
+
+        2.4.2 RNR              ___
+
+        This frame is handled the same for both the primary and secondary
+        ports.   When an RNR frame is received this is an indication that
+        the sending station is unable to  receive  any  more  information
+        frames.    This   frame  also  acknowledges  previously  received
+        information frames.  After receiveing this frame, the  SDLC  port
+        will  not  send  any  more  Information  frames  until  an  RR is
+        received.
+
+        This frame is sent by the SDLC port when the port's  buffers  are
+        filled.   This  will  inhibit  the station from sending until the
+        port sends an RR.
+
+
+        2.4.3 REJ              ___
+
+        If this frame is received by a secondary port, a DISC is sent  to
+        the  primary  port, and a DM is sent to the primary station.  The
+        HIF is now in NDM.  The reason for this is because the HIF has no
+        way  to  recover,  since  the frame being rejected by the primary
+SDLC Interface Reference Manual                                   Page 12
+
+
+        station has already been acknowledged at the TIF.
+
+        If this frame is received by a  primary  port  from  a  secondary
+        station, the frame is discarded and ignored.
+
+        The REJ frame is never sent by the HIF or the TIF.
+
+
+        2.4.4 FRMR              ____
+
+        If this frame is received by the HIF from the primary station,  a
+        DISC  frame  is  sent to the TIF, and a DM is sent to the primary
+        station.  There is no way for the HIF to recover since the  frame
+        being rejected has already been acknowledged at the TIF.
+
+        If this frame is received by the TIF it is discarded and ignored.
+
+        The only interface which may generate this frame locally  is  the
+        HIF.  If the HIF receives from the primary station a frame with a
+        control field error, a prohibited I-field, or the message is  too
+        long,  the  HIF  sends  a FRMR frame to the primary station.  See
+        section 2.5.7 case 3 to see what frames are  accepted  after  the
+        HIF sends a FRMR frame.
+
+
+        2.4.5 Nr and Ns              __ ___ __
+
+        The Nr and Ns values are not passed end-to-end.   The  SDLC  port
+        locally  supplies  these  values  in  complience  with  the  SDLC
+        protocol.
+
+
+SDLC Interface Reference Manual                                   Page 13
+
+
+        2.4.6 Poll/Final Bit
+
+        This bit is always reset when sent  from  one  interface  to  the
+        destination  interface.   Therefore,  this  bit  must  be locally
+        adjusted before sending to the SDLC station.
+
+        The primary port will set this bit  when  polling  the  secondary
+        station for information.
+
+        The secondary port sets this bit in an I-frame, if there  are  no
+        more  I-frames  to send.  The Final bit is reset if more I-frames
+        are ready to send to the primary station.  The  following  is  an
+        example of setting and resetting the Poll/Final bit.
+
+
+          Secondary Station    TIF                 HIF  Primary Station
+        -------------------    ---                 ---  ---------------
+            I(0)~F(0),info1-->                       <--RR P(0)
+                               Data Packet (info1)-->
+            I(1)~F(0),info2-->                        -->I(0)F(0),info1
+                               Data Packet (info2)-->
+            I(2) F(0),info3-->
+                               Data Packet (info3)--> <-- RR P(1)
+                   RR(3)  <--
+                                                      -->I(1)~F(0),info2
+                                                      -->I(2) F(0),info3
+        ----------------------------------------------------------------
+        To indicate  Poll  or  Final  bit  reset,  ~P  and  ~F  are  used
+        respectively.   Also, TIF(Terminal Interface) is the primary port
+        and HIF(Host Interface) is the secondary port.
+
+        Each Data Packet contains one SDLC I-frame.  The  secondary  port
+        (HIF)  sets  the Final bit when sending the first I-frame because
+        this is the only  frame  currently  available  for  transmission.
+        When  the  secondary  port  is  polled the next time, there are 2
+        I-frames ready to  be  transmitted.   In  this  case,  the  first
+        I-frame  has  the  Final bit reset and the second I-frame has the
+        Final bit set.
+SDLC Interface Reference Manual                                   Page 14
+
+
+        SECTION 2.5 End to End Procedures        _______ ___ ___ __ ___ __________
+
+
+             End to end procedures are used  to  handle  SDLC  unnumbered
+        frames,  and  Information  frames.  Only a subset of the possible
+        unnumbered frames is supported by this interface.  Some of  these
+        unnumbered  frames  are sent only by a Primary station, only by a
+        Secondary station, and some can  be  sent  by  both  Primary  and
+        Secondary  stations.   (see  IBM  Synchronous  Data  Link Control
+        General Information Manual)
+
+             The following is a list of SDLC unnumbered frames  supported
+        by this interface:
+
+               ACRONYM DEFINING CHARACTERISTICS               _______ ________ _______________
+
+               RIM       Request initialization mode
+               SIM       Set initialization mode
+               SNRM      Set normal response mode
+               DM        Disconnect mode (response)
+               DISC      Disconnect (command)
+               UA        Unnumbered aknowledgement
+               FRMR      Frame reject
+               RD        Request disconnect
+               XID       Transmit identification
+               TEST      Test pattern
+
+
+             The following is a list of SDLC unnumbered frames which  are
+        NOT supported by this interface:
+
+               ACRONYM   DEFINING CHARACTERISTICS               _______   ________ _______________
+
+               UI        Unnumbered information
+               BCN       Beacon
+               CFGR      Configure
+               UP        Unnumbered poll
+
+
+             The secondary port will be refered to as the Host  Interface
+        (HIF),  and  the  primary port will be refered to as the Terminal
+        Interface  (TIF)  in  the  following   end   to   end   procedure
+        descriptions.
+
+             Both the Host Interface and the Terminal  Interface  operate
+        in  two  modes;  Normal Disconnect Mode (NDM) and Normal Response
+        Mode (NRM).  Each mode functions differently depending on whether
+        it`s  the  HIF  or  the  TIF.   A  basic  description of how each
+        interface operates in these two modes is given below.
+
+
+        Host Interface Normal Disconnect Mode (NDM)        ____ _________ ______ __________ ____ _____
+
+        The HIF is waiting to receive either XID, TEST, SNRM, or SIM from
+        the primary station.  Before any of these frames is received, all
+SDLC Interface Reference Manual                                   Page 15
+
+
+        frames ready for transmission to the  primary  station  (received
+        from the TIF) are ignored.
+
+        Once one of these frames is  received,  the  frames  waiting  for
+        transmission  to  the primary station are procesed.  If the frame
+        being processed is not an expected  response  to  the  previously
+        received  command  frame,  then  the  frame  is  discarded.   The
+        following sections explain what are expected responses  for  each
+        SDLC command frame sent by the host.
+
+
+        Terminal Interface Normal disconnect Mode (NDM)        ________ _________ ______ __________ ____ _____
+
+        In Normal Disconnect Mode the TIF is looking for a frame received
+        from  the  HIF  to  transmit  to  the  terminal.  All SDLC frames
+        received from the secondary station, at this point,  are  ignored
+        untill an SNRM, DISC, SIM, XID or TEST frame is received from the
+        HIF and then transmitted to the secondary station.
+
+        Once one of these frames has been transmitted by the TIF  to  the
+        secondary  station,  the frames which have been received from the
+        secondary station are processed if they are the expected response
+        frames.   See  the  following  sections  for a description of the
+        expected  response  frames.    All   unexpected   responses   are
+        discarded.
+
+
+        Host Interface Normal Response Mode (NRM)        ____ _________ ______ ________ ____ _____
+
+        The only way for the HIF to enter  NRM,  is  either  the  primary
+        station sent an SIM frame to the HIF, or a UA response to an SNRM
+        was sent to the primary station by the HIF.
+
+        The HIF will make sure  that  all  information  frames  from  the
+        primary  station  are  formatted correctly before sending them to
+        the TIF.  Also, only  those  unnumbered  SDLC  frames  which  are
+        commands will be passed to the TIF.  Others will be discarded.
+
+        The only unnumbered frames which can change the mode back to  NDM
+        are  SNRM, and DISC.  Both of these are sent as commands from the
+        primary station.  See sections 2.5.3 and 2.5.5.
+
+
+        Terminal Interface Normal Response Mode (NRM)        ________ _________ ______ ________ ____ _____
+
+        The TIF enters NRM from NDM, when  a  UA  is  received  from  the
+        secondary  station  in  response  to a SNRM command, or a SIM has
+        been sent to the TIF.
+
+        Only SDLC unnumbered response and information frames are sent  to
+        the  HIF.   If  an  SDLC  unnumbered  command,  such  as SNRM, is
+        received from a secondary staton it is discarded and  not  passed
+        to the HIF.
+
+        The TIF will go to NDM only if a SNRM was sent to  the  secondary
+SDLC Interface Reference Manual                                   Page 16
+
+
+        station,  or  a UA or DM response to a DISC frame is recived from
+        the secondary station.
+
+
+        2.5.1 RIM              ___
+
+        The way the RIM and SIM code is currently  implemented  will  not
+        work.   So far there haven't been any problems because an SIM has
+        always been the response sent from the primary to  the  secondary
+        after  the secondary has sent an RIM to the primary.  The RIM and
+        SIM  processing  should  be  the  same  as  the  SNRM  and  UA/DM
+        processing.   The  TIF  and  HIF  should  garauntee  the  correct
+        response to an RIM and SIM frame.
+
+        Another problem with the current SIM processing, is that  an  SIM
+        received during NDM would start the HIF in the NRM.
+
+               Case  Start           TIF          HIF           End
+                     Mode                                       Mode
+               -----------------------------------------------------
+               1     NDM    --RIM-->|X  |        |   |
+                                    |   |        |   |          NDM
+               -----------------------------------------------------
+               2     NDM/           |   |        |  X|<--RIM--
+                     NRM            |   |        |   |          NDM
+               -----------------------------------------------------
+               3     NRM    --RIM-->|   |--RIM-->|   |--RIM-->
+                                    |   |        |   |          NRM
+               -----------------------------------------------------
+
+        Case 1 - The TIF will discard the RIM frame  in  this  mode.   In        ____ _
+        real  situation,  a  RIM  has  never  been sent to the TIF.  This
+        situation could possibly happen if the  primary  is  in  NRM,  in
+        multipoint  duplex,  and polls a secondary station which has just
+        been brought online.  The secondary may  respond  with  RIM.   In
+        which  case our TIF could receive RIM in NDM.  This code may need
+        to be modified if the need arrises.
+
+        Case 2 - The HIF will discard the RIM frame in both NDM and NRM.        ____ _
+
+        Case 3 - When the TIF receives  RIM  during  NRM,  the  frame  is        ____ _
+        transmitted  to  the HIF.  TIF is still in NRM.  HIF sends RIM to
+        the primary station.  HIF remains in NRM.
+
+
+SDLC Interface Reference Manual                                   Page 17
+
+
+        2.5.2 SIM              ___
+               See section 2.5.1 RIM.
+
+               Case  Start           TIF          HIF           End
+                     Mode                                       Mode
+               -----------------------------------------------------
+               1     NDM    <--SIM--|   |<--SIM--|   |<--SIM--
+                                    |   |        |   |          NRM
+               -----------------------------------------------------
+               2     NDM    --SIM-->|X  |        |   |
+                                    |   |        |   |          NDM
+               -----------------------------------------------------
+               3     NRM    <--SIM--|   |<--SIM--|   |<--SIM--
+                                    |   |        |   |          NRM
+               -----------------------------------------------------
+               4     NRM    --SIM-->|X  |        |   |
+                                    |   |        |   |          NRM
+               -----------------------------------------------------
+
+        Case 1 - When SIM is received by HIF, it it  transmitted  to  the        ____ _
+        TIF  and  the  HIF  enters  NRM.   The  TIF  sends the SIM to the
+        secondary station and also enters NRM.
+
+        Case 2 - TIF will discard an  SIM  received  from  the  secondary        ____ _
+        station in any mode.
+
+        Case 3 - While in NRM the HIF will send the SIM to  the  TIF  and        ____ _
+        continue  in NRM.  The TIF sends the SIM to the secondary station
+        and also continues NRM.
+
+        Case 4 - An SIM frame received by the TIF will  be  discarded  in        ____ _
+        any mode.
+
+
+SDLC Interface Reference Manual                                   Page 18
+
+
+        2.5.3 SNRM              ____
+
+               Case  Start           TIF          HIF          End
+                     Mode                                      Mode
+               -----------------------------------------------------
+               1     NDM    <-SNRM--|   |<-SNRM--|   |<-SNRM--
+                            <-SNRM--|   |        |  X|<-SNRM--
+                            <-SNRM--|   |        |  X|<-SNRM--
+                            <-SNRM--|   |        |  X|<-SNRM--
+                            <-SNRM--|   |        |  X|<-SNRM--
+                                    |   |        |  X|<-SNRM--
+                            <-SNRM--|   |<-SNRM--|   |<-SNRM--
+                                    |   |        |   |         NDM
+               ----------------------------------------------------
+               2     NDM    --SNRM->|X  |        |   |
+                                    |   |        |   |         NDM
+               ----------------------------------------------------
+               3     NDM    <-SNRM--|   |<-SNRM--|   |<-SNRM--
+                    (After          |   |        |   |
+                     SNRM)  --UA--->|   |--UA--->|   |--UA--->
+                                    |   |        |   |         NRM
+               ----------------------------------------------------
+               4     NDM    <-SNRM--|   |<-SNRM--|   |<-SNRM--
+                    (After          |   |        |   |
+                     SNRM)  --DM--->|   |--DM--->|   |--DM--->
+                                    |   |        |   |         NDM
+               ----------------------------------------------------
+               5     NDM    <-SNRM--|   |<-SNRM--|   |<-SNRM--
+                    (After          |   |        |   |
+                     SNRM)          |  X|<-*OTHER|   |<-*OTHER-
+                                    |   |        |   |         NDM
+               *OTHER = XID, TEST, SIM, SNRM(after retries=0)
+               ---------------------------------------------------
+               6     NDM    <-SNRM--|   |<-SNRM--|   |<-SNRM--
+                                    |   |        |   |
+                            *OTHER->|X  |        |   |         NDM
+               *OTHER = NOT DM or UA
+               ---------------------------------------------------
+               7     NRM    <-SNRM--|   |<-SNRM--|   |<-SNRM--
+                                    |   |        |   |         NDM
+               ---------------------------------------------------
+               8     NRM    --SNRM->|X  |        |   |
+                                    |   |        |   |         NRM
+               ---------------------------------------------------
+
+        Case 1 - During NDM, when the first SNRM is received by  the  HIF        ____ _
+        it  is  sent to the TIF.  The HIF is still in NDM, but is waiting
+        for a response to the SNRM command.
+
+        While in this waiting for  response  state,  the  HIF  will  only
+        process  XID,  TEST,  SNRM  or SIM from the primary station.  All
+        other frames are discarded.
+
+        The HIF will decrement a retry counter (default = 5 retries) each
+        time  it  checks  for  something  received from the TIF and finds
+SDLC Interface Reference Manual                                   Page 19
+
+
+        nothing.  When this counter reaches 0, HIF stops  looking  for  a
+        response and goes back to the start of NDM.
+
+        The TIF sends the SNRM to the secondary  station.   TIF  is  also
+        still  in  NDM,  but is waiting for a response from the secondary
+        station to the SNRM command.
+
+        While in this waiting  for  response  state,  the  TIF  will  not
+        process  any  frames  received from the HIF.  Each time TIF looks
+        for a  receive  frame  from  the  secondary  station,  and  finds
+        nothing,  a  retry  counter is decremented (default = 5 retries).
+        Each time it is decremented an SNRM  is  sent  to  the  secondary
+        station.   When  the  counter  reaches 0, TIF stops looking for a
+        response and starts NDM before SNRM sent.
+
+        Case 2 - An SNRM received by the TIF from the  secondary  station        ____ _
+        is discarded in both NDM and NRM.
+
+        Case 3 - After sending the SNRM, the TIF will accept a  UA  frame        ____ _
+        received from the secondary station as a positive response to the
+        previously sent SNRM command.  The UA is sent to the HIF, and the
+        TIF  enters  NRM.   Before entering NRM, the TIF will discard any
+        SNRM frames which might have been received  from  the  HIF  while
+        waiting for the UA.
+
+        When the HIF receives this UA, it is sent to the primary station.
+        The HIF enters NRM.
+
+        Case 4 - The TIF sends the DM  to  the  HIF.   TIF  restarts  NDM        ____ _
+        (waiting for SNRM from HIF).  The HIF sends the DM to the primary
+        station, and the HIF also restarts NDM  (waiting  for  SNRM  from
+        primary station).
+
+        Case 5 - The HIF may still process certain frames  received  from        ____ _
+        the  primary  station  during  this waiting for response from TIF
+        state.  The frames which are processed are  XID,  TEST,  SIM  and
+        SNRM  if  retries counter = 0.  For more information on how these
+        frames are processed see the section relating to each frame.
+
+        Case 6 - The TIF will discard all frames other  than  DM  and  UA        ____ _
+        received from the secondary station after SNRM is sent.
+
+        Case 7 - During NRM a SNRM frame received by  the  HIF  from  the        ____ _
+        Host  is  sent  to the TIF.  The HIF then goes to NDM waiting for
+        response.  The TIF sends the SNRM to the  secondary  station  and
+        then also goes into NDM waiting for response.
+
+        Case 8 - SNRM received by the TIF from  a  secondary  station  is        ____ _
+        discarded in any mode.
+
+
+SDLC Interface Reference Manual                                   Page 20
+
+
+        2.5.4 DM              __
+
+               Case  Start           TIF          HIF          End
+                     Mode                                      Mode
+               ----------------------------------------------------
+               1     NDM/   ---DM-->|   |---DM-->|   |---DM-->
+                     NRM            |   |        |   |         NDM/
+                                    |   |        |   |         NRM
+               ----------------------------------------------------
+               2     NDM            |   |        |  X|<--DM---
+                                    |   |        |   |         NDM
+               ----------------------------------------------------
+               3     NRM    <-DISC--|   |<-DISC--|   |<--DM---
+                                    |   |        |   |---DM-->
+                                    |   |        |   |         NDM
+               ----------------------------------------------------
+
+        Case 1 - In both modes DM is sent from the TIF to  the  HIF  when        ____ _
+        received  from  a secondary station.  The HIF sends the DM to the
+        primary station.  Both TIF and HIF start NDM  mode  (waiting  for
+        SNRM state).
+
+        Case 2 - In NDM a DM received by the HIF from the primary station        ____ _
+        is discarded.
+
+        Case 3 - In NRM a DM received by the HIF from the primary station        ____ _
+        will  cause  the  HIF  to send a DM to the primary station, and a
+        DISC to the TIF.  The HIF is now in NDM.  The TIF sends the  DISC
+        to the secondary station (see section 2.5.5).
+
+
+SDLC Interface Reference Manual                                   Page 21
+
+
+        2.5.5 DISC              ____
+
+               Case  Start           TIF          HIF          End
+                     Mode                                      Mode
+               ----------------------------------------------------
+               1     NDM            |   |        |  X|<-DISC--
+                                    |   |        |   |         NDM
+               ----------------------------------------------------
+               2     NDM/   --DISC->|X  |        |   |         NDM/
+                     NRM            |   |        |   |         NRM
+               ----------------------------------------------------
+               3     NRM    <-DISC--|   |<-DISC--|   |<-DISC--
+                                    |   |        |   |---DM-->
+                            -UA/DM->|   |--DM--->|X  |         NDM
+               ----------------------------------------------------
+
+        Case 1 - During NDM, the HIF will discard a  DISC  received  from        ____ _
+        the primary station.
+
+        Case 2 - In both modes (NDM or NRM), the TIF will discard a  DISC        ____ _
+        when received from the secondary station.
+
+        Case 3 - The HIF will respond locally  to  the  DISC  command  by        ____ _
+        sending a DM rresponse to the primary station.  The HIF sends the
+        DISC to the TIF.  HIF is now in NDM.
+
+        The TIF transmits the DISC to the secondary station and waits for
+        a  DM  or  UA  response from the secondary station.  Once the TIF
+        receives DM or UA it is in NDM.  The TIF sends a DM  to  the  HIF
+        whether a UA or DM was received from the secondary station.
+
+        By the time the HIF has received  the  DM,  the  HIF  has  had  a
+        receive  timeout  (nothing received from primary) and empties all
+        frames received from the TIF.
+
+
+SDLC Interface Reference Manual                                   Page 22
+
+
+        2.5.6 UA              __
+
+               Case  Start           TIF          HIF          End
+                     Mode                                      Mode
+               ----------------------------------------------------
+               1     NDM    --UA--->|X  |        |   |
+                  (Before           |   |        |   |
+                   SNRM)            |   |        |   |         NDM
+               ----------------------------------------------------
+               2     NDM    <-SNRM--|   |<-SNRM--|   |<-SNRM--
+                  (After            |   |        |   |
+                   SNRM)    ---UA-->|   |---UA-->|   |---UA-->
+                                    |   |        |   |         NRM
+               ----------------------------------------------------
+               3     NDM            |   |        |  X|<--UA---
+                                    |   |        |   |         NDM
+               ----------------------------------------------------
+               4     NRM    <-DISC--|   |<-DISC--|   |<-DISC--
+                  (After            |   |        |   |---DM-->
+                   DISC)    ---UA-->|   |--DM--->|X  |         NDM
+               ----------------------------------------------------
+               5     NRM    ---UA-->|   |--UA--->|X  |
+                                    |   |        |   |         NRM
+               ----------------------------------------------------
+               6     NRM            |   |        |  X|<--UA----
+                            <-DISC--|   |<-DISC--|   |
+                                    |   |        |   |---DM--->
+                                    |   |        |   |         NDM
+               ----------------------------------------------------
+        Case 1 - The TIF will discard a UA received in NDM before a  SNRM        ____ _
+        has been sent to the terminal.
+
+        Case 2 - After the SNRM has been sent in NDM, a  UA  received  by        ____ _
+        the  TIF is sent to the HIF.  The TIF is now in NRM.  When the UA
+        arrives at the HIF, it is output  to  the  Host.   The  HIF  also
+        enters NRM at this time.
+
+        Case 3 - In NDM, the HIF will discard  a  UA  received  from  the        ____ _
+        Host.
+
+        Case 4 - After a DISC has been sent from the primary  station  to        ____ _
+        the  secaondary  station (see secction 2.5.5 case 3), a UA may be
+        sent to the TIF from the secondary station.  The TIF  is  in  NDM
+        after  UA  received.   The  HIF is in NDM before DM received from
+        TIF.
+
+        Case 5 - In NRM (no SNRM or DISC has been sent), anytime a UA  is        ____ _
+        received  from  secondary  station  the TIF just passes it to the
+        HIF.  The HIF will always discard the UA , at this time,  because
+        it  is  assumed  to be a response to a unnumbered command already
+        sent and aknowledged.
+
+        Case 6 - When the HIF receives a UA from the Host in NRM, a  DISC        ____ _
+        is sent to the TIF.  The HIF sends a DM to the Host to signal the
+        Host that  the  HIF  is  now  in  NDM.   See  section  2.5.5  for
+SDLC Interface Reference Manual                                   Page 23
+
+
+        information on TIF handling DISC.
+
+
+        2.5.7 FRMR        _____ ____
+
+        The SDLC FRMR frame is used by the HIF to locally  reject  a  bad
+        frame  sent  from  the  primary  station.   See section 2.4 Local
+        Procedures for sending FRMR locally.
+
+        In the TIF, this frame can only be received  from  the  secondary
+        station.   The  only time the TIF sends this FRMR response to the
+        HIF is if it is NDM, and is a response to an XID command.  If the
+        FRMR  frame  is  received during NRM, there is no way to recover.
+        The TIF simply discards the FRMR in this case.
+
+               Case  Start           TIF          HIF          End
+                     Mode                                      Mode
+               ----------------------------------------------------
+               1     NDM    -FRMR-->|X  |        |   |
+                                    |   |        |   |         NDM
+               ----------------------------------------------------
+               2     NDM            |   |        |  X|<--FRMR-
+                                    |   |        |   |         NDM
+               ----------------------------------------------------
+               3     NDM    <-XID---|   |<-XID---|   |<-XID---
+                   (After           |   |        |   |
+                     XID)   -FRMR-->|   |-FRMR-->|   |-FRMR-->
+                                    |   |        |   |         NDM
+               ----------------------------------------------------
+               4     NRM    -FRMR-->|X  |        |   |
+                                    |   |        |   |         NRM
+               ----------------------------------------------------
+               5     NRM    <-DISC--|   |<-DISC--|   |<-FRMR--
+                                    |   |        |   |---DM-->
+                                    |   |        |   |         NDM
+               ----------------------------------------------------
+
+        Case 1 - The TIF discards any FRMRs received from the terminal in        ____ _
+        NDM.
+
+        Case 2 - The HIF discards any FRMRs received  from  the  Host  in        ____ _
+        NDM.
+
+        Case 3 - A FRMR frame is sent end to end after  a  XID  frame  is        ____ _
+        sent  during  NDM.   This  is to tell the primary station the XID
+        frame has been rejected.  After the FRMR is sent to  the  primary
+        station,  the  HIF  is waiting for either SNRM, DISC, or SIM from
+        the primary station.  If SNRM or SIM is  received  the  HIF  goes
+        into  NRM.   If DISC is received, the HIF restarts the NDM before
+        the XID was sent.  If a frame is received which is not SNRM, SIM,
+        or  DISC  then  the  HIF  resends  the  FRMR.  If receive timeout
+        occurrs (nothing received in certain amount of  time),  then  HIF
+        restarts NDM before XID sent.
+
+        Case 4 - In NRM  the  TIF  discards  a  received  FRMR  from  the        ____ _
+SDLC Interface Reference Manual                                   Page 24
+
+
+        terminal.   There  is  no  way  for  the  TIF  to recover in this
+        situation.   The  frame   being   rejected   has   already   been
+        acknowledged at the HIF.
+
+        Case 5 - When a FRMR is received by the HIF in  NRM,  a  DISC  is        ____ _
+        sent to the TIF.  The HIF then notifies the Host that it's now in
+        NDM by sending the Host a DM.  See section 2.5.5 for  details  on
+        handling DISC frames.
+
+
+        2.5.8 RD        _____ __
+
+               Case  Start           TIF          HIF          End
+                     Mode                                      Mode
+               ----------------------------------------------------
+               1     NDM    ---RD-->|X  |        |   |
+                                    |   |        |   |         NDM
+               ----------------------------------------------------
+               2     NDM/           |   |        |  X|<--RD---
+                     NRM            |   |        |   |         NDM/
+                                    |   |        |   |         NRM
+               ----------------------------------------------------
+               3     NRM    ---RD-->|   |---RD-->|   |---RD-->
+                            <-DISC/-|   |<-DISC/-|   |<-DISC/-
+                              SNRM  |   |  SNRM  |   |  SNRM
+                                    |   |        |   |         NDM
+               ----------------------------------------------------
+
+        Case 1 - The TIF will discard a RD received during NDM.        ____ _
+
+        Case 2 - In any mode, a RD received by the HIF from the  Host  is        ____ _
+        discarded.
+
+        Case 3 - When the TIF receives a RD during NRM, the RD is sent to        ____ _
+        the  HIF.   The  TIF is still in NRM, but will discard any frames
+        other than DISC or SNRM received from  the  HIF.   The  TIF  will
+        still  send  frames  from the terminal to the HIF.  The HIF sends
+        the RD to the Host, and remains in NRM.  For more information  on
+        SNRM and DISC see sections 2.5.3 and 2.5.5.
+
+
+SDLC Interface Reference Manual                                   Page 25
+
+
+        2.5.9 XID              ___
+
+               Case  Start           TIF          HIF          End
+                     Mode                                      Mode
+               ----------------------------------------------------
+               1     NDM    <--XID--|   |<--XID--|   |<--XID--
+                   (After           |   |        |   |
+                     XID)   --XID-->|   |--XID-->|   |--XID-->
+                                    |   |        |   |         NDM
+               ----------------------------------------------------
+               2     NDM    <--XID--|   |<--XID--|   |<--XID--
+                                    |   |        |   |
+                            ---DM-->|   |---DM-->|   |---DM-->
+                                    |   |        |   |         NDM
+               ----------------------------------------------------
+               3     NDM    <--XID--|   |<--XID--|   |<--XID--
+                                    |   |        |   |
+                             -FRMR->|   |-FRMR-->|   |-FRMR-->
+                                    |   |        |   |         NDM
+               ----------------------------------------------------
+               4     NDM    <--XID--|   |<--XID--|   |<--XID--
+                                    |   |        |  X|<--XID--
+                            *OTHER->|X  |        |  X|<--XID--
+                                    |   |        |  X|<--XID--
+                                    |   |        |  X|<--XID--
+                                    |   |        |  X|<--XID--
+                            <--XID--|   |<--XID--|   |<--XID--
+                                    |   |        |   |         NDM
+               * OTHER are any frames which are NOT XID, DM, or FRMR.
+               ------------------------------------------------------
+               5     NDM    --XID-->|X  |        |   |
+                                    |   |        |   |         NDM
+               ----------------------------------------------------
+               6     NRM    <--XID--|   |<--XID--|   |<--XID---
+                                    |   |        |   |         NRM
+               ----------------------------------------------------
+               7     NRM    ---XID->|   |---XID->|   |---XID-->
+                                    |   |        |   |         NRM
+               ----------------------------------------------------
+
+SDLC Interface Reference Manual                                   Page 26
+
+
+        Case 1 - In NDM, the HIF sends the XID to the TIF and  then  will        ____ _
+        not  send  any  future  frames  received  from  the  Host until a
+        response to the XID has been received from the TIF.  The  HIF  is
+        still  in  NDM  but is waiting for either a XID, DM, or FRMR from
+        the TIF.  Any other frames received from the TIF are discarded.
+
+        The TIF sends the XID to the terminal.  The TIF looks at the next
+        frame  received from the terminal.  If it is XID, the XID is sent
+        to the HIF.The TIF goes to the start of NDM.
+
+        When the XID is received by the HIF from the TIF, the  HIF  sends
+        it to the Host.  The HIF is now at the start of NDM again.
+
+        Case 2 - After the XID  has  been  sent  from  the  Host  to  the        ____ _
+        terminal,  in  NDM,  and the TIF receives a DM from the terminal,
+        the DM is sent to the HIF.  The TIF restarts the NDM  before  the
+        XID was sent.  The HIF sends the DM to the Host, and restarts NDM
+        before XID sent.
+
+        Case 3 - After the XID  has  been  sent  from  the  Host  to  the        ____ _
+        teminal,  in  NDM,  the TIF may receive a FRMR from the terminal.
+        In this case, the FRMR is sent to the HIF.  The TIF  is  snow  in
+        NDM  before  the  XID  was  sent.  When the HIF gets the FRMR, it
+        sends it to the Host.  The HIF is now waiting  for  the  Host  to
+        send either DISC, SNRM, or SIM.  See section 2.5.7 on FRMR.
+
+        Case 4 - If the TIF receives something other  than  XID,  DM,  or        ____ _
+        FRMR  after  sending  XID,  then  the  TIF discards the frame and
+        restarts NDM before the XID was sent.  In this mode, the TIF  may
+        retransmit an XID that is received from the HIF.
+
+        Meanwhile, the HIF keeps checking for a XID, DM, or FRMR from the
+        TIF.   When  the HIF timesout, it goes to the start of NDM before
+        the XID was sent.  In this mode, the HIF can send another XID  to
+        the TIF only when and if it is received from the Host.
+
+        Case 5 - If an unsolicited XID is sent to the TIF before  an  XID        ____ _
+        was sent to the terminal, the received XID is discarded.
+
+        Case 6 - In NRM, an XID may be transmitted any time from the  HIF        ____ _
+        to the TIF.  When this happens, the HIF stays in NRM.
+
+        Case 7 - In NRM, an XID may be transmitted any time from the  TIF        ____ _
+        to the HIF.  The TIF stays in NRM.
+
+
+SDLC Interface Reference Manual                                   Page 27
+
+
+        2.5.10 TEST               ____
+
+               Case  Start         TIF            HIF          End
+                     Mode                                      Mode
+               -----------------------------------------------------
+               1     NDM   <-TEST-|   |<-TEST----|   |<--TEST--
+                                  |   |          |  X|<--TEST--
+                                  |   |          |  X|<--TEST--
+                           -(NOT->|X  |          |  X|<--TEST--
+                            TEST) |   |          |  X|<--TEST--
+                                  |   |          |  X|<--TEST--
+                           <-TEST-|   |<-TEST----|   |<--TEST--
+                                  |   |          |   |          NDM
+               ----------------------------------------------------
+               2     NDM   <-TEST-|   |<--TEST---|   |<--TEST--
+                                  |   |          |   |
+                           -TEST->|   |---TEST-->|   |---TEST-->
+                                  |   |          |   |          NDM
+               ----------------------------------------------------
+               3     NRM   <-TEST-|   |<---TEST--|   |<--TEST---
+                                  |   |          |   |          NRM
+               ----------------------------------------------------
+               4     NRM   -TEST->|   |----TEST->|   |---TEST-->
+                                  |   |          |   |          NRM
+               ----------------------------------------------------
+
+        Case 1 - In NDM, the HIF sends the  first  TEST  frame  from  the        ____ _
+        primary  station to the TIF.  Subsequent received TEST frames are
+        discarded untill the HIF has looked at the received  frames  from
+        the TIF 5 times and found nothing.  The HIF then restarts the NDM
+        as if no TEST frame has been  sent.   The  HIF  is  now  able  to
+        transmit  the  next  TEST  frame  it  receives  from  the primary
+        station.
+
+        The TIF will send the TEST frame to the  secondary  station,  and
+        then  waits  for  a TEST response frame from the secaondary.  All
+        other frames from the secondary station are discarded by the  TIF
+        at this point.  After looking for a received frame from secondary
+        station, and not finding a TEST response  frame,  the  TIF  stops
+        looking  and  restarts the NDM before the TEST was sent.  The TIF
+        is now able to receive another TEST from the HIF.
+
+SDLC Interface Reference Manual                                   Page 28
+
+
+        Case 2 - After the TEST frame has been sent from end to end,  and        ____ _
+        the  secondary  station  TEST  response frame is sent end to end,
+        both TIF and HIF are at the start of  NDM  before  the  TEST  was
+        sent.   At  this  point  the HIF can pass to the TIF either SNRM,
+        TEST, XID, or DISC frames only.
+
+        Case 3 - During NRM  a  TEST  frame  received  from  the  primary        ____ _
+        station  by  the  HIF is sent to the TIF.  The HIF remains in NRM
+        and does not look for a response TEST frame from  the  TIF.   The
+        TIF  also  remains  in NRM, and does not look for a TEST response
+        from the secaondary station.
+
+        Case 4 - During NRM a TEST  frame  received  from  the  secondary        ____ _
+        station by the TIF is sent to the HIF.  The TIF and HIF remain in
+        NRM.  Neither TIF or HIF insure that this TEST response frame was
+        solicited by the primary station.
+
+
+SDLC Interface Reference Manual                                   Page 29
+
+
+        2.5.11 I-Frame               _______
+
+               Case    Start                                        End
+                       Mode             TIF             HIF         Mode
+               ---------------------------------------------------------
+               1       NDM   I-Frame->|X   |           |  X|<-I-Frame
+                                      |    |           |   |
+                                      |    |           |   |         NDM
+               ---------------------------------------------------------
+               2       NRM   I-Frame->|    | I-Frame-->|   | I-Frame->
+                                      |    |           |   |
+                             <-I-Frame|    |<-I-Frame--|   |<-I-Frame-
+                                      |    |           |   |         NRM
+               ---------------------------------------------------------
+
+        Case 1 - Information frames are ignored during NDM.        ____ _
+
+        Case 2 - If  the  I-frame  is  formatted  correctly  (i.e.   good        ____ _
+        address,  control  bytes  etc.),  then  the  frame  is  passed to
+        destination interface.   Only  the  information  field  from  the
+        I-frame  is  sent  across  the  network.  All other fields of the
+        frame are supplied by local procedures at interface  transmitting
+        to  the  station.   For more on local procedures see Section 2.4.
+        If something is wrong with the I-frame  when  received  from  the
+        primary  station  by  the  HIF,  the  HIF will send a FRMR to the
+        primary station.
+SDLC Interface Reference Manual                                   Page 30
+
+
+        SECTION 2.6 Inter-Slot Format and Protocol        _______ ___ __________ ______ ___ ________
+
+
+        This section describes the different types of messages which  are
+        sent  and  received by the SDLC Interface to other slots, and the
+        formats  for  each  of  these  message  types.   There  are   two
+        fundamental types of messages, those which are transfered between
+        slot 0 and the SDLC slot, and  those  which  are  not  transfered
+        between the SDLC slot and slot 0 (i.e.  another SDLC slot).
+
+        Messages which are sent to or received from slot 0  (node  code),
+        are    called    intra-ISIS   messages.    These   messages   are
+        distinguishable by the destination port   (RPORT) equal to 0.
+
+        Messages which are transfered to slots other than  slot  0,  have
+        the  destination port   (RPORT) equal to the port number assigned
+        to  this  circuit.   This  port     is   obtained   from   either
+        Pseudo-needle  (B2)  , or Needle (00) ISIS Control messages, when
+        received by the SDLC slot.  These messages can be categorized  as
+        either  ISIS  Control  and Data messages, Global IIX messages, or
+        SDLC IIX Dialect messages.  The SDLC  IIX  Dialect  messages  are
+        either  control or data messages.  These data messages are in the
+        form of Data Qualified packets (end-to-end SDLC frames), or  Data
+        packets (SDLC Information frames).
+
+        To understand this section, the  reader  must  be  familiar  with
+        TYMNET-II and ISIS-II.
+
+SDLC Interface Reference Manual                                   Page 31
+
+
+        SECTION 2.6.1 TYMNET Intra-ISIS Messages        _______ _____ ______ __________ ________
+
+
+        Only a subset of the Intra-ISIS (port 0) messages  are  supported
+        by  the  SDLC  Interface.   Messages  which are not supported are
+        ignored and discarded.
+
+        For more information on these  types  of  messages,  see  ISIS-II
+        docuement, chapter 2 -- ISIS Process Intercommunication.
+
+        The following is  a  brief  description  of  how  each  supported
+        Intra-ISIS  message,  that is messages transmited between slot 0,
+        are handled by the SDLC Interface:
+
+
+        2.6.1.1 Restart-request (00)                _______________ ____
+
+        This message is not supported by the SDLC Interface.
+
+
+        2.6.1.2 Restart-response (01)                ________________ ____
+
+        This message is not supported by the SDLC Interface.
+
+
+        2.6.1.3 Take Over (02)                ____ ____ ____
+
+        When this message is received from slot 0,  a  Port  Availability
+        message (0A) is sent to slot 0.
+
+
+        2.6.1.4 Report to Supervisor's Log (03)                ______ __ ____________ ___ ____
+
+        The only time the SDLC Interface sends this message,  is  if  the
+        switch  REPORT  is set when the interface was assembled.  If this
+        switch has been set, then each time there is a change in the  log
+        table  this  message  is  sent.   These  log table changes are as
+        follows:
+
+           Log Code     Log Table Change
+           --------     ----------------
+             0          Slot initial start
+             1          Slot restart
+             2          Circuit built
+             3          Circuit zapped
+             4          Circuit/station or line shut
+             5          Circuit/station or line removed from shut
+             6          Line up
+             7          Line down
+             8          Circuit/station or line shut due to excessive
+                         log on retries
+             9          Circuit/station or line logon failed
+            0A          Circuit/station or line inoperable
+SDLC Interface Reference Manual                                   Page 32
+
+
+       2.6.1.5 Report Host Status (04)               ______ ____ ______ ____
+
+       This message is only sent by the SDLC Interface if the host cannot
+       support  IIX.   The only host in the SDLC Interface which does not
+       use IIX is the Monitor Host.  This message is sent when  a  Needle
+       is  received  for  the  Monitor host, when a Monitor port is being
+       terminated, or during initialization for a Monitor port.
+
+
+       2.6.1.6 Report Accounting (05)               ______ __________ ____
+
+       This message is not supported by the SDLC Interface.
+
+
+       2.6.1.7 Tell Host Time (06)               ____ ____ ____ ____
+
+       This message is not supported by the SDLC Interface.
+
+
+       2.6.1.8 Pseudo-needle Request (07)               _____________ _______ ____
+
+       This message is sent to slot 0 when the  interface  is  trying  to
+       build  a  circuit.   A circuit can only be built from the terminal
+       interface to the host interface.
+
+
+       2.6.1.9 Auxiliary Circuit Request (08)               _________ _______ _______ ____
+
+       This message is not supported by the SDLC Interface.
+
+
+       2.6.1.10 Pseudo-needle Reject (09)                _____________ ______ ____
+
+       When this message is received from  slot  0,  the  interface  will
+       resend the Pseudo-needle Request message (07) to slot 0.
+
+
+       2.6.1.11 Report Host Port Availability (0A)                ______ ____ ____ ____________ ____
+
+       This message is sent to slot 0 whenever  the  Report  Host  Status
+       message (04), or Extended Host Status message (10) is sent.
+
+
+       2.6.1.12 Host Unacceptable (0B)                ____ ____________ ____
+
+       If this message is received from slot 0, the SDLC  Interface  will
+       crash.
+
+
+       2.6.1.13 Report Host Cost (0C)                ______ ____ ____ ____
+
+       This message is not supported by the SDLC Interface.
+
+
+       2.6.1.14 No Supervisor (0D)                __ __________ ____
+SDLC Interface Reference Manual                                   Page 33
+
+
+       This message is not supported by the SDLC Interface.
+
+
+       2.6.1.15 1-Down (0E)                ______ ____
+
+       This message is not supported by the SDLC Interface.
+
+
+       2.6.1.16 Report All Hosts (0F)                ______ ___ _____ ____
+
+       This message is not supported by the SDLC Interface.
+
+
+       2.6.1.17 Extended Report Host Status (10)                ________ ______ ____ ______ ____
+
+       This message is sent in place of the Report  Host  Status  message
+       (04),  when  IIX  protocol is understood by Host.  This message is
+       sent at all the same times the Report Host Status message (04)  is
+       sent, except it is sent for all ports other than monitor.
+SDLC Interface Reference Manual                                   Page 34
+
+
+       SECTION 2.6.2 TYMNET ISIS Control and Data Messages       _______ _____ ______ ____ _______ ___ ____ ________
+
+
+       The TYMNET SDLC Interface is running under TYMNET ISIS-II  system.
+       However,   only  native  mode  capability  is  supported  by  this
+       interface.   Not  all  of  the  ISIS  Control  message  types  are
+       supported by this interface.
+
+       Whenever an un-supported ISIS control message is received  by  the
+       SDLC  Iterface,  a  standard  default  action may be taken.  Those
+       default actions  are  described  on  the  ISIS-II  FRNTND  Library
+       package.   A  listing of this library package can be obtained from
+       the  (ISIS2)FRNTND.LIB  file  which  is  available  on   most   of
+       Tymshare's PDP-10 systems.
+
+       The following is a summary of each ISIS Control message  usage  by
+       the SDLC Interface:
+
+
+SDLC Interface Reference Manual                                   Page 35
+
+
+       TYPE    Original Usage                SDLC Usage
+       (hex)
+       ------------------------------------------------------------------
+       00      Needle                        Needle
+       9E      Detach                        Detach
+       9F      Zapper                        Zapper
+       A0      Apply Backpressure            Apply Backpressure
+       A1      Release Backpressure          Release Backpressure
+       A2      Flush Output                  Default action but not empty
+                                              input buffer
+       A3      Flush Input                   Default action but not empty
+                                              output buffer
+       A4      Black Ball                    Circuit zap and rebuild
+       A5      Gray  Ball                    Circuit zap and rebuild
+       A6      enter 'DEM'                   Default action
+       A7      leave 'DEM'                   Default action
+       A8      enter 'Transparency'          Default action
+       A9      leave 'Transparency'          Default action
+       AA      Green Ball                    Default action (return GB)
+       AB      Red Ball                      Default action (return RB)
+       AC      Yellow Ball                   Default action (return OB)
+       AD      Orange Ball                   Default action (ignore)
+       AE      Break                         Default action (ignore)
+       AF      'Hang Up'                     Zap circuit
+       B0      Query                         Default action (ignore)
+       B1      Set Parameter                 Default action (ignore)
+       B2      Pseudo-needle                 Pseudo-needle
+       B3      Normal Logon Char.            Normal logon char.
+       B4      Normal Logon Status           Normal logon status
+       B5      Logon Failure                 Logon failure (recovery)
+       B6      Logon Successful              Logon successful
+       B7      Addendum to Account           Default action (ignore)
+       B8      Super 'Hang Up'               Zap circuit
+       B9      Set XMT Limit                 Default XMT limit (9Dx)
+       BA      Break End                     Default action (ignore)
+       BB      Zap Acknowledge               Default action (ignore)
+       BC      Enter AODM                    Default action (ignore)
+       BD      Leave AODM                    Default action (ignore)
+       BE      Zap Reason                    Default action (ignore)
+       BF      SIIX Command                  SIIX command
+       C0      TIIX Command                  TIIX command
+       C1-FF   Reserved                      Default action (ignore)
+SDLC Interface Reference Manual                                   Page 36
+
+
+       SECTION 2.6.3 TYMNET IIX Protocol       _______ _____ ______ ___ ________
+
+
+       The SDLC Interface supports the  TYMNET  IIX  protocol.   For  the
+       detailed  description  of  this  protocol  please  refer to TYMNET                                                                   ______
+       Circuit Protocol, Chapter  3  Interface  Information  Exchange  in       _______ _________ _______  _  _________  ___________  ________  __
+       TYMNET.       ______
+
+       The IIX message types are divided into  two  groups:   global  and
+       dialect.   Global  messages  are  of  a  general  nature  and  are
+       supported by all interfaces that  support  IIX  protocol.   Global
+       messages may be sent at any time even when a particular dialect is
+       in effect.
+
+       Dialect messages are only sent  and  received  between  interfaces
+       which  both  support  this  dialect  and have agreed to speak this
+       dialect.
+
+
+       An IIX command or response consists of the following:
+
+        1.     A leading ISIS control message to indicate the start of an
+               IIX
+               message.
+
+        2.     The following ISIS Data message contains 2 bytes to
+               indicate the
+               the type of IIX message.
+
+        3.     An optional length field to indicate the size in bytes of
+               the
+               information field which follows.
+
+        4.     An optional IIX message information field of varying
+               length
+               depending on the IIX message type.
+
+        5.     An optional ending ISIS control message to indicate the
+               termination
+               of an IIX message.
+SDLC Interface Reference Manual                                   Page 37
+
+
+       SECTION 2.6.4 GLOBAL IIX Messages       _______ _____ ______ ___ ________
+
+
+       Global IIX messages 8082, 8083, and 8084 are only applicable  when
+       the virtual circuit spans over more than one network.
+
+       The current global IIX messages handled by the SDLC Interface  are
+       as follows:
+
+       2.6.4.1 Select Dialect Command (8080)               ______ _______ _______ ______
+
+       This command contains a 2 byte information field which selects the
+       dialect  value.  The SDLC IIX can only select the SDLC IIX dialect
+       value of 808A.
+
+
+       2.6.4.2 Select Dialect Response (8081)               ______ _______ ________ ______
+
+       This message is sent in  response  to  a  Select  Dialect  Command
+       (8080), and contains a 2 byte dialect value to indicate the agreed
+       dialect.  A response dialect value  of  8080  indicates  that  all
+       dialects have been rejected.
+
+
+       2.6.4.3 Gateway Reached Smart Host (8082)               _______ _______ _____ ____ ______
+
+       No information field is contained in this  message.   Here  'smart
+       host' means the host supports IIX protocol.
+
+
+       2.6.4.4 Gateway Reached Dumb Host (8083)               _______ _______ ____ ____ ______
+
+       No information field is contained in  this  message.   Here  'dumb
+       host' means the host cannot support IIX protocol.
+
+
+       2.6.4.5 Normal Logon Status (8084)               ______ _____ ______ ______
+
+       This IIX message contains an 8 bit information field  to  indicate
+       the  logon  status.   The format for this status is the same as in
+       ISIS B4 control message.
+
+
+       2.6.4.6 Resynchronize Interface Exchange (8085)               _____________ _________ ________ ______
+
+       Currently the SDLC Interface  does  not  send  this  message,  and
+       ignores this message when it is received.
+
+
+       2.6.4.7 Product ID and Version (8086)               _______ __ ___ _______ ______
+
+       This message contains a 4 byte information  field.   The  first  2
+       bytes  are  the  product  ID of the sending interface.  The next 2
+       bytes are the 8 bit version and 8  bit  revision  numbers  of  the
+       sending interface.
+SDLC Interface Reference Manual                                   Page 38
+
+
+       The SDLC Interface will respond with this  message  to  a  request
+       product  ID  message  (see  next message).  The product ID for the
+       TYMNET SDLC Interface is 49x.
+
+
+       2.6.4.8 Request Product ID and Version (8087)               _______ _______ __ ___ _______ ______
+
+       This  message  contains  no  information  field.   The   interface
+       receiving  this  message  responds with the product ID and version
+       (8086) message (see above message).
+SDLC Interface Reference Manual                                   Page 39
+
+
+       SECTION 2.6.5 SDLC IIX Dialect Messages       _______ _____ ____ ___ _______ ________
+
+
+       The basic formats of the IIX  SDLC  Dialect  Messages  conform  to
+       those  of  the  IX BSC/3270 DSP Protocol, but they are not exactly
+       the same.  Since the design objective of these  SDLC  IIX  Dialect
+       messages is to be able to exchange information between TYMNET SDLC
+       Interface and any X.25 Interface, the message types  defined  here
+       are   utilizing   the   CCITT  X.25  terminology.   Moreover,  the
+       definition of some fields of  a  message  may  also  have  similar
+       meaning and usage as those of CCITT X.25.
+
+
+       2.6.5.1 Called Address (C087)               ______ _______ ______
+
+       Usage:  To specify the intended target address.  This  message  is
+       currently ignored by SDLC Interface if received.
+
+       Format:
+
+               -------------------------------------------
+               | C087 | Length | Address Digits          |
+               -------------------------------------------
+
+               Field         Length in Bytes      Function
+               -----         ---------------      --------
+               Length               1             number of the address
+                                                   digits
+
+               Address Digits     1 to 7          reserved
+
+
+       2.6.5.2 Calling Address (C088)               _______ _______ ______
+
+       Usage:  To identity  the  callee.   This  message  is  ignored  if
+       received by the SDLC Interface.
+
+       Format:
+
+               --------------------------------------
+               | C088 | Length | Address Digits     |
+               --------------------------------------
+
+               Field          Length in Bytes  Function
+               -----          ---------------  --------
+               Length                1         number of address
+                                                digits
+
+               Address Digits      1 to 7      reserved
+
+
+       2.6.5.3 Call User Data (C089)               ____ ____ ____ ______
+
+       Usage:  To provide information about the  characteristics  of  the
+       caller.
+SDLC Interface Reference Manual                                   Page 40
+
+
+       Format:
+
+               -------------------------------------
+               | C089 | Length | Call User Data    |
+               -------------------------------------
+
+               Field       Length in Bytes  Function
+               -----       ---------------  --------
+               Length              1        Length of call user data
+
+               Call User Data      7        see sub-field below
+
+
+               Sub-Field   Length in Bytes  Function
+               ---------   ---------------  --------
+               Protocol Type      1         PVC or Virtual Call
+               Terminal Type      1         PUT1 or PUT2 or PUT4
+               Access Link        1         Half or Full Duplex
+               Max. Frame Size    1         Maximun frame size
+                                              (in size of pages)
+               Max. Window Size   1         Maximum window size
+               Destination Line   1         Destination Line
+                                              (for PVC only)
+               Dest. Station      1         Destination station's
+                Address                       polling address
+
+
+       2.6.5.4 Interrupt (C08A)               _________ ______
+
+       Usage:  To interrupt the flow comming from the  other  end.   This
+       message is ignored if received by SDLC Interface.
+
+       Format:
+
+               ---------------------------
+               | C08A | Interrupt Type   |
+               ---------------------------
+
+               Field       Length in Bytes  Function
+               -----       ---------------  --------
+               Interrupt Type     1         To indicate the type
+                                              of interruption
+
+
+       2.6.4.5 Interrupt Confirmation (C08B)               _________ ____________ ______
+
+       Usage:  To confirm the  receipt  of  an  interrupt  packet.   This
+       message is ignored if received by the SDLC Interface.
+
+       Format:
+
+               --------
+               | C08B |
+               --------
+SDLC Interface Reference Manual                                   Page 41
+
+
+               This message contains no information field.
+
+
+       2.6.5.6 Network Utility (C08C)               _______ _______ ______
+
+       Usage:  see CCITT X.25 docuement.  This message is ignored by  the
+       SDLC Interface if received.
+
+       Format:
+
+               ------------------------------------
+               | C08C | Length | Utility Field    |
+               ------------------------------------
+
+               Field       Length in Bytes   Function
+               -----       ---------------   --------
+               Length             1          Length of utility field
+
+               Utility Field    1 to n       reserved (see CCITT X.25)
+
+
+       2.6.5.7 Facility (C08D)               ________ ______
+
+       Usage:  see CCITT X.25 docuement.   This  message  is  ignored  if
+       received by the SDLC Interface.
+
+       Format:
+
+               ------------------------------------
+               | C08D | Length | Facility Field   |
+               ------------------------------------
+
+               Field       Length in Bytes  Function
+               -----       ---------------  --------
+               Length             1         Length of facility field
+
+               Facility Field   1 to n      reserved (see CCITT X.25)
+
+
+       2.6.5.8 Reset Confirmation (C091)               _____ ____________ ______
+
+       Usage:  To confirm the receipt of a Reset Indication packet.
+
+       Format:
+
+               --------
+               | C091 |
+               --------
+
+               This message contains no information field.
+
+
+       2.6.5.9 Call Accept (C092)               ____ ______ ______
+
+       Usage:  To indicate the acceptance of the call.
+SDLC Interface Reference Manual                                   Page 42
+
+
+       Format:
+
+               --------
+               | C092 |
+               --------
+
+               currently this message contains no information  field  for
+               the SDLC IIX Protocol.
+
+
+       2.6.5.10 Dialect Level (C093)                _______ _____ ______
+
+       Usage:  To indicate the level of dialect being used by  interface.
+       This message is ignored by the SDLC Interface if received.
+
+       Format:
+
+               -------------------------
+               | C093 | Dialect Level  |
+               -------------------------
+
+               Field       Length in Bytes   Function
+               -----       ---------------   --------
+               Dialect Level      2          To indicate the dialect
+               level
+                                             (not used in SDLC IIX)
+
+
+       2.6.5.11 Data Packet (C094)                ____ ______ ______
+
+       Usage:  To send SDLC end to end frames.  These end to  end  frames
+       are  both  information  and  unnumbered  SDLC frames.  See section
+       2.6.6 for more details.
+
+       Format:
+
+               --------------------------------------------------
+               | C094 | Length | QDRRRRRM | ADDR. | Information |
+               --------------------------------------------------
+
+               Field       Length in Bytes  Function
+               -----       ---------------  --------
+               Length             2         The length of this data
+                                             packet, includes next byte
+
+               QDRRRRRM           1         Q - Data Qualified bit
+                                            D - Delivery Bit
+                                            R - Reserved
+                                            M - More bit
+                                            (only Q bit is used on
+                                             SDLC Interface)
+               Address            1         Destination station address
+               Information   ISIS record    SDLC protocol information
+                             length - 5     (see section 2.6.6)
+SDLC Interface Reference Manual                                   Page 43
+
+
+       2.6.5.12 Clear Indication (C095)                _____ __________ ______
+
+       Usage:  See CCITT X.25 docuement.   This  message  is  ignored  if
+       received by SDLC Interface.
+
+       Format:
+
+               -----------------------------------------
+               | C095 | Clear Cause | Clear Diagnostic |
+               -----------------------------------------
+
+               Field       Length in Bytes  Function
+               -----        ---------------  --------
+               Clear Cause        1         To indicate clearing cause
+
+               Clear Diagnostic   1         Clear diagnostic data
+
+
+       2.6.5.13 Reset Indication (C096)                _____ __________ ______
+
+       Usage:  See CCITT X.25 docuement.   This  message  is  ignored  if
+       received by the SDLC Interface.
+
+       Format:
+
+               -----------------------------------------
+               | C096 | Reset Cause | Reset Diagnostic |
+               -----------------------------------------
+
+               Field       Length in Bytes  Function
+               -----       ---------------  --------
+               Reset Cause         1        To indicate cause of reset
+
+               Reset Diagnostic    1        Rset diagnostic data
+SDLC Interface Reference Manual                                   Page 44
+
+
+       SECTION 2.6.6 SDLC Data and Data Qualified Packets       _______ _____ ____ ____ ___ ____ _________ _______
+
+
+       SDLC frames which are transmited  from  end-to-end,  are  formated
+       into SDLC IIX Dialect Data packets (C094).  These Data packets are
+       either Data Qualified (Q bit set), or they are just  Data  packets
+       (Q bit reset).
+
+       Data Qualified packets are used to pass  unnumbered  SDLC  frames,
+       such  as  SNRM,  UA  etc.   Data packets are used to pass the data
+       contained in the SDLC Information frames from end-to-end.
+
+       In the SDLC IIX Dialect Data packet (C094), the only bit currently
+       used in the fourth byte (QDRRRRRM) is the Q bit.
+
+       The format for the Data packet and Data Qualified packets  are  as
+       follows:
+
+
+
+       Data Packet:
+
+       ---------------------------------------------------------
+       | C094 | Length | QDRRRRRM | Address | SDLC Information |
+       ---------------------------------------------------------
+
+
+
+       Data Qualified Packet:
+
+       ----------------------------------------------------
+       | C094 | Length | QDRRRRRM | Address | Message Type|
+       ----------------------------------------------------
+       | Control Code  | Control Code Info. |
+       --------------------------------------
+
+
+
+       Field        Length in Bytes  Function
+       -----        ---------------  ---------------------------
+       Length              2         The length of this packet,
+                                      includes next byte
+       ---------------------------------------------------------
+       QDRRRRRM            1         Q - Data Qualified bit
+                                     D - Delivery bit
+                                     R - Reserved
+                                     M - More bit
+                                     (currently only Q bit
+                                      used in SDLC Interface)
+       ----------------------------------------------------------
+       Address             1         Destination station address
+       ----------------------------------------------------------
+       SDLC          ISIS record     Unaltered information from
+       Information   length - 5       SDLC Information frame
+       ----------------------------------------------------------
+SDLC Interface Reference Manual                                   Page 45
+
+
+       Message Type        1         Identifies DQ packet, current
+                                      value is 01 hex
+       ----------------------------------------------------------
+       Control Code        1         SDLC frame unnumbered control
+                                      field with P/F set to 0
+       ----------------------------------------------------------
+       Control Code  ISIS record     Unaltered information from
+       Information   length - 7       SDLC TEST or XID frames
+                                      (this field present only for
+                                       TEST or XID Control Codes)
+       ----------------------------------------------------------
+
+
+       2.6.6.1 Data Packets (Q bit = 0)               ____ _______ __ ___ _ __
+
+       SDLC Information frames are transmited end-to-end using  IIX  SDLC
+       Dialect Data Packets (C094) with the Q bit reset.
+
+       Because Nr, Ns and P/F are all handled locally, these  values  are
+       not  included  in the Data packet when passed end-to-end.  This is
+       the reason for not having a control field in this type packet.
+
+       For Data packets which  are  longer  than  one  ISIS  record,  the
+       subsequent  ISIS data records do not have IIX SDLC Data packet IIX
+       dialect header.
+
+
+       2.6.6.2 Data Qualified Packets (Q bit = 1)               ____ _________ _______ __ ___ _ __
+
+       SDLC Unnumbered frames to be sent end-to-end,  are  formated  into
+       IIX SDLC Dialect Data Packets (C094) with the Q bit set.
+
+       The message type  (01  hex)  is  included  in  the  DQ  packet  as
+       insurance  that  this packet is indeed a DQ packet.  Since the P/F
+       bit is handled locally by the SDLC Interface, this  value  is  not
+       passed in the control code field.
+
+       The control codes sent end-to-end in DQ packets are as follows:
+
+           Code        SDLC Frame Type
+           ----        ---------------
+            83         Set Normal Response Mode (SNRM)
+            43         Disconnect Command (DISC)
+                       Request Disconnect Response (RD)
+            AF         Exchange Station ID (XID)
+            E3         Test (TEST)
+            63         Unnumbered Acknowledgement (UA)
+            0F         Disconnect Mode (DM)
+            07         Request Initialization Mode Response (RIM)
+                       Set Initialization Mode Command (SIM)
+SDLC Interface Reference Manual                                   Page 46
+
+
+        SECTION 2.7 Network Services        _______ ___ _______ ________
+
+
+        2.7.1 Permanent Virtual Circuits              _________ _______ ________
+
+
+             A point-to-point or multipoint link connected to  a  primary
+        port  on  a TYMNET SDLC interface will utilize a unique Permanent
+        Virtual Circuit (PVC) through TYMNET for  each  station  on  that
+        link  to  connect to a secondary port on a TYMNET SDLC interface.
+        The PVC(s) provides a path  between  the  primary  and  secondary
+        ports  for  data,  diagnostic,  and  control  messages.   No user
+        interaction is required to build or maintain the PVC.  The figure
+        below illustrates the connection of stations on a primary port to
+        a  secondary  port  utilizing  network  PVC's.   Note  that  only
+        connections between primary and secondary ports are supported.
+
+
+
+
+                     +++++++++++++           +++++++++++++
+                     +   SDLC    +           +   SDLC    +
+                     + INTERFACE +           + INTERFACE +
+                     --------    +           +    --------
+        POINT-POINT  | SEC  |    +  NETWORK  +    | PRI  |  POINT-POINT
+        -------------| PORT |---------------------| PORT |-------------
+           LINK      |      |    +    PVC    +    |      |     LINK
+                     --------    +           +    --------
+                     +           +           +           +
+                     --------    +           +    --------
+         MULTIPOINT  | PRI  |    +  NETWORK  +    | SEC  |  MULTIPOINT
+        -------------| PORT |---------------------| PORT |------------
+           LINK      |      |---------------------|      |    LINK
+                     --------    +   PVCS    +    --------  2 STATIONS
+                     +           +           +           +
+                     +++++++++++++           +++++++++++++
+
+
+SDLC Interface Reference Manual                                   Page 47
+
+
+        2.7.2 Split Multipoint Links              _____ __________ _____
+
+
+             PVC's servicing  secondary  stations  on  different  primary
+        ports  can  be  targeted  to  a single secondary port servicing a
+        multipoint link.  This link is effectively split to allow  remote
+        secondary stations which are physically or logically separated to
+        be serviced by a single  host  connection.   Thus  the  secondary
+        stations  attached  to a point-to-point or each secondary station
+        on a primary port  can  be  individually  targeted  to  different
+        secondary ports.  The figure below illustrates the combination of
+        two secondary stations on point-to-point links (on primary  ports
+        1 and 2) with a single secondary station on a multipoint link (on
+        primary port 3) into a single multipoint link  with  3  secondary
+        stations  (on  secondary  port  1)  via  3  network  PVC's.   The
+        remaining two secondary stations on primary port 3  are  combined
+        into  a  single  multipoint  link  with  2  secondary stations on
+        secondary port 2 via 2 network PVC's.
+
+
+
+
+                     +++++++++++++           +++++++++++++
+                     +   SDLC    +           +   SDLC    +
+                     + INTERFACE +           + INTERFACE +
+                     --------    +           +    --------
+        POINT-POINT  | PRI  |    +  NETWORK  +    | PRI  | POINT-POINT
+        -------------| PORT |------| PVCS  |------| PORT |------------
+           LINK      |  1   |    + |       | +    |  2   |    LINK
+                     --------    + |       | +    --------
+                     +           + |       | +           +
+                     +           + |       | +           +
+                     --------    + |       | +    --------
+                     |      |------|       | +    |      |
+         MULTIPOINT  | SEC  |    +         | +    | PRI  |  MULTIPOINT
+        -------------| PORT |--------------| +    | PORT |------------
+           LINK      |  1   |    +           +    |  3   |    LINK
+         3 STATIONS  |      |---------------------|      |  3 STATIONS
+                     --------    +          +     |      |
+                     +           +  |-------------|      |
+                     +           +  |       +     |      |
+                     +           +  |     |-------|      |
+                     --------    +  |     |  +    --------
+         MULTIPOINT  | SEC  |-------|     |  +           +
+        -------------| PORT |    +        |  +++++++++++++
+           LINK      |  2   |-------------|
+         2 STATIONS  --------    +
+                     +           +
+                     +++++++++++++
+
+
+SDLC Interface Reference Manual                                   Page 48
+
+
+        SECTION 3.0 OPERATIONS        _______ ___ __________
+
+
+             This section contains information concerning the operational
+        aspects  of  primary  and  secondary  ports  as  they  pertain to
+        polling, error recovery, and system monitoring.
+
+
+        SECTION 3.1 Operating Characteristics        _______ ___ _________ _______________
+
+
+             A primary feature of the TYMNET SDLC interface is  that  all
+        polling  is  handled locally.  A secondary port responds to polls
+        of secondary station addresses on a host  link  independently  of
+        its  associated primary port polling those same secondary station
+        addresses on a remote link.  Secondary station addresses which  a
+        secondary  port  can  respond  to and a primary port can poll are
+        sysgenned into the interface(s).
+
+             A  primary  port  also  has  the  capability  of  mapping  a
+        secondary station address into a different address.  This is done
+        on a one-to-one basis.  As an example, let us say that a host  is
+        polling addresses A, B, and C on a multipoint link connected to a
+        TYMNET SDLC secondary port.  The secondary port is  connected  by
+        three  PVCs  to  three  primary ports.  The first primary port is
+        sysgenned to only poll addresses A and B on its remote multipoint
+        link.  The second primary port is sysgenned to map address C into
+        address A which it polls on its remote point-to-point link.  This
+        feature allows reduction of the number of host ports to support a
+        given number of remote terminals.
+
+
+SDLC Interface Reference Manual                                   Page 49
+
+
+                                             +++++++++++++
+                                             +   SDLC    +
+                                             + INTERFACE +
+                                             +    --------
+                     +++++++++++++           +    | PRI  | POINT-POINT
+                     +   SDLC    +         |------| PORT |------------
+                     + INTERFACE +         | +    |  1   |    LINK
+                     +           +         | +    --------    (A)
+                     --------    +         | +           +
+                     |      |--------------| +    --------
+         MULTIPOINT  | SEC  |    +           +    | PRI  |  MULTIPOINT
+        -------------| PORT |    +           +    | PORT |------------
+           LINK      |  1   |---------------------|  2   |    LINK
+         3 STATIONS  |      |    +           +    |      |  2 STATIONS
+          (A,B,C)    |      |    +           +    |      |    (A,B)
+                     |      |---------------------|      |
+                     |      |    +           +    |      |
+                     --------    +           +    --------
+                     +           +           +           |
+                     +++++++++++++           +++++++++++++
+
+
+SDLC Interface Reference Manual                                   Page 50
+
+
+        SECTION 3.2 Operation Scenarios        _______ ___ _________ _________
+
+
+        This section illustrates operations of the SDLC Interface  during
+        Initialization   and   PVC   building,   transition  from  Normal
+        Disconnect Mode (NDM)  to  Normal  Response  Mode  (NRM),  Normal
+        Response  Mode,  and finally transition from Normal Response Mode
+        to Normal Disconnect Mode.
+
+
+        3.2.1 Initialization and PVC Building              ______________ ___ ___ ________
+
+
+        The  following  diagram  is  a  scenario  of  operations   during
+        initialization  and  when  the PVC building process which goes on
+        between a Host Interface (HIF) and a  Terminal  Interface  (TIF).
+        Each  interface  interacts  with it's own slot 0.  Sup stands for
+        the Supervisor node.  The secondary station and  primary  station
+        are external to the network.
+
+        To build a PVC the SDLC Interfaces must  complete  the  following
+        steps:
+
+               1.  Initialize Physical Line - Before trying  to  build  a                   __________ ________ ____
+               PVC  to the Host Interface, or accepting a Needle from the
+               Terminal Interface, both interfaces make sure the physical
+               lines are up.
+
+               2.  Build PVC - Once the physical lines  are  active,  the                   _____ ___
+               PVC building process can begin.
+
+               3.  Dialect Handshake - It is not enough for the PVC to be                   _______ _________
+               built,  both  interfaces  must be able to use the same IIX
+               Dialect.   This  step  also  includes  making   sure   the
+               interface  configurations  are  compatable.   This is done
+               when the HIF receives the Call User Data from the TIF.
+
+        Each of these steps is illustrated in the next 3 sub-sections.
+
+
+SDLC Interface Reference Manual                                   Page 51
+
+
+        3.2.1.1 Initialize Physical Lines                __________ ________ _____
+
+
+        Secondary   Primary
+        Station     Port (TIF)  Comments
+        --------    ---------- ------------------------------------------
+                <-- DTR OFF    TIF drops DTR for specific period of time.
+                               This insures secondary station is discon-
+                               nected.
+                <-- DTR ON     DTR is raised if there is no DTR/DSR hand-
+                               shaking, or if there is handshaking and
+        DSR
+                               is still down, or if no handshaking and
+        DSR
+                               is up but has been dropped at least once,
+                               or if timer runs out. This procedure makes
+                               sure secondary is disconnected.
+         DSR ON -->            TIF monitors DSR up for specific period of
+                               time before considering the line ready for
+                               PVC building.
+
+
+
+        Primary    Secondary
+        Station    Port (HIF)  Comments
+        -------    ----------  -----------------------------------------
+               <-- DTR OFF     HIF drops DTR to insure line is discon-
+                               nected.
+        DSR ON -->             This step is skipped if DTR/DSR
+        handshaking
+                               is specified for this line. Otherwise, the
+                               HIF waits for DSR up before raising DTR.
+               <-- DTR ON      If no handshaking, DTR is always raised.
+        TIF
+                               raises DTR in this step only if not hand-
+                               shaking and DSR is down, or DSR is up and
+                               has been dropped at least once, or time is
+                               up.
+        DSR ON -->             The HIF monitors DSR up for certain period
+                               of time before line is considered active
+                               and ready to accept Needle for this line.
+
+
+SDLC Interface Reference Manual                                   Page 52
+
+
+        3.2.1.2 PVC Building                ___ ________
+
+
+        Primary
+        Station (TIF)        Slot 0        Supervisor
+        -----------------    --------      ------------------
+        Pseudo-needle
+        Request (07)      -->
+                          <--------------- Pseudo-needle (B2)
+        Logon Char. (B3)  --------------->
+                          <--------------- Host Status (B4)
+        Logon Char. (B3)  --------------->
+                          <--------------- Logon Success(B6)
+
+
+        Comments:
+
+        The TIF builds a PVC using destination information  contained  in
+        the TYMFILE for this interface.  The PVC building process follows
+        the process defined by ISIS-II.  The TIF is now ready  to  accept                               _______
+        IIX Dialect handshaking packets from the remote HIF.
+
+
+        Secondary
+        Port (HIF)                 Supervisor
+        ----------------------     -----------
+                               <-- Needle (00)
+        Host Status (04/10)    -->
+        Port Availability (0A) -->
+
+
+        Comments:
+
+        The HIF accepts the Needle only after the line  is  active.   The
+        HIF  responds  to  the Supervisory Node with the Host Status, and
+        Port Availability messages.  For  more  information  on  these  2
+        messages  see  Section  2.6.1.  The HIF is now ready to start the
+        IIX Dialect handshaking with the remote TIF.
+
+        3.2.1.3 IIX Dialect Handshaking                ___ _______ ___________
+
+
+        Primary                            Secondary
+        Port (TIF)                         Port (HIF)
+        -------------------------------    ---------------------
+                                       <-- SIIX (BF)
+                                       <-- Select Dialect (8080)
+                                       <-- TIIX (C0)
+        Select Dialect Response (8081) -->
+        Call User Data (C089)          -->
+                                       <-- Call Accept (C092)
+
+
+        Comments:
+SDLC Interface Reference Manual                                   Page 53
+
+
+        The HIF sends the Select Dialect (8080) message containing a list
+        of  IIX  Dialects  which  are supported by the HIF.  The TIF will
+        then select a IIX Dialect from  the  list  and  send  the  Select
+        Dialect  Response  (8081)  message  to  the  HIF.  If none of the
+        dialects can be supported the TIF send back a null  selection  in
+        the Select Dialect Response (8081) message.
+
+        The TIF then sends a message containing the call user  data.   If
+        the HIF accepts this call user data, the HIF responds with a Call
+        Accept (C092) message.  For  more  information  on  a  particular
+        message  se  either  Section 2.6.4 Global IIX Messages or Section
+        2.6.5 SDLC IIX Dialect Messages.
+
+        Both interfaces are now in Normal Disconnect Mode (NDM).
+
+
+SDLC Interface Reference Manual                                   Page 54
+
+
+        3.2.2 Normal Disconnect Mode to Normal Response Mode              ______ __________ ____ __ ______ ________ ____
+
+
+        After the PVC has been built, the secondary port (Host Interface)
+        and  the  primary  port  (Terminal  Interface) are both in Normal
+        Disconnect Mode (NDM).  The interfaces are now able to pass  SDLC
+        frames between the primary and secondary stations.  In this mode,
+        only  some  SDLC  unnumbered  commands  and  responses  are  sent
+        end-to-end.  These frames are SNRM, UA, XID, FRMR, SIM, DM, DISC,
+        and TEST.  For more information on when during NDM  these  frames
+        are sent end-to-end, reference Section 2.5 End-to-End Procedures.
+
+        It is only after both interfaces have gone into  Normal  Response
+        Mode  (NRM),  that  SDLC  Information frames are sent end-to-end.
+        The following diagram illustrates the transformation from NDM  to
+        NRM.
+
+
+          Secondary                                             Primary
+          Station      TIF                  HIF                 Station
+        ----------     ----------------     ------------------  -------
+                                                               <-- SNRM
+                                        <-- Data Packet (SNRM)
+
+                   <-- SNRM
+                UA -->
+                       Data Packet (UA) -->
+                                                             UA -->
+        ---------------------------------------------------------------
+
+
+        After receiving the SNRM frame  from  the  primary  station,  the
+        secondary  port  (HIF)  sends  a  Data  Packet,  with  Q bit set,
+        containing the SNRM command code to the primary port (TIF).   The
+        HIF is waiting for a UA response from the remote TIF.
+
+        Once the secondary port (HIF) receives the UA response  from  the
+        primary port (TIF), the UA is sent to the primary station and the
+        HIF is now in NRM.
+
+        The  primary  port  (TIF),  sends  the  SNRM  received  from  the
+        secondary  port (HIF) to the secondary station.  The TIF is still
+        in NDM waiting  for  a  UA  response  frame  from  the  secondary
+        station.
+
+        Once the primary port (TIF) has received the  UA  response  frame
+        from  the  secondary  station, the TIF is in NRM.  The TIF send a
+        Data Packet, with Q bit set, containing the UA response  code  to
+        the secondary port (HIF)
+
+
+SDLC Interface Reference Manual                                   Page 55
+
+
+        3.2.3 Normal Response Mode (NRM)              ______ ________ ____ _____
+
+
+        In this mode the secondary port (Host Interface) and the  primary
+        port  (Terminal Interface) will exchange both SDLC unnumbered and
+        information  frames  end-to-end.    For   more   information   on
+        end-to-end  procedures  see Section 2.5.  For more information on
+        local procedures (i.e.  Nr, Ns and P/F), see Section 2.4.
+
+        A typical Normal Resonse Mode  scenario  is  illustrated  in  the
+        following digram.
+
+
+        Secondary                                             Primary
+        Station                TIF             HIF            Station
+        ------------------     ----------      -----------    -------
+                          <--20,RR P(0)
+        20,I(0)~F(0),info1-->
+                             Data Packet-->
+                               (info1)
+        20,I(1)F(0),info2 -->                40,I(0)F(0)-->
+                          <--20,RR P(2)                 <--40,RR P(1)
+                             Data Packet
+                               (info2)  -->
+                                             40,I(1)F(0)-->
+                20,RR F(0)-->                           <--40,I(0)P(2),
+                                                            info1
+                                              40,RR P(1)-->
+                                        <--Data Packet
+                                            (info1)
+                          <-- 20,I(0)P(2)
+        -----------------------------------------------------------------
+        In this diagram ~F indicates  Final  bit  reset.   The  secondary
+        station  has  an  address  of  20  and the primary station has an
+        address of 40.  The HIF sets the Final bit when there are no more
+        frames  to  send.  Only the information field from the I-frame is
+        sent across the network.  All other fields are supplied  locally,
+        by port transmitting to primary or secondary station.
+
+
+SDLC Interface Reference Manual                                   Page 56
+
+
+        3.2.4 Normal Response Mode (NRM) to Normal Disconnect Mode (NDM)              ______ ________ ____ _____ __ ______ __________ ____ _____
+
+
+        Both the Host Interface and Terminal  Interface  will  remain  in
+        Normal   Response   Mode  (NRM),  untill  one  of  the  following
+        conditions occurs:
+
+        1.  Secondary station sends a DM or RD to the TIF.
+
+        2.  Primary station sends a DISC to the HIF.
+
+        3.  Primary station sends UA, FRMR, or DM to the HIF.
+
+
+        A typical transformation from NRM to NDM is illustrated below.
+
+
+        Secondary                                           Primary
+        Station   TIF                HIF                    Station
+        -----    ----------------    ------------------     --------
+         RD  -->
+             <-- RR
+                 Data Packet (RD) -->
+                                      RD                 -->
+                                                         <-- DISC
+                                  <-- Data Packet (DISC)
+             <-- DISC
+         DM  -->
+                 Data Packet (DM) -->
+                                      DM                 -->
+SDLC Interface Reference Manual                                   Page 57
+
+
+        SECTION 3.3 Error Recovery        _______ ___ _____ ________
+
+
+             The TYMNET SDLC interface provides error recovery  for  link
+        level errors and loss of a network PVC.  Error recovery occurs at
+        the link level only.  Lost data because of network  circuit  zaps
+        or  transmission  errors  is  not recovered.  SNA provides higher
+        level sequence checking to recover from this condition.
+
+             If a frame is received with an incorrect  FCS,  it  will  be
+        discarded.   If  a frame is received with correct FCS but with an
+        incorrect Ns, then the receiving  station  will  discard  the  Ns
+        field  and  information  field in that frame, and responds with a
+        appropriate frame or frames at  the  proper  moment.   This  will
+        continue until the expected frame is correctly received.  The P/F
+        and Nr indicators in the discard frames will, however, be used by
+        the receiving station.  The basic retransmission of I frames will
+        be initiated  by  P/F  bit  checkpointing.   Optionally  the  REJ
+        command/response can be used for more timely reporting of I frame
+        errors.
+
+
+        3.3.1 Primary Ports              _______ _____
+
+             The following table details the actions a primary port  will
+        take given certain error conditions.
+
+            EVENT               ACTION
+
+            Timeouts to, CRC    Retransmit until limit reached or good
+            error in, or bad    response received.  If limit reached then
+            response to any     set disconnect mode and send <DM network
+            supervisory or      message via the PVC to its corresponding
+            unnumbered frame    secondary port.
+
+            Timeouts to an      Poll until limit reached or response re-
+            information frame   received.  Re-transmit unacknowledged
+            with P-bit set      frames if good response, otherwise set
+                                timeout mode and notify secondary port.
+
+            CRC error in        Confirm last good frame after Final bit
+            information frame   detected, or timeout then confirm with
+                                RR, or send REJ.
+
+            DM to information   Set disconnect mode, discard frame,
+            frame               and notify secondary port.
+
+            FRMR                Set timeout mode and send notification to
+                                secondary port.  Discard this command
+        frame.
+
+            Lost PVC            Send DISC and restart when PVC rebuilt.
+SDLC Interface Reference Manual                                   Page 58
+
+
+        3.3.2 Secondary Ports              _________ _____
+
+             The following table details the  actions  a  secondary  port
+        will take upon detection of an error event.
+
+            EVENT               ACTION
+
+            Timeout to any      Wait for re-transmission, if timeout
+            supervisory or      set timeout mode, notify primary port.
+            unnumbered frame
+
+            CRC error or bad    Wait for re-transmission, if timeout
+            response in any     set timeout mode, notify primary port.
+            supervisory or
+            unnumbered frame
+
+            CRC error in        Wait for re-transmission, if timeout
+            information frame   set timeout mode, notify primary port.
+                                Or send REJ response.
+
+            Lost PVC            Send DISC and restart when PVC re-built.
+SDLC Interface Reference Manual                                   Page 59
+
+
+        SECTION 3.4 Monitoring and Control        _______ ___ __________ ___ _______
+
+
+             Each TYMNET SDLC interface incorporates a system monitor.  A
+        network operator can log into this monitor to display the status,
+        loading, and exception conditions of each physical link  attached
+        to the interface.  Other information available includes status of
+        network logical links, interface revision  level,  and  the  last
+        crash   code  and  time.   A  network  operator  can  also  issue
+        diagnostic commands to isolate data link problems.  The following
+        subsections describe the system monitor in more detail.
+
+
+        3.4.1 Logging into the System Monitor              _______ ____ ___ ______ _______
+
+
+             A unique host number is used in each SDLC interface for  the
+        system  monitor.   Users  with the appropriate network validation
+        can log into this host number and access the system monitor.   Do
+        not  use NAD to log into system monitor.  When using Nad a double
+        echo appears at users terminal.  Either log in directly,  or  use
+        MUX  or AUXIO.  The system monitor will initially prompt the user
+        with:
+
+
+        SDLC Interface Monitor
+
+                  Enter Terminal Type, 0=TTY, 1=HP, 2=ADM.
+                  >_
+
+
+             Three  types  of  terminals  are  supported  by  the  system
+        monitor,  low speed hard-copy terminals, Tymshare Model 444 (HP),
+        and Tymshare Model 425 (ADM-1A).  The 0=TTY mode  really  is  the
+        LINE  mode which will display the slot status in the scroll mode.
+        Even with a Tymshare Model 444 (HP) terminal, the user still  can
+        select  0 if he/she prefers to have a normal line mode.  However,
+        the selection of 1 or 2 must be really for that paticular type of
+        terminal,   otherwise  the  displayed  information  will  not  be
+        readable.  To  select  a  terminal  type,  the  user  enters  the
+        terminal  type followed by a carriage return.  The system monitor
+        then outputs the Interface Status  Display  until  a  command  is
+        issued  or  the  operator logs off.  The Interface Status Display
+        consists of:
+
+             o header line, with SDLC interface ID, Node number, and Slot
+                number
+
+             o detail line, with interface version number, time the  slot
+                was  last  started,  the  crash count, and the last crash
+                code
+
+             o the command prompt ">"
+
+        oo  The system monitor uses ">" for the command prompt.
+SDLC Interface Reference Manual                                   Page 60
+
+
+        oo  Commands can be entered in either upper or lower case.
+        oo  Command abreviations may be entered.
+        oo  Control A can be used to delete the last character entered.
+        oo  Control Q or Escape can be used to delete the whole line.
+        oo  A command is executed when a carriage return is entered.
+        oo  To terminate a display, escape is entered to redisplay
+        prompt.
+
+
+        3.4.2 DISPLAY Commands              _______ ________
+
+        3.4.2.1 DISPLAY HOST                _______ ____
+
+        SYNTAX:  DISPLAY HOST(cr)
+
+        ABBREVIATED SYNTAX:  D H(cr)
+
+             This  command  lists  the  status  of  all  hosts  in   this
+        interface.  For each host, this includes:
+
+         o HOST     host number
+         o TYPE     host type (monitor or SDLC)
+         o STATUS   host status,
+                    values for STATUS are as follows:
+                      oo HANS  host answered
+                      oo HDWN  host down
+                      oo HSHT  host shut
+         o HMPT     total number of ports available
+         o HSPT     number of ports in shut state
+         o HUPT     number of ports in use
+         o HAPT     number of ports in active state
+         o HFPT     number of free ports
+
+
+        3.4.2.2 DISPLAY CONFIG                _______ ______
+
+        SYNTAX:  DISPLAY CONFIG [line](cr)
+
+        ABBREVIATED SYNTAX:  D CON [line](cr)
+
+             This command lists the  configuration  data  for  all  or  a
+        single line.  If the line number is not specified, then all lines
+        are listed with the following information:
+
+         o LINE #    line number
+         o STATUS    line status,
+                     values for STATUS are as follows:
+                        oo TINI   terminal at initialization state
+                        oo TDWN   terminal at down state
+                        oo TWUP   watch DTR up for specified period,
+                                  waiting for DSR up
+                        oo TRDY   line is up and ready to place call
+                        oo TPVC   PVC terminal line waiting for
+                                  circuit(s) up
+                        oo TACT   terminal line active
+SDLC Interface Reference Manual                                   Page 61
+
+
+                        oo TTRM   terminal line in terminated state
+                        oo TACV   terminal line active (virtual call)
+                        oo TSHT   terminal line shut
+                        oo TRNL   terminal line at shut transition state
+                        oo HINI   host line at initialization state
+                        oo HDWN   host line at down state
+                        oo HWUP   watch DTR up for specified period
+                        oo HRDY   host line ready to accept logon
+                        oo HACT   host line active
+                        oo HTRM   host line in terminated state
+                        oo HSHT   host line in shut state
+                        oo HTRN   host line in shut transition state
+         o HOST #    host number (if any)
+         o MSTN      total number of stations
+         o SSTN      current number of shut stations
+         o ASTN      current number of active stations
+         o PVC       PVC/VC available
+         o ACLNK     link type,
+                     values for ACLNK are as follows:
+                     oo HP  half-duplex, point-to-point
+                     oo HM  half-duplex, multi-point
+                     oo FP  full-duplex, point-to-point
+                     oo FM  full-duplex, multi-point
+         o MFM       maximum frame size
+         o WDW       maximum window size
+         o DT/SR     DTR/DSR signalling option
+         o R/CTS     RTS/CTS signalling option
+         o VTAM      use VTAM
+
+
+        3.4.2.3 DISPLAY STAT Command                _______ ____ _______
+
+        SYNTAX:  DISPLAY STAT [line] [station](cr)
+
+        ABBREVIATED SYNTAX:  D STAT [line] [station](cr)
+
+             This command displays statistical information for lines  and
+        stations.   If the station number is omitted, then statistics for
+        all stations on the specified line is displayed.   If  both  line
+        and  station  numbers  are omitted, then statistics for all lines
+        and stations is displayed, including:
+
+         o LINE #       line number
+         o LINE STATUS  line status,
+                        values for LINE STATUS are as follows:
+
+                        oo TINI   terminal at initialization state
+                        oo TDWN   terminal at down state
+                        oo TWUP   watch DTR up for specified period,
+                                  waiting for DSR up
+                        oo TRDY   line is up and ready to place call
+                        oo TPVC   PVC terminal line waiting for
+                                  circuit(s) up
+                        oo TACT   terminal line active
+                        oo TTRM   terminal line in terminated state
+SDLC Interface Reference Manual                                   Page 62
+
+
+                        oo TACV   terminal line active (virtual call)
+                        oo TSHT   terminal line shut
+                        oo TRNL   terminal line at shut transition state
+                        oo HINI   host line at initialization state
+                        oo HDWN   host line at down state
+                        oo HWUP   watch DTR up for specified period
+                        oo HRDY   host line ready to accept logon
+                        oo HACT   host line active
+                        oo HTRM   host line in terminated state
+                        oo HSHT   host line in shut state
+                        oo HTRN   host line in shut transition state
+
+         o RCV          total number of received frames since starting
+         o XMT          total number of transmitted frames since starting
+         o REJ          number of frames rejected since starting
+         o TIMOUT       number of timeouts occurring since starting
+         o STATION #    station address
+         o CKT_STS      station circuit status,
+                        values for CKT_STS are as follows:
+
+                        oo SHUT  host/terminal port shut
+                        oo CLRD  host/terminal port cleared
+                        oo REDY  terminal port ready to build circuit, or
+                                 host port ready for Needle
+                        oo CLRN  host/terminal port clearing
+                        oo WPND  terminal port waiting for pseudo-needle
+                        oo NTLG  terminal port network logon
+                        oo DLHS  host/terminal dialect handshaking
+                        oo CLHS  host/terminal call handshaking
+                        oo DTXR  host/terminal port data transfer
+
+         o LINK_STS     link protocol status,
+                        values for LINK_STS are as follows:
+
+                        oo PNRR  protocol in NRM rcv state
+                        oo PNRX  protocol in NRM xmt state
+                        oo PNRS  protocol in NRM supervisor state
+                        oo PNDM  protocol in NDM
+                        oo PWNR  protocol in waiting NRM state
+                        oo PWND  protocol in waiting NDM state
+                        oo PHLT  protocol in halt state
+                        oo PCLR  protocol in clear state
+                        oo PTER  protocol in terminate state
+
+
+        3.4.2.4 DISPLAY LOGON Command                _______ _____ _______
+
+        SYNTAX:  DISPLAY LOGON [line] [stations](cr)
+
+        ABBREVIATED SYNTAX:  D LOGON [line] [stations](cr)
+
+             This command display PVC logon  information  for  lines  and
+        stations.  If the station number is omitted, then PVC information
+        for all stations on the line is displayed.  If the line number is
+        omitted, then all PVC information is displayed, including:
+SDLC Interface Reference Manual                                   Page 63
+
+
+         o LINE #     line number
+         o STN #      station number
+         o CU_ADDR    physical control unit address
+         o MAP_ADDR   mapping control unit address
+         o USER-NAME  username
+         o HOST-ID    host number
+         o PASSWORD   password
+         o DLN        destination line number
+
+
+        3.4.2.5 DISPLAY EIA Command or DISPLAY RSC Command                _______ ___ _______ __ _______ ___ _______
+
+        SYNTAX:  DISPLAY EIA (or RSC) [line](cr)
+
+        ABBREVIATED SYNTAX:  D EIA (or RSC) [line](cr)
+             This command display EIA RS-232-C exectrical signal status -
+        on  or  off - for lines.  If the line number is omitted, then the
+        EIA/RSC-232-C information for all the lines within this  slot  is
+        displayed, including:
+
+         o  LINE =    line number
+         o  DTR =     Data Terminal Ready (DTR) signal = ON or OFF
+         o  DSR =     Data Set Ready (DSR) signal = ON or OFF
+         o  RTS =     Request To Send (RTS) signal = ON or OFF
+         o  CTS =     Clear To Send (CTS) signal = ON or OFF
+         o  TX  =     Transmit Data = ON or OFF
+         o  RX  =     Receive Data = ON or OFF
+
+
+        3.4.2.6 DISPLAY PARAMETER Command                _______ _________ _______
+
+        SYNTAX:  DISPLAY PARAMETER(cr)
+
+        ABBREVIATED SYNTAX:  D P(cr)
+             This command displays the values of  the  internal  function
+        parameters  of  this  slot  monitor.   Currently, the displayable
+        parameters are as follows:
+
+        o REFRESH refresh mode is either ON or OFF
+
+        o INTERVAL the current setting for the refresh interval
+
+
+        3.4.3 SHUT Command              ____ _______
+
+        SYNTAX:  SHUT [line] [station](cr)
+
+             This command is used to shut a station on a particular line.
+        If  no station is specified then all stations on a line are shut.
+        If no line is specified then all stations on all lines are shut.
+
+
+        3.4.4 RSHUT Command              _____ _______
+SDLC Interface Reference Manual                                   Page 64
+
+
+        SYNTAX:  RSHUT [line] [station](cr)
+
+             This command is used  to  remove  a  shut  station.   If  no
+        station is specified then all shut stations on the specified line
+        are activated.  If no line is specified then all shut stations on
+        all lines are activated.
+
+
+        3.4.5 CHANGE Commands              ______ ________
+
+
+        3.4.5.1 CHANGE LOGON Command                ______ _____ _______
+
+        SYNTAX:  CHANGE LOGON [line] [station](cr)
+
+        ABBREVIATED SYNTAX:  C L [line] [station](cr)
+
+             This command is used to change the PVC logon information for
+        a  particular  station.   The  line  and  station  number must be
+        specified.  Once the command is executed, the system monitor will
+        display  the  current  logon  information (see DISPLAY LOGON) and
+        prompt for the new logon string  records.   The  format  of  each
+        logon string record is:  USERID:HOST ;PASSWORD or USERID:HOST  or
+        USERID.  For logon going through gateways, the appropriate number
+        of  logon  string records must be entered.  Once this information
+        is entered,  the  system  monitor  will  display  the  new  logon
+        information.
+
+
+        3.4.5.2 CHANGE STATION POLLING ADDRESS Command                ______ _______ _______ _______ _______
+
+        SYNTAX:  CHANGE ADDR [line] [station] [address](cr)
+
+        ABBREVIATED SYNTAX:  C A [line] [station] [address](cr)
+             This command is used to assign a new polling address  for  a
+        station  on  a  link.  The address must be entered in hexadecimal
+        format.
+
+        The same interface port can be connected  to  different  external
+        system  (but  the primary/secondary stations relationship must be
+        still      preserved)      without      re-assembling       (i.e.
+        re-system-generation) of the slot code.
+
+
+        3.4.5.3 CHANGE LOGON DESTINATION STATION's ADDRESS Command                ______ _____ ___________ _________ _______ _______
+
+        SYNTAX:  CHANGE DADDR [line] [station] [address](cr)
+
+        ABBREVIATED SYNTAX:  C DA [line] [station] [address](cr)
+
+             This command is used to assign  a  new  destination  station
+        address  for  a particular station.  This information is required
+        after the PVC is  built  from  the  originate  interface  to  the
+        destination interface to attach the PVC to the desired station on
+        the  destination  interface,  especially  when  the   PVC   logon
+SDLC Interface Reference Manual                                   Page 65
+
+
+        information is changed and a different destination port which may
+        have a different station address is desired.
+
+        The line and station number must be specified.  The address  must
+        be entered in hexadecimal format.
+
+
+        3.4.5.4 CHANGE LOGON DESTINATION LINE Command                ______ _____ ___________ ____ _______
+
+        SYNTAX:  CHANGE DLINE [line] [station] [desti.  line](cr)
+
+        ABBREVIATED SYNTAX:  C DL [line] [station] [dest.  line](cr)
+
+             This command is used to assign a new destination line for  a
+        particular  station.   This information is required after the PVC
+        is  built  from  the  originate  interface  to  the   destination
+        interface  to  attach  the  PVC  to  the  desired  station  on  a
+        particular line on the destination interface, especially when the
+        PVC logon information is changed and a different destination port
+        which may be associated with a particular line is desired.
+
+        The line and station number must be specified.   The  destination
+        line   must be entered in hexadecimal format.
+
+
+        3.4.5.5 CHANGE WINDOW Command                ______ ______ _______
+
+        SYNTAX:  CHANGE WINDOW [line] [value](cr)
+
+        ABBREVIATED SYNTAX:  C W [line] [value](cr)
+
+             This command can be used to change  the  outstanding  window
+        frame  size to a value less than or equal to the sysgen parameter
+        value.  The line number must be specified.  Once the  command  is
+        entered,  the  system  monitor  will  display  the new value (see
+        DISPLAY CONFIG).
+
+
+        3.4.5.6 CHANGE MAXFRAME Command                ______ ________ _______
+
+        SYNTAX:  CHANGE MAXFRAME [line] [value](cr)
+
+        ABBREVIATED SYNTAX:  C M [line] [value](cr)
+
+             This command is used to change the maximum frame size  on  a
+        particular line.  The new value must be less than or equal to the
+        sysgen parameter value.  The line number must be specified.  Once
+        the  command  is entered, the system monitor will display the new
+        value (see DISPLAY CONFIG).
+
+
+        3.4.6 EXIT Command              ____ _______
+
+        SYNTAX:  EXI(cr), EXIT(cr), or BYE(cr)
+SDLC Interface Reference Manual                                   Page 66
+
+
+             This command is used to log  off  from  the  SDLC  interface
+        system monitor.
+
+
+        3.4.7 REFRESH Command              _______ _______
+
+        SYNTAX:  REFRESH [ON][OFF](cr)
+             or REFRESH [MIN]/[SEC] [value](cr)
+
+             This command  controls  whether  the  current  display  will
+        refresh  with  new  information  automatically,  according to the
+        amount of time specified in the sysgen  parameter.   The  refresh
+        interval  can  also  be modified by using the second format.  The
+        [MIN] can be used to set up interval with units in minutes.   The
+        [SEC] can be used to set up interval with units in seconds.  Both
+        accept positiva intergers as the value  of  refresh  interval  in
+        minutes or seconds respectively.  Entering REFRESH OFF suppresses
+        automatic updating of information.
+
+
+        3.4.8 LOGTABLE Command              ________ _______
+
+        SYNTAX:  LOGTABLE(cr)
+
+             This command is used to display the contents of the slot log
+        file.   The  slot  log  file contains exceptional events occurred
+        since the slot initially started.  The information displayed from
+        this slot log file includes:
+
+         o  time
+         o  PRODID (for SDLC , 70 in decimal)
+         o  event code
+         o  other information
+         o  simple explaination text
+
+
+        3.4.9 WHO Command              ___ _______
+
+        SYNTAX:  WHO(cr)
+
+             This command is used to display those user's names that  are
+        authorized  to log into this slot monitor host.  Each name listed
+        on the display  is  marked  with  proper  character  to  indicate
+        whether this user is currently login into this monitor.
+
+
+        3.5 Extended DDT Commands            ________ ___ ________
+
+
+        3.5.1 Logging into Extended DDT              _______ ____ ________ ___
+
+        SYNTAX:  ::?STATUS (cr)
+
+             The SDLC Extended DDT is similar to Extended DDT packages in
+        other interfaces.  The user must first log intoDDT before issuing
+SDLC Interface Reference Manual                                   Page 67
+
+
+        the Extended DDT command '::?STATUS'.  Once this command has been
+        entered,  the acknowledgement header will be displayed along with
+        the Extended DDT prompt ':>'.
+
+             For a display of all possible  commands  available  at  this
+        point,  the  user  need  only  type in '::?' or '::HELP'.  Before
+        entering any of the menu commands, '::' must be typed in first.
+
+
+        3.5.2 Extended DDT Display Ring Commands               ________ ___ _______ ____ ________
+
+        The commands used to display ISIS Input and Output Rings  are  as
+        follows:
+
+            ::DIR <ARG>      Display Dispatcher Input Ring from the
+                             starting address <ARG>, or if no <ARG>
+                             is defined display starts from the begin-
+                             ning of the ring.
+
+            ::DOR <ARG>      Display Dispatcher Output Ring from the
+                             starting address <ARG>, or if no <ARG>
+                             is defined display starts from the begin-
+                             ning of the ring.
+
+            ::DR             Display Dispatcher Input and Output rings
+                             continuously, until user types in `\`.
+
+
+        3.5.3 Extended DDT Symbol Address Display              ________ ___ ______ _______ _______
+
+        Some symbol addresses, commonly needed for testing purposes,  are
+        available using the following command:
+
+        ::SYM Prints a list of symbol addresses, such as IRING and ORING.
+
+
+        3.5.4 Extended DDT Real Time SDLC Line Display              ________ ___ ____ ____ ____ ____ _______
+
+        The SCOPE command is used to  display  real  time  SDLC  protocol
+        information,  being  both  transmitted  and  received on any user
+        defined line.  The format for this command is as follows:
+
+            ::SCOPE <ARG>    Display transmit and receive SDLC protocol
+                             information for the line specified by
+                             <ARG>. To stop the continuous display type
+                             in `\`.
+
+SDLC Interface Reference Manual                                   Page 68
+
+
+            Example Display:
+
+            ::SCOPE 1
+
+            **********PRIMARY LINE**********
+            MNE          ADDRESS    CONTROL
+            X SNRM         40         93
+            R UA           40         73
+            X RR           40         11
+            R INF          40         10
+            * R SNRM       40         93
+
+        If the line defined by <ARG> in the SCOPE command is defined as a
+        primary  line  in  the  TYMFILE  the header will appear as in the
+        example.  For a secondary line the header will display  SECONDARY
+        LINE instead of PRIMARY LINE.
+
+        The first field of the display  is  for  the  SDLC  mneumonic.The
+        prefix  of X indicates transmit frame, prefix R indicates receive
+        frame, and an * prefix indicates this frame does not  follow  the
+        SDLC  protocol.   In  the  example, the last frame is `* R SNRM`.
+        This is an error, because a secondary station is never suppose to
+        transmit command frames to the primary station.
+
+
+        3.5.5 Extended DDT Menu Display              ________ ___ ____ _______
+
+        There are two commands available to display the menu of  possible
+        Extended DDT commands:  skip 1
+            ::?         Display menu of commands
+
+            ::HELP      Display menu of commands
+
+
+        3.5.6 Terminate Extended DDT Mode              _________ ________ ___ ____
+
+        The user can either terminate Extended DDT by logging off, or  by
+        returning to operator monitor.
+
+            ::Q        Return to DDT
+
+            ::ZZ       Log Off
+
+            ::EXI      Log Off
+SDLC Interface Reference Manual                                   Page 69
+
+
+        SECTION 4.0 Generation        _______ ___ __________
+
+
+             Generation of a TYMNET SDLC interface requires configuration
+        and  loading  of the primary and secondary port interfaces.  Note
+        that a single TYMNET  SDLC  interface  can  support  any  mix  of
+        primary and secondary ports, up to a maximum of 16 ports.  Before
+        an interface can be loaded into a job slot on an ISIS  node,  its
+        operating    environment   must   be   defined.    The   detailed
+        configuration of a TYMNET SDLC  interface  is  specified  in  the
+        Tymfile.   For  the detailed configuration specifications, please
+        refer to the TYMNET SDLC SYSGEN Reference Manual.                     ______ ____ ______ _________ ______
+
+
+        4.1 Requirements            ____________
+
+
+        4.1.1 SOFTWARE              ________
+
+             The TYMNET SDLC interface runs under ISIS and is  compatible
+        with either TYMNET-I or TYMNET-II network nodes.
+SDLC Interface Reference Manual                                   Page 70
+
+
+        4.1.2 HARDWARE              ________
+
+
+        4.1.2.1 SIO                ___
+
+             The SDLC interface runs in a standard TYMNET ENGINE with  at
+        least  one  SIO  mother  board  and  one  daughter  board (either
+        RS-232-C/V.24  or  V.35).   Each  daughter  board  provides   two
+        physical  ports.   The  formula  for  determining  the  number of
+        daughterboards required is:
+
+             ( Number of SDLC ports + 1) / 2
+
+             The formula  for  determining  the  number  of  motherboards
+        required for ports with line speeds up to 9.6 kb is:
+
+             ( Number of SDLC ports + 15) / 16
+
+             Any fractions resulting from the divisions are discarded and
+        the whole number result is used.
+
+             The Node should be configured so that both physical ports on
+        a  particular daughter board are used by the same slot.  In other
+        words, two different slots may not share the same daughter board.
+
+             In order to handle frame sizes greater than 4K, the daughter
+        baord  must  contain  micro code version E or later.  To use this
+        new code for frame sizes greater than 4K, the slot must  use  the
+        proper  macro  values.   Since,  PUT4  to  PUT4  flows use frames
+        greater  than  4K,  see  the  section  on  PUT4  to  PUT4  system
+        generation for correct macro values.
+
+
+        4.1.2.2 Memory Size                ______ ____
+
+             The memory size for a particular SDLC interface is  composed
+        of  three elements:  basic memory size, SIO buffer size, and size
+        of  Bufferlet  storage.   The  basic  memory  required  for   the
+        interface is:
+
+            o  48k bytes if Secondary SDLC Ports only
+            o  48k bytes if Primary SDLC Ports only
+            o  51k bytes if mixed Primary and Secondary SDLC ports
+
+             In addition  to  the  basic  memory,  additional  memory  is
+        required  for  SIO  buffers  for  each  Port.   The  formula  for
+        calculating SIO buffer storage size for each Port is:
+
+             (MFMSZn * 16) + 1k
+
+             Where MFMSZn = maximum frame size for Port n.  Buffer  space
+        is  also  required for bufferlets and command lists.  The formula
+        for calculating each Port's bufferlet allocation is:
+
+             BBQAn = ((MFMSZn + (BBFLSZ-1)) / BBFLSZ ) * FRMQA
+SDLC Interface Reference Manual                                   Page 71
+
+
+             Resulting fractions are discarded.  And
+             BBQAn = number of bufferlets allocated for Port n
+             BBFLSZ = bufferlet size
+             MFMSZn = maximum frame size for Port n
+             FRMQA = frame quota allowed.
+
+             Additional bufferlets are required for the  System  monitor.
+        The  total  number of bufferlets required in an SDLC interface is
+        given by the formula:
+
+             NBBFLT = (2 * (sum of (BBQAn * NMSTNn))) + (MONPRT * MONBQA)
+
+             Where
+                  BBFLT = total number of bufferlets allocated
+                  BBQAn = bufferlets allocated for Port n
+                  NMSTNn = maximum number of stations on port n
+                  MONBQA = bufferlet quota for the System monitor
+                  MONPRT = number of System monitor ports
+
+             The sum of each Port's allocation must be added together.
+
+
+             The final formula for bufferlet size calculation is:
+
+             (NBBFLT * BBFLSZ) + (NBBFLT * CMDSIZ)
+
+             Where
+                  NBBFLT = total number of bufferlets allocated
+                  BBFLSZ = bufferlet size
+                  CMDSIZ = size of the command links
+                           If (NBBFLT * BBFLSZ) < 64k then CMDSIZ = 6,
+                           otherwise CMDSIZ = 8.
+
+
+             Default values for various parameters are:
+
+                         o  BBFLSZ = 140
+                         o  FRMQA  = 10
+                         o  MONPRT = 1
+                         o  MONBQA = 10
+                         o  MFMSZn = 270
+SDLC Interface Reference Manual                                   Page 72
+
+
+        4.2 Primary Ports            _______ _____
+
+
+             To generate a primary port on the TYMNET SDLC interface  the
+        following information must be specified.
+
+            o  The  type  of   data   link,   multipoint,   half   duplex
+               point-to-point, or full duplex point-to-point.
+
+            o  The addresses of all secondary stations on the link.
+
+            o  The slow poll list activation rate
+
+            o  Length of non-productive receive timeout.
+
+            o  Maximum number of error retries.
+
+
+        4.3 Secondary Ports            _________ _____
+
+
+             To generate a secondary port on a TYMNET SDLC interface  the
+        following information must be specified.
+
+            o  The  type  of   data   link,   multipoint,   half   duplex
+               point-to-point, or full duplex point-to-point.
+
+            o  The  addresses  of  all  devices  the  secondary  port  is
+               handling.
+
+
+        4.4 PUT4 to PUT4 System Generation            ____ __ ____ ______ __________
+
+
+        When using the SDLC Interfaces between a PUT4 and PUT4, the  SSCP
+        sending  an  XID frame with an information field describing it as
+        primary is connected  to  the  SDLC  secondary  port.   The  SSCP
+        sending  an  XID  with  an  information  field describing it as a
+        secondary station, must be connected to the  SDLC  primary  port.
+        The  system programmer should know which SSCP (PUT4) is set up as
+        DLC primary and which is DLC secondary.  This information may  be
+        obtained  from  byte  31  (bits 2-3) in the XID information field
+        (see IBM Format and Protocol Reference Manual).             ___ ______ ___ ________ _________ ______
+
+        Some PUT4 to PUT4 configurations, use frame  sizes  greater  than
+        4K.   If  this  is  the  case,  the  SIO must be using micro code
+        version E or later.  Bytes 11-12 in  the  XID  information  field
+        describe  the  maximum  frame  size  (see IBM Format and Protocol                                                  ___ ______ ___ ________
+        Reference Manual).          _________ ______
+
+        To use the micro code version E or later, three macros need to be
+        adjusted correctly.
+
+        1.  SIONVR(YES) - This macro will enable the software to  support
+            the micro code.
+SDLC Interface Reference Manual                                   Page 73
+
+
+        2.  FRAMESIZE(max.  size in bytes) - This value must be equal  to
+            the maximum PIU size (found in the XID info.  field).
+
+        3.  RCVSIOFR(  of RCV frames)  This value must be reduced so that
+            the room needed to hold SO RCV frames and SIO XMT frames does
+            not exceed 1 segment (64K).
+
+            If the  maximum  frame  size  is  <  4K  this  macro  is  not
+            necessary,  because  with  this  frame size, 1 segment is not
+            exceeded.
+
+               Example:  8 SIO RCV frames
+                       + 8 SIO XMT frames
+                       --------
+                        16 SIO total frames
+
+                        64 K divided by 16 frames = 4 K max. per frame
+
+            If the maximum frame size is 4K it is  neccessary  to  reduce
+            the  number  of  SIO  RCV  frames  so  that  1 segment is not
+            exceeded.
+
+               Example:  2 SIO RCV frames       RCVSIOFR(2)
+                       + 8 SIO XMT frames
+                       -------
+                       10 SIO total frames
+
+                       64 K divided by 10 frames = 6.4 max. per frame
+SDLC Interface Reference Manual                                   Page 74
+
+
+            SECTION 5.0 External Support            _______ ___ ________ _______
+
+
+            5.1 Hosts                _____
+
+
+                 The following table is a summary of host software  which
+            the TYMNET SDLC interface is compatible with.
+
+
+            ========================================================
+            | System     | Programs   | RJE        | Program       |
+            | Control    |            | Subsystems | Products      |
+            --------------------------------------------------------
+            | DOS/VS(E)  | NCP/VS     | POWER/VSE  | ACF/NCP/VS    |
+            |            | VTAM       |            | ACF/VTAM      |
+            |            |            |            | CICS/VS       |
+            |            |            |            | EXTM          |
+            |            |            |            | ACF/VTAME     |
+            --------------------------------------------------------
+            | OS/VS1     | NCP/VS     | RES        | ACF/NCP/VS    |
+            |            | VTAM       | JES        | ACF/VTAM      |
+            |            | TCAM       |            | ACF/TCAM
+            |            |            |            | CICS/VS       |
+            |            |            |            | IMS/VS        |
+            --------------------------------------------------------
+            | MVS        | NCP/VS     | JES2       | ACF/NCP/VS    |
+            |            | VTAM       | JES3       | ACF/VTAM      |
+            |            | TCAM       |            | ACF/TCAM      |
+            |            |            |            | TSO ACF/TCAM  |
+            |            |            |            | TSO ACF/VTAM  |
+            |            |            |            | CICS/VS       |
+            |            |            |            | IMS/VS        |
+            |            |            |            | JES2NJE      |
+            |            |            |            | JES3/NJP      |
+            |            |            |            | JES3/RJP      |
+            ========================================================
+SDLC Interface Reference Manual                                   Page 75
+
+
+        5.2 Terminals            _________
+
+
+             The TYMNET SDLC primary interface is  compatible  with  3270
+        terminal  equipment  and  3770  communication  terminals.  TYMNET
+        representatives should be consulted to  verify  compatibility  of
+        specific non-IBM devices.  Compatible IBM devices are:
+
+
+        ================================================================
+        |                          |                                   |
+        |     3271-11,12           |       Control Unit                |
+        |     3274-1C              |       Control Unit                |
+        |     3275-11,12           |       Control Unit                |
+        |     3276-1,2,3,4         |       Control Unit Display Station|
+        |     3276-11,12,13,14     |       Control Unit Display Station|
+        |                          |                                   |
+        ----------------------------------------------------------------
+        |                          |                                   |
+        |     360X                 |       Application Terminals       |
+        |                          |                                   |
+        ----------------------------------------------------------------
+        |                          |                                   |
+        |     3771-1,2,3           |       Communication Terminal      |
+        |     3774-p1,p2           |       Communication Terminal      |
+        |     3775-p1              |       Communication Terminal      |
+        |     3776-1,2,3,4         |       Communication Terminal      |
+        |     3777-1,3             |       Communication Terminal      |
+        |                          |                                   |
+        ----------------------------------------------------------------
+        |                          |                                   |
+        |     8775                 |       Control Unit Display        |
+        |                          |                                   |
+        ================================================================
+
+
+        5.3 Systems            _______
+
+
+             TYMNET SDLC Primary and Secondary interface ports  are  also
+        compatible  with  a  variety  of  IBM  computer systems operating
+        either as Primary Stations or Secondary Stations on a  particular
+        link.  These systems include:
+
+
+                         o    SERIES-1
+                         o    System 32
+                         o    System 34
+                         o    System 38
+                         o    8100
+                         o    3705
+
+
+SDLC Interface Reference Manual                                   Page 76
+
+
+        5.4 Modem Connection            _____ __________
+
+
+             The circuit connections  and  external  hardware  needed  to
+        connect  a  secondary  port  to  a  host  or  a primary port to a
+        terminal(s) is given below.
+
+
+
+
+             --------        --------        --------        --------
+             |      |        |      |        |      |        |      |
+             | E    | 7    7 |    M |        | M    | 7    7 |    H |
+             | N  SG|--------|SG  O |        | O  SG|--------|SG  O |
+             | G    | 2    2 |    D |        | D    | 3    3 |    S |
+             | I TXD|------->|TXD E |========| E RXD|------->|RXD T |
+             | N    | 3    3 |    M |        | M    | 2    2 |      |
+             | E RXD|<-------|RXD   |========|   TXD|<-------|TXD O |
+             |      | 4    4 |    O |        | O    | 4    4 |    R |
+             |   RTS|------->|RTS R |        | R RTS|<-------|RTS   |
+             |      | 5    5 |      |        |      | 5    5 |    T |
+             |   CTS|<-------|CTS L |        | L CTS|------->|CTS E |
+             |      | 20  20 |    D |        | D    | 20  20 |    R |
+             |   DTR|------->|DTR M |        | M DTR|<-------|DTR M |
+             |      | 6    6 |      |        |      | 6    6 |    I |
+             |   DSR|<-------|DSR   |        |   DSR|------->|DSR N |
+             |      | 15  15 |      |        |      | 15  15 |    A |
+             |   TXC|<-------|TXC   |        |   TXC|------->|TXC L |
+             |      | 17  17 |      |        |      | 17  17 |      |
+             |   RXC|<-------|RXC   |        |   RXC|------->|RXC   |
+             |      |        |      |        |      |        |      |
+             --------        --------        --------        --------
+
+
+SDLC Interface Reference Manual                                   Page 77
+
+
+        5.5 Direct Connection            ______ __________
+
+
+             The circuit connections required for a direct connection
+        between
+        a secondary port and a host or a primary port and a terminal
+        for full duplex point-to-point applications are given below.
+
+
+
+
+                             --------        --------
+                             |      |        |      |
+                             | E    | 7    7 |    H |
+                             | N  SG|--------|SG  O |
+                             | G    | 2    3 |    S |
+                             | I TXD|------->|RXD T |
+                             | N    | 3    2 |      |
+                             | E RXD|<-------|TXD O |
+                             |      | 4    4 |    R |
+                             |   RTS|---  ---|RTS   |
+                             |      | 5|  |5 |    T |
+                             |   CTS|<--  -->|CTS E |
+                             |      | 20   6 |    R |
+                             |   DTR|------->|DSR M |
+                             |      | 6   20 |    I |
+                             |   DSR|<-------|DTR N |
+                             |      | 15  15 |    A |
+                             |   INT|------->|TXC L |
+                             |      | 17  17 |      |
+                             |   INT|------->|RXC   |
+                             |      |        |      |
+                             --------        --------
+
+
+
+
+
+
+             Note that the TYMNET engine can supply TXC  and  RXC  clocks
+        from its internal 8000 Hz clock.
+SDLC Interface Reference Manual                                   Page 78
+
+
+        5.6 Optional Connection for Multipoint Links            ________ __________ ___ __________ _____
+
+
+             On non-switched multipoint  links  an  additional  level  of
+        diagnostic  information can be provided by supplying DCD into the
+        DSR input.  It is then possible to detect a streaming terminal on
+        the  link by monitoring the DSR (now DCD) signal when the port is
+        in an inactive state.
+
+
+
+
+                             --------        --------
+                             |      |        |      |
+                             | E    | 6    8 |    H |
+                             | N DSR|<-------|DCD O |
+                             | G    |        |    S |
+                             | I    |        |    T |
+                             | N    |        |      |
+                             | E    |        |    O |
+                             |      |        |    R |
+                             |      |        |      |
+                             |      |        |    T |
+                             |      |        |    E |
+                             |      |        |    R |
+                             |      |        |    M |
+                             |      |        |      |
+                             --------        --------
+
+
+
+
+SDLC Interface Reference Manual                                   Page 79
+
+
+        Section 6.0 Crash Codes        _______ ___ _____ _____
+
+
+        The following is a list of all the possible hardware and software
+        crash codes used by the SDLC Interface.
+
+
+                          Hardware Crash Codes                          ________ _____ _____
+
+        Code in Hex  Reason for Crash
+        -----------  -------------------
+        00           Power failure
+        01           Manual restart
+        0E           Parity error
+        10           Dispatcher crash
+        11           Illegal instruction
+        12           Illegal SVC
+        13           System crash
+        14           Protection violation
+        15           Non-recoverable device check
+
+
+                          Software Crash Codes                          ________ _____ _____
+
+        Mneumonic   Code in Hex  Reason for Crash
+        ---------   -----------  -----------------------------------
+        CRDCB           20  Invalid port 0 message
+        CRINVO          21      Invalid output request
+        CRNOBF          22      No bufferlets available
+        CRMONT          23      Monitor table problem
+        CRNCMD          24      No command link found
+        CRICMD          25      Invalid output command
+        CRINVX          26      Invalid IIX dialect/global code
+        CRBCMD          27      Bad command list advance
+        CRCLLK          28      Command list locked
+        CRCLMT          29      Command list empty
+        CRINIC          2A      Invalid information frame
+                                counter(IC)
+        CRBRXC          2B      Invalid retransmission count
+        CRINVC          2C      Invalid virtual ckt mode
+        CRIHST          2D      Host unacceptable
+        CRIHSH          2E      Invalid handshaking state
+        CRIDQ           2F      Invalid data qualified packet
+        CRICTL          30      Invalid control code
+        CRIRNG          31      Bad ring data
+        CRIXD           32      Invalid non global IIX message
+        CRICKT          33      Invalid ckt state
+        CRDBUG          34      Crash caught by DEBUG switch
+        CRFTRC          35      Crash caught by FTRACE switch
+
+
+        For information on hardware  crash  codes  see  CRASH.LIB.   This
+        docuement  will  only  explain  the SDLC Interface software crash
+        codes.
+SDLC Interface Reference Manual                                   Page 80
+
+
+        Whenever the CRASH routine is called,  one  of  the  above  crash
+        codes is entered into the crash table.  A crash code of less than
+        20 hex, indicates a hardware crash.  Crash codes of  20  hex  and
+        greater indicate a software crash.
+
+
+        6.1 CRIPOM - Invalid port 0 message.
+
+              ISIS ring input routine ('INPUT') found a message for  port
+              zero  (Intra-ISIS message), with an invalid message subtype
+              number.  Intra-ISIS messages are formated as follows:
+
+
+                ---------.---------.--------.--------.--------.--------
+                |        0         |subtype | additional string
+                -------------------------------------------------------
+
+
+        6.2 CRNAR - No activation routine found.
+
+              ISIS ring input routine ('INPUT') found a data  message  or
+              control message (Inter-ISIS message), and crashed because a
+              parameter for input processing was found to be absent  from
+              the  Device  Control  Block ('DCBLKS').  Missing parameters
+              which will cause this crash are either no  data  activation
+              routine   ('ACTIVD'),   no   pointer   to  control  message
+              activation routine ('ACTIVC'), or no device  control  block
+              table offset in Port Table ('PORTAB').
+
+
+        6.3 CRINVN - Invalid needle received.
+
+              ISIS ring input routine ('INPUT') recieved a needle for  an
+              inactive  port.  Port was determined to be inactive because
+              the bit in Active Port bit array ('ACP'), for this port was
+              reset.
+
+
+        6.4 CRINVM - Invalid message received.
+
+              This  crash  will  occur  when  a  non  zero  port  message
+              (Inter-ISIS  message)  has  an  invalid  message type.  The
+              format for Inter-ISIS messages is as follows:
+
+
+                ---------.--------.--------.--------.--------.--------
+                |    RPORT        | M.TYPE | dependent on M.TYPE
+                ------------------------------------------------------
+
+
+        6.5 CRDCB - Device Control Block error.
+
+              This crash is caused by  an  invalid  entry  found  in  the
+              Device Control Block ('DCBLKS').  Currently this crash code
+              is entered into the crash  table  by  3  routines;   needle
+SDLC Interface Reference Manual                                   Page 81
+
+
+              input  handling  routine ('NACTIV'), release device control
+              block routine ('RELDCB'), and initialize LSDTAB ('INITAB').
+
+
+              'NACTIV' will use this crash code if trying to  get  a  new
+              device control block ('DCB'), but none are available.
+
+
+              'RELDCB' crashes when releasing a DCB chain, and  0  is  in
+              the chain.
+
+
+              'INITAB' crashes when trying to get a DCB to store  in  the
+              LSDTAB and none are available.
+
+
+        6.6 CRINVO - Invalid output request.
+
+              The only routine using  this  crash  code  is  the  invalid
+              output  request  routine  ('TRASH0').  This routine is only
+              called by the front end output routine, found in  FRNT.LIB.
+              The  Device Control Block initialization routine ('INIDCB')
+              stores 'TRASH0' in the DCB output activation routine  entry
+              ('ACTIVO').   The  only way 'TRASH0' is called by 'OUTPUT',
+              is if all of the  following  indicators  are  true  in  the
+              active port indicator ('ACP'):  data waiting ('OUTDAT'), no
+              back  pressure  ('TOISIS'),  and   not   already   serviced
+              ('PRTSVC').
+
+
+        6.7 CRNOBF - No bufferlets available.
+
+              CRNOBF crash code is entered, when the routine to get a big
+              bufferlet  ('GBB')  is  called  and  'GBB'  finds  none are
+              available.
+
+
+        6.8 CRMONT - Monitor table problem.
+
+              User has requested more monitor ports than are available in
+              monitor   table   ('MONTAB').    Activate  monitor  routine
+              ('ACTMON') cannot find an available space in  'MONTAB'  for
+              storing  the  ports  device  control  block address pointer
+              ('DCB').
+
+
+        6.9 CRNCMD - No command link found.
+
+              An SDLC output routine, either data  output  ('OUTDTA')  or
+              monitor  output  ('OUTMON')  routines, was called without a
+              command in the device control block ('DCBCMD' contained 0).
+
+
+        6.10 CRICMD - Invalid output command.
+SDLC Interface Reference Manual                                   Page 82
+
+
+              The SDLC output  routine  ('OUTDTA')  was  called  with  an
+              invalid   command   byte   in   the  device  control  block
+              ('DCBCMD').  The  only  valid  command  values  are  either
+              greater  than 0 to indicate the length of SDLC data frames,
+              or between minus 1 to minus 9 to indicate either  a  global
+              IIX  message  (-1) or SDLC end to end commands (i.e.  SNRM,
+              UA, DISC or RD, DM, RIM or SIM, XID, TEST, FRMR).
+
+
+        6.11 CRINVX - Invalid IIX message.
+
+              The input activation  routine  pointed  to  by  'ACTVD'  in
+              device  control block, finds an IIX message which is either
+              an illegal global message or dialect message.
+
+
+        6.12 CRBCMD - Bad command advance.
+
+
+
+        6.13 CRCLLK - Command list locked.
+
+
+
+        6.14 CRCLMT - Command list empty.
+
+
+
+        6.15 CRINIC - Invalid information counter.
+
+              This crash occurs when the  decrement  IC  counter  routine
+              ('DECIC'),  decrements the counter ('SCBIC') in the station
+              control block ('SCBLKS') to  a  negative  value.'DECIC'  is
+              called  whn a current transmit command is released, or when
+              a frame is transmitted by the protocol handler.
+
+
+        6.16 CRBRXC - Invalid retransmission counter.
+
+              The decrement retransmission  counter  routine  ('DECRXC'),
+              finds  the  counter  ('SCBRXC')  to  be 0.  This routine is
+              called by  the  retransmission  protocol  handler  routines
+              ('HPARXM'  or  'HSARXM').   The  crash  occurs  because the
+              retransmision flag in the 'RETXMT' bit array is  still  set
+              and the retransmission count is already 0.
+
+
+        6.17 CRINVC - Invalid virtual circuit mode.
+
+              The configuration table ('CFGTAB') has this line  specified
+              as  not a PVC ('LNPVC'=0), and system generation parameters
+              specify the interface as PVC only ('PVCONLY'=1).
+
+
+        6.18 CRIHST - Invalid host number.
+SDLC Interface Reference Manual                                   Page 83
+
+
+              During  the  port  0  message  input   processing   routine
+              ('POACTIV'), a port 0 host reject message has been received
+              from ISIS.
+
+
+        6.19 CRIHSH - Invalid handshaking state.  Call accept dialect IIX
+              message  is  received  by executing routine ('ID92M1'), for
+              SDLC PVC Dialect IIX message without being  in  the  proper
+              circuit state, i.e.  'LSDCST' in 'LSDTAB' < 'CTCLHS'.
+
+
+        6.20 CRIDQ - Invalid DQ packet.
+
+              A data or data qualified packet (C094)  was  received  with
+              the  Q  bit  set.   This indicates a DQ packet, however the
+              first information byte < 01.  The only acceptable value for
+              this byte in a DQ packet is 1.  The format for the data and
+              data qualified packet is as follows:
+
+
+
+              ------------------------------------------------------------
+                | C094 | Length | QDRRRRM | Information
+
+              ------------------------------------------------------------
+
+
+        6.21 CRICTL - Invalid control code.
+
+              The control code in the data qualified packet was  invalid.
+              See  description  6.20 for format of data qualified packet.
+              This  crash  occured  because  the  second  byte   of   the
+              information  field  contained an invalid SDLC control byte.
+              The only valid control bytes are 83 SNRM, 43  for  DISC  or
+              RD,  AF  for XID, E3 for TEST, 63 for UA, 0F for DM, 87 for
+              FRMR, 07 for RIM or SIM.
+
+
+        6.22 CRIRNG - Bad ring data.
+
+              The data qualified length bytes (see description  6.20  for
+              format)  are  not  equal  to  the  data  byte  count  (byte
+              following control byte) + 3 (address byte + M.TYPE  byte  +
+              control byte).
+
+
+        6.23 CRIXD - Invalid IIX global message.
+
+              The  received  global  IIX  message  did  not  start   with
+              hexadecimal 80.
+
+
+        6.24 CRICKT - Invalid circuit state.
+
+              This crash occured because circuit was not in terminal port
+SDLC Interface Reference Manual                                   Page 84
+
+
+              network   logon   ('CTNLG')   or  terminal  port  wait  for
+              pseudo-needle ('CTWPND') when the log on process timed  out
+              ('LGFAIL').
+
+
+        6.25 CRDBUG - Debug crash.
+
+              Crash caught by code assembled using DEBUG switch.
+
+
+        6.26 CRFTRC - Ftrace crash
+
+              Crash caught by code assembled using FTRACE switch.
+SDLC Interface Reference Manual                                   Page 85
+
+
+                                  INDEX                                  _____
+
+
+
+              Address limit  . . . . . . .  9
+              Address mapping  . . . . . .  48
+              Ascii code set . . . . . . .  7
+
+              Crash codes  . . . . . . . .  79
+
+              Data packet  . . . . . . . .  13, 56
+              Data packet (c094) . . . . .  42, 44-45
+              Data packets . . . . . . . .  55
+              Data qualified packet (c094)  42, 44-45
+              Data qualified packets . . .  54
+              Destination line . . . . . .  65
+              Destination station address   64
+              Device direct channel attachment  7
+              Dialect iix messages
+                 call accept . . . . . . .  52
+                 call user data  . . . . .  52
+
+              Eia signals
+                 data set ready (dsr)  . .  51
+                 data terminal ready (dtr)  51
+              End-to-end procedures  . . .  14
+              Error recovery
+                data loss conditions . . .  57
+                incorrect fcs  . . . . . .  57
+                incorrect ns . . . . . . .  57
+                p/f bit checkpointing  . .  57
+                primary port . . . . . . .  57
+                secondary ports  . . . . .  58
+              Extended ddt commands  . . .  66
+              Extended ddt commands
+                 display ring  . . . . . .  67
+                 exit ext. ddt . . . . . .  68
+                 logging into ext. ddt . .  66
+                 menu display  . . . . . .  68
+                 real time sdlc line display  67
+                 symbol addr display . . .  67
+
+              Frame size . . . . . . . . .  65
+              Frames
+                 frmr  . . . . . . . . . .  56
+                 ua  . . . . . . . . . . .  56
+                bcn  . . . . . . . . . . .  7
+                cfgr . . . . . . . . . . .  7
+                disc . . . . . . . . . . .  10
+                dm . . . . . . . . . . . .  10, 57
+                frmr . . . . . . . . . . .  10, 57
+                i  . . . . . . . . . . . .  10
+                rd . . . . . . . . . . . .  10
+                rej  . . . . . . . . . . .  10, 57-58
+                rnr  . . . . . . . . . . .  10
+                rr . . . . . . . . . . . .  10
+                snrm . . . . . . . . . . .  10
+                test . . . . . . . . . . .  10
+                ua . . . . . . . . . . . .  10
+                ui . . . . . . . . . . . .  7
+                up . . . . . . . . . . . .  7
+                xid  . . . . . . . . . . .  10
+              Frames
+                 disc  . . . . . . . . . .  21
+                 dm  . . . . . . . . . . .  20, 56
+                 frmr  . . . . . . . . . .  12, 23, 29
+                 i-frame . . . . . . . . .  29
+                 i-frames  . . . . . . . .  55
+                 rd  . . . . . . . . . . .  24, 56
+                 rej . . . . . . . . . . .  11
+                 rim . . . . . . . . . . .  16
+                 rnr . . . . . . . . . . .  11
+                 rr  . . . . . . . . . . .  11
+                 sim . . . . . . . . . . .  17
+                 snrm  . . . . . . . . . .  18, 54
+                 test  . . . . . . . . . .  27
+                 ua  . . . . . . . . . . .  22, 54
+                 xid . . . . . . . . . . .  25
+                disc . . . . . . . . . . .  56
+              Full duplex link . . . . . .  9
+
+              Global iix messages
+                 gateway reached dumb host (8083)  37
+                 gateway reached smart host (8082)  37
+                 normal logon status (8084)  37
+                 product id and version (8086)  37
+                 request product id and version (8087)  38
+                 resynchronize interface exchange (8085)  37
+                 select dialect  . . . . .  52
+                 select dialect command (8080)  37
+                 select dialect response .  52
+                 select dialect response (8081)  37
+
+              Half duplex link . . . . . .  9
+
+              Iix protocol . . . . . . . .  36
+              Iix protocol
+                 global iix messages . . .  37
+              Initialize physical lines  .  51
+              Inter-isis messages
+                 host status . . . . . . .  52
+                 logon char  . . . . . . .  52
+                 logon success . . . . . .  52
+                 needle  . . . . . . . . .  52
+                 pseudo-needle . . . . . .  52
+                 siix  . . . . . . . . . .  52
+                 tiix  . . . . . . . . . .  52
+              Inter-slot format and protocol  30
+              Internal clock . . . . . . .  8, 77
+              Intra-isis messages  . . . .  31
+              Intra-isis messages
+                 1-down (0e) . . . . . . .  33
+                 auxiliary circuit request (08)  32
+                 extended report host status  52
+                 extended report host status (10)  33
+                 host status   . . . . . .  52
+                 host unacceptable (0b)  .  32
+                 no supervisor (0d)  . . .  32
+                 pseudo-needle reject (09)  32
+                 pseudo-needle request . .  52
+                 pseudo-needle request (07)  32
+                 report accounting (05)  .  32
+                 report all hosts (0f) . .  33
+                 report host cost (0c) . .  32
+                 report host port availability (0a)  32
+                 report host status (04) .  32
+                 report to sup (03)  . . .  31
+                 restart-request (00)  . .  31
+                 restart-response (01) . .  31
+                 take over (02)  . . . . .  31
+                 tell host time (06) . . .  32
+              Isis control messages  . . .  34
+              Isis data messages . . . . .  34
+
+              Local procedures . . . . . .  11
+              Logical unit types . . . . .  5
+              Loop data link . . . . . . .  7
+
+              Ndm
+                support  . . . . . . . . .  5
+              Network services . . . . . .  46
+              Normal disconnect mode (ndm)  56
+              Normal disconnect mode (ndm)
+                 host interface  . . . . .  14
+                 terminal interface  . . .  15
+              Normal response mode (nrm) .  56
+              Normal response mode (nrm)
+                 host interface  . . . . .  15
+                 terminal interface  . . .  15
+              Nr . . . . . . . . . . . . .  12, 55
+              Nrm
+                support  . . . . . . . . .  5
+              Nrzi transmission coding . .  7
+              Ns . . . . . . . . . . . . .  12, 55
+
+              Operating characteristics  .  48
+              Operation scenarios  . . . .  50
+              Operation scenarios
+                 initialization  . . . . .  50
+                 pvc building  . . . . . .  50
+
+              P/f bit  . . . . . . . . . .  12, 55
+              Physical unit types  . . . .  5
+              Polling  . . . . . . . . . .  48
+              Polling address  . . . . . .  48, 64
+              PuT4 to puT4 . . . . . . . .  72
+              Pvc  . . . . . . . . . . . .  46, 50, 52, 62, 64
+
+              Rts control  . . . . . . . .  9
+
+              Sdlc iix dialect messages  .  39
+              Sdlc iix dialect messages
+                 call accept (c092)  . . .  41
+                 call user data (c089) . .  39
+                 called address (c087) . .  39
+                 calling address (c088)  .  39
+                 clear indication (c095) .  43
+                 data packet (c094)  . . .  42
+                 dialect level (c093)  . .  42
+                 facility (c08d) . . . . .  41
+                 interrupt (c08a)  . . . .  40
+                 interrupt confirmation (c08b)  40
+                 network utility (c08c)  .  41
+                 reset confirmation (c091)  41
+                 reset indication (c096) .  43
+              Split multipoint links . . .  47
+              Streaming terminal diagnostic  78
+              System monitor
+                 change logon command  . .  64
+                 change logon dest line cmd  65
+                 change logon dest stat addr cmd  64
+                 change maxframe cmd . . .  65
+                 change stat poll addr cmd  64
+                 change window cmd . . . .  65
+                 display config command  .  60
+                 display eia or rsc command  63
+                 display host command  . .  60
+                 display logon command . .  62
+                 display parameter command  63
+                 display stat command  . .  61
+                 exit cmd  . . . . . . . .  65
+                 logging into monitor  . .  59
+                 logtable cmd  . . . . . .  66
+                 refresh cmd . . . . . . .  66
+                 rshut command   . . . . .  63
+                 shut command  . . . . . .  63
+                 who command . . . . . . .  66
+
+              Window size  . . . . . . . .  65
+
+
+     dv
