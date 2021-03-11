@@ -1,0 +1,407 @@
+                           TYMNET / MEMO
+
+TO:       Local Access Engineers               COPIES: Jeannette Weisinger
+FROM:     Edsel Garciamendez Budar                     Ron Kowalka
+          Louise Kennefick                             Steve Poppe
+DATE:     November 14, 1985                              
+SUBJECT:  Traffic Forecast Documentation
+
+                                               NEW [X]  SUPERCEDES [ ]
+
+
+NETWORK ENGINEERING MANAGER APPROVAL _________________ 
+
+
+OBJECTIVE:
+
+To produce a forecast for the average connect-hours per business day
+in each one of our rotaries. The forecast method used is Exponential
+Smoothing with trend algorithm. The forecast will be useful to engineer 
+our rotaries properly for future growth, by making use of historical
+traffic information.
+
+
+KEY DEFINITIONS:
+
+1. Exponential Smoothing = Forecasting method in which the most recent
+                           data points are weighted heavier than
+                           the older data points; each data point is
+                           assigned a weight in an exponential manner.
+
+2. Constant Growth = Forecasting method where the current traffic in a
+                     rotary is grown by a chosen fixed percentage.
+
+3. Linear Regression = Forecasting method in which all data points are
+                       fitted into a straight line that minimizes the
+                       squared error.
+
+4. Slope = The angle of incline of a line between two points.
+           It represents the average increase of connect-hours per month
+           in a rotary.
+
+5. `B' Intercept = The point where a line between two points
+                   crosses on the Y-axis. It represents the starting
+                   traffic level at the beginning of the rotary life.
+
+6. Forecasting Horizon = the future period of time for which a 
+                         connect-hours forecast is desired. 
+                         
+
+REFERENCES:
+
+1. Presentation to Network Engineering by Edsel Garciamendez Budar
+   held on August 2, 1985.
+
+2. Hillier and Lieberman. Introduction to Operations Research. Third Edition.
+   Holden-Day. 1980.
+
+3. Hines and Montgomery. Probability and Statistics in Engineering and
+   Management Science. Second Edition. John Wiley and Sons. 1980.
+
+4. Statistical Validation of the Rotary Forecast.  Edsel Garciamendez
+   Budar. (to be published November 22, 1985)
+
+5. Analysis of an Economic Order Quantity (EOQ) Model for Local
+   Rotaries.  Jason Ma.  May 3, 1985.
+
+
+
+TABLES: none.
+
+
+STATEMENT OF GUIDELINE:
+
+To obtain an estimate of the number of connect-hours per business day in
+a future month for each specific local access rotary in the network. 
+
+ASSUMPTIONS USED:
+
+1. Historical data points are reliable.
+
+2. Average connect-hours per business day in each month
+   represents accurately the activity of a rotary.
+
+3. Exponential smoothing with trend algorithm is a statistically reliable
+   forecasting method.
+
+4. Short forecasting horizon (less than a year) yields accurate results.
+
+5. Forecasts are done at both the city or rotary level.
+
+
+PROCEDURE:
+  
+
+Follow the 5 steps described in this procedure. Please refer to the
+EXAMPLE at the end of this procedure.
+
+
+1) OBTAIN HISTORICAL DATA
+
+
+   i.    Get into the PGRADE directory, system 28 and
+         run MAGNUM ROTARY.PGRADE.
+
+   ii.   At the prompt, type RUN CONNECT.HISTORY.REPORT.  This report
+         will create historical data for a specified number of months.
+         You will need to determine the starting and ending months for 
+         the historical data desired. The earliest starting date for
+         which data is available is March 1, 1983. The maximum number
+         of months that you can specify is 36 months. For example, if
+         you specify 3/01/83 as your starting date, the maximum ending
+         date will be 2/28/86. Input notation is YYMMDD. When prompted,
+         indicate that the report should be sorted by CITY. The HISTORY
+         program takes about 25 minutes to run. The program FRCST.FTF
+         uses this report as input.
+
+    iii. At the prompt, type QUIT. The output file name will be
+         HISTRY.CNT.  You will need to rename or copy HISTRY.CNT to the
+         filename HISTRY.DMI.
+
+
+2) CLEAN DATA
+
+
+      i. The next step is to load the HISTRY.DMI into a X22 database.
+         Run 1022 and at the asterisk type, LOAD HISTRY and then
+         carriage return. At the next asterisk prompt type 
+         USE (MSANAL)HISTRY.DMC and carriage return. The system
+         will modify the HISTRY database, which takes about 15 minutes.
+
+    ii. At the asterisk prompt, type QUIT. The output file name will be
+        (PGRADE)HSTRY1.CNT.
+
+
+3) OBTAIN FORECASTS USING THE FRCST.FTF PROGRAM
+
+
+     i. Execute the program (PGRADE:28)FRCST.FTF. It will provide you 
+        with a forecast of the average daily connect-hours per rotary,
+        or per city. The connect-hours per city will incorporate both 
+        the 1200 and 2400 baud rotaries' data into one rotary for that
+        city. Connect-hours per rotary will keep the 1200 and 2400
+        rotaries' data separated for that city. 
+
+    ii. The FRCST.FTF program provides you with default parameters. It 
+        will use these default parameters if you specify "N" for
+        inputting your own parameters. If you want to specify your 
+        own parameters, specify "Y" and the program will prompt you
+        for each parameter input. After specifying the parameters desired,
+        the program will run and finish without any more user input.
+        The program takes a few minutes to run.
+
+
+4) ANALYZE THE OUTPUT FILES FRCST.DAT AND (MSANAL)ANALYS.DAT
+       
+   A. EXPLANATION OF FRCST.DAT
+
+     i. The FRCST.DAT output file will give an exponential smoothed value
+        of the average connect-hours for each rotary or city in a future
+        month. Use this value (last column) when running the PORTS program
+        to determine the number of asynchronous dial-up ports in a rotary.
+        (Do NOT use the DAILY.INF value). An asterisk by the rotary indicates
+        that there are not enough data points for a reliable forecast.
+
+         a) Explanation of Frcst.Dat columns
+
+           1. Historic Data - last monthly value of connect-hours per
+                              business day per rotary/city.
+           2. Constant Growth - forecast in which historic data is grown
+                                by a given percentage.   
+           3. Exponential Smoothing - forecast using historic data points
+                                      weighted in an exponential manner.
+	
+   B. EXPLANATION OF (MSANAL)ANALYS.DAT  [OPTIONAL]
+
+     i. The second output file, (MSANAL)ANALYS.DAT, gives results on
+        other forecasting methods used. Use this second output file
+        only if you are interested in the following information:
+
+          a) If you want to compare the forecast using Exponential Smoothing
+             method against other forecasting methods, please
+             look at the columns under the headings "ROTOR GROWTH" and
+             "LINEAR REGRESSION".
+
+          b) If you want to find out the average increase in daily connect-
+             hours per rotary/city per month, look at the column
+             under the heading "M=SLOPE".
+
+          c) If you want to find out the average monthly percent growth in
+             connect-hours per city/rotary, please look at the
+             last column under the heading "AVERAGE GROWTH %".
+
+      ii. The meaning of each column under this report is as follows:
+
+           1. Historic Data - last monthly value of connect-hours per
+                              business day per rotary/city.
+           2. Rotary Growth - forecast using average monthly growth 
+                              percentage for each rotary/city.
+           3. Linear Regression - forecast in which data points are
+                                  fitted into a straight line
+           4. B=Intercept - point where a straight line crosses the Y-axis
+           5. M=Slope - the angle of incline of a straight line
+           6. Ave. Growth % - average monthly growth percentage value
+                              for each rotary/city. This is the value
+                              used for the Rotary Growth Forecasting.
+
+
+    C. DISCREPANCIES IN THE OUTPUT FILES
+
+        If you find discrepancies on the spelling of city names, please
+        refer these city names to Edsel Garciamendez Budar. The
+        discrepancies will be entered into an error file program.
+        This program only assures that we gather connect-hours information
+        for cities/rotaries regardless of the different pilot number and
+        city name spellings throughout the existence of a local access
+        city/rotary.
+
+
+
+5) STOP.
+
+
+
+                              E X A M P L E
+                              =============
+
+NOTE: All User Input is Underlined.   
+START BY LOGGING INTO SYSTEM 28.
+
+
+-GFD PGRADE
+ ----------
+
+-MAGNUM ROTARY.PGRADE
+ --------------------
+7-NOV-1985   8:40:38
+NOTE: PGRADE AVAILABLE
+
+:RUN CONNECT.HISTORY.REPORT
+ --------------------------
+LOADING CONNECT.HISTORY.REPORT
+EXECUTION
+
+Enter beginning date for report (yymmdd): 830301
+                                          ------                            
+Enter ending date for report (yymmdd): 850731
+                                       ------ 
+Do you want this report sorted by:
+1. PILOT.PHONE
+2. CITY
+3. STATE
+Enter number: 2
+              -
+830301  1     
+830401  2
+830501  3
+.
+.
+.
+850601 28
+850701 29
+850801 30
+
+EXECUTION COMPLETED
+
+:QUIT
+ ----
+7-NOV-1985   8:46:58
+
+EXIT
+
+
+-COPY
+ ----
+FROM FILE: HISTRY.CNT
+           ---------
+TO: HISTRY.DMI
+    ---------- 
+
+-R 1022
+ ------
+11/7/85
+TYMSHARE System 1022A (114B)
+
+* LOAD HISTRY
+  -----------
+System 1022 Data Loading Program
+No errors on DESCRIPTION file
+915 records processed, 292 blocks written on phase 2
+processing keyed attributes:
+AREA (8 blocks, 124 values)
+PREF (12 blocks, 401 values)
+NUMB (16 blocks, 790 values)
+MODEM (3 blocks, 16 values)
+CITY (23 blocks, 561 values)
+62 blocks written on phase 3
+* USE (MSANAL)HISTRY.DMC
+  -----------------------
+FOUND.
+FOUND.
+FOUND.
+.
+.
+.
+694 RECS FOUND.
+10 RECS FOUND.
+40 RECS FOUND.
+FOUND.
+FOUND.
+908 RECS FOUND.
+* QUIT
+  ----
+
+EXIT
+
+
+-EXEC (PGRADE)FRCST.FTF
+ ----------------------
+LOADING
+EXECUTION
+
+
+   * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    WELCOME TO THE PROGRAM FRCST.FTF (2.0). IT WILL PROVIDE YOU 
+    WITH A FORECAST OF THE AVERAGE DAILY CONNECT-HOURS PER ROTARY/CITY.
+    YOU NEED TO CREATE THE FILE (PGRADE:28)HSTRY1.CNT UNDER
+    MAG ROTARY.PGRADE FOR 5-36 MONTHS BEFORE RUNNING THIS PROGRAM.
+    PLEASE TYPE IN AS NEEDED.
+    CONSULT (PGRADE)FRCST.DOC, OR EDSEL GARCIAMENDEZ BUDAR.
+
+
+  THE DEFAULT PARAMETERS ARE AS FOLLOWS:
+
+    ALPHA=  .2
+    BETA=   .2
+    NUMBER OF HISTORICAL MONTHS= 30
+    FUTURE MONTH TO FORECAST=IT(1)=  6
+    AVERAGE MONTHLY GROWTH RATE=G=%  3.44 ( 50.1 % ANNUALLY)
+    SEPARATED 1200 FROM 2400 BPS ROTARIES ? : Y
+    INPUT FILE NAME= (PGRADE)HSTRY1.CNT  
+    OUTPUT FILE NAME = FRCST.DAT           
+
+
+
+    WOULD YOU LIKE TO INPUT YOUR OWN PARAMETERS? Y/N: N
+                                                      -
+
+    HOLA. READING INPUT FILE...
+
+
+    MAXROT=  908   MAXSIT=  432
+                             CITY " 65"  CHARLOT SHOWS NO TRAFFIC.
+                             CITY "130"  FT SMIT SHOWS NO TRAFFIC.
+                             CITY "256"  NEW LON SHOWS NO TRAFFIC.
+                             CITY "278"  OAKLAND SHOWS NO TRAFFIC.
+                             CITY "325"  REDWOOD SHOWS NO TRAFFIC.
+                             CITY "342"  SALT LA SHOWS NO TRAFFIC.
+                             CITY "345"  SAN ANT SHOWS NO TRAFFIC.
+                             CITY "383"  STAMFOR SHOWS NO TRAFFIC.
+                             CITY "418"  WHITE P SHOWS NO TRAFFIC.
+
+    ..... COMPUTING FORECAST WITH FLAT GROWTH...
+
+    ..... COMPUTING LINEAR REGRESSION...
+
+    ..... COMPUTING EXPONENTIAL SMOOTHING VALUES.
+
+          THE OUTPUT FILE IS FRCST.DAT           
+          THE FILE WITH PARAMETERS IS (MSANAL)ANALYS.DAT ! GRACIAS!
+
+EXIT
+
+              E X A M P L E   O F   O U T P U T   F I L E S
+              =============================================
+
+
+
+-type (pgrade)frcst.dat
+ ----------------------
+
+ 
+     TRAFFIC FORECAST FOR EACH LOCAL ACCESS ROTOR IN CONNECT-HOURS
+               PER BUSINESS DAY FOR  6 MONTHS AHEAD.                8-Nov-85
+==============================================================================
+ 
+
+NUM  PILOT NUMBER NODE  DEN MODEM      CITY       HISTORIC CONSTNT. EXPNENT.
+                                                    DATA    GROWTH   SMOOTHNG
+===  ============ ===== === =====      ====       ======== ======== ========
+ 
+  1) 301/272-3800  2354 LFX 1200 ABERDE               8.50    10.41     9.66  
+  2) 216/535-1861  3111 PUB 1200 AKRON        OH     98.80   121.03   113.72  
+  3) 518/458-8300  3705 PUB 1200 ALBANY             173.10   212.05   188.12  
+  4) 505/242-8344  4212 PUB 1200 ALBUQURQUE         111.30   136.34   115.72  
+  5) 318/443-9544  1444 LFX 1200 ALEXAN       LA     11.30    13.84    14.00  
+  .
+  .
+  .
+ etc.
+
+
+-tty width 132 [COMPRESSED PRINTING]
+ -------------
+-type (msanal)analys.dat [OPTIONAL]
+ -----------------------
+ 
