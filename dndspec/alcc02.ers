@@ -1,0 +1,2115 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                    ALC-CMT
+
+
+
+                        External Reference Specification
+
+
+
+                               Filename: ALCC.ERS
+
+
+
+
+                     Integrated Communications Applications
+
+
+
+
+                          McDonnell Douglas Inc. - ISG
+
+
+
+                                   Revised by
+
+
+
+                                   M.M. Lewis
+
+
+
+
+                                 March 27, 1987
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          +------------------------------------------------------------+
+          |  TYMNET's proprietary rights are included in the infor-    |
+          |  mation disclosed herein.  The recipient, by receiving     |
+          |  this document, agrees that neither this document nor the  |
+          |  information disclosed herein nor any part thereof shall   |
+          |  be reproduced or transferred to other documents or used   |
+          |  or disclosed to others for manufacturing or for any other |
+          |  purpose except as specifically authorized in writing by   |
+          |  TYMNET.                                                   |
+          +------------------------------------------------------------+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            SECTION 1. INTRODUCTION
+
+
+
+
+          1.1.  PURPOSE
+          _____________
+
+          The purpose of this document is to describe the
+          functionality of the ALC Character Mode Translator (CMT)
+          Terminal Interface.
+
+          The ALC-CMT has been designed to provide asynchronous
+          terminals access via the Tymnet network to hosts or service
+          suppliers which use ALC protocol.
+
+
+
+
+
+          1.2.  SCOPE
+          ___________
+          This document explains how the ALC-CMT interface provides
+          connections between users and various service suppliers
+          through the Tymnet packet switched network.  Because ALC-CMT
+          works in conjunction with a Host Interface (ALC-HIF), the
+          ALC-HIF is also described in this manual.  In addition, this
+          document describes the tools that help generate the ALC-CMT
+          tables.
+
+          The ALC-CMT was originally designed for the airline
+          reservation system industry.  There are some mentions
+          throughout this manual of airline specific terminology such
+          as 'agent' and 'res'.  Because this interface can be easily
+          adapted to suit a variety of industries, most airline
+          industry references have been changed to more general terms.
+
+          The synchronous host applications that  ALC-CMT provides
+          asynchronous terminals access to, are referred to
+          alternately throughout this manual as: Service Supplier,
+          Service, Host and Host Application.
+
+
+
+
+
+          1.3.  FUNCTIONAL OVERVIEW
+          _________________________
+
+          Functional aspects of ALC-CMT include:
+
+               1.  User-related functions
+               2.  Operational support functions
+
+
+
+
+
+
+          March 27, 1987             - 2 -                    ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE                   1. INTRODUCTION
+
+
+
+
+          1.3.1.  User Environment
+          ________________________
+
+          Users access ALC-CMT by means of a dial-up connection (using
+          the public telephone network) to Tymnet.  In turn, ALC-CMT
+          permits users to access one or more suppliers' systems.
+          Users can also arrange for hardwired connections to a Tymnet
+          Engine configured for them.
+
+          The user may use one or more of the following terminal
+          types:
+
+             o DEC VT52 Terminal
+             o Protocol PCI78
+             o Tymshare 440 CRT (ADM-2) in block mode
+             o Tymshare 430 (ADM-3A)
+             o Hard copy
+             o Tymshare 470 CRT (Super Owl 1250) in block mode
+             o Scanset
+             o Tymshare 102 (VT102)
+             o Tymshare 431 (ADM-11)
+
+
+
+          1.3.2.  ALC-CMT Operational Environment
+          _______________________________________
+
+          ALC-CMT Is a program which runs in a slot on a Tymnet En-
+          gine.  It communicates with users and with other hosts
+          through ISIS, the Internally Switched Interface System.
+          ISIS Protocol provides the operating environment for
+          programs running in slots on nodes within Tymnet.  (See ISIS
+          II; A Reference Manual).
+
+          The ALC-HIF is generally connected to the Service Supplier
+          host via a synchronous cable.  Its connection to the ALC-CMT
+          is maintained via a virtual network circuit built by the
+          ALC-HIF.
+
+          All communications with ALC-CMT are through network
+          circuits, not dedicated lines.  The location of ALC-CMT is
+          completely independent of the user's access to the network
+          and the service supplier's access to the network.
+
+          Currently, an incremental .5k Bytes of memory are required
+          to support each user above the basic requirements of an ALC-
+          CMT.
+
+
+          1.3.3.  User-Related Functions
+          ______________________________
+
+          Singular Log-on  ALC-CMT Permits users to access more than
+          _______________
+          one service supplier with only one network logon.
+
+
+
+
+
+          March 27, 1987             - 3 -                    ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE                   1. INTRODUCTION
+
+
+
+
+          Many Terminal Types  Through the process of reformatting and
+          ___________________
+          code conversion, ALC-CMT permits users with various terminal
+          types to access the service supplier systems.  Thus, no
+          applications software changes are required at the host-end.
+
+
+
+
+          Security and Resource Management  For security, ALC-CMT
+          ________________________________
+          validates users both at logon, and at each service request.
+          In addition the Auto-Signoff feature can be used to enhance
+          workspace security on the host application.  Resource
+          management is performed for network access via session ad-
+          dressing (IA-TAs).
+
+
+
+
+          User Interaction  When the user logs onto ALC-CMT, he is
+          ________________
+          first validated as a proper user and is then validated for
+          each service required.  ALC-CMT includes a Local User
+          Directory (LUD), locally stored user profile data that tells
+          which users are valid on the system and which services each
+          user is permitted to access.
+
+          The user profile data also includes information about which
+          terminal types a user has.  If a user has more than one
+          terminal type, ALC-CMT prompts for the terminal type
+          currently being used, so that service supplier responses can
+          be appropriately reformatted.
+
+
+
+
+          Global or Standard Usernames  Usernames can be defined as
+          ____________________________
+          either Global or Standard.  Global usernames are capable of
+          multiple simultaneous sessions without the use of associated
+          AGENT IDs, where Standard usernames may have multiple
+          simultaneous access only when defined in conjunction with
+          AGENT IDs.
+
+
+
+
+          Project Code  ALC-CMT interfaces can be configured with the
+          ____________
+          Project Code feature which enables a user accounting string
+          to be entered immediately following the username login.
+          This field may be up to 25 characters in length, minus the
+          number of characters in the login username.
+
+
+
+
+
+
+
+          March 27, 1987             - 4 -                    ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE                   1. INTRODUCTION
+
+
+
+
+          Auto Sign-In  The auto sign-in feature is primarily for the
+          ____________
+          user's convenience.  When it is configured for an interface
+          it causes the ALC-CMT to perform an automatic login sequence
+          to the host each time a user logs in through that ALC-CMT.
+          It performs the host sign-in procedure through a set of
+          predefined command/response macros.  Section 4.8.4 describes
+          this feature in more detail.
+
+
+
+
+          Auto Sign-Off  The auto sign-off feature has two functions.
+          _____________
+          It provides the convenience of automatic host sign-off for
+          the user (using a predefined set of command/response
+          macros), and it provides security for the user's host work
+          space within the dynamic addressing environment.  When this
+          feature is configured for an interface, the ALC-CMT performs
+          an automatic signoff from the host for each normal and
+          abnormal disconnect that occurs.  Section 4.8.5. describes
+          this feaure in more detail.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          March 27, 1987             - 5 -                    ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE                   1. INTRODUCTION
+
+
+
+
+          1.3.4.  ALC-CMT Functional Diagram
+          __________________________________
+
+          Following is a general diagram showing the information flow
+          within the ALC environment.
+
+
+
+
+
+           +---------+
+           |         |
+           | Airline | ALC
+           |  Host   |---+   +---------+
+           |   #1    |   |   |         |             +-------+
+           |         |   |   |         |    ICAP     |       |
+           +---------+   +---|   ALC   |-------------|       |----Terminal
+                             |  Host   |    ICAP     |  ALC  |----Terminal
+           +---------+   +---|Interface|-------------|  CMT  |----Terminal
+           |         |   |   |         |             |       |----Terminal
+           | Airline |   |   |         |      +------|       |----Terminal
+           |  Host   |---+   +---------+      |      |       |
+           |   #2    | ALC                    |      +-------+
+           |         |                        |
+           +---------+                        |
+                                              | ICAP
+           +---------+       +---------+      |
+           |         |       |         |      |
+           | Airline | ALC   |   ALC   |      |
+           |  Host   |-------|  Host   |------+
+           |   #3    |       |Interface|
+           |         |       |         |
+           +---------+       +---------+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          March 27, 1987             - 6 -                    ALCC.ERS
+
+
+
+
+
+
+
+
+
+                          SECTION 2. SYSTEM INTERFACES
+
+
+
+
+
+          2.1.  USER INTERFACE
+          ____________________
+
+          This section details the interactions between ALC-CMT and
+          the user.
+
+
+
+
+
+          2.1.1.  User Log-In
+          ___________________
+
+          At the network prompt 'PLEASE LOG IN', the user enters:
+
+              username;password; <cr>
+
+          [Note:  If the ALC-CMT is defined for the Project Code
+          option, the first 25 characters minus the number of
+          characters in the username, that are typed in will be sent
+          to the network supervior for accounting purposes.  The ALC-
+          CMT is configured with a specified time period in which to
+          wait for the project code to be entered.  Data entered with-
+          in that time will be both stored in the ALC-CMT and sent to
+          the supervisor.  Project code data which is not entered
+          within that time will be sent to the supervisor but will not
+          be stored in the ALC-CMT.  Either way, the user will not
+          receive any further prompts from the ALC-CMT until the
+          configured time period has elapsed.]
+
+          ALC-CMT Receives the username and verifies that it is valid
+          in its own LUD (Local User Directory), which is configured
+          for the customers.
+
+          Valid users who have more than one terminal type will
+          receive the prompt:
+
+              'WHAT TERMINAL TYPE ARE YOU USING?'
+
+          The user will enter a code for the terminal type.  (See User
+          Environment, section 1.3.1 for the various terminal types.)
+
+          If a multi-agent facility is being used, the user receives
+          the prompt,
+
+          [Note:  Global Usernames are not be prompted for AGENT ID.]
+
+               ENTER AGENT ID
+
+          The user enters the ID.
+
+
+          March 27, 1987             - 7 -                    ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE              2. SYSTEM INTERFACES
+
+
+
+
+          If the user has multi-host service the user receives the
+          prompt,
+
+               ENTER SERVICE SUPPLIER
+
+          ALC-CMT verifies that the user is permitted to access the
+          requested service supplier.
+
+          If the user does not have multi-host service, ALC-CMT
+          automatically connects the user to the one service.
+
+          ALC-CMT assigns an access resource, that is, an IA-TA
+          address, to the user, and prints/displays a banner on the
+          user terminal.  (The address may be dynamically assigned, or
+          dedicated to that user.)  If the user is allowed to receive
+          printing from the host, a printer IA/TA also is assigned at
+          this time.
+
+
+
+          2.1.2.  Switch to Another Service Supplier
+          __________________________________________
+
+          Users who have multi-host service may switch to another
+          supplier by entering:
+
+              SW <service-supplier-code>.
+
+          ALC-CMT Verifies that the user is permitted to use this
+          service supplier and updates the banner.
+
+          The connection to the previous service supplier is retained
+          when a user switches supplier.  The user may use another SW
+          command to return to the original supplier and retain the
+          connection to this new one.  To release the connection to a
+          supplier the user enters the DONE command.
+
+
+
+          2.1.3.  Disconnect from Service Supplier
+          ________________________________________
+
+          A user with multi-host service terminates the connection
+          with the active service supplier by typing:
+
+              DONE
+
+          ALC-CMT releases the host IA/TA; it performs the automatic
+          host sign-out if this has been arranged with the host
+          service.  The user receives the prompt to enter another
+          supplier identifier.  The user may select another supplier
+          or log off.
+
+
+
+
+
+
+          March 27, 1987             - 8 -                    ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE              2. SYSTEM INTERFACES
+
+
+
+
+          2.1.4.  Log Off
+          _______________
+
+          To end an ALC-CMT session, the user enters the configured
+          logout string or a valid abbreviation of that string.
+          Logout strings may be up to 12 characters long, and are
+          defined along with their valid abbreviations, in the
+          tymfile.
+
+              <logout string>
+
+          ALC-CMT zaps the circuit and releases any remaining host
+          IA/TA's; it performs the automatic host sign-out if this has
+          been arranged with the host service.
+
+
+
+          2.1.5.  Timeout, Automatic Log-off, Reconnect
+          _____________________________________________
+
+          Timeout features are included in ALC-CMT to permit it to
+          manage its resources and those of the service suppliers.
+
+          The access resources of a service supplier - the IA/TA's and
+          related work areas in the host system - may be dynamically
+          assigned or dedicated.
+
+          Some service suppliers want ALC-CMT to assign their system
+          access resources dynamically in order to make the most
+          efficient use of a limited number of resources.  To this
+          end, ALC-CMT can timeout a user who has not entered a
+          command within a time period specified by the service
+          supplier (a command timeout), and can timeout a user who has
+          switched away from a service supplier for a time period (a
+          service timeout).
+
+          With the command timeout option, ALC-CMT automatically logs
+          off a user who has entered no command during a period of
+          time and releases all resources assigned to her.
+
+          With the service-timout option, if the user switches away
+          from the supplier for the specified amount of time, ALC-CMT
+          releases only the resources associated with the specific
+          service supplier.
+
+          Other service suppliers are willing to have system access
+          resources assigned to a user indefinitely.  In this
+          situation, ALC-CMT permits the user to reconnect if she is
+          accidentally disconnected.  To achieve reconnection, ALC-CMT
+          saves the resources assigned to the user for a pre-
+          determined period of time.
+
+
+
+
+
+
+
+          March 27, 1987             - 9 -                    ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE              2. SYSTEM INTERFACES
+
+
+
+
+          2.2.  ALC-CMT MONITOR
+          _____________________
+
+          The ALC-CMT monitor serves several functions:
+
+              o Operational support tool.
+              o Display of system statistics, periodically and on
+                request.
+              o High-level debugging tool.
+
+          2.2.1.  Operational Support
+          ___________________________
+
+          The ALC-CMT operator needs to know the current status of the
+          ALC-CMT system.  Some information is continually made
+          available (System Statistics), while other information is
+          obtained through specific commands (Operational Commands).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          March 27, 1987             - 10 -                   ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE              2. SYSTEM INTERFACES
+
+
+
+
+          2.2.1.1.  System Statistics
+          ___________________________
+
+          The ALC-CMT monitor provides a continually updated display
+          of current usage of the ALC-CMT system.  The information
+          display includes:
+
+              o  System data
+                o  System name (a name configured for the slot)
+                o  Version number
+                o  Host number
+                o  System start-up date and time
+                o  Date and time display last updated
+                o  Crash count and last crash code
+
+              o  Load data
+                o  Number of normal users logged on
+                o  Number of normal users resources still available
+                   for log-on
+                o  Number of monitor users
+                o  Number of debugger users
+
+              o  Service supplier data
+                o  Port number from ALC-CMT to ALCH.
+                o  Service supplier code
+                o  Access Status (up, down, backpressure, network
+                   circuit unavailable)
+                o  Date and time of last status change
+                o  Number of messages
+                o  Average length of user message
+                o  Average length of ALC-HIF message
+                o  Average response time during last update period
+                o  Average response time for total time since ALC-CMT
+                   system startup
+
+
+
+
+
+
+
+
+
+
+          *NOTE:
+
+          A 440 CRT must be used in order to see the statistics
+          display.
+
+
+
+
+
+
+
+
+
+          March 27, 1987             - 11 -                   ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE              2. SYSTEM INTERFACES
+
+
+
+
+          2.2.1.2.  Operator Commands
+          ___________________________
+
+          The operator can use the monitor to obtain information about
+          the system and to perform selected functions.
+
+          Current User Information
+          ________________________
+
+          On occasion, the operator needs to know who is logged onto
+          the system.  The command:
+
+              Query NAMES
+
+           causes a one-time display of all the active normal users.
+
+          The information given for each user is:
+
+              <port #> <username>/<agent-id>
+                           or
+
+               DSC      <username>/<agent-id>
+
+          where DSC means the user is disconnected.
+
+          If the operator wants to know who is using a specific port,
+          she enters:
+
+              Query <port_#>
+
+          This command causes the username/agent-id currently assigned
+          to that port number to be displayed.
+
+          Conversely, if the operator wants to know the port number
+          that a specific user is using, she enters:
+
+              Query <username>/<agent-id>
+
+          The port number, if any, currently assigned to that username
+          is displayed.
+
+          Monitor messages to users
+          _________________________
+
+          Through the ALC-CMT monitor, an operator can send messages
+          to users.  To send a message to all active users, the
+          operator enters:
+
+              BROadcast <message>
+
+          The message is immediately sent to all active users.
+
+
+
+
+
+
+
+
+          March 27, 1987             - 12 -                   ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE              2. SYSTEM INTERFACES
+
+
+
+
+          To send a message to an individual user, say, during a
+          problem-solving session, the operator enters:
+
+              TALK <username/agent-id>, <message>
+                               or
+              TALK <port #>, <message>
+
+          To set a system message that is displayed to all users as
+          they log on, or on command, the operator enters:
+
+              SETMsg <message>
+
+          The user can cause the current system message to be
+          displayed by entering:
+
+              SYSMsg
+
+          A system message is cleared by entering:
+
+              SETMsg (with no message)
+
+
+          ALC-CMT Access Controls
+          _______________________
+
+          The operator has the facility to close the ALC-CMT to logons
+          by entering the command:
+
+              SHUT
+
+          To open an ALC-CMT to logons, the operator enters:
+
+              ANSwer
+
+          The operator may force a user off the system by entering:
+
+              FORCE <username/agent-id>
+                            or
+              FORCE <port #>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          March 27, 1987             - 13 -                   ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE              2. SYSTEM INTERFACES
+
+
+
+
+          2.3.  THE ALC HOST INTERFACE
+          ____________________________
+
+          The ALC Host Interface provides ALC-CMT access to services
+          that are not on a Tymnet packet-switched network.  Like the
+          ALC-CMT, ALC-HIF is a program that runs in an ISIS slot on a
+          Tymnet Engine.  The Engine in this case, however, is
+          physically connected to a supplier's multidrop communication
+          line.
+
+
+
+          2.3.1.  ALC Host Interface Login
+          ________________________________
+
+
+          An ALC-HIF is programmed to log into the ALC-CMT.  The ALC-
+          CMT verifies the username associated with the login.
+
+
+
+
+          2.3.2.  ICAP Protocol
+          _____________________
+
+          Communication between an ALC-HIF and an ALC-CMT takes place
+          in the ICAP protocol, which has been developed expressly for
+          ICA software applications.  The format of the ICAP protocol
+          envelope is:
+
+              SOP RES CMD SEQ IA TA [text] EOP
+
+          where:
+
+              SOP = Start of message packet symbol
+
+              RES = 2-digit number associated with service supplier
+                    drop
+
+              CMD = command (a code indicating the type of ICAP
+                    message)
+
+              SEQ = sequence number
+
+              IA  = interchange address
+
+              TA  = terminal address
+
+              EOP = end-of-message packet symbol
+
+
+
+
+
+
+
+
+
+
+          March 27, 1987             - 14 -                   ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE              2. SYSTEM INTERFACES
+
+
+
+
+              The ICAP message types specified by CMD are:
+
+              o  Startup
+              o  Acknowledge startup
+              o  Purple ball
+              o  Line down
+              o  Reset
+              o  Apply backpressure
+              o  Release backpressure
+              o  CCC error
+              o  Text
+
+          'Startup' and 'Acknowledge Startup' - On receiving a
+          'startup' message from an ALC-HIF, ALC-CMT verifies that the
+          Res number is valid, sets the status for this Res to 'UP',
+          updates the monitor screen, and sends an 'acknowledge
+          startup' message to the host that sent the 'startup'
+          message.
+
+          Depending upon the system being used, ALC-CMT may perform
+          other functions when a 'startup' message is received.  For
+          example, resources (such as IA-TA) that are dynamically
+          allocated must be freed if they are not already free.
+
+          'Purple Ball' - This message lets a host know that the
+          communicating host is still there.  When ALC-CMT receives a
+          purple ball, it should send one in return within a specified
+          time frame.
+
+          'Line down' - When ALC-CMT receives a 'Line down' message on
+          an ALC-HIF circuit, it changes the status of that circuit to
+          down, records the time, and updates the monitor screen.
+
+          'Reset' - On receiving a 'reset' message on an ALC-HIF
+          circuit, ALC-CMT determines which users are actively using
+          that printer and notifies them to re-enter their last
+          request.   ALC-CMT resets the printer.
+
+          'CCC Error' - When ALC-CMT receives a host application error
+          message it will display a message on all monitors tracing
+          that service's circuit.
+
+          'Text' - When ALC-CMT receives A 'text' message from an ALC-
+          HIF, it locates the user who is currently using the RES-IA-
+          TA in the message, formats the text according to the user's
+          current terminal type, and transmits the formatted text to
+          the user.
+
+          ALC-CMT Uses a 'text' message to transmit text entered by a
+          user to the appropriate ALC-HIF (given the RES-IA-TA
+          assigned to the user.)
+
+
+
+
+
+          March 27, 1987             - 15 -                   ALCC.ERS
+
+
+
+
+
+
+
+
+
+                            SECTION 3. ALC PROTOCOL
+
+
+
+
+          3.1.  COMMUNICATION REQUIREMENTS
+          ________________________________
+
+          Each service supplier must provide one or more drops from
+          its multidrop polled network, to an ALC-HIF.  (For a
+          detailed description of the ALC-HIF see 'ALC Extension Cord
+          and PAD External Reference Specification - August, 1986').
+
+          On each drop, the service will supply a set of addresses
+          (IA-TAs).  These may be dedicated to specific users or they
+          may be shared among a group of users.
+
+
+          3.2.  MESSAGE COMPOSITION
+          _________________________
+
+
+          3.2.1.  General
+          _______________
+
+          The basic format of messages transmitted from an ALC-based
+          reservation system to CRTs and printers is described in IBM
+          document GL24-3570, entitled 'IBM 2946 Terminal Control
+          Subsystem Component Description and Operating Guide.'  A
+          summary of this format is as follows:
+
+               S1/S2/IA/TA/C1/C2/(TEXT)/EOM/CCC
+
+               - S1 and S2 are synchronization characters (octal 77
+                  and 76 response).
+               -IA and TA identify the address of the device to which
+                  the message is directed (LN is implied).
+               -C1 and C2 are control characters - see discussion
+                  following.
+               - (TEXT) is the actual message for display or printing,
+                  not to exceed 355 characters in a single message
+                  block.
+               - EOM designates the end-of-message or end-of-message
+                  block (text) - see discussion following.
+               - CCC is a cyclic check character.
+
+          Logical output messages can consist of one or more message
+          blocks.  The EOM character in each message block designates
+          the end of the block.
+
+
+
+
+
+
+
+
+
+
+          March 27, 1987             - 16 -                   ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE                   3. ALC PROTOCOL
+
+
+
+
+               Last message block
+
+                    - EOM/C (octal 35) used for CRT display messages
+                    - EOM/U (octal 55) used for printer messages
+
+               - Not last message block
+
+                    - EOM/PB (octal 75) used for CRT display messages
+                    - EOM/I (octal 15) used for printer messages
+
+
+
+          3.2.2.  CRT Messages
+          ____________________
+
+
+          3.2.2.1.  Display Message Format
+          ________________________________
+
+               - CRT Display messages: first block
+
+
+                    - C1 and C2 provide display control information
+                    - C1 specifies 'write' (octal 20) or 'erase/write'
+                      (octal 21): the latter designates that all
+                                  previous data from the position
+                                  referenced by C2 to the end of the
+                                  screen to be deleted.
+                    - C2 specifies the location at which the message
+                       is to be displayed:
+                    (1)  a line-address-code character
+                         (see IBM 2946, document GL24-3570)
+                    (2) a 'new line' (NL, octal 14) indicating a
+                        message is to be displayed starting on the
+                        next line following the present position
+                        of the cursor; or
+                    (3) a 'no-op' (octal 20) designating that the
+                        message is to be displayed starting in the
+                        position following the present position
+                        of the cursor.
+
+
+          3.2.2.2.  Unsolicited Message Format
+          ____________________________________
+
+          ALC Protocol also provides for a message format to 'set
+          unsolicited message' (an indicator light on some CRTs used
+          in ALC-based systems).  This message will cause a small
+          square to be displayed to the right of the banner on a CRT
+          in block mode and the message 'UMSG waiting' to be printed
+          on terminals in conversational mode.
+
+          The format used for this mesage is;
+               S1/S2/IA/TA/52*/05*/EOMC/CCC   (*OCTAL).
+
+
+
+
+
+          March 27, 1987             - 17 -                   ALCC.ERS
+
+
+
+
+
+
+
+
+
+                   SECTION 4. FUNCTIONS SUPPORTED IN ALC-CMT
+
+
+
+
+
+          4.1.  KEYBOARD
+          ______________
+
+          User entries are either commands to a service supplier host
+          or commands to an ALC-CMT (ie;, SW, DONE).  When the user
+          completes an entry, ALC-CMT interprets it and takes
+          appropriate action.  Normally the user gets a response to
+          each entry.  After each response ALC-CMT prints or displays
+          a prompt for the next user entry.  There are differences in
+          the operation of a terminal depending on whether it is in
+          conversational or block mode.
+
+
+
+          4.1.1.  Conversational Mode
+          ___________________________
+
+          On a conversational mode terminal, the user types an entry
+          and ALC-CMT receives each character as it is typed.  ALC-CMT
+          permits some editing of the entry; see the section "Editing
+          Features".  The user completes the entry by hitting the
+          Carriage-Return key.
+
+
+
+          4.1.2.  Block Mode
+          __________________
+
+          On a block mode CRT, the user composes an entry locally on
+          the display screen, typing and using the cursor arrows etc.
+          without the intervention of ALC-CMT.  The user hits an ENTER
+          (or SEND) key to terminate an entry and send it to ALC-CMT.
+          Once the entry has been sent, the terminal keyboard is
+          locked to inhibit further entries.  Normally the keyboard is
+          unlocked when the response to the user's entry and a new
+          input prompt are displayed.
+
+          On the rare occasion when there is no response to the user's
+          entry (because of a communication failure, for example), the
+          user may unlock the keyboard with the 'reset' function key.
+          When the reset function is used, ALC-CMT displays a new
+          input prompt.
+
+
+
+          4.2.  BANNER AND PROMPTS
+          ________________________
+
+          ALC-CMT Prints/displays a banner to advise the user of the
+          current status of his connection to the host application
+          system.
+
+
+
+          March 27, 1987             - 18 -                   ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE 4. FUNCTIONS SUPPORTED IN ALC-CMT
+
+
+
+
+          For CRTs in block mode, the banner will be located at the
+          top of the screen.  For all other terminals, the banner will
+          be printed/displayed whenever a service is made active.
+
+
+
+
+          4.3.  EDITING FEATURES
+          ______________________
+
+          ALC-CMT Supports four basic editing features for Conver-
+          sational Mode terminals.  These are:
+
+               1.  Cursor Left
+               2.  Cursor Right
+               3.  Line Delete
+               4.  Character Delete
+
+          Features 1-3 are available for terminal types: VT52, PCI78,
+          Tymshare 431, Scanset, Tymshare 102.
+
+          Features 3 and 4 only are available for terminal types:
+          Tymshare 430, and Hard Copy terminals 315.
+
+
+
+          Cursor Left/Right
+          _________________
+
+          Cursor Left/Right will move the cursor in the specified
+          direction without affecting the character it is placed on.
+          When the cursor is in position the user may change the
+          character it is placed on by using the delete key, hitting
+          the space bar, or typing in a character.
+
+
+
+          Line Delete
+          ___________
+
+          This command deletes an entire line of text, but will work
+          only upon the current line.  When the command is issued, the
+          cursor moves down to the following line where new text may
+          be typed.  The deleted line does not disappear from the
+          screen during the session.
+
+          For this command, either the DEL or DELETE key should be
+          used.
+
+
+
+          Character Delete
+          ________________
+
+          This command causes the character at the cursor location to
+          be deleted.  It can be used successively for successive
+          character deletions but it can only be used for the current
+          line.
+
+
+          March 27, 1987             - 19 -                   ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE 4. FUNCTIONS SUPPORTED IN ALC-CMT
+
+
+
+
+          4.4.  CRT MESSAGE PROCESSING
+          ____________________________
+
+
+
+          4.4.1.  Block-mode CRT
+          ______________________
+
+          A 24 line by 80 character screen is used: to display the
+          ALC-CMT banner and diagnostic information; to permit data
+          entry; to accomodate 16 lines of 64 characters per line (960
+          characters) for display responses from the participating
+          host application systems, and to accommodate 350 characters
+          of user entry.
+
+
+
+
+          4.4.2.  Display Controls from Services
+          ______________________________________
+
+          The display controls contained in the CRT message from the
+          host application system (or service supplier host) - i.e.;
+          'erase/write' and 'write' (as defined in section 3.2.2.1 of
+          this document) will be acted upon accordingly.  For a CRT in
+          block mode, Tymnet will adjust the host application system's
+          home line (line one) control, and other line numbers to the
+          appropriate line on the CRT screen below the banner.
+
+
+
+
+
+          4.4.3.  Full Screen Support
+          ___________________________
+
+          In the past full screen support was available only for block
+          mode terminals (440,470).  At present however, scroll mode
+          terminals also have full screen support.  The C1, C2
+          characters which are part of the ALC protocol are translated
+          into the appropriate ASCII sequences and sent to the
+          hardcopy terminal.  Only terminals that support line
+          addressing and screen erase will benefit from this change.
+          ALC-CMT Does not keep track of the cursor, so it is up to
+          the host to perform the functions supported.  These
+          functions are:
+
+               - New Line
+               - Line Address (always column 1)
+               - No Op (leave the cursor where it is)
+               - Erase from cursor to end of screen
+
+
+
+
+
+
+
+
+
+          March 27, 1987             - 20 -                   ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE 4. FUNCTIONS SUPPORTED IN ALC-CMT
+
+
+
+
+          4.4.4.  Unsolicited Messages
+          ____________________________
+
+          See section 3.2.2.2 for a description of unsolicited
+          messages.  For a CRT in block mode, a small square will be
+          displayed to the right of the banner.  For a terminal in
+          conversational mode, the message 'UMSG waiting' will be
+          displayed.
+
+          If the user receives an unsolicted message from a service
+          supplier while he is connected to that system but not active
+          on it, the unsolicited message indicator will be displayed
+          by ALC-CMT when the user switches back and a tone will
+          sound.
+
+
+
+
+          4.5.  PRINTER CAPABILITY
+          ________________________
+
+          ALC-CMT Supports printers which are attached to the CRT.
+          Only specific combinations of CRT and printer types are
+          supported.  ALC-CMT Assigns the printer to a separate IA/TA
+          on the host.  It operates the printer independently of the
+          traffic going to and from the CRT.  If the user has multi-
+          host access, the printer may receive from one host while the
+          CRT works at another.
+
+          A host may permit sharing a printer among several CRTs.
+          ALC-CMT Users may use such sharing provided they log in to
+          the CRT to which the printer is attached.  If the IA/TAs are
+          pooled, a user must then use the ATTPTR command to see which
+          IA/TA is assigned, and the host must provide a command for
+          the users at other CRT's to designate that IA/TA for their
+          printing.  If the IA/TAs are dedicated, then the host has
+          the option to permanently assign printer IA/TAs to users.
+
+          ALC-CMT Protects the user with multi-host service against
+          receiving blocks of printing from two hosts mixed together:
+          once one host begins printing, the user must give a printer
+          attach command before doing printing from another host.
+
+
+
+          4.5.1.  BUSY and FREE Printer Status
+          ____________________________________
+
+          ALC-CMT Considers a printer busy as soon as printing data is
+          sent to  it, given that the  printer is not already  busy or
+          attached to a different host.
+
+          The printer  becomes free when  ALC-CMT finishes  printing a
+          final block  of data from the  host.  A final block  ends in
+          EOM-U or EOM-C.
+
+
+
+
+          March 27, 1987             - 21 -                   ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE 4. FUNCTIONS SUPPORTED IN ALC-CMT
+
+
+
+
+          4.5.2.  Attach Printer
+          ______________________
+
+          The ATTPTR command will cause a printer to become 'attached'
+          to the host to which the CRT is connected.  ALC-CMT Will
+          accept printing from that host only, and will reject
+          printing from other hosts, until the user gives an ATTPTR
+          command for a different host.
+
+               Entry:   ATTPTR
+
+          The banner update will be provided to reflect this new
+          assignment.
+
+          ATTPTR Is effective even if the printer's status is busy
+          when the command is issued.
+
+          'Attach Printer/Default'
+          ________________________
+
+          When the host first sends printing to a user, ALC-CMT
+          automatically sets the printer to 'attached' status for that
+          host, unless the printer is already attached.  When the ALC-
+          CMT receives the printing from the printer IA-TA, the user
+          must be still logged in and assigned to the related CRT IA-
+          TA.
+
+
+
+          4.5.3.  Configuring Printers in ALC-CMT
+          _______________________________________
+          Each service supplier must designate pairs of addresses,
+          relating every printer IA-TA they support, to a CRT IA-TA.
+          Every pair must be configured in the ALC-CMT.  When a user's
+          terminal is assigned to the CRT IA-TA, then whatever comes
+          out of the related printer IA-TA will get printed on the
+          user's printer.  This applies to both dedicated and pooled
+          CRTs and printers.
+
+
+
+
+          4.5.4.  User Security Provisions for Printer Data
+          _________________________________________________
+
+          ALC-CMT Has  a scheme  by which  each host  may insert  user
+          identifiers in  the printer  blocks for  protection of  user
+          data when pooled printer addresses are used.
+
+          The problem scenario is this: user  A logs into the supplier
+          host and is assigned a CRT  address and printer address from
+          the pool.  The user gives  a command which creates printing.
+          The host queues this printing,  but the user is disconnected
+          from  the  host.   ALC-CMT  Returns   the  CRT  and  printer
+          addresses to  the pool since it  has no way of  knowing that
+          the host still has printing to send to the user.
+
+
+
+
+          March 27, 1987             - 22 -                   ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE 4. FUNCTIONS SUPPORTED IN ALC-CMT
+
+
+
+
+          User B logs in and is  assigned the released CRT and printer
+          address.  The printing  begins to arrive from  the host, but
+          the supplier probably  does not want user B  to receive user
+          A's printing.
+
+
+
+          4.6.  HOST SYSTEM AVAILABILITY
+          ______________________________
+
+          If the service system is unavailable when the user enters a
+          command, then an appropriate message will be displayed.
+
+
+
+          4.7.  IA-TA RESOURCE MANAGEMENT
+          _______________________________
+
+          As described in section 3.2, Message Composition, each
+          service supplier message in IBM 2946 protocol contains an
+          IA-TA (interchange address/terminal address).  A host system
+          IA-TA together with the res number of the ICAP protocol
+          forms a unique address that is used for routing user
+          messages between the ALC-CMT and ALC-HIF.
+
+          Each service supplier must provide Tymnet with a set of IA-
+          TAs to be used with each service supplier drop.
+
+          ALC-CMT Has the ability to dedicate an IA-TA to a specific
+          username or to assign the IA-TAs dynamically to a group of
+          username initials on a first-come/first-served basis.
+          Dynamic assignment is referred to as pooling.
+
+          The IA-TA assignment information is stored in the LUD (Local
+          User Directory) which is part of one individual ALC-CMT
+          interface.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          March 27, 1987             - 23 -                   ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE 4. FUNCTIONS SUPPORTED IN ALC-CMT
+
+
+
+
+          4.8.  CONFIGURATION OPTIONS
+          ___________________________
+
+
+
+          4.8.1.  Configuring Terminal Users
+          __________________________________
+          The person configuring an individual ALC-CMT first creates
+          the LUD (Local User Directory).  Included must be a USER
+          statement with the Tymnet username for each user who will
+          log in to the ALC-CMT.  The way a username is configured in
+          the LUD determines which host the user may access, whether
+          he/she has the print option, which terminal types he/she may
+          login from, whether the username is Global or Standard, etc.
+
+          When the user has access to only one host, or has only one
+          terminal type, or is not one of a group of agents, ALC-CMT
+          will skip the question and answer at log-in, saving the
+          user's time.
+
+          Agency/Agent Option
+          ___________________
+
+          Several terminal users may be grouped into one Agency which
+          has one Tymnet Username.  In this case they are identified
+          by a group Agent Identifier.  After the Tymnet login is
+          successfully completed ALC-CMT prompts for the Agent Id.  A
+          customer who prefers to be billed for just one Tymnet
+          username and does not mind the extra type-in would be likely
+          to choose this option.  (Usernames with this option may be
+          configured for multiple simultaneous sessions with the use
+          of multiple agent ids.)
+
+          Each agent can have a different set of valid hosts, and may
+          or may not be valid for printing.
+
+          Global Usernames  Global usernames may be defined on a
+          ________________
+          per/user basis.  These are usernames which allow multiple
+          simultaneous logons to one ALC-CMT.  Usernames which are
+          configured as global do not have AGENT IDs associated with
+          them.
+
+
+          4.8.2.  Dedicated IA-TAs vs Pooled IA-Tas
+          _________________________________________
+
+          Each host supplier has the option of assigning each terminal
+          user dedicated addresses, or a pool of addresses.  With a
+          dedicated address, a user will receive the same IA-TA upon
+          each logon.  With a pool of addresses the user will receive
+          an available IA-TA from the address pool.
+
+          Pooling of IA-TAs allows a large group of users to share a
+          relatively small number of IA-TAs.  The pool need only be
+          large enough to accomodate the number of users expected to
+          use the service simultaneously.
+
+
+
+
+          March 27, 1987             - 24 -                   ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE 4. FUNCTIONS SUPPORTED IN ALC-CMT
+
+
+
+
+          Address assignments are contained in the user's profile;
+          thus IA-TA is directly associated with a username.  If there
+          are several users sharing a username (agents in an agency),
+          they cannot have individual dedicated IA-TAs.  The shared
+          username, however may have a dedicated pool of addresses
+          which is available only to that username and thus to that
+          group of users.
+
+
+
+          4.8.3.  IA-TA Release/Reconnection Option
+          _________________________________________
+
+          When a pooled IA-TA is released, it becomes available for
+          re-assignment.  ALC-CMT Releases an IA-TA when a user types
+          'DONE' (to indicate that he/she is finished with a
+          reservation system), and when the user logs off.
+
+          In case of a disconnection (where the user either hangs up
+          the phone without first logging off or loses the connection
+          to ALC-CMT), ALC-CMT's handling of IA-TAs assigned to the
+          user depends on the reconnection option.  Without the
+          reconnection option, IA-TAs are released immediately.
+
+          With it, ALC-CMT waits a certain amount of time before
+          releasing the user's IA-TAs; if the user logs in again
+          before the IA-TAs are released, he/she can continue whatever
+          work was in progress.
+
+          The reconnection option is an ALC-CMT configuration
+          parameter.  It can be selected once for all usernames
+          configured within an interface.  This option cannot be
+          configured individually on a user-by-user basis.
+
+          The reconnection option is useful only for a user population
+          with access to a single ALC-CMT.  The option cannot be used
+          with Multi or Priority targeting*, and it cannot be used
+          with Global Usernames.
+
+          [NOTE: * Multi and Priority Targeting are Tymnet network
+          validation options which are used for routing logons to
+          different copies of the same process.  If a user is
+          disconnected from one copy of a process and immediately logs
+          back on, there is no guarantee that the user will be
+          connected to the same copy of that process.]
+
+
+
+          4.8.4.  Automatic Sign-In
+          _________________________
+
+          The automatic sign-in feature is a process by which users
+          are automatically signed in to a host application
+          immediately following network logon.  This feature is
+          configured into the Tymfile of the ALC-CMT via a sequence of
+
+
+
+          March 27, 1987             - 25 -                   ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE 4. FUNCTIONS SUPPORTED IN ALC-CMT
+
+
+
+
+          command and response macros which are known as Sign Command
+          Groups and Command Sets
+
+          Auto Sign-In offers a convenient way to access a host
+          service for the individual user, but it can also be used to
+          increase security for the customer's host application.  This
+          can be accomplished by configuring the first set of commands
+          of an Auto Sign-In Command Group to perform Auto Sign-Off
+          before allowing the user to sign in to that area of the
+          application.  When the command group is set up this way, an
+          auto sign-off will be performed first before signing in a
+          new user to that area of the application.  The precludes the
+          possibility of one user inadvertently signing in to a work
+          area which has not been signed off.  The following example
+          will help to illustrate this point.
+
+
+                      SIGNI1   SGNBEG
+                                 SGNCMD(Perform auto sign-off)
+                                 SGNRSP(Sign-off completed)
+                                 SGNCMD(Sign-in user)
+                                 SGNRSP(User signed-in)
+
+
+          Sign Command Groups and Command Sets are just names given to
+          the sequence of macros that create the command/response
+          strings exchanged between the ALC-CMT and the host, to
+          perform an Auto Sign-In or Auto Sign-Off.  These are
+          described in the ALC-CMT System Generation Manual.
+
+          If the ALC-CMT receives either no response or an incorrect
+          response to a sign-in command, the interface will continue
+          to make a predefined number of retry attempts to sign-in to
+          the host.  If all the retry attempts fail, then the ALC-CMT
+          checks to see whether the user is configured for access to
+          one, or more than one host service.  If the username has
+          access to only one host service (RES) then the circuit is
+          zapped and the message 'Sign-In to Service Failed - Circuit
+          Zapped' will be displayed on the terminal and the user is
+          logged off the ALC-CMT.  If the username has access to more
+          than one service, the message 'Sign-In to Service Failed -
+          If You Wish, Try Another Service' will be displayed on the
+          terminal.  In this case the circuit between the user and the
+          ALC-CMT is maintained and the user is able to sign-in to
+          another service.
+
+
+
+          4.8.5.  Automatic Sign-Off
+          __________________________
+
+          Automatic Sign-Off causes the ALC-CMT to perform an
+          automatic host sign-off for all disconnects, both normal and
+          abnormal*.  Similar to the Auto Sign-In feature, it does
+
+
+
+          March 27, 1987             - 26 -                   ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE 4. FUNCTIONS SUPPORTED IN ALC-CMT
+
+
+
+
+          this by exchanging a sequence of command and response
+          strings with the host.  When the message exchange is suc-
+          cessful, the user's resources are released and the address
+          is returned to the free address pool where it can be
+          assigned to another user.
+
+          When the ALC-CMT does not receive a response from the host,
+          or the response received does not match the configured
+          response that ALC-CMT expects, it makes a predefined number
+          of consecutive retry attempts to free the address.  If all
+          of these fail, the interface freezes the address (meaning it
+          is not returned to the free address pool).  Once an address
+          is frozen, the ALC-CMT makes another predefined number of
+          retry attempts to sign-off the host.  These attempts are
+          separated by a specified time interval.  Currently, the
+          default number of retry attempts is 3 sets, each consisting
+          of 3 consecutive retries.  Each set is separated by a time
+          interval which has a current default value of 10 minutes.
+          (It is possible to change these values in the Tymfile.)  If
+          all automatic retry attempts fail, the operator may issue
+          the FREE command manually.  This causes ALC-CMT to once
+          again execute the series of command/response macros to free
+          all frozen addresses on the interface.
+
+          If the host line goes down and comes back up again, the ALC-
+          CMT will restart the auto sign-off procedure for all
+          addresses which were frozen at the time the line went down.
+          If the ALC-CMT goes down and comes back up again, however,
+          the interface cannot differentiate between those adresses
+          which were frozen and those which were not at the time of
+          the crash.  Therefore, when it comes back up it begins the
+          sign-off process for all addresses that were signed in at
+          the time of the crash.
+
+          [Note: * Abnormal disconnects can occur for a variety of
+          reasons, such as the circuit going down, the host line going
+          down, an expired inactivity timer, the user hanging up the
+          phone line or loss of the network connection.]
+
+
+
+
+          4.8.6.  Command Timeout
+          _______________________
+
+          The command timeout facility is a means of preventing
+          resources from being tied up indefinitely.  With this
+          option, ALC-CMT will log off a user who has not entered a
+          command within a pre-determined time period.  ALC-CMT Then
+          releases all resources assigned to that user.
+
+
+
+
+
+
+
+          March 27, 1987             - 27 -                   ALCC.ERS
+
+
+
+
+          ALC-CMT EXTERNAL REFERENCE 4. FUNCTIONS SUPPORTED IN ALC-CMT
+
+
+
+
+          4.8.7.  Reservation System Timeout
+          __________________________________
+
+          The reservation system timeout applies when the SWITCH
+          command is used.  Under this option the user can switch away
+          from a service for a configured time period.  If the user
+          does not switch back within that amount of time, the
+          resources associated with the service will be released.
+
+
+          4.9.  BUILDING CIRCUITS TO AN EXTERNAL HOST
+          ___________________________________________
+
+          The ALC-CMT is capable of building a circuit to an external
+          host.  This factor has been implemented in order to gather
+          statistics information and to send it to a PDP-10 for
+          processing.
+
+
+          4.10.  USER FRIENDLY INTERFACE
+          ______________________________
+
+          A 'user friendly' interface has been implemented for the
+          customer USAIR.  This interface translates user commands
+          into host commands.  This allows for the user to type in
+          easily remembered commands.  In addition, the user is able
+          to obtain information about these commands by using a set of
+          HELP commands.
+
+          It should be noted that this feature is application
+          dependent and has been implemented for USAIR specifically.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          March 27, 1987             - 28 -                   ALCC.ERS
+
+
+
+
+
+
+
+
+
+                               TABLE OF CONTENTS
+
+
+
+
+          1 INTRODUCTION .........................................   2
+
+             1.1 PURPOSE .........................................   2
+
+             1.2 SCOPE ...........................................   2
+
+             1.3 FUNCTIONAL OVERVIEW .............................   2
+                1.3.1 User Environment ...........................   3
+                1.3.2 ALC-CMT Operational Environment ............   3
+                1.3.3 User-Related Functions .....................   3
+                1.3.4 ALC-CMT Functional Diagram .................   6
+
+
+          2 SYSTEM INTERFACES ....................................   7
+
+             2.1 USER INTERFACE ..................................   7
+                2.1.1 User Log-in ................................   7
+                2.1.2 Switch to Another Service Supplier .........   8
+                2.1.3 Disconnect from Service Supplier ...........   8
+                2.1.4 Log Off ....................................   9
+                2.1.5 Timeout, Automatic Log-off, Reconnect ......   9
+
+             2.2 ALC CMT MONITOR .................................  10
+                2.2.1 Operational Support ........................  10
+                2.2.1.1 System Statistics ........................  11
+                2.2.1.2 Operator Commands ........................  12
+
+             2.3 THE ALC HOST INTERFACE ..........................  14
+                2.3.1 ALC Host interface Login ...................  14
+                2.3.2 ICAP Protocol ..............................  14
+
+
+          3 ALC PROTOCOL .........................................  16
+
+             3.1 COMMUNICATION REQUIREMENTS ......................  16
+
+             3.2 MESSAGE COMPOSITION .............................  16
+                3.2.1 General ....................................  16
+                3.2.2 CRT Messages ...............................  17
+                3.2.2.1 Display Message Format ...................  17
+                3.2.2.2 Unsolicited Message Format ...............  17
+
+
+          4 FUNCTIONS SUPPORTED IN ALC-CMT .......................  18
+
+
+
+
+
+
+
+          March 27, 1987             - i -                    ALCC.ERS
+
+
+
+
+          ALC-CMT External Reference                 TABLE OF CONTENTS
+
+
+
+
+             4.1 KEYBOARD ........................................  18
+                4.1.1 Conversational Mode ........................  18
+                4.1.2 Block Mode .................................  18
+
+             4.2 BANNER AND PROMPTS ..............................  18
+
+             4.3 EDITING FEATURES ................................  19
+
+             4.4 CRT MESSAGE PROCESSING ..........................  20
+                4.4.1 Block-mode CRT .............................  20
+                4.4.2 Display Controls from Services .............  20
+                4.4.3 Full Screen Support ........................  20
+                4.4.4 Unsolicited Messages .......................  21
+
+             4.5 PRINTER CAPABILITY ..............................  21
+                4.5.1 BUSY and FREE Printer Status ...............  21
+                4.5.2 Attach Printer .............................  22
+                4.5.3 Configuring Printers in ALC-CMT ............  22
+                4.5.4 User Security Provisions for Printer Data ..  22
+
+             4.6 HOST SYSTEM AVAILABILITY ........................  23
+
+             4.7 IA-TA RESOURCE MANAGEMENT .......................  23
+
+             4.8 CONFIGURATION OPTIONS ...........................  24
+                4.8.1 Configuring Terminal Users .................  24
+                4.8.2 Dedicated IA-TAs versus Pooled IA-TAs ......  24
+                4.8.3 IA-TA Release/Reconnection Option ..........  25
+                4.8.4 Automatic Sign-In ..........................  25
+                4.8.5 Automatic Sign-Off .........................  26
+                4.8.6 Command Timeout ............................  27
+                4.8.7 Reservation System Timeout .................  28
+
+             4.9 BUILDING CIRCUITS TO AN EXTERNAL HOST ...........  28
+
+             4.10 USER FRIENDLY INTERFACE ........................  28
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          March 27, 1987             - ii -                   ALCC.ERS
+
+
+
+D@ ¼
