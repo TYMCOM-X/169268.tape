@@ -1,0 +1,1568 @@
+                                                                January 19, 1988
+
+
+
+
+
+
+
+                                CMT HALF-DUPLEX
+                            GENERAL INTERNAL DESIGN
+
+                                    LIZA HU
+
+                                     TYMNET
+                         NETWORK TECHNOLOGY DEVELOPMENT
+                                January 19, 1988
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ====================================================================
+      |   TYMNET's     proprietary  rights  are  included  in  the       |
+      |   information  disclosed herein.  The recipient, by receiving    |
+      |   this document, agrees that neither  this  document  nor  the   |
+      |   information  disclosed  herein nor any part thereof shall be   |
+      |   reproduced or transferred to  other  documents  or  used  or   |
+      |   disclosed  to  others  for  manufacturing  or  for any other   |
+      |   purpose except as  specifically  authorized  in  writing  by   |
+      |   TYMNET                                                         |
+      ====================================================================
+
+
+
+
+                                 CMT Half-Duplex GID                     HDX.GID
+                                                                January 19, 1988
+
+
+
+
+
+
+
+                                  TABLE OF CONTENTS
+
+      Section                                                               Page
+
+
+
+      1.   CMTI HALF-DUPLEX                                                    1
+        1.1   INTRODUCTION                                                     1
+        1.2   INIT FILE                                                        2
+           1.2.1    Macro : ADDHDX                                             3
+           1.2.2    Macro : T78HDX                                             6
+
+        1.3   DSP COMMAND DECODER                                              9
+        1.4   OPTIMIZER                                                       10
+        1.5   TERMINAL MANAGER                                                11
+           1.5.1    H6CURL : cursor left in ADDH and T78H                     12
+           1.5.2    H6CURR : cursor right in ADDH and T78H                    12
+           1.5.3    H6CURU : cursor up in ADDH and T78H                       12
+           1.5.4    H6CURD : cursor down in ADDH and T78H                     13
+           1.5.5    H6HOME : cursor home in ADDH                              14
+           1.5.6    H7HOME : cursor home in T78H                              14
+           1.5.7    H6TAB : tab in ADDH                                       14
+           1.5.8    H7TAB : tab in T78H                                       14
+           1.5.9    H6BTAB : back tab in ADDH                                 15
+           1.5.10   H7BTAB : back tab in T78H                                 15
+           1.5.11   H6OFFP : turn off AUX port in ADDH                        15
+           1.5.12   H6DELC : delete a character in  ADDH                      16
+           1.5.13   H7DELC : delete a character in T78H                       16
+           1.5.14   H6EEOF : erase to end of the field in ADDH and T78H       17
+           1.5.15   H6EEOP : erase to end of page in ADDH                     17
+           1.5.16   H6ERAS : erase all input in ADDH and T78H                 18
+           1.5.17   H6INSM : insert mode in ADDH and T78H                     18
+           1.5.18   H7NWLN : new line in T78H                                 19
+           1.5.19   H6RDSP : screen buffer redisplay in ADDH and T78H         20
+           1.5.20   HSTAT : status line selection in ADDH                     20
+           1.5.21   HKILL : zap the circuit                                   21
+           1.5.22   HRESET : turn off status item -F                          21
+           1.5.23   FCNCLR : clear screen                                     21
+           1.5.24   CURSEL : cursor select                                    21
+           1.5.25   FSYS : system request function                            21
+           1.5.26   FCNENT : enter                                            22
+           1.5.27   FCNF1 - FCNF24 : program function key                     22
+           1.5.28   FCNPA1 - FCNPA3 : program access key                      22
+
+
+                                   APPENDICES
+                                   ==========
+
+
+                                 CMT Half-Duplex GID                     HDX.GID
+                                                                January 19, 1988
+
+
+
+
+                                    INDEX
+                                    =====                                     24
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                 CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+
+
+
+
+                                1 -  CMTI HALF-DUPLEX
+
+
+
+
+
+
+
+                                  1.1  INTRODUCTION
+
+
+           This is the internal design  for the support of the  Half-Duplex mode
+      operation in CMT.
+
+           The primary effort  will be to  define the Half-Duplex  mode terminal
+      profile in  the INIT  file and  to define  characteristics for  each local
+      function in the Terminal Manager module (TM). Therefore, when  those local
+      functions are  active in  Half-Duplex mode, CMT  will properly  update its
+      internal screen buffer.
+
+           TYMNET78 is one of the  Softerm emulations and is run  in half-duplex
+      mode on the  PC or PC  XT.  TYMNET78 actually is  an extension of  ADDS 60
+      HDX, but it has more features than ADDS 60 has.  They are:
+
+      ---the 25th line for status display
+      ---video on/off to buffer the screen data
+      ---initially set to full-duplex mode
+      ---set to half-duplex mode upon TYMNET78 being selected
+      ---return to full-duplex and off insert mode upon circuit zap
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      1                          CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+                                    1.2  INIT FILE
+
+
+           New macros in  each terminal profile macro  will be created  and some
+      macros already in the terminal profile need to be modified.
+
+
+
+      New macros :
+
+
+           CNVDEF( )    :macro to set terminal in conversation mode
+        *  FDXDEF( )    :macro to set terminal in full-duplex mode
+           SFMDEF( )    :macro to set terminal in FORM mode
+           PRHDEF( )    :macro to set protected high intensity
+           PRLDEF( )    :macro to set protected low intensity
+           UPHDEF( )    :macro to set unprotected high intensity
+           UPLDEF( )    :macro to set unprotected low intensity
+           UNDDEF( )    :macro to set unprotected non-display
+        *  CINDEF( )    :macro to clear insert mode
+        ** NUPDEF( )    :macro to set unprotected numeric
+        ** LSTDEF( )    :macro to set terminal in its local status mode
+
+        *  ADDS HDX terminal itself does not support full-duplex recovery
+           after circuit zap so that FDXDEF macro can not be used in
+           ADDS 60 HDX terminal profile.  Clear insert mode to toggle off
+           insert mode after circuit zap does not work properly in ADDS 60
+           HDX terminal.
+       
+        ** Only be applied to TYMNET78
+
+      Modified macros :
+
+         
+           CTLDEF( )    :macro to set terminal parameter
+           STRDEF( )    :macro to set terminal initialization
+           LKBDEF( )    :macro to lock terminal locally
+           UKBDEF( )    :macro to unlock terminal locally
+           DATDEF( )    :macro to indicate Half-Duplex terminal type
+        o  BOPDEF( )    :macro to begin optimizer (video off) 
+        o  FOPDEF( )    :macro to end optimizer (video on) 
+
+        o  Only be used in TYMNET78
+
+
+
+
+
+
+
+
+
+
+
+      2                          CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+                  1.2.1  Macro : ADDHDX
+
+
+      Terminal profile macros of the ADDS VIEWPOINT 60 terminal:
+
+
+       ADDHDX MACRO(RENAM,NEWNAM) [           :"ADDS VP 60 HDX"
+              BGNTRM("41"44"44"53"20"56"50"20"36"30"20"48"44"58,RENAM,NEWNAM)
+              CTLDEF(0,0,1,0,2,0,3,0,4,0,7,0,8,1,0C,1)
+              CTLDEF(0D,00,0E,01)                   :0,0-CONSAT no local echo
+              STRDEF("1B"36)                        :8,1-CMT supports HDX
+              CLRDEF("0C"01)          
+              SPCDEF(SPCSCS)
+              MCDEF(MCSCS)
+              XERDEF(XERSCS)
+              PRTDEF(1)
+              BPRDEF("00)
+              FPRDEF("00)
+              SIZDEF(BUFSIZ)
+              LSZDEF(LINSIZ)
+              SDPDEF(SDPSCS)
+              OUTDEF(OUTSCS)
+              CTRDEF(CTRA6H)
+              ERSDEF(ERSVT1)
+              INCDEF(INCVT1)
+              DELDEF(INCVT1)
+       :
+              LKBDEF("1B"35)                  :(ESC 5) lock keyboard
+              UKBDEF("1B"36)                  :(ESC 6) unlock keyboard
+              DATDEF(ADDH)                    :indicate this terminal is HDX
+              CNVDEF("1B"56)                  :ESC V, conversation mode
+              CINDEV("1B"46)                  :ESC F, clear insert mode
+              SFMDEF("1B"52)                  :ESC R, set in FROM mode
+              PRHDEF("1B"30"49)               :ESC 0 I, protected high
+              PRLDEF("1B"30"48)               :ESC 0 H, protected low
+              UPHDEF("1B"30"41)               :ESC 0 A, unprotected high
+              UPLDEF("1B"30"40)               :ESC 0 @, unprotected low
+              UNDDEF("1B"30"44)               :ESC 0 D, unprotected non-display
+
+      :
+              STADEF($a24)                    
+              BSTDEF(absent)                  
+              FSTDEF(absent)                  
+              SCDEF(ABSENT)
+              EELDEF(PRESENT,"1B"4B)
+              ESLDEF(ABSENT)
+              EESDEF(PRESENT,"1B"6B)        
+              ESSDEF(ABSENT)    
+              RCDEF(ABSENT)
+              HIDEF(ABSENT)   
+              LIDEF(ABSENT)
+              KDEF(4)
+              CFDEF(1,1,1,1)
+
+      3                          CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+              ESZDEF(2)
+              OPTDEF(0E000)
+              GRTDEF(GRTSCS)
+              ENDTRM
+      ]
+
+
+      CTRA6H  MACRO [
+              LEVEL1(A.SO,1,HSTAT)            :status line on/off (^N) (defined)
+              LEVEL1(A.EM,1,FSYS)             :system request (^Y) (defined)
+              LEVEL1(A.FF,1,FCNCLR)           :clr scn (^L) [CTRL-SHIFT-E ALL]
+              LEVEL1(A.CR,1,FCNENT)           :return (^M) [RETURN]
+              LEVEL1(A.VT,1,HKILL)            :zap circuit (^K) (defined)
+              LEVEL1(A.ETX,1,FCNCLR)          :clear screen (^C) (defined)
+              LEVEL1(A.DC2,1,H6OFFP)          :force AUX port off (^R) [AUX]
+              LEVEL1(A.DC4,1,H6OFFP)          :turn AUX port off (^T) [AUX]
+              LEVEL1(A.HT,1,H6TAB)            :tab (^I) [TAB] or [ENTER]
+              LEVEL1(A.BS,1,H6CURL)           :backspace (^H) [BACK SPACE]
+              LEVEL1(A.CAN,1,CURSEL)          :cursor select (^X) (defined)
+              LEVEL1(A.NAK,1,H6CURL)          :cursor left(^U)
+              LEVEL1(A.LFED,1,H6CURD)         :cursor down(^J)
+              LEVEL1(A.ACK,1,H6CURR)          :cursor right(^F)
+              LEVEL1(A.SUB,1,H6CURU)          :cursor up(^Z)
+              LEVEL1(A.SOH,1,H6HOME)          :home (^A) [HOME]
+              LEVEL1(A.ENQ,1,HRESET)          :reset:turn off -F (^E)(defined)
+              LEVEL1(A.SYN,1,H6RDSP)          :redisplay (^V) (defined)
+      :
+              LEVEL1(A.STX,0)                 :(^B)
+                LEVEL2(A.1,0)                 
+                  LEVEL3(A.CR,1,FCNF1)        :PF-1(F1)
+                LEVEL2(A.2,0)
+                  LEVEL3(A.CR,1,FCNF2)        :PF-2(F2)
+                LEVEL2(A.3,0)
+                  LEVEL3(A.CR,1,FCNF3)        :PF-3(F3)
+                LEVEL2(A.4,0)
+                  LEVEL3(A.CR,1,FCNF4)        :PF-4(F4)
+                LEVEL2(A.5,0)
+                  LEVEL3(A.CR,1,FCNF5)        :PF-5(F5)
+                LEVEL2(A.6,0)
+                  LEVEL3(A.CR,1,FCNF6)        :PF-6(F6)
+                LEVEL2(A.7,0)
+                  LEVEL3(A.CR,1,FCNF7)        :PF-7(F7)
+                LEVEL2(A.8,0)
+                  LEVEL3(A.CR,1,FCNF8)        :PF-8(F8)
+                LEVEL2(A.9,0)
+                  LEVEL3(A.CR,1,FCNF9)        :PF-9(^B 9 CR)(defined F9)
+                LEVEL2(A.COLN,0)
+                  LEVEL3(A.CR,1,FCNF10)       :PF-10(^B : CR)(defined F10)
+                LEVEL2(A.SEMI,0)
+                  LEVEL3(A.CR,1,FCNF11)       :PF-11(^B ; CR)(defined F11)
+                LEVEL2(A.LTH,0)
+                  LEVEL3(A.CR,1,FCNF12)       :PF-12(^B < CR)(defined F12)
+                LEVEL2(A.EQ,0)
+
+      4                          CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+                  LEVEL3(A.CR,1,FCNF13)       :PF-13(^B = CR)(defined F13)
+                LEVEL2(A.GT,0)
+                  LEVEL3(A.CR,1,FCNF14)       :PF-14(^B > CR)(defined F14)
+                LEVEL2(A.QUE,0)
+                  LEVEL3(A.CR,1,FCNF15)       :PF-15(^B ? CR)(defined F15)
+                LEVEL2(A.AT,0)
+                  LEVEL3(A.CR,1,FCNF16)       :PF-16(^B @ CR)(defined F16)
+                LEVEL2(A.EXCL,0)
+                  LEVEL3(A.CR,1,FCNF17)       :PF-17(SHIFT-F1)
+                LEVEL2(A.DQT,0)
+                  LEVEL3(A.CR,1,FCNF18)       :PF-18(SHIFT-F2)
+                LEVEL2(A.PND,0)
+                  LEVEL3(A.CR,1,FCNF19)       :PF-19(SHIFT-F3)
+                LEVEL2(A.DOL,0)
+                  LEVEL3(A.CR,1,FCNF20)       :PF-20(SHIFT-F4)
+                LEVEL2(A.PCT,0)
+                  LEVEL3(A.CR,1,FCNF21)       :PF-21(SHIFT-F5)
+                LEVEL2(A.AND,0)
+                  LEVEL3(A.CR,1,FCNF22)       :PF-22(SHIFT-F6)
+                LEVEL2(A.SQT,0)
+                  LEVEL3(A.CR,1,FCNF23)       :PF-23(SHIFT-F7)
+                LEVEL2(A.LPAR,0)
+                  LEVEL3(A.CR,1,FCNF24)       :PF-24(SHIFT-F8)
+      :
+              LEVEL1(A.DLE,0)                 :(^P) (defined)  
+                LEVEL2(A.1,1,FCNPA1)          :PA-1
+                LEVEL2(A.2,1,FCNPA2)          :PA-2
+                LEVEL2(A.3,1,FCNPA3)          :PA-3
+      :
+              LEVEL1(A.ESC,0)
+                LEVEL2(A.O,1,H6BTAB)          :back tab (ESC 0) [SHIFT-TAB]
+                LEVEL2(A.F,1,H6INSM)          :insert mode (ESC F)[INS C]
+                LEVEL2(A.LF,1,H6INSM)         :insert mode (ESC f)[SHIFT-INS C]
+                LEVEL2(A.G,1,H6ERAS)          :erase all unprot; erase input
+                                              :(ESC G) [CTRL-E ALL]
+                LEVEL2(A.K,1,H6EEOF)          :erase to EOF (ESC K) [CTRL-EOF]
+                LEVEL2(A.LK,1,H6EEOP)         :erase to EOP (ESC k)
+                                              :[CTRL-SHIFT-EOF]
+                LEVEL2(A.E,1,H6DELC)          :del char (ESC E) [DEL-C]   
+                LEVEL2(A.LE,1,H6DELC)         :del char (ESC e) [SHIFT DEL-C]
+                LEVEL2(A.Q,1,HNXTCHR)         :PAGE DOWN KEY
+                LEVEL2(A.LQ,1,HNXTCHR)        :PAGE UP KEY     
+      ]
+
+
+
+
+
+
+
+
+
+
+
+      5                          CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+                  1.2.2  Macro : T78HDX
+
+
+      Terminal profile macros for the TYMNET78 PC software:
+
+
+       T78HDX MACRO(RENAM,NEWNAM) [           :"TYMNET78 HDX"
+              BGNTRM("54"59"4D"4E"45"54"37"38"20"48"44"58,RENAM,NEWNAM)
+              CTLDEF(0,0,1,0,2,0,3,0,4,0,7,0,8,0,0C,1)
+              CTLDEF(0D,00,0E,01)             :0,0-CONSAT no local echo
+                                              :8,0-CMT supports FDX initially
+              STRDEF("1B"0A"1B"38"1B"36)      :recover TYMNET78 status line
+                                              :HDX mode, unlock keyboard
+              CLRDEF("0C"01)          
+              SPCDEF(SPCSCS)
+              MCDEF(MCSCS)
+              XERDEF(XERSCS)
+              PRTDEF(1)
+              BPRDEF("1B"33)      
+              FPRDEF("1B"34)         
+              SIZDEF(BUFSIZ)
+              LSZDEF(LINSIZ)
+              SDPDEF(SDPSCS)
+              OUTDEF(OUTSCS)
+              CTRDEF(CTRA7H)
+              ERSDEF(ERSVT1)
+              INCDEF(INCVT1)
+              DELDEF(INCVT1)
+       :
+              LKBDEF("1B"35)                  :(ESC 5) lock keyboard
+              UKBDEF("1B"36)                  :(ESC 6) unlock keyboard
+              DATDEF(T78H)                    :indicate this terminal is HDX
+              CNVDEF("1B"56)                  :ESC V, conversation mode
+              SFMDEF("1B"52)                  :ESC R, set in FROM mode
+              FDXDEF("1B"37)                  :ESC 7, set in full-duplex mode
+              LSTDEF("1B"39)                  :ESC 9, recover local status line
+              CINDEF("1B"46)                  :ESC F, clear insert mode
+              PRHDEF("1B"30"49)               :ESC 0 I, protected high
+              PRLDEF("1B"30"48)               :ESC 0 H, protected low
+              UPHDEF("1B"30"41)               :ESC 0 A, unprotected high
+              UPLDEF("1B"30"40)               :ESC 0 @, unprotected low
+              UNDDEF("1B"30"44)               :ESC 0 D, unprotected non-display
+              NUPDEF("1B"30"45)          :ESC 0 E, unprotected numeric
+      :
+              STADEF($a25)                    :25th line as status line
+              BSTDEF(PRESENT,"1B"59"38"20)    :begin string for line 25 display
+              FSTDEF(ABSENT)                  :end string for 25th line display
+              SCDEF(ABSENT)
+              BOPDEF(PRESENT,"1B"44)          :ESC D, begin optimizer(video off)
+              FOPDEF(PRESENT,"1B"64)          :ESC d, end optimizer (video on)
+              EELDEF(PRESENT,"1B"4B)
+              ESLDEF(ABSENT)
+              EESDEF(PRESENT,"1B"6B)        
+
+      6                          CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+              ESSDEF(ABSENT)    
+              RCDEF(ABSENT)
+              HIDEF(ABSENT)   
+              LIDEF(ABSENT)
+              KDEF(4)
+              CFDEF(1,1,1,1)
+              ESZDEF(2)
+              OPTDEF(0E000)
+              GRTDEF(GRTSCS)
+              ENDTRM
+      ]
+
+
+      CTRA7H  MACRO [
+              LEVEL1(A.EM,0)                  :system request
+                LEVEL2(A.CR,1,FSYS)           :(^Y CR)
+              LEVEL1(A.CR,1,FCNENT)           :return (^M)
+              LEVEL1(A.VT,0)                  :zap circuit
+                LEVEL2(A.CR,1,HKILL)          :(^K CR)
+              LEVEL1(A.ETX,0)                 :clear screen
+                LEVEL2(A.CR,1,FCNCLR)         :(^C CR)
+              LEVEL1(A.HT,1,H7TAB)            :tab (^I)
+              LEVEL1(A.BS,1,H6CURL)           :backspace (^H)
+              LEVEL1(A.CAN,0)                 :cursor select
+                LEVEL2(A.CR,1,CURSEL)         :(^X CR)
+              LEVEL1(A.NAK,1,H6CURL)          :cursor left(^U)
+              LEVEL1(A.LFED,1,H6CURD)         :cursor down(^J)
+              LEVEL1(A.ACK,1,H6CURR)          :cursor right(^F)
+              LEVEL1(A.SUB,1,H6CURU)          :cursor up(^Z)
+              LEVEL1(A.SOH,1,H7HOME)          :home (^A) 
+              LEVEL1(A.EOT,1,H7NWLN)          :new line (^D)
+              LEVEL1(A.ENQ,0)                 :reset:turn off -F
+                LEVEL2(A.CR,1,HRESET)         :(^E CR)
+              LEVEL1(A.SYN,0)                 :redisplay
+                LEVEL2(A.CR,1,H6RDSP)         :(^V CR)
+      :
+              LEVEL1(A.STX,0)                 :(^B)
+                LEVEL2(A.1,0)                 
+                  LEVEL3(A.CR,1,FCNF1)        :PF-1(^B 1 CR)
+                LEVEL2(A.2,0)
+                  LEVEL3(A.CR,1,FCNF2)        :PF-2(^B 2 CR)
+                LEVEL2(A.3,0)
+                  LEVEL3(A.CR,1,FCNF3)        :PF-3(^B 3 CR)
+                LEVEL2(A.4,0)
+                  LEVEL3(A.CR,1,FCNF4)        :PF-4(^B 4 CR)
+                LEVEL2(A.5,0)
+                  LEVEL3(A.CR,1,FCNF5)        :PF-5(^B 5 CR)
+                LEVEL2(A.6,0)
+                  LEVEL3(A.CR,1,FCNF6)        :PF-6(^B 6 CR)
+                LEVEL2(A.7,0)
+                  LEVEL3(A.CR,1,FCNF7)        :PF-7(^B 7 CR)
+                LEVEL2(A.8,0)
+                  LEVEL3(A.CR,1,FCNF8)        :PF-8(^B 8 CR)
+
+      7                          CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+                LEVEL2(A.9,0)
+                  LEVEL3(A.CR,1,FCNF9)        :PF-9(^B 9 CR)
+                LEVEL2(A.COLN,0)
+                  LEVEL3(A.CR,1,FCNF10)       :PF-10(^B : CR)
+                LEVEL2(A.SEMI,0)
+                  LEVEL3(A.CR,1,FCNF11)       :PF-11(^B ; CR)
+                LEVEL2(A.LTH,0)
+                  LEVEL3(A.CR,1,FCNF12)       :PF-12(^B < CR)
+                LEVEL2(A.EQ,0)
+                  LEVEL3(A.CR,1,FCNF13)       :PF-13(^B = CR)
+                LEVEL2(A.GT,0)
+                  LEVEL3(A.CR,1,FCNF14)       :PF-14(^B > CR)
+                LEVEL2(A.QUE,0)
+                  LEVEL3(A.CR,1,FCNF15)       :PF-15(^B ? CR)
+                LEVEL2(A.AT,0)
+                  LEVEL3(A.CR,1,FCNF16)       :PF-16(^B @ CR)
+                LEVEL2(A.EXCL,0)
+                  LEVEL3(A.CR,1,FCNF17)       :PF-17(^B ! CR)
+                LEVEL2(A.DQT,0)
+                  LEVEL3(A.CR,1,FCNF18)       :PF-18(^B " CR)
+                LEVEL2(A.PND,0)
+                  LEVEL3(A.CR,1,FCNF19)       :PF-19(^B # CR)
+                LEVEL2(A.DOL,0)
+                  LEVEL3(A.CR,1,FCNF20)       :PF-20(^B $ CR)
+                LEVEL2(A.PCT,0)
+                  LEVEL3(A.CR,1,FCNF21)       :PF-21(^B % CR)
+                LEVEL2(A.AND,0)
+                  LEVEL3(A.CR,1,FCNF22)       :PF-22(^B & CR)
+                LEVEL2(A.SQT,0)
+                  LEVEL3(A.CR,1,FCNF23)       :PF-23(^B ' CR)
+                LEVEL2(A.LPAR,0)
+                  LEVEL3(A.CR,1,FCNF24)       :PF-24(^B ( CR)
+                LEVEL2(A.RPAR,0)N
+                  LEVEL3(A.CR,1,FCNPA1)       :PA-1(^B ) CR)
+                LEVEL2(A.STAR,0)
+                  LEVEL3(A.CR,1,FCNPA2)       :PA-2(^B * CR)
+                LEVEL2(A.PLUS,0
+                  LEVEL3(A.CR,1,FCNPA3)       :PA-3(^B + CR)
+      :
+              LEVEL1(A.ESC,0)
+                LEVEL2(A.O,1,H7BTAB)          :back tab (ESC O)
+                LEVEL2(A.F,1,H6INSM)          :insert mode (ESC F)
+                LEVEL2(A.G,1,H6ERAS)          :erase all unprot; erase input
+                                              :(ESC G)
+                LEVEL2(A.K,1,H6EEOF)          :erase to EOF (ESC K)
+                LEVEL2(A.E,1,H7DELC)          :del char (ESC E)
+
+
+
+
+
+
+
+
+      8                          CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+                               1.3  DSP COMMAND DECODER
+
+
+           In Full-Duplex mode,  to do the  optimization, two bit  arrays CCHANG
+      and CGRAPH  are required. In  Half-Duplex mode, only  one bit  array CHALF
+      will be required.  The  optimization works differently in  the Half-Duplex
+      mode. Optimization  will be  done on  a line-by-line  basis, instead  of a
+      character-by-character basis.
+
+
+      create new bit array : CHALF[1..24]
+
+          each bit represent one line,
+          CHALF[1] is line 1, CHALF[2] is line 2, ....
+          the bit value will be set to 1 if the line in the new screen is
+          different from the old screen
+          the bit value will be reset to 0 if the line in the new screen
+          is the same as the old screen
+         
+      DSPEOM : 
+                initbit array CHALF[1..24] = 0
+                count = 1
+                while count <= 24 do
+                      while not end of current line do
+                            compare one word with the old screen buffer
+                            if same, then get next word
+                                     else set CHALF[count] = 1
+                                           skip this while loop
+                      end
+                      increase count by 1
+                end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      9                          CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+                                    1.4  OPTIMIZER
+
+
+           In Full-Duplex  mode, routine OPTXMT  is used to  output data  to the
+      terminal. In Half-Duplex mode, routine HOPTXMT does the output for ADD 60,
+      as routine T78XMT does for TYMNET78.
+
+            The new screen data is transmitted to the terminal in half-duplex
+      mode instead of calling OPTXMT to do transmission.
+
+      HOPTXMT:
+              send a BOP string to the PC for video off
+              send a keyborad-locked string
+              send a form-mode string
+              count = 0
+               while count <= 24 do
+                     if CHALF[count] = 1
+                        then send out the whole current line to the terminal
+                     get next line
+                     increase count by 1
+               end while
+              send a access-to-the-25th-line string
+              send a conversation-mode string
+              send a keyboard unlocked string
+              send a FOP string to the PC for video on
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      10                         CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+                                1.5  TERMINAL MANAGER
+
+
+           The local functions work  quite differently in Half-Duplex  mode.  In
+      Full-Duplex mode, the edit keys entered from the keyboard are sent to CMT,
+      then  CMT  sends down  the  move  cursor control  sequence  to  update the
+      terminal screen cursor position and data.  In  Half-Duplex mode,  the edit
+      keys work locally and  CMT is notified.  CMT  need not send down  any move
+      cursor control sequence or erase control sequence to the terminal, because
+      the terminal screen has been updated locally already.
+
+           In ADDS VIEWPOINT and TYMNET78, before CMT sends down any screen data
+      to the terminal, CMT should sent ESC sequences to set the terminal  in the
+      FORM  mode and  to lock  the  keyboard. After  the whole  screen  has been
+      painted,  CMT  sends  down  ESC sequences  to  set  the  terminal  in CONV
+      mode(conversation mode) and to unlock the keyboard.
+
+           In Half-Duplex mode, when entering  a character at the end  of field,
+      the  cursor  moves  to  the  next  unprotected  field  automatically.   No
+      character is allowed to be entered in a protected field.  Therefore, catch
+      up mode and enter deferred echo mode will not be activated  in Half-Duplex
+      mode.    The  functionality  of  each local  key  in  Half-Duplex  mode is
+      described as follows :
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      11                         CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+
+
+
+
+
+
+                  1.5.1  H6CURL : cursor left in ADDH and T78H
+
+      H6CURL : back up the cursor address
+               wrap if necessary
+
+
+
+
+
+
+                  1.5.2  H6CURR : cursor right in ADDH and T78H
+
+      H6CURR : advance cursor address
+               wrap if necessary
+
+
+
+
+
+
+                  1.5.3  H6CURU : cursor up in ADDH and T78H
+
+      H6CURU : back up a line
+               wrap if necessary
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      12                         CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+                  1.5.4  H6CURD : cursor down in ADDH and T78H
+
+      H6CURD : advance one line
+               wrap if necessary
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      13                         CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+                  1.5.5  H6HOME : cursor home in ADDH
+
+      H6HOME :  update the cursor address to 
+                the first position of the screen
+               
+
+
+
+
+
+                  1.5.6  H7HOME : cursor home in T78H
+
+      H7HOME :  update the cursor address to the first position of the
+                 first unprotected field
+               
+
+
+
+
+
+                  1.5.7  H6TAB : tab in ADDH
+
+      H6TAB : update the cursor address to the first position
+              of the next unprotected field.
+              if the current field is the last unprotected field
+                 then update the cursor address to the first 
+                      position on the screen buffer
+
+
+
+
+
+                  1.5.8  H7TAB : tab in T78H
+
+      H7TAB :  update the cursor address to the first 
+               position of the next unprotected field
+               if the current field is the last unprotected field
+                  then update the cursor address to the first
+                       position of the first unprotected field.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      14                         CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+                  1.5.9  H6BTAB : back tab in ADDH
+
+      H6BTAB : if the cursor on the first position of 
+                  an unprotected field
+                  then update the cursor address to the first 
+                       position of the previous unprotected field.
+
+                  else update the cursor address to the first position of 
+                       the current field.
+
+               if the cursor on the first position of 
+                  the first unprotected field of the formatted screen,
+                  then move the cursor to home position.
+
+               if the cursor on the home position then wrap it to
+                  the first position of the last unprotected field of
+                  the formatted screen.
+
+
+
+
+
+                  1.5.10  H7BTAB : back tab in T78H
+
+      H7BTAB : if the cursor on the first position of
+                  an unprotected field
+                  then update the cursor address to the first
+                       position of the previous unprotected field.
+                       
+                  else update the cursor address to the first position of
+                       the current field.
+
+               if the cursor on the first position of
+                  the first unprotected field of the formatted screen,
+                  then wrap the cursor to the first position of
+                       the last unprotected field of the formatted screen. 
+
+
+
+
+
+                  1.5.11  H6OFFP : turn off AUX port in ADDH
+
+      H6OFFP : CTRL-T control code disables AUX port
+
+
+
+
+
+
+
+
+
+
+      15                         CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+                  1.5.12  H6DELC : delete a character in  ADDH
+
+      H6DELC :  if the cursor is on an attribute
+                   then terminal sends out bell and displays "PROTECTED"
+                        on the terminal status line and nothing is sent 
+                        to CMT
+                  
+                if the cursor is on a protected field
+                   then terminal sends out bell and displays "PROTECTED"
+                        nothing is sent to CMT
+                  
+                if the character in an unprotected field is deleted
+                   then the character on the cursor position has been
+                        deleted, all the remaining characters from
+                        the cursor position to the end of field shift
+                        one position left.
+
+
+
+
+
+
+                  1.5.13  H7DELC : delete a character in T78H
+
+      H7DELC :  the cursor is not allowed to move to an attribute or 
+                protected positions.
+
+                if the cursor is in an unprotected field, and
+                the character at the cursor position has been
+                deleted, all the remaining characters following 
+                the cursor position to the end of line shift
+                one position left.
+
+                if the unprotected field encompasses more than
+                one row, characters in other rows are not affected.
+                  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      16                         CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+                  1.5.14  H6EEOF : erase to end of the field in ADDH and T78H
+
+      H6EEOF :  put nulls from the cursor address in the screen buffer 
+                to the end of the field
+
+
+
+
+
+
+                  1.5.15  H6EEOP : erase to end of page in ADDH
+
+      H6EEOP : put nulls from the cursor address in the screen buffer
+               through all unprotected fields
+
+               the cursor can be in anywhere
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      17                         CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+                  1.5.16  H6ERAS : erase all input in ADDH and T78H
+
+      H6ERAS :  clear all unprotected field to nulls
+                reset MDT bit to 0 in the unprotected field
+                reposition cursor to the first position on 
+                the screen
+
+
+
+
+
+
+                  1.5.17  H6INSM : insert mode in ADDH and T78H
+
+      H6INSM :  get insert character
+                while (not receive insert mode key
+                       to exit insert mode) do
+                       put insert character on the cursor position
+                       cursor and data from that position to the en<d of
+                       field is shift right one position
+                       get next insert character
+                end while
+               
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      18                         CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+               
+
+
+
+
+
+                  1.5.18  H7NWLN : new line in T78H
+
+      H7NWLN :  move the cursor to the first unprotected 
+                location of the next line
+       
+                if the next line does not have the unprotected field
+                   then move the cursor to the first position on the
+                        first position following unprotected field
+              
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      19                         CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+                  1.5.19  H6RDSP : screen buffer redisplay in ADDH and T78H
+
+      H6RDSP :  send the string to set the terminal in FORM mode
+                redisplay the whole screen buffer on the terminal screen 
+                send the string to end the FORM mode and start conversation 
+                mode
+
+
+
+
+
+
+                  1.5.20  HSTAT : status line selection in ADDH
+
+      HSTAT :  erase the status line -
+                    
+               lock keyboard
+               restore the status line with the screen data
+               unlock keyboard
+
+               display the status line -
+        
+               lock keyboard
+               set the whole line to a protected field 
+
+               check bit 0 (host interface type)
+               check bit 1 (session type)
+               check bit 2 (crt luname)
+               check bit 3 (prt luname)
+               check bit 4 (printer busy)
+               check bit 5 (-F)
+               skip bit 6 (insert mode)         
+               skip bit 7 (prot)
+               skip bit 8 (nulk)
+               skip bit 9 (lock)
+
+               set field attribute at the end of status line (for the
+               next screen data line)
+               unlock keyboard
+       
+         ** No upper-corner status display, no 25th status line display.
+                
+
+
+
+
+
+
+
+
+
+
+
+
+      20                         CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+                  1.5.21  HKILL : zap the circuit
+
+      HKILL : clear screen
+              send "please log in :" to the terminal
+
+         ** when the circuit gets zapped,
+            clear screen
+            send an error message to the terminal
+            send a full-duplex string
+            send a clear-insert-mode string
+
+
+
+
+
+
+                  1.5.22  HRESET : turn off status item -F
+
+      HRESET : if the host interface is SNA
+                  then reset status bit 5 (-F) and bit 9 (lock)
+               
+
+
+
+
+
+                  1.5.23  FCNCLR : clear screen
+
+               Clears the local screen
+               Clears the CMT internal screen buffer
+
+
+
+
+
+
+                  1.5.24  CURSEL : cursor select
+
+               Works the same as the Full-Duplex mode.
+
+
+
+
+
+
+                  1.5.25  FSYS : system request function
+
+               Works the same as the Full-Duplex mode.
+
+
+
+
+
+
+      21                         CMT Half-Duplex GID                     HDX.GID
+      CMTI HALF-DUPLEX                                          January 19, 1988
+
+
+                  1.5.26  FCNENT : enter
+
+               Works the same as Full-Duplex mode.
+
+
+
+
+
+
+                  1.5.27  FCNF1 - FCNF24 : program function key
+
+               Works the same as the Full-Duplex mode.
+
+
+
+
+
+
+                  1.5.28  FCNPA1 - FCNPA3 : program access key
+
+               Works the same as the Full-Duplex mode.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      22                         CMT Half-Duplex GID                     HDX.GID
+                                                                January 19, 1988
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                     *   ****  ****  ***** *   * ****  ***** *   *
+                    * *  *   * *   * *     **  * *   *   *    * * 
+                   ***** ****  ****  ****  * * * *   *   *     *  
+                   *   * *     *     *     *  ** *   *   *    * * 
+                   *   * *     *     ***** *   * ****  ***** *   *
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      23                         CMT Half-Duplex GID                     HDX.GID
+      INDEX                                                     January 19, 1988
+
+
+                                        INDEX
+
+      ADDHDX profile  3
+
+
+      Half-Duplex  1
+
+
+      T78HDX profile  6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      24                         CMT Half-Duplex GID                     HDX.GID
+ @
+[ñ
