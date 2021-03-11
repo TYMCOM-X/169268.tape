@@ -1,0 +1,797 @@
+***********************************************************************
+*                                                                     *
+*                       SUBROUTINE:  GETCOM                           *
+*                                                                     *
+*      THIS SUBROUTINE INTERPRETS A 71 CHAR COMMAND STRING BY         *
+*      DIVIDING THE COMMAND STRING INTO TWO PARTS (IF AVAILABLE).     *
+*      THE FIRST PART WILL CONTAIN THE 1ST THREE (NON-BLANK)          *
+*      CHARACTERS.  THE 2ND PART WILL CONTAIN UP TO FIVE              *
+*      CHARACTERS FOUND AFTER THE END OF THE 1ST COMMAND PART.        *
+*                                                                     *
+*      THE CALLING SEQUENCE IS:                                       *
+*       CALL GETCOM(COMMND,IPART1,IPART2,IERR)                        *
+*      WHERE THE REQUIRED INPUTS ARE:                                 *
+*              COMMND = ARRAY CONTAINING 71 CHAR COMMAND STRING       *
+*      WHERE THE VALUES RETURNED ARE:                                 *
+*              IPART1 = 1ST PART OF COMMAND                           *
+*              IPART2 = 2ND PART OF COMMAND                           *
+*              IERR   = ERROR FLAG. SET IF 'COMMND' WAS ALL BLANKS    *
+*                                                                     *
+***********************************************************************
+
+       SUBROUTINE GETCOM(COMMND,IPART1,IPART2,IERR)
+
+       INTEGER COMMND(71)
+
+*      ** DETERMINE LENGTH OF COMMAND STRING
+       ICLGTH=71
+
+       DO 10 I=71,1,-1
+       IF (COMMND(I).NE.' ') GO TO 20
+10     CONTINUE
+
+*      ** COMMAND WAS ALL BLANKS. SET ERR FLAG, AND RETURN
+       IERR=1
+       RETURN
+
+*      ** FOUND LENGTH!
+20     ICLGTH=I
+
+*      ** INIT VARIABLES. 
+       IPART1='     '
+       IPART2='     '
+       IPOS=1
+
+*      ** GET 1ST PART OF COMMAND. GET THREE CHARACTERS ONLY.
+*         IGNORE LEADING BLANKS.
+
+       DO 50 I=1,ICLGTH
+       IF(COMMND(I).NE.' ') GO TO 40
+       IF (IPOS.EQ.1) GO TO 50
+       GO TO 60
+
+40     IF (IPOS.GE.4) GO TO 50
+       CALL STC(COMMND(I),IPART1,IPOS)
+       IPOS=IPOS+1
+50     CONTINUE
+
+*      ** 'I'  NOW CONTAINS THE POSITION OF THE 1ST BLANK
+*         AFTER THE 1ST PART OF THE COMMAND.
+*      ** GET 2ND PART OF COMMAND.  GET MAX OF 5 CHARACTERS
+*      ** IGNORE ANY BLANKS BETWEEN 1ST AND 2ND PARTS OF COMMAND
+
+60     IPOS=1
+       DO 80 J=I+1,ICLGTH
+       IF (COMMND(J).NE.' ') GO TO 70
+       IF (IPOS.EQ.1) GO TO 80
+       GO TO 90
+
+70     IF (IPOS.GE.6) GO TO 80
+       CALL STC(COMMND(J),IPART2,IPOS)
+       IPOS=IPOS+1
+80     CONTINUE
+
+*       ** FINIDHED:  RETURN TO CALLING PROGRAM
+
+90     RETURN
+       END
+
+
+***********************************************************************
+*                                                                     *
+*                       SUBROUTINE: GETATT                            *
+*                                                                     *
+*      THIS SUBROUTINE READS ATTRIBUTE NAMES FROM ONE OF THE .DMD     *
+*      FILES AND PLACES THE ATTRIBUTES INTO ARRAY: ATTS , STARTING    *
+*      WITH ELEMENT 'IPNT'.                                           *
+*                                                                     *
+*      THE CALLING SEQUENCE IS:                                       *
+*       CALL GETATT(IPNT)                                             *
+*      WHERE THE REQUIRED INPUT IS:                                   *
+*              IPNT  = THE POINER INTO ARRAY 'ATTS' WHERE THE NAMES   *
+*                      OF THE ATTRIBUUTES BEING READ IN SHOULD START  *
+*                      BEING PLACED.                                  *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE GETATT(IPNT)
+
+        INTEGER ATTS(200)
+
+       COMMON/AREA2/ATTS
+
+10      READ (21,15,END=50) IWORD
+15      FORMAT (A3)
+        IF (IWORD.NE.'ATT') GO TO 10
+        REREAD 20,ATTS(IPNT)
+20      FORMAT (4X,A5)
+        IPNT=IPNT+1
+        GO TO 10
+
+50      CLOSE (21)
+        RETURN
+        END
+
+
+***********************************************************************
+*                                                                     *
+*                        SUBROUTINE: ATTOUT                           *
+*                                                                     *
+*      THIS SUBROUTINE USES THE 'DBINFO' COMMAND TO DETERMINE THE     *
+*      POSITION AND TYPE OF THE ATTRIBUTE NAME SPECIFIED, THEN        *
+*      DISPLAYS THE ATTRIBUTE. IF DISPLAYING ANY INFO OTHER THAN A    *
+*      SINGLE ATTRIBUTE, THE ATTRIBUTES WILL BE DISPLAYED THREE TO A  *
+*      LINE.                                                          *
+*                                                                     *
+*      THE CALING SEQUENCE IS:                                        *
+*       CALL ATTOUT(IMODE,IFLD,IDIS,IERR)                             *
+*      WHERE THE REQUIRED INPUTS ARE:                                 *
+*              IMODE  = UPDATE MODE. EITHER 'VAS','NAD', OR 'ISS'     *
+*              IFLD   = NAME OF ATTRIBUTE TO BE OUTPUT                *
+*              IDIS   = NUMBER OF ATTRIBUTES ALREADY OUTPUT ON THE    *
+*                       CURRENT LINE. IF SET TO 4, OUTPUT WILL GO     *
+*                       TO A NEW LINE.                                *
+*      WHERE THE RETURNED VALUES ARE:                                 *
+*              IERR   = ERROR FLAG. SET IF INVALID ATTRIBUTE NAME.    *
+*                                                                     *
+***********************************************************************
+
+       SUBROUTINE ATTOUT (IMODE,IFLD,IDIS,IERR)
+
+       INTEGER IARR(25),IVAL(3),L(2),SCR(8)
+
+        COMMON/AREA1/IHVR1,IHVR2,IHVR3,INVR1,INVR2,INVR3
+        IERR=0
+
+*       ** INIT 'IVAL' TO BLANKS
+        DO 140  I=1,3
+        IVAL(I)='     '
+140     CONTINUE
+
+*       ** GET INFORMATION ON ATTRIBUTE
+
+       CALL DBINFO(IFLD,IARR)
+
+*      ** IARR NOW CONTAINS THE ATTRIBUTE INFORMATION: IARR(7)=
+*         ATTRIBUTE POSITION: IARR(8)= ATTRIBUTE TYPE (0=INTEGER,
+*         1=REAL,2=TEXT)
+
+
+*      ** CHECK IF VALID ATTRIBUTE NAME
+       IF (IARR(7).NE.0) GO TO 100
+       IERR=1
+       RETURN
+
+*       ** CHECK IF TIME FOR A NEW LINE
+100    IF (IDIS.NE.4) GO TO 115
+        IDIS=1
+        TYPE 110
+110    FORMAT (1H+,/)
+
+*       ** IF ATTRIBUTE IS NOT A NEIGHBOR HERE
+
+115     IF (IMODE.EQ.'VAS'.AND.(IARR(7).GE.INVR1.AND.IARR(7).LE.
+     XINVR3)) GO TO 175
+
+*       ** IF ATTRIBUTE IS A HOST CHECK IF IT SHOULD BE DISPLAYED
+
+        IF (IMODE.EQ.'VAS'.AND.(IARR(7).LE.IHVR2.OR.IARR(7).GT.
+     XIHVR3)) GO TO 118
+        GO TO 200
+
+*       ** IF ATTRIBUTE IS NOT REAL STAY HERE
+118     IF (IARR(8).EQ.1) GO TO 150
+
+*      ** GET VALUE OF ATTRIBUTE
+       CALL DBVAL(IARR(7),IVAL)
+
+*      ** DISPLAY FIELD 
+
+*       ** THIS ATTRIBUTE IS NUMERIC
+       IF (IARR(8).EQ.2) GO TO 130
+       TYPE 120,IFLD,IVAL(1)
+120    FORMAT (1H+,1X,':',A5,4X,I12,':',$)
+       IDIS=IDIS+1
+       GO TO 200
+
+*       ** THIS ATTRIBUTE IS ALPHA
+130    TYPE 135,IFLD,(IVAL(I),I=1,3)
+135    FORMAT (1H+,1X,':',A5,1X,3A5,':',$)
+       IDIS=IDIS+1
+
+        GO TO 200
+
+*       ** THIS ATTRIBUTE IS REAL
+*       ** GET VALUE OF ATTRIBUTE AND DISPLAY IT
+
+150     CALL DBVAL(IARR(7),VAL)
+        TYPE 155,IFLD,VAL
+155     FORMAT (1H+,1X,':',A5,10X,F6.2,':',$)
+        IDIS=IDIS+1
+        GO TO 200
+
+*       ** ATTRIBUTE IS A NEIGHBOR
+*       ** BREAK THE VALUE OF THE ATTRIBUTE INTO 2 PARTS, AND
+*          DISPLAY BOTH. PARTS ARE: GROUPS & NODE NUMBER.
+
+*       ** CHECK IF ATTRIBUTE SHOULD BE DISPLAYED
+
+175     CALL DBVAL(IARR(7),IVAL)
+
+        IF (IMODE.EQ.'VAS'.AND.(IARR(7).GE.INVR1.AND.IARR(7).LE.INVR2))
+     XGO TO 176
+        GO TO 200
+
+*       ** DISPLAY ATTRIBUTE
+176    ENCODE (8,177,L)IVAL(1)
+177     FORMAT (I8)
+       DECODE (8,178,L)(SCR(I),I=1,8)
+178     FORMAT (8I1)
+
+       INUM1=SCR(1)*100*SCR(2)*10+SCR(3)
+       INUM2=SCR(4)*10000+SCR(5)*1000+SCR(6)*100+SCR(7)*10+SCR(8)
+
+        TYPE 180,IFLD,INUM1,INUM2
+180     FORMAT (1H+,1X,':',A5,7X,I3,',',I5,':',$)
+        IDIS=IDIS+1
+
+200    RETURN
+       END
+
+***********************************************************************
+*                                                                     *
+*                     SUBROUTINE: ALLOUT                              *
+*                                                                     *
+*      THIS SUBROUTINE OUTPUTS ALL ATTRIBUTES IN THE ARRAY: ATTS      *
+*      BETWEEN POINTERS ILOOP1 AND ILOOP2                             *
+*                                                                     *
+*      THE CALLING SEQUENCE IS:                                       *
+*       CALL ALLOUT(IMODE,ILOOP1,ILOOP2,IDIS,IERR)                    *
+*      WHERE THE REQUIRED INPUTS ARE:                                 *
+*              IMODE  = UPDATE MODE. EITHER 'PLOT' OR 'CODE'          *
+*              ILOOP1 = POINTER TO 1ST ATTRIBUTE NAME IN 'ATTS'       *
+*                       TO BE DISPLAYED.                              *
+*              ILOOP2 = POINTER TO LAST ATTRIBUTE NAME IN 'ATTS'      *
+*                       TO BE DISPLAYED.                              *
+*      WHERE VALUES RETURNED ARE:                                     *
+*              IERR   = ERROR FLAG. SET IF ERROR CONDITION EXISITED   *
+*                       UPON RETURN FROM SUBROUTINE: ATTOUT           *
+*                                                                     *
+***********************************************************************
+
+       SUBROUTINE ALLOUT(IMODE,ILOOP1,ILOOP2,IDIS,IERR)
+
+       INTEGER ATTS(200)
+
+        COMMON/AREA2/ATTS
+
+       DO 200 I=ILOOP1,ILOOP2
+       CALL ATTOUT(IMODE,ATTS(I),IDIS,IERR)
+       IF (IERR.EQ.0) GO TO 200
+       RETURN
+200    CONTINUE
+
+       RETURN
+       END
+
+***********************************************************************
+*                                                                     *
+*                      SUBROUTINE: INNOD                              *
+*                                                                     *
+*      THIS SUBROUTINE INPUTS A NODE NUMBER, CHECKS IF ITS VALID,     *
+*      AND GETS THE RECORD FROM THE DATA BASE WITH INFORMATION FOR    *
+*      THE SPECIFIED NODE.                                            *
+*                                                                     *
+*      THE CALLING SEQUENCE IS:                                       *
+*       CALL INNOD(INODE,IERR)                                        *
+*      WHERE THE RETURNED VALUES ARE:                                 *
+*              INODE  = NODE NUMBER INPUT                             *
+*              IERR   = ERROR FLAG. SET IF PROGRAM SHOULD RETURN TO   *
+*                       COMMAND LEVEL                                 *
+*                                                                     *
+***********************************************************************
+
+       SUBROUTINE INNOD(INODE,IERR)
+
+*       ** INPUT NODE NUMBER
+
+105     TYPE 110
+110     FORMAT (/,1X,'* NODE NO? ',$)
+        ACCEPT 115,INODE
+115     FORMAT (I4)
+        IF (INODE.GE.0.AND.INODE.LE.3777) GO TO 125
+        TYPE 120
+120     FORMAT (/,1X,'!! BAD NODE NUMBER !!')
+       GO TO 105
+
+*       ** IF RESPONSE = CR, RETURN TO COMMAND LEVEL
+125     IF (INODE.NE.0) GO TO 130
+       IERR=1
+       RETURN
+
+*       ** GET RECORD FOR THIS NODE
+
+130     CALL DBFIND ('NODE','EQ',INODE)
+        CALL DBNREC(IREC)
+
+*       ** IF NO RECORDS FOR THIS NODE GO BACK TO 'NODE?' PROMPT.
+        IF (IREC.NE.0) GO TO 135
+        TYPE 133,INODE
+133     FORMAT (/,1X,'NO ENTRY FOR NODE: ',I4)
+       GO TO 105
+
+*       ** GET RECORD
+135     CALL DBGREC($105)
+
+       RETURN 
+        END
+
+***********************************************************************
+*                                                                     *
+*                     SUBROUTINE: CHANGE                              *
+*                                                                     *
+*      THIS SUBROUTINE INPUTS THE VALUE OF AN ATTRIBUTE TO BE CHANGED,*
+*      CHANGES THE VALUE OF THE ATTRIBUTE, AND DISPLAYS THE NEW       *
+*      VALUE.                                                         *
+*                                                                     *
+*      THE CALLING SEQUENCE IS:                                       *
+*       CALL CHANGE(IMODE,IFIELD,TYPE,IERR)                           *
+*      WHERE THE REQUIRED INPUTS ARE:                                 *
+*              IMODE  = UPDATE MODE. EITHER 'PLOT' OR 'CODE'          *
+*              IFIELD = NAME OF ATTRIBUTE TO BE CHANGED               *
+*              TYPE   = TYPE OF FIELD. (INTEGER,REAL,TEXT)            *
+*      WHERE RETURNED VALUES ARE:                                     *
+*              IERR   = ERROR FLAG. SET IF INVALID FIELD TYPE         *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE CHANGE(IMODE,IFIELD,TYPE,IERR)
+
+        INTEGER IVAL(3),TYPE
+
+*      ** INPUT NEW VALUE OF FIELD
+
+330     TYPE 335
+335     FORMAT (1X,'* NEW VALUE? ',$)
+
+*       ** BRANCH TO APPROPRIATE INPUT FORMAT,CHANGE FIELD, AND
+*          DISPLAY NEW VALUE
+
+        IDIS=4
+        ITYPE=TYPE+1
+        GO TO (340,350,360),ITYPE
+        TYPE 337,IFIELD
+337     FORMAT (1X,'PROBLEM WITH FIELD TYPE FOR FIELD: ',A5)
+       IERR=3
+        GO TO 370
+
+*       ** FIELD IS INTEGER
+
+340     ACCEPT 345,IVAL(1)
+345     FORMAT(I)
+        CALL DBCHNG(IFIELD,IVAL(1))
+        CALL ATTOUT(IMODE,IFIELD,IDIS,IERR)
+        GO TO 370
+
+*       ** FIELD IS REAL
+
+350     ACCEPT 355,VAL
+355     FORMAT(F)
+        CALL DBCHNG(IFIELD,VAL)
+        CALL ATTOUT(IMODE,IFIELD,IDIS,IERR)
+        GO TO 370
+
+*       **  FIELD IS TEXT
+
+360     ACCEPT 365,(IVAL(I),I=1,3)
+365     FORMAT (3A5)
+        CALL DBCHNG(IFIELD,IVAL)
+        CALL ATTOUT(IMODE,IFIELD,IDIS,IERR)
+*       ** FINISHED!! RETURN TO CALING PROGRAM
+
+370     RETURN
+        END
+
+
+***********************************************************************
+*                                                                     *
+*                       SUBROUTINE: CHGPRT                            *
+*                                                                     *
+*      THIS SUBROUTINE FINDS THE RECORD FOR THE SPECIFIED NODE        *
+*      NUMBER, DETERMINES THE POSITION OF THE NEIGHBOR ATTRIBUTE      *
+*      FOR THE GIVEN PORT NUMBER AND CHANGES EITHER THE GROUPS OR     *
+*      BOTH THE GROUPS AND NODE NUMBER DEPENDING ON THE VALUE OF      *
+*      'IOPT'. IF IOPT' = 'G' ONLY THE GROUPS ARE CHANGED.            *
+*      IF 'IOPT' = 'B' BOTH GROUPS AND NODE NUMBER ARE CHANGED.       *
+*      THE NEW VALUE OF THE NEIGHBOR ATTRIBUTE IS THEN DISPLAYED.     *
+*                                                                     *
+*      THE CALLING SEQUENCE IS:                                       *
+*       CALL CHGPRT(IMODE,INODE,IGPS,INUM,IPORT,IOPT)                 *
+*      WHERE THE REQUIRED INPUTS ARE:                                 *
+*              IMODE  = UPDATE MODE. EITHER 'PLOT' OR 'CODE'          *
+*              INODE  = NUMBER OF NODE FOR WHICH A NEIGHBOR ATTRIBUTE *
+*                       WILL BE CHANGED.                              *
+*              IGPS   = NEW VALUE OF GROUPS                           *
+*              INUM   = NEW VALUE OF NODE NUMBER                      *
+*              IPORT  = PORT NUMBER WHOSE VALUE IS TO BE CHANGED      *
+*              IOPT   = OPTION FLAG. INDICATES WHETHER TO CHANGE      *
+*                       GROUPS ONLY OR BOTH GROUPS AND NODE NUMBER    *
+*                                                                     *
+***********************************************************************
+
+       SUBROUTINE CHGPRT(IMODE,INODE,IGPS,INUM,IPORT,IOPT)
+
+*       ** GET RECORD FOR SPECIFIED NODE
+
+        CALL DBFIND('NODE','EQ',INODE)
+        CALL DBGREC($100)
+
+*       ** IF NEIGHBOR ON PORT 'IPORT' IS TDM-GEAR THEN THERE ARE
+*          NO GROUPS TO CHANGE.
+
+        IF (INUM.GE.600.AND.INUM.LT.700) GO TO 300
+
+*       ** IF OPTION IS TO CHANGE 'GROUPS' ONLY STAY HERE
+
+        IF (IOPT.EQ.'B') GO TO 50
+
+*       ** GET VALUE FOR THIS NEIGHBOR AND STRIP OUT NODE NUMBER
+
+        CALL DBVAL(IPORT,IVAL)
+        INUM=MOD(IVAL,100000)
+
+
+*      ** PACK NUMBER OF GROUPS AND NODE NUMBER INTO ONE VALUE
+50     INUM2=IGPS*100000+INUM
+       IDIS=1
+
+*      ** CHANGE GROUPS FOR NEIGHBOR ON 'IPORT'
+
+       CALL DBCHNG(IPORT,INUM2)
+
+*       ** DISPLAY NEW NEIGHBOR INFORMATION
+
+       TYPE 75,INODE
+75     FORMAT(/,1X,I4,' - ',2X,$)
+       CALL ATTOUT(IMODE,IPORT,IDIS,IERR)
+
+       RETURN 
+100     TYPE 110,INODE
+110     FORMAT (1X,'!! NO SUCH NODE - ',I4,' !!')
+
+*       ** THIS IS A TDM-GEAR PORT. THERE ARE NO GROUPS ASSICIATED
+*          WITH THE LINE, SO CHANGE ONLY THE NODE NUMBER.
+
+300     CALL DBCHNG (IPORT,INUM)
+
+        RETURN
+
+        RETURN
+       END
+
+***********************************************************************
+*                                                                     *
+*                     SUBROUTINE: INPRT                               *
+*                                                                     *
+*      THIS SUBROUTINE INPUTS TWO PAIRS OF NODE AND PORT NUMBERS.    *
+*      IT CHECKS TO MAKE SURE THESE PARIS DETERMINE A LINE AND THEN   *
+*      RETURNS BOTH NODE NUMBERS AND PORT NUMBERS TO THE CALLING      *
+*      PROGRAM.                                                       *
+*      THE CALLING SEQUENCE IS:                                       *
+*       CALL INIOPT,INODE1,IPORT1,INODE2,IPORT2,IGRPS,IERR)      *
+*      WHERE REQUIRED INPUTS ARE:                                     *
+*           IOPT = OPTION FLAG. TELLS WHICH FORMAT STATEMENT TO USE   *
+*      WHERE THE RETURNED VALUES ARE:                                 *
+*              NODE1 = NODE INPUT BY USER                             *
+*              PORT1 = PORT INPUT BY USER                             *
+*              NODE2 = NODE ON OTHER END OF LINE                      *
+*              PORT2 = PORT ON OTHER END OF LINE                      *
+*              IGRPS = NUMBER OF GROUPS ON THE LINE                   *
+*                                                                     *
+***********************************************************************
+
+       SUBROUTINE INPRT(IOPT,INODE1,IPORT1,INODE2,IPORT2,IGRPS,IERR)
+
+*      ** INPUT 1ST NODE AND PORT NUMBER
+
+100    IF (IOPT.EQ.'105') TYPE 105
+       IF (IOPT.EQ.'106') TYPE 106
+105    FORMAT (/,1X,'* NODE1,PORT1? ',$)
+106    FORMAT (/,1X,'* NODE1,PORT1? (WILL NOT MOVE) ',$)
+       ACCEPT 110,INODE1,IPORT1
+110    FORMAT (I,A5)
+
+*       ** IF  RESPONSE - CR, SET ERROR FLAG AND RETURN
+
+        IF (INODE1.NE.0) GO TO 120
+        IERR=1
+        RETURN
+
+*       ** IF PORT IS INPUT INCORRECTLY, REENTER
+
+120     CALL RTC(ICHAR,IPORT1,1)
+        IF (ICHAR.EQ.'P'.OR.ICHAR.EQ.'T') GO TO 115
+        TYPE 116
+116     FORMAT (1X,'!! REMEMBER YOUR P-S OR TDM-S !!')
+        GO TO 100
+
+*       ** GET NEIGHBOR NUMBER FOR NEIGHBOR ON 'INODE1-IPORT1'.
+
+115     CALL GETNBR(INODE1,IPORT1,INUM1,IGRPS,IERR)
+        IF (IERR.EQ.0) GO TO 121
+        IERR=0
+        GO TO 100
+
+*       ** CHECK IF PORT IS IN USE
+
+121     IF (INUM1.NE.0) GO TO 125
+        TYPE 122
+122     FORMAT (1X,'PORT NOT IN USE')
+        GO TO 100
+
+*       ** INPUT 2ND NODE AND PORT NUMBERS
+
+125     IF (IOPT.EQ.'105') TYPE 130
+       IF (IOPT.EQ.'106') TYPE 126
+126    FORMAT (1X,'* NODE2,PORT2? (WILL MOVE) ',$)
+130     FORMAT (1X,'* NODE2,PORT2? ',$)
+        ACCEPT 110,INODE2,IPORT2
+
+*       ** IF PORT IS INPUT INCORRECTLY, REENTER
+
+        CALL RTC(ICHAR,IPORT2,1)
+        IF (ICHAR.EQ.'P'.OR.ICHAR.EQ.'T') GO TO 131
+        TYPE 116
+        GO TO 125
+
+*       ** GET NEIGHBOR NUMBER FOR NEIGHBOR ON
+*          'INODE2-IPORT2'
+
+131     CALL GETNBR(INODE2,IPORT2,INUM2,IGRPS,IERR)
+        IF (IERR.EQ.0) GO TO 132
+        IERR=0
+        GO TO 100
+
+*       ** CHECK IF PORT IS IN USE
+
+132     IF (INUM2.NE.0) GO TO 135
+        TYPE 122
+        GO TO 100
+
+*       ** CHECK IF NODE NUMBER ON NEIGHBOR 'INODE1-IPORT1' = INODE2
+
+135     IF (INUM1.EQ.INODE2) GO TO 140
+        TYPE 137,INODE1,IPORT1,INODE2,IPORT2
+137     FORMAT (1X,'NEIGHBOR ON NODE - ',I4,', PORT - ',A5,/,' DOES
+     X NOT TALK TO',/,' NEIGHBOR ON NODE - ',I4,', PORT -',A5)
+        GO TO 100
+
+*       ** CHECK IF NODE NUMBER ON NEIGHBOR 'INODE2-IPORT2' = NODE1
+
+140     IF (INUM2.EQ.INODE1)  RETURN
+        TYPE 137,INODE1,IPORT1,INODE2,IPORT2
+        GO TO 100
+
+        RETURN
+        END
+
+***********************************************************************
+*                                                                     *
+*                      SUBROUTINE: GETNBR                             *
+*                                                                     *
+*      THIS SUBROUTINE BREAKS THE VALUE FOR A NEIGHBOR ATTRIBUTE      *
+*      INTO TWO PARTS: GROUPS AND NODE NUMBER AND RETURNS THESE TWO   *
+*      VALUES TO THE CALLING PROGRAM                                  *
+*      THE CALLING SEQUENCE IS:                                       *
+*       CALL GETNBR(INODE,IPORT,INUM,IGRP,IERR)                       *
+*      WHERE THE REQUIRED INPUTS ARE:                                 *
+*              INODE = NODE NUMBER                                    *
+*              IPORT = PORT NUMBER                                    *
+*      WHERE THE VALUES RETURNED ARE:                                 *
+*              INUM = NODE NUMBER ON 'IPORT' OF NODE 'INODE'          *
+*              IGRPS = NUMBER OF GROUPS ON LINE BETWEEN 'INODE'       *
+*                     AND 'INUM'                                      *
+*              IERR = ERROR FLAG - SET IF NO ENTRY FOR                *
+*                     'INODE' IN DATA BASE                            *
+*                                                                     *
+***********************************************************************
+
+       SUBROUTINE GETNBR(INODE,IPORT,INUM,IGRP,IERR)
+
+*      ** GET RECORD FOR 'INODE'
+
+       CALL DBFIND ('NODE','EQ',INODE)
+       CALL DBGREC($195)
+
+*      ** GET NODE NUMBER FOR NEIGHBOR ON 'IPORT'
+
+       CALL DBVAL(IPORT,IVAL)
+       INUM=MOD(IVAL,100000)
+       IGRP=IVAL/100000
+
+       RETURN
+
+195    TYPE 200,INODE
+200    FORMAT (1X,'!! ERROR - NO SUCH NODE- ',I4)
+       IERR=1
+       RETURN
+
+       END
+
+
+***************************************************************************
+*                                                                     *
+*                       SUBROUTINE: ADDBEM                            *
+*                                                                     *
+*      THIS SUBROUTINE OPENS THE SPECIFIED '.BEM' FILE AND APPENDS    *
+*      THE INFORMATION IN THIS FILE TO THE CURRENTLY OPEN '.TYM'      *
+*      FILE.                                                          *
+*                                                                     *
+*      CALLIND SEQUENCE IS:                                           *
+*       CALL ADDBEM(BEM)                                              *
+*      WHERE THE REQUIRED INPUT IS:                                   *
+*              BEM = AN ARRAY WHICH CONTAINS THE ANME OF THE '.BEM(   *
+*                       FILE TO BE USED.                              *
+*                                                                     *
+****************************************************************************
+
+       SUBROUTINE ADDBEM(BEM)
+
+       INTEGER BEMDAT(16),BEM(2)
+
+*      ** FIND 1ST BLANK IN FILE NAME
+
+       DO 100 J=1,6
+       CALL RTC(ICHAR,BEM,J)
+       IF (ICHAR.EQ.' ') GO TO 110
+100    CONTINUE
+       J=7
+
+*      ** FOUND 1ST BLANK. NOW PLACE '.BEM' EXTENSION IN THE FILE NAME
+
+110    CALL STC('.',BEM,J)
+       CALL STC('B',BEM,J+1)
+       CALL STC('E',BEM,J+2)
+       CALL STC('M',BEM,J+3)
+
+*      ** OPEN THE '.BEM' FILE , READ ALL RECORDS, AND WRITE TEH  OUT TO
+*         THE '.TYM' FILE
+
+       OPEN (23,BEM,INPUT)
+
+120    READ (23,125,END=150)(BEMDAT(J),J=1,16)
+125    FORMAT (16A5)
+       WRITE (21,125)(BEMDAT(J),J=1,16)
+       GO TO 120
+
+150    CLOSE(23)
+       RETURN
+       END
+
+************************************************************************
+*                                                                     *
+*                       SUBROUTINE: SWOUT                             *
+*                                                                     *
+*      THIS SUBROUTINE OUTPUTS OUTPUTS TO THE '.TYM' FILE CURRENTLY   *
+*      OPEN THE APPROPRIATE ASSEMBLY SWITCHES. IT ALSO INDICATES      *
+*      WHETHER OR NOT THIS ASSEMBLY SWITCH IS SET.                    *
+*                                                                     *
+*      THE CALLING SEQUENCE IS :                                      *
+*       CALL SWOUT(ITYPE)                                             *
+*      WHERE THE REQUIRED INPUT IS:                                   *
+*              ITYPE = NODE TYPE OF THE NODE WHOSE TYM FILE IS BEING  *
+*                       CREATED.                                      *
+*                                                                     *
+***********************************************************************
+
+       SUBROUTINE SWOUT(ITYPE)
+
+       INTEGER TYPES(20,50),ISW(15),SWITCH(45,10)
+
+       COMMON/GEN3/TYPES,SWITCH,ISW
+
+*      ** FOR EACH ASSEMBLY SWITCH NUMBER CONTAINED IN ARRAY: TYPES
+*         FOR THIS NODE TYPE, WFIND OUT IF THE SWITCH IS
+*         TO BE SET, THEN WRITE OUT THE SWITCH AND ITS DESCRIPTION
+
+       DO 200 I=5,50
+
+*      ** FIRST GET THE NUMBER OF A SWITCH THAT IS TO BE INCLUDED IN
+*         THIS .TYM FILE, AND ASSUME THE SWITCH IS TO BE SET.
+
+       INUM=TYPES(ITYPE,I)
+        IF (INUM.EQ.0) GO TO 200
+       ISET=-1
+
+*      ** NOW, CHECK THE LIST OF SWITCHES THAT ARE TO BE SET FOR THIS
+*         NODE AND DETERMINE IF THE SWITCH IT TRULY SET.
+
+       DO 110 J=1,15
+       IF (ISW(J).EQ.INUM) GO TO 120
+110    CONTINUE
+
+*      ** IF FELL THROUGH TO HERE THEN SWITCH IS NOT SET
+       ISET=0
+
+*      ** WRITE THE SWITCH AND ITS DESCRIPTION OUT
+
+120    WRITE (21,125)(SWITCH(INUM,J),J=2,4),ISET,(SWITCH(INUM,J),
+     XJ=5,10)
+125    FORMAT (3A5,1X,'E',3X,I2,2X,6A5)
+
+200    CONTINUE
+       RETURN
+       END
+
+*************************************************************************
+*                                                                     *
+*                       SUBROUINE: NBROUT                             *
+*                                                                     *
+*      THIS SUBROUTINE OUTPUTS THE CORRECT NUMBER OF NEIGHBOR         *
+*      PARAMETERS. THEN OUTPUTS THE CORRESPONDING GROUP PARAMETERS    *
+*                                                                     *
+*      THE CALLING SEQUENCE IS:                                       *
+*       CALL NBROUT(ILOOP)                                            *
+*      WHERE THE REQUIRED INPUT IS:                                   *
+*              ILOOP = LAST NEIGHBOR TO OUTPUT PARAMTER FOR           *
+*                                                                     *
+***********************************************************************
+
+       SUBROUTINE NBROUT(ILOOP)
+
+       INTEGER NEIGH(32)
+
+       COMMON/GEN2/NEIGH
+
+*      ** OUTPUT NEIGHBOR PARAMETERS
+
+       DO 100 I=0,ILOOP
+
+       INODE=MOD(NEIGH(I+1),100000)
+       IF (I.GT.9) GO TO 90
+       WRITE (21,80)I,INODE,I
+80     FORMAT ('NEIGH',I1,10X,'E',1X,I4,2X,'NEIGHBOR FOR LINE ',I1)
+       GO TO 100
+90     WRITE (21,95)I,INODE,I
+95     FORMAT ('NEIGH',I2,9X,'E',1X,I4,2X,'NEIGHBOR FOR LINE ',I2)
+100    CONTINUE
+
+*      ** OUTPUT GROUP PARAMETERS
+
+       DO 200 I=0,ILOOP
+       IGRP=NEIGH(I+1)/100000
+       IF (I.GT.9) GO TO 190
+       WRITE (21,180)I,IGRP,I
+180    FORMAT ('NGRPS',I1,10X,'E',1X,I4,'D NUMBER OF GROUPS ON LINE
+     X ',I1)
+       GO TO 200
+190    WRITE (21,195)I,IGRP,I
+195    FORMAT ('NGRPS',I2,9X,'E',1X,I4,'D NUMBER OF GROUPS ON LINE '
+     X,I2)
+200    CONTINUE
+       RETURN
+       END
+
+***********************************************************************
+*                                                                     *
+*                         SUBROUTINE: MDCODE                            *
+*                                                                     *
+*       THIS SUBROUTINE WILL BE WRITTEN BY MARGARET DELANEY AND       *
+*       WILL ACTUALLY GENERATE CODE FOR THOSE NODES CONTAINED         *
+*       IN THE ARRAY: NAMES.                                          *
+*                                                                     *
+**********************************************************************
+
+        SUBROUTINE MDCODE(IERR)
+
+        INTEGER NAMES(15,9)
+
+        COMMON/GEN1/NAMES
+
+        TYPE 100
+100     FORMAT (//,10X,'SUBROUTINE CODE HAS BEEN CALLED',/)
+        TYPE 110,(NAMES(1,J),J=1,9)
+110     FORMAT (1X,I4,1X,I1,1X,I1,1X,2A5,1X,2A5,1X,2A5)
+        RETURN
+        END
+ p@<È
