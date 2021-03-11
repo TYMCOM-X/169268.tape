@@ -1,0 +1,413 @@
+The following 2 sections describe the NETVAL Archive tape format.
+.pushsect 'General Description'
+The following describes the general format of the NETVAL tape;
+refer to the following Section for a specific description of each record.
+Following each record name is the length of the record in 
+bytes, and any significant contents.
+Items marked with "***" are defined in the NETVAL configuration file,
+NVALvv.Arr, where vv=version, rr=revision.
+.fo no;.sp;
+                              field
+                               size  information
+
+      VOL1 label                 80  date, "NETVAL", version
+      HDR1 label                 80  "configuration", seq = 0001
+      HDR2 label                 80  block length = 00256
+      ...tape-mark...
+      configuration file        256
+      ...tape-mark...
+      EOF1 label                 80  block count = 000001
+      ...tape-mark...
+
+      HDR1 label                 80  "node_host (header)", seq = 0002
+      HDR2 label                 80  block length = 00256
+      ...tape-mark...
+      node host header          256
+      ...tape-mark...
+      EOF1 label                 80  block count = 000001
+      ...tape-mark...
+
+      HDR1 label                 80  "node_host (hostlists)", seq = 0003
+      HDR2 label                 80  block length = ***
+      ...tape-mark...
+      1 block of data for
+        each defined HOSTLIST   ***
+      ...tape-mark...
+      EOF1 label                 80  block count = no. of defined HOSTLISTS
+      ...tape-mark...
+
+      HDR1 label                 80  "node_host (nodelists)", seq = 0004
+      HDR2 label                 80  block length = ***
+      ...tape-mark....
+      1 block of data for
+        each defined NODELIST   ***
+      ...tape-mark...
+      EOF1 label                 80  block count = no. of defined NODELISTS
+      ...tape-mark...
+
+      HDR1 label                 80  "node_host (classes)", seq = 0005
+      HDR2 label                 80  block length = ***
+      ...tape-mark...
+      1 block of data for
+        each defined CLASS      ***
+      ...tape-mark...
+      EOF1 label                 80  block count = no. of defined CLASSES
+      ...tape-mark...
+
+      HDR1 label                 80  "node_host (groups)", seq = 0006
+      HDR2 label                 80  block length = ***
+      ...tape-mark...
+      1 block of data for
+        each defined GROUP      ***
+      ...tape-mark...
+      EOF1 label                 80  block count = no. of defined GROUPS
+      ...tape-mark...
+
+      HDR1 label                 80  "mud_update", seq = 0007
+      HDR2 label                 80  block length = 00260
+      ...tape-mark...
+      MUDUPDATE file header     260
+      ...tape-mark...
+      EOF1 label                 80  block count = 000001
+      ...tape-mark...
+
+      HDR1 label                 80  "oper_log", seq = 0008
+      HDR2 label                 80  block length = ***
+      ...tape-mark...
+      1 block of data for each
+        *** OPER_LOG pages      ***
+      ...tape-mark...
+      EOF1 label                 80  block count = ***
+      ...tape-mark...
+
+      HDR1 label                 80  "CUD", seq = 0009
+      HDR2 label                 80  block length = ***
+      ...tape-mark...
+      1 block of data for
+        each *** CUD blocks     ***
+      ...tape-mark...
+      EOF1 label                 80  block count = ***
+          ...tape-mark...
+
+      HDR1 label                 80  "cud_parameter", seq = 0010
+      HDR2 label                 80  block length = 00256
+      ...tape-mark...
+      CUD parameter file        256
+      ...tape-mark...
+      EOF1 label                 80  block count = 000001
+      ...tape-mark...
+
+      ...tape-mark...
+.fo yes;.nextsect 'Record Descriptions'
+.se taprcdsc='&sectno'
+This Section describes the specific format of each NETVAL tape
+record in order of appearance.
+Items marked with "***" are defined
+in the NETVAL configuration file, NVALvv.Arr, where vv=version,
+rr=revision.
+.fo no
+
+                                                       size in bytes
+ VOL1 label (ANSII standard, 80 bytes total):
+      id ("VOL1")                                                4
+      date ("DDMMYY")                                            6
+      accessibility (" ")                                        1
+      reserved                                                  26
+      owner id ("NETVAL ")                                       7
+      version id ("VV.RR")                                       5
+      reserved                                                  30
+      label level ("1")                                          1
+
+
+ HDR1 label (ANSII standard, 80 bytes total):
+      id ("HDR1")                                                4
+      file name                                                 17
+      volume serial ("      ")                                   6
+      section ("0001")                                           4
+      file sequence number                                       4
+      generation ("0001")                                        4
+      version ("00")                                             2
+      creation date (" YYDDD" )                                  6
+      expiration date (" YYDDD")                                 6
+      accessibility (" ")                                        1
+      block count ("000000")                                     6
+      reserved (" ")                                            20
+
+
+ HDR2 label (ANSII standard, 80 bytes total):
+      id ("HDR2")                                                4
+      record format ("F")                                        1
+      block length                                               5
+      reserved                                                  70
+
+
+ configuration file data (256 bytes total):
+      file data                                                256
+           disk incarnation number              4
+           label date and time                  4
+           DISK_UNIT_ONE_SIZE***                4
+           configuration file description:
+                unit (1)                        4
+                address (0)                     4
+                length (1)                      4
+                creation date                   4
+           node host file description:
+                unit (1)                        4
+                address (1)                     4
+                length                          4
+                creation date                   4
+           class group file description:
+                unit (1)                        4
+                address                         4
+                length                          4
+                creation date                   4
+           OPER_LOG file description:
+                unit (1)                        4
+                address                         4
+                length (OPERLOG_FILE_LENGTH***) 4
+                creation date                   4
+           MUDUPDATE file header description:
+                unit (1)                        4
+                address                         4
+                length                          4
+                creation date                   4
+           CUD file description:
+                unit (0)                        4
+                address (0)                     4
+                length                          4
+                creation date                   4
+           CUD parameter file description:
+                unit (0)                        4
+                address                         4
+                length                          4
+                creation date                   4
+           MAXIMUM_CUD_BLOCK_SIZE_IN_SECTORS    4
+           MAXIMUM_EXPECTED_SUPERVISORS         4
+           MAXIMUM_CUD_BLOCK                    4
+           INCLUDE_GAN (1 if TRUE, 0 if FALSE)  2
+           INCLUDE_DISTRICT                     2
+             (1 if TRUE, 0 if FALSE)
+           MINIMUM_PASSWORD_SIZE                4
+           REQUIRE_NON_ALPHA_NUMERIC            2
+              (1 if TRUE, 0 if FALSE)
+           CLASS_0_GROUP_0_ASSIGNABLE           2
+              (1 if TRUE, 0 if FALSE)
+           NETVAL_CUD_IS_A_MUD                  2
+              (1 if TRUE, 0 if FALSE)
+           PROGRAMMER_NAME_SIZE                 4
+              (1 if TRUE, 0 if FALSE)
+           PROGRAMMER_NAME                     20
+           MAXIMUM_HOST                         4
+           MAXIMUM_NODE                         4
+           MAXIMUM_CLASS                        4
+           MAXIMUM_CLASS_TABLE_SIZE             4
+           MAXIMUM_GROUP                        4
+           MAXIMUM_GROUP_TABLE_SIZE             4
+           unused                              54
+           checksum                             4
+
+
+ EOF1 label (ANSII standard, 80 bytes total):
+      id ("EOF1")                                                4
+      file name                                                 17
+      volume serial ("      ")                                   6
+      section ("0001")                                           4
+      file sequence number                                       4
+      generation ("0001")                                        4
+      version ("00")                                             2
+      creation date (" YYDDD" )                                  6
+      expiration date (" YYDDD")                                 6
+      accessibility (" ")                                        1
+      block count                                                6
+      reserved (" ")                                            20
+
+
+ node host file header data:
+      data:                                                    256
+           id ("NHCG")                                4
+           MAXIMUM_LIST                               4
+           MAXIMUM_NAMED_LIST_NAME_SIZE               4
+           MAXIMUM_NAMED_LIST_DESCRIPTION_SIZE        4
+           MAXIMUM_NAMED_LIST_ENTRY                   4
+           pages in a named list                      4
+           MAXIMUM_LISTS_IN_GLOBAL_ACCESS             4
+           pages in a global access                   4
+           first node list page                       4
+           last node list page                        4
+           first host list page                       4
+           last host list page                        4
+           first class definition page                4
+           last class definition page                 4
+           first group definition page                4
+           last group definition page                 4
+           unused                                   188
+           checksum                                   4
+
+
+ HOSTLIST and NODELIST data block:
+      list offset                                            4
+      NAMED_LIST_DEFINITION:                               ***
+          list name text
+                     MAXIMUM_NAMED_LIST_NAME_SIZE ***
+          list name text size                       4
+          list description text
+              MAXIMUM_NAMED_LIST_DESCRIPTION_SIZE ***
+          list description text size                4
+          count of defined values in list to follow 4
+          list values (4 each)
+                       MAXIMUM_NAMED_LIST_ENTRY*4 ***
+          checksum                                  4
+
+
+ CLASS and GROUP (global access) data block:
+      CLASS or GROUP number                                  4
+      GLOBAL_ACCESS_DESCRIPTION:                           ***
+          exception flag (1 if exception; else 0)   2
+          count of defined values in list to follow 4
+          list values
+               MAXIMUM_LISTS_IN_GLOBAL_ACCESS * 6 ***
+                   list offset           4
+                   hostlist flag         2
+                    (1 if hostlist; 0 if nodelist)
+          checksum                                  4
+
+
+ MUDUPDATE file header data:
+      checksum for data                                          4
+      data:                                                    256
+           id (hex 5A5A0041)                        4
+           eof byte pointer (0)                     4
+           last CLASS/GROUP creation date           4
+           consistency start time                   4
+           consistency stop time                    4
+           pointer to last record (0)               4
+           unused                                 232
+
+
+ OPER_LOG file data (*** per block):
+      page offset                                                4
+      page data                                                256
+
+
+ CUD block data: (*** per block):
+      block offset                                               4
+      block data                                *** CUD block size
+
+
+CUD Parameter file data:
+      data (sector from file)                                  256
+.fo yes
+.popsect 1 'ASCII Dump Tape Format Description'
+The next 2 sections describe the NETVAL ASCII tape dump format which
+is generated by the DUMP command.
+The DUMP command will be included in the archive sub-system if the
+conditional flag INCLUDE_DUMP is enabled in the NETVAL configuration file,
+NVALvv.Arr, where vv==version and rr=revision.
+.pushsect 'General Description'
+.cp begin;The following is a general description of the ASCII tape dump format.
+Following each record name is the length of the record in bytes.
+Sizes indicated by *** are defined by the NETVAL configuration file.
+
+.fo no
+		               field
+                                size information
+       VOL1 label                 80 date, "NETVAL", version
+       HDR1 label                 80 "ASCII dump", seq = 0001
+       HDR2 label                 80 block length=***,record length=80
+       ...tape-mark...
+       ASCII CUD data file       ***
+	 1 block of ASCII data
+	   ASCII_DUMP_BLOCKING_FACTOR of
+	     user data           80
+	     change date/profile 80
+	     additional profiles if any
+               each profile      80
+       ...tape-mark...
+       EOF1 label                80 block count = no. of blocks
+       ...tape-mark...
+        ...tape-mark...
+.cp end
+.nextsect 'Record Description'
+.fo yes;.cp begin;The following is a description of the specific format of
+each field of the ASCII tape data in order of appearance for each user record.
+The VOL1, HDR1, HDR2 and EOF1 label records are the same as described
+in section &taprcdsc.
+.sp;The field sizes are either constant or variable.
+Constant field sizes are indicated by a single number, variable field
+sizes are indicated by the range of the minimum size to the maximum size.
+
+
+.fo no;.cp end;.sp 3;.cp begin
+						   field    record
+						    size      size
+      CUD user data:				    	   	80
+	   user count				       8
+	   user name text		  	      21
+           user GAN or zero if not INCLUDE GAN        12
+           user UUN
+           user district or zero if not INCLUDE DIST   5
+           abreviated control options	              22
+	      ACCOUNT SUPERVISOR:	as
+	      IGNORE HOST:		ih
+	      NETWORK ADMINISTRATOR:	na
+	      NO PASSWORD:		np
+	      SHUT OVERRIDE:		so
+	      AUDITOR:			au
+	      OPERATOR:			op
+	      TRANSPARENT LOGIN:        tl
+
+     CHANGE DATE and FIRST ACCESS PROFILE ENTRY:	        80
+	   password change date		              10
+              mm/dd/yy or blank
+	   entry change date		              10
+	      mm/dd/yy or blank
+	   number of access profiles                   4
+	   profile position number     ' P1'           3
+              profile description:
+		with system defined class           6-53
+		  class number
+                     ' Cnnn'
+  	          1-6 (home)group(s)/host(s) 
+	             ' (H)Gnn'/' (H)Hnnnnn'
+
+		or with user defined origin	    7-48
+		(minimum of 1 origin and 1
+		destination, maximum total of 6)
+		  1-5 origin host(s)/origin node(s)
+		     ' OHnnnnn'/' ONnnnnn'
+	            or
+	          1-5 not origin host(s)/origin node(s)
+		     ' NHnnnnn'/' NNnnnnn'
+	          1-5 (home)group(s)/host(s)
+		     ' (H)Gnn'/' (H)Hnnnnn'
+	      unused (blank filled)		    0-47
+
+.fo yes;.sp;NOTE:  Single quotes indicate ASCII data as it appears on tape,
+where () indicate characters which are not necessarily present.
+Numeric values are indicated by 'n', where each 'n' represents a digit of
+the value and 'n' is repeated for the maximum number of digits which the
+value may contain.
+.fo no;.cp end;.sp 3;.cp begin
+						   field    record
+						    size      size
+      ADDITIONAL ACCESS PROFILE ENTRIES:			80
+	   profile position number ' Pnn'            3-4
+              profile description:
+		with system defined class           6-53
+		  class number
+                     ' Cnnn'
+  	          1-6 (home)group(s)/host(s) 
+	             ' (H)Gnn'/' (H)Hnnnnn'
+
+		or with user defined origin	    7-48
+		(minimum of 1 origin and 1
+		destination, maximum total of 6)
+		  1-5 origin host(s)/origin node(s)
+		     ' OHnnnnn'/' ONnnnnn'
+	            or
+	          1-5 not origin host(s)/origin node(s)
+		     ' NHnnnnn'/' NNnnnnn'
+	          1-5 (home)group(s)/host(s)
+		     ' (H)Gnn'/' (H)Hnnnnn'
+	      unused (blank filled)		   23-71
+.cp end;.fo yes  
