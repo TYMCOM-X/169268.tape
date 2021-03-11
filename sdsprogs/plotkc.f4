@@ -1,0 +1,715 @@
+************************************************************************
+*                                                                      *
+*                       SUBROUTINE: NDRAW                              *
+*                                                                      *
+*       THIS SUBROUTINE DRAWS A NODE                                   *
+*       CALLING SEQUENCE IS:                                           *
+*        CALL NDRAW(IPART2,IERR)                                       *
+*       WHERE REQUIRED INPUT IS:                                       *
+*              IPART2 = SECOND PART OF COMMAND                         *
+*       WHERE RETURNED VALUE IS:                                       *
+*              IERR   = ERROR FLAG. SET IF INTERRUPT OCCURS            *
+*                                                                      *
+************************************************************************
+
+       SUBROUTINE NDRAW(IPART2,IERR)
+
+       COMMON/DRAW/XX,YY,XX1,YY1
+
+
+*      ** GET NEEDED INFO FROM RECORD ON THIS NODE
+
+       CALL DBVAL('NTYP',ITYPE,'X',X,'Y',Y,'NODE',INUM,'H0',IHOST
+     X,'PNAM',INAM)
+
+*      ** SET X AND Y COORDINATES FOR CENTER OF SYMBOL, SHIFTING
+*      THE POINT OF ORIGIN TO THE VALUES OF XX AND YY.
+
+       A=X-XX
+       B=Y-YY
+
+
+*      ** PLOT THE APPROPRIATE SYMBOL FOR THIS NODE TYPE
+
+50     GO TO (100,200,100,200,100,300,400,500,600,700,800,900,1000
+     X,1100,200),ITYPE
+
+*      ** DRAW A HEXAGON
+*         (SYMBOL FOR BAS370, BAS940-SINGLE, AND BASPDP-SINGLE)
+
+100    CALL HEX(A,B)
+        IF (IPART2.EQ.'NAM') GO TO 110
+       CALL DRWNUM(INUM,A,B)
+       RETURN
+110     CALL DRWNAM(INAM,A,B)
+        RETURN
+
+*      ** DRAW AN ELONGATED HEXAGON
+*         (SYMBOL FOR BAS940-DUAL, BASPDP-DUAL, AND SUPERVISORS)
+
+200    CALL DHEX(A,B)
+       IF (IPART2.EQ.'NAM') GO TO 210
+       CALL DRWNUM(INUM,A,B)
+       RETURN
+210    CALL DRWNAM(INAM,A,B)
+       RETURN
+
+*      ** DRAW A SMALL ELLIPSE
+*         (SYMBLOL FOR REMOTE)
+
+300    CALL ELIPSE(A,B)
+       IF (IPART2.EQ.'NAM') GO TO 310
+       CALL DRWNUM(INUM,A,B)
+       RETURN
+310    CALL DRWNAM(INAM,A,B)
+       RETURN
+
+*      ** DRAW A MEDIUM ELLIPSE AND A LARGE ELLIPSE
+*         (SYMBOL FOR SUPER REMOTE)
+
+400    CALL MELIPSE(A,B)
+       CALL ELIPSE(A,B)
+       IF (IPART2.EQ.'NAM') GO TO 410
+       CALL DRWNUM(INUM,A,B)
+       RETURN
+410    CALL DRWNAM(INAM,A,B)
+       RETURN
+
+*      ** DRAW AN ELLIPSE AND A LARGE CIRCLE
+*         (SYMBOL FOR ISIS-BOX)
+
+500    CALL ELIPSE(A,B)
+       CALL LCIRC(A,B)
+       IF (IPART2.EQ.'NAM') GO TO 510
+       CALL DRWNUM(INUM,A,B)
+       RETURN
+510    CALL DRWNAM(INAM,A,B)
+       RETURN
+
+*      ** DRAW A RECTANGLE
+*         (SYMBOL FOR TDM-GEAR)
+
+600    CALL RECT(A,B)
+       IF (IPART2.EQ.'NAM') GO TO 610
+       CALL DRWNUM(INUM,A,B)
+       RETURN
+610    CALL DRWNAM(INAM,A,B)
+       RETURN
+
+*      ** DRAW AN ELLIPSE AND A HEXAGON
+*         (SYMBOL FOR TYMCOM)
+
+700    CALL ELIPSE(A,B)
+       CALL HEX(A,B)
+       IF (IPART2.EQ.'NAM') GO TO 710
+       CALL DRWNUM(INUM,A,B)
+       RETURN
+710    CALL DRWNAM(INAM,A,B)
+       RETURN
+
+*      ** DRAW AN ELLIPSE, A HEXAGON, AND A LARGE HEXAGON
+*         (SYMBOL FOR SUPER TYMCOM)
+
+800    CALL ELIPSE(A,B)
+       CALL HEX(A,B)
+       CALL LHEX(A,B)
+       IF (IPART2.EQ.'NAM') GO TO 810
+       CALL DRWNUM(INUM,A,B)
+       RETURN
+810    CALL DRWNAM(INAM,A,B)
+       RETURN
+
+*      ** DRAW A MEDIUM SQUARE
+*         (SYMBOL FOR BICYNC TYMCOM)
+
+900    CALL SQUAR1(A,B)
+       IF (IPART2.EQ.'NAM') GO TO 910
+       CALL DRWNUM(INUM,A,B)
+       RETURN
+910    CALL DRWNAM(INAM,A,B)
+       RETURN
+
+*      ** DRAW A MEDIUM SQUARE AND A LARGE SQUARE
+*         (SYMBOL FOR SUPER BISYNC TYMCOM)
+
+1000   CALL SQUAR1(A,B)
+       CALL SQUAR2(A,B)
+       IF (IPART2.EQ.'NAM') GO TO 1010
+       CALL DRWNUM(INUM,A,B)
+       RETURN
+1010   CALL DRWNAM(INAM,A,B)
+       RETURN
+
+*      ** DRAW A SMALL SQUARE
+*         (SYMBOL FOR A TYMHOST)
+
+1100   CALL SQUARE(A,B)
+
+*      ** DRAW THE HOST NUMBER INSTEAD OF THE NODE NUMBER OR PLOT NAME
+
+        A1=A-.23
+        B1=B-.06
+       IF (IHOST.GE.100) GO TO 1150
+       ENCODE(2,1110,IH)IHOST
+1110   FORMAT(I2)
+       A1=A1+.10
+       CALL SYM(A1,B1,.12,IH,0,2)
+       RETURN
+
+1150   ENCODE(3,1160,IH)IHOST
+1160   FORMAT(I3)
+       A1=A1+.06
+       CALL SYM(A1,B1,.12,IH,0,3)
+1165   RETURN
+
+       END
+
+***********************************************************************
+*                                                                     *
+*                       SUBROUTINE: DRWNUM                            *
+*                                                                     *
+*      THIS SUBROUTINE DRAWS THE NODE NUMBER IN THE BOTTOM PORTION    *
+*      OF THE SYMBOL.                                                 *
+*      THE CALLING SEQUENCE IS:                                       *
+*       CALL DRWNUM(N,A1,B1)                                          *
+*      WHERE THE REQUIRED INPUT IS:                                   *
+*              N  = NODE NUMBER TO BE DRAWN                           *
+*              A1 = X COORDINATE FOR CENTER OF SYMBOL                 *
+*              B1 = Y COORDINATE FOR CENTER OF SYMBOL                 *
+*                                                                     *
+***********************************************************************
+
+       SUBROUTINE DRWNUM(N,A1,B1)
+
+*      ** SET X AND Y COORDINATES TO START DRAWING NODE NUM AT CORRECT
+*         POSITION IN SYMBOL
+
+       A1=A1-.23
+       B1=B1-.06
+
+*      ** IF NODE NUMBER IS NOT A 4 DIGIT NUMBER STARY HERE
+
+       IF (N.GE.1000) GO TO 100
+
+*      ** IF NODE NUMBER IS A 3 DIGIT NUMBER MOVE STARTING POSITION
+*         '.06' INCHES TO THE RIGHT.
+
+       IF (N.LT.100) GO TO 25
+       A1=A1+.06
+       GO TO 110
+
+*      ** IF NODE NUMBER IS A 2 DIGIT NUMBER MOVE STARTING POSITION
+*         '.12' INCHES TO THE RIGHT.
+
+25     IF (N.LT.10) GO TO 50
+       A1=A1+.12
+       GO TO 120
+
+*      ** THIS IS A ONE DIGIT NODE NUMBER, MOVE STARTING POSITION
+*         '.18' INCHES TO THE RIGHT.
+
+50     A1=A1+.18
+       GO TO 130
+
+*      ** PRINT A DIGIT IN THE LEFTMOST POSITION IN THE
+*         SYMBOL
+
+100    CALL NUM(A1,B1,.12,FLOAT(N/1000),0.,-1)
+       A1=A1+.12
+       N=N-1000
+
+*      ** PRINT A DIGIT IN THE NEXT POSITION
+
+110    CALL NUM(A1,B1,.12,FLOAT(N/100),0.,-1)
+       A1=A1+.12
+       N=N-100*(N/100)
+
+*      ** PRINT A DIGIT IN THE NEXT POSITION
+
+120    CALL NUM (A1,B1,.12,FLOAT(N/10),0.,-1)
+       A1=A1+.12
+       N=N-10*(N/10)
+
+*      ** PRINT A DIGIT IN THE LAST POSITION
+
+130    CALL NUM (A1,B1,.12,FLOAT(N),0.,-1)
+
+       RETURN
+
+       END
+
+***********************************************************************
+*                                                                     *
+*                       SUBROUTINE: DRWNAM                            *
+*      THIS SUBROUTINE DRAWS THE PLOT NAME IN THE BOTTOM PORTION OF   *
+*      THE SYMBOL.                                                    *
+*      THE CALING SEQUENCE IS:                                        *
+*       CALL DRWNAM(INAM,A,B)                                         *
+*      WHERE THE REQUIRED INPUTS ARE:                                 *
+*              INAM = PLOT NAME                                       *
+*              A    = X COORDINATE OF CENTER OF SYMBOL                *
+*              B    = Y COORDINATE OF CENTER OF SYMBOL                *
+*                                                                     *
+***********************************************************************
+
+       SUBROUTINE DRWNAM(INAM,A,B)
+
+*      ** SET THE X,Y CORRDINATES TO START DRAWING THE PLOT NAME AS
+*         THOUGH IT HAD A 4 CHARACTER NAME.
+
+       A1=A-.23
+       B1=B-.06
+
+*      ** FIND OUT HOW MANY NON-BLANK CHARS THERE ARE IN THE NAME
+
+       DO 100 I=1,4
+       IBLANK=I
+       CALL RTC(ICHAR,INAM,I)
+       IF (ICHAR.EQ.' ') GO TO 110
+100    CONTINUE
+
+*       ** IF FELL THROUGH TO HERE THEN THERE ARE NO BLANKS IN THE NAME
+
+       IBLANK=5
+
+110    GO TO (700,150,200,300,400),IBLANK
+
+*      ** THERE IS ONLY ONE CHARACTER TO DRAW
+
+150    A1=A1+.17
+       CALL SYM(A1,B1,.12,INAM,0,1)
+       RETURN
+
+*      ** THERE ARE 2 CHARACTERS TO DRAW
+
+200    A1=A1+.11
+       CALL SYM(A1,B1,.12,INAM,0,2)
+       RETURN
+
+*      ** THERE ARE 3 CHARACTERS TO DRAW
+
+300    A1=A1+.05
+       CALL SYM(A1,B1,.12,INAM,0,3)
+       RETURN
+
+*      ** THERE ARE 4 CHARACTERS TO DRAW
+
+400    CALL SYM(A1,B1,.12,INAM,0,4)
+
+*      ** FINISHED!!
+
+700    RETURN
+
+       END
+
+************************************************************************
+*                                                                     *
+*                       SUBROUTINE: PLTALL                            *
+*                                                                     *
+*      THIS SUBROUTINE PROMPTS FOR THE COORDINATES WHICH              *
+*      DETERMINE THE AREA OF THE MAP TO BE PLOTTED. IT THEN PLOTS     *
+*      THAT AREA OF THE MAP.                                          *
+*      THE CALLING SEQUENCE IS:                                       *
+*       CALL PLTALL(IPART2,IERR)                                      *
+*      WHERE THE REQUIRED INPUT IS:                                   *
+*              IPART2 = SECOND PART OF COMMAND                        *
+*      WHERE THE RETURNED VALUE IS:                                   *
+*              IERR   = ERROR FLAG. SET IF INTERRUPT OCCURES           *
+*                                                                     *
+***********************************************************************
+
+       SUBROUTINE PLTALL(IPART2,IERR)
+
+        COMMON/DRAW/XX,YY,XX1,YY1
+
+*      ** INPUT COORDINATES FOR THE LOWER LEFT CORNER OF
+*         THE AREA TO BE DISPLAYED.
+
+       TYPE 100
+100    FORMAT (1X,'X=',$)
+       ACCEPT 110,XY1
+110    FORMAT(G)
+
+*      IF RESPONSE = CR, THEN USE EXISTING COORDINATES
+       IF (XY1.EQ.0) GO TO 150
+       XX=XY1
+
+       TYPE 115
+115    FORMAT (1X,'Y=',$)
+       ACCEPT 110,YY
+
+*      ** INPUT COORDINATES FOR UPPER RIGHT CORNER OF AREA TO
+*         BE DISPLAYED.
+
+       TYPE 120
+120    FORMAT (1X,'XMAX=',$)
+       ACCEPT 110,XX1
+
+       TYPE 125
+125    FORMAT (1X,'YMAX=',$)
+       ACCEPT 110,YY1
+
+*       ** CALCOMP MAP COORDINATES WERE ENTERED. CONVERT THEESE TO
+*          TEKTRONICS COORDINATES. CURRENTLY THE SCALING FACTOR USED TO
+*          PRODUCE THE MAP ON THE CALCOMP IS '.8' AND THE
+*          X,Y COORDINATES OF THE LOWER LEFT CORNER ARE -6.5 , -8.5
+*          THE -7.5 YOU SEE USED BELOW IS OBTAINED BECAUSE THE ACTUAL
+*          ORIGIN OF THE CALCOMP IS 0,-1. SO A -1 IS SUBTRACTED FROM
+*          -8.5 TO OBTAIN -7.5.  THESE CONSTANTS MAY HAVE TO BE CHANGED
+*          FROM TIME TO TIME.
+
+        XX=(XX-6.5)/.8
+        YY=(YY-7.5)/.8
+        XX1=(XX1-6.5)/.8
+        YY1=(YY1-7.5)/.8
+
+        XX2=XX1
+        YY2=YY1
+
+*       ** SHIFT THE COORDINATES OF THE UPPER RIGHT CORNER TO PUT THEM
+*          IN THE CORRECT RELATION TO THE NEW ORIGIN WHICH IS DETERMINED
+*          BY THE COORDINATES OF THE LOWER LEFT CORNER. ALL COORDINATES
+*          FROM HERE ON OUT WILL BE THUS SHIFTED.
+
+       XX1=XX1-XX
+        YY1=YY1-YY
+
+*      ** INIT THE PLOT PACKAGE
+
+150    CALL PLTS(IXI)
+
+*       ** GET THE RECORDS FOR THE NODES THAT FALL IN THE WINDOW DEFINED
+*          BY X,Y,XMAX,AND YMAX.
+
+        CALL DBSET(2)
+        CALL DBFIND('X','GE',XX,'AND','X','LE',XX2,'SAV.',1,
+     X'Y','GE',YY,'AND','Y','LE',YY2,'AND','REF.',1)
+
+*       ** SORT THESE RECORDS BY PLOT POSITION AND PLOT EACH NODE
+
+        CALL DBEXEC ('SORT KEY PLOT')
+175     CALL DBGREC($300)
+        CALL NDRAW(IPART2,IERR)
+        GO TO 175
+
+
+300    RETURN
+
+       END
+
+************************************************************************
+*                                                                     *
+*                       SUBROUTINE: LDRAW                             *
+*                                                                     *
+*      THIS SUBROUTINE DRAWS A LINE.                                  *
+*                                                                     *
+***********************************************************************
+
+       SUBROUTINE LDRAW(IERR)
+
+       COMMON/DRAW/XX,YY,XX1,YY1
+
+
+*      ** GET NEEDED INFO FROM THE RECORD FOR THIS LINE
+
+       CALL DBVAL('TYP1',ITYPE1,'NX1',X1,'NY1',Y1,'TYP2',ITYPE2
+     X,'NX2',X2,'NY2',Y2,'BX1',BX1,'BY1',BY1,'BX2',BX2,'BY2',BY2
+     X,'LTYP',LTYPE)
+
+       A=X1-XX
+       B=Y1-YY
+       C=X2-XX
+       D=Y2-YY
+
+*      ** CHECK FOR THE FIRST BEND IN THE LINE (IF ANY)
+
+       IF ((BX1.EQ.0).AND.(BY1.EQ.0)) GO TO 100
+
+*      ** THERE IS A BEND IN THE LINE. SET END OF LINE SEGMENT TO
+*         COORDINATES OF 1ST BEND.
+
+       C=BX1-XX
+       D=BY1-YY
+
+*       ** IF SYMBOL IS  A CIRCLE STAY HERE
+
+100     IF (ITYPE1.NE.8) GO TO 105
+        CALL LSECTI(A,B,C,D,X0,Y0)
+
+        IF (A-C) 130,130,101
+101     X0=-X0
+        GO TO 130
+
+*      ** IF THE SLOPE OF THIS LINE SEGMENT IS POSITIVE STAY HERE
+
+105     IF (B-D) 120,120,110
+
+*      ** DEPENDING ON THE TYPE OF NODE1 DETERMINE THE COORDINATES
+*         OF THE POINT OF INTERSECTION BETWEEN THE LINE SEGMENT AND
+*         NODE1.
+
+110    CALL INTERS(ITYPE1,C,D,A,B,X0,Y0)
+
+       X0=-X0
+       Y0=-Y0
+
+       GO TO 130
+
+120    CALL INTERS(ITYPE1,A,B,C,D,X0,Y0)
+
+*      ** SET END OF LINE SEGMENT TO COORDINATES OF 2ND NODE
+
+130    C=X2-XX
+       D=Y2-YY
+
+*      ** IF THERE IS A SECOND BEND STAY HERE
+
+       IF ((BX2.EQ.0).AND.(BY2.EQ.0)) GO TO 140
+
+*      ** SET BEGINNING OF LINE SEGMENT TO COORDINATES OF 2ND BEND
+*         SO NOW THE LINE SEGMENT IS DEFINED BY THE COORDINATES
+*         OF THE 2ND BEND AND THE CENTER OF THE 2ND NODE.
+
+       A=BX2-XX
+       B=BY2-YY
+       GO TO 150
+
+*      ** THERE IS NO 2ND BEND. IF THER WAS A FIRST ONE THEN SET BEGINNING
+*         OF LINE SEGMENT TO COORDINATES OF 1ST BEND.
+
+140    IF ((BX1.EQ.0).AND.(BY1.EQ.0)) GO TO 150
+
+       A=BX1-XX
+       B=BY1-YY
+
+*       ** IF SYMBOL IS A CIRCLE STAY HERE
+
+150     IF (ITYPE2.NE.8) GO TO 155
+        CALL LSECTI(A,B,C,D,X2,Y2)
+        IF (A-C)156,156,157
+
+156     X2=-X2
+157     Y2=-Y2
+        GO TO 180
+
+*      ** CHECK ON SLOPE OF LINE SEGMENT. IF SLOPE IS POSITIVE STAY
+*         HERE.
+
+155    IF (B-D) 175,175,160
+
+*      ** DETERMINE THE INTERSECTION BETWEEN THE LINE SEGMENT AND
+*         THE SECOND NODE.
+
+160    CALL INTERS(ITYPE2,C,D,A,B,X2,Y2)
+       GO TO 180
+
+175    CALL INTERS(ITYPE2,A,B,C,D,X2,Y2)
+       X2=-X2
+
+       Y2=-Y2
+
+*      ** SET BEGINNING OF LINE SEGMENT TO THE COORDINATES 
+*         OF THE 1ST NODE.
+
+180    A=X1-XX
+       B=Y1-YY
+
+*      ** NOW ADD THE INCREMENTS OBTAINED FROM THE INTERSECTION SUBROUTINES
+*         TO THE COORDINATES OF THE CENTERS OF NODES 1 & 2 TO
+*         OBTAIN THE POSINTS OF INTERSECTION BETWEEN THE NODES AND THE
+*         LINE BETWEEN THEM
+
+       A=A+X0
+       B=B+Y0
+       C=C+X2
+       D=D+Y2
+
+*      ** NOW POSITION PEN TO POINT OF INTERSECTION OF LINE AND 1ST
+*         NODE - WITH THE PEN RAISED.
+
+       CALL PLT(A,B,3)
+
+*      ** READY TO DRAW THE LINE. CHECK FOR 1ST BEND - ASSUME IF NO
+*         BEND 1 THE NO BENDS AT ALL.
+
+       IF ((BX1.EQ.0).AND.(BY1.EQ.0)) GO TO 300
+
+*      ** DEPENDING ON TYPE OF LINE BRANCH TO CORRECT LINE DRAWING
+*         ROUTINE TO DRAW THE LINE SEGMENT BETWEEN THE 1ST NODE AND
+*         AND THE 1ST BEND.
+
+       GO TO (210,220,210,230,210),LTYPE
+
+*      ** LINE IS FULL DATA ,DSDT CIRCUIT, OR CUSTOMER SUPPLIED
+
+210    CALL PLT(BX1-XX,BY1-YY,2)
+       GO TO 250
+
+*      ** LINE IS A HARD WIRED LINE
+
+220    CALL DOTLIN(A,B,BX1-XX,BY1-YY,.05,.05)
+       GO TO 250
+
+*      ** LINE IS A SATELLITE LINE
+
+230    CALL DOTLIN(A,B,BX1-XX,BY1-YY,.75,.25)
+
+*      ** CHECK FOR 2ND BEND
+
+250    IF ((BX2.NE.0).OR.(BY2.NE.0)) GO TO 255
+
+*       ** SET BEGINNING OF LINE SEGMENT TO BE DRAWN TO COORDINATES
+*          OF 1ST BEND.
+
+        A=BX1-XX
+        B=BY1-YY
+        GO TO 300
+
+*      ** DEPENDING ON TYPE OF LINE BRANCH TO CORRECT LINE DRAWING
+*         ROUTINE TO DRAW THE LINE SEGMENT BETWEEN THE 1ST AND 2ND
+*         BENDS.
+
+255    GO TO (260,270,260,280,260),LTYPE
+
+*      ** LINE IS A FULL DATA ,DSDT CIRCUIT, OR CUSTOMER SUPPLIED
+
+260    CALL PLT(BX2-XX,BY2-YY,2)
+       GO TO 290
+
+*      ** LINE IS A HARD WIRED LINE
+
+270    CALL DOTLIN(BX1-XX,BY1-YY,BX2-XX,BY2-YY,.05,.05)
+       GO TO 290
+
+*      ** LINE IS A SATELLITE LINE
+
+280    CALL DOTLIN(BX1-XX,BY1-YY,BX2-XX,BY2-YY,.75,.25)
+
+*      ** TO DRAW THE LAST SEGMENT SET END OF LINE SEGMENT TO
+*         THE CORRDINATES OF 2ND BEND
+
+290    A=BX2-XX
+       B=BY2-YY
+
+*      ** DRAW LAST SEGMENT OF LINE. OR, IF NO BENDS IN LINE, THEN
+*         DRAW THE WHOLE LINE. DEPENDING ON TYPE OF LINE, BRANCH
+*         TO CORRECT LINE DRAWING ROUTINE.
+
+300     GO TO (310,320,310,330,310),LTYPE
+
+*       ** LINE IS A FULL DATA ,A DSDT CIRCUIT, OR CUSTOMER SUPPLIED
+
+
+310    CALL PLT(C,D,2)
+        CALL PLT(0.,0.,-3)
+        RETURN
+
+*       ** LINE IS A HARD WIRED LINE
+
+320     CALL DOTLIN (A,B,C,D,.05,.05)
+        CALL PLT(0.,0.,-3)
+        RETURN
+
+*       ** LINE IS A SATELLITE LINE
+
+330     CALL DOTLIN (A,B,C,D,.75,.25)
+
+*      ** FINISHED!! RETURN TO CALLING PROGRAM
+
+        CALL PLT(0.,0.,-3)
+       RETURN
+
+       END
+
+*************************************************************************
+*                                                                     *
+*                       SUBROUTINE: INTERS                            *
+*                                                                     *
+*      THIS SUBROUTINE BRANCHES TO THE CORRECT INTERSECTION SUBROUTINE*
+*      DEPENDING ON THE TYPE OF NODE BEING INTERSECTED WITH.          *
+*                                                                *
+*      THE CALLING SEQUENCE IS:                                       *
+*       CALL INTERS(X1,Y1,X2,Y2,X3,Y3)                                *
+*      WHERE THE REQUIRED INPUTS ARE:                                 =
+*              X1 = X COORDINATE FOR CENTER OF THE SYMBOL             *
+*              Y1 = Y COORDINATE FOR CENTER OF THE SYMBOL             *
+*              X2 = X COORDINATE OF POINT AT END OF LINE SEGMENT      *
+*                       TO INTERSECT SYMBOL.                          *
+*              Y2 = Y COORDINATE OF POINT AT END OF LINE SEGMENT      *
+*                       TO INTERSECT SYMBOL.                          *
+*      WHERE THE RETURNED VALUES ARE:                                 *
+*              X3 & Y3 = INCREMENTS BETWEEN CORRDINATES OF THE CENTER *
+*                       OF THE SYMBOL OF 1ST NODE AND THE COORDINATES *
+*                       OF THE INTERSECTION OF THE SYMBOL AND THE     *
+*                       LINE DETERMINED BY THE TWO GIVEN PARIS OF     *
+*                       POINTS.                                       *
+*                                                                     *
+***********************************************************************
+
+       SUBROUTINE INTERS(ITYPE,X1,Y1,X2,Y2,X3,Y3)
+
+       GO TO (100,150,100,150,100,200,250,300,350,100,400,450,500
+     X,550,150),ITYPE
+
+*      ** DETERMINE INTERSECTION POINT WITH A HEXAGON
+*         (SYMBOL FOR BAS370, BAS940-SINGLE, AND BASPDP-SINGLE)
+
+100    CALL HSECT(X1,Y1,X2,Y2,X3,Y3)
+       RETURN
+
+*      ** DETERMINE THE INTERSECTION POINT WITH AN ELONGATED HEXAGON
+*         FOR BAS940-DUAL AND BASPDP-DUAL)
+
+150    CALL DSECT(X1,Y1,X2,Y2,X3,Y3)
+       RETURN
+
+*      ** DETERMIN THE INTERSECTION POINT WITH A SMALL ELLIPSE
+*         (FOR REMOTE)
+
+200    CALL ESECT(X1,Y1,X2,Y2,X3,Y3)
+       RETURN
+
+*      ** DETERMINE THE INTERSECTION POINT WITH A MEDIUM ELLIPSE
+*         (FOR SUPER REMOTE)
+
+250    CALL MESECT(X1,Y1,X2,Y2,X3,Y3)
+       RETURN
+
+*      ** DETERMINE THE INTERSECTION POINT WITH A LARGE CIRCLE
+*         (FOR ISIS-BOX)
+
+300    CALL LSECTI(X1,Y1,X2,Y2,X3,Y3)
+       RETURN
+
+*      ** DETERMINE THE INTERSECTION POINT WITH A RECTANGLE
+*         (FOR TDM-GEAR)
+
+350    CALL RSECT(X1,Y1,X2,Y2,X3,Y3)
+       RETURN
+
+*      ** DETERMINE THE INTERSECTION POINT WITH A LARGE HEXAGON
+*         (FOR TYMCON)
+
+400    CALL LHSECT(X1,Y1,X2,Y2,X3,Y3)
+       RETURN
+
+*      ** DETERMINE THE INTERSECTION POINT WITH A MEDIUM SQUARE
+*         (FOR BISYNC TYMCOM)
+
+450    CALL SQSEC1(X1,Y1,X2,Y2,X3,Y3)
+       RETURN
+
+*      ** DETERMINE THE INTERSECTION POINT WITH A LARGE SQARE
+*         (FOR A SUPER BISYNC TYMCOM)
+
+500    CALL SQSEC2(X1,Y1,X2,Y2,X3,Y3)
+       RETURN
+
+*      ** DETERMINE THE INTERSECTION POINT WITH A SMALL SQARE
+*         (FOR A TYMHOST)
+
+550    CALL SQSECT(X1,Y1,X2,Y2,X3,Y3)
+       RETURN
+
+       END
+    x@ ð
