@@ -1,0 +1,4898 @@
+                                                               March 28, 1986
+
+
+
+
+
+
+
+
+         **** *   * ****  ***** *    ****        ****   ***   ****
+        *     *   * *   * *     *    *   *       *   * *   * *    
+         ***  *   * ****  ***** *    *   *       *   * *   * *    
+            * *   * *     *     *    *   *  ***  *   * *   * *    
+        ****   ***  *     *     **** ****   ***  ****   ***   ****
+
+
+                          SUPERVISOR FIELD GUIDE
+
+
+
+                                  TYMNET
+                      NETWORK TECHNOLOGY DEVELOPMENT
+                              March 28, 1986
+
+
+
+
+
+
+
+
+
+
+   ====================================================================
+   |       THIS DOCUMENT IS THE SOLE PROPERTY AND CONFIDENTIAL        |
+   |       INFORMATION  OF  TYMNET,   AND MAY NOT BE COPIED IN        |
+   |       WHOLE OR IN PART OR DISCLOSED  TO  ANY  THIRD PARTY        |
+   |       WITHOUT THE PRIOR WRITTEN CONSENT OF TYMNET.               |
+   ====================================================================
+
+
+
+ Copyright 1986 by Tymnet -- The McDonnell Douglas Network Systems Company
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+                                                               March 28, 1986
+
+
+
+
+
+
+
+                                 TABLE OF CONTENTS
+
+      Section                                                            Page
+
+
+
+      1.   Staging the Supervisor                                           1
+        1.1   Introduction                                                  1
+        1.2   The Tymnet Supervisor                                         2
+        1.3   Major Supervisor Functions                                    3
+        1.4   Typical ISIS Supervisor Layout                                5
+        1.5   Supervisor Core Layout                                        6
+           1.5.1    Parameters affecting Layout                             6
+
+        1.6   Core Layout, Non-Sup ISIS Node                                8
+        1.7   Core Layout, ISIS Supervisor Node                            10
+        1.8   Supervisor Data Structures                                   13
+        1.9   Supervisor Disk Logical Unit                                 14
+        1.10  The Class and Group Table                                    14
+        1.11  Sample Class Table                                           17
+        1.12  Sample Group Table                                           18
+
+
+      2.   Functional  Description                                         20
+        2.1   The .DSC File                                                20
+           2.1.1    Tips for Supervisor DSC files                          22
+           2.1.2    RAM disk Tip's                                         23
+           2.1.3    NETVAL disk Tip's                                      24
+
+        2.2   Example 1. - Ampex 10 Mb disk drive                          25
+        2.3   Example 2. CDC MMD/FSD 160 MB DSC File                       30
+        2.4   Example 3. CDC SMD 300 MB DSC File                           35
+        2.5   The LOA 'load' file                                          38
+        2.6   The Supervisor Tym File                                      42
+           2.6.1    Sample Version 40.01 Sup Tym file                      44
+
+        2.7   General Consideration                                        51
+
+
+      3.   The Macro Supervisor                                            53
+        3.1   Example 1. All Macro Sup Tymfile                             56
+
+
+      4.   Procedures                                                      58
+        4.1   Formatting a Disk from SCP                                   59
+        4.2   Formatting a Disk - 10 Mb only                               60
+        4.3   Establishing the initial MUD                                 60
+        4.4   Sample VAL session after logging into Netpriv                62
+
+                              SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+                                                               March 28, 1986
+
+
+        4.5   Sample 1.14 NETVAL session after logging into Netpriv        63
+        4.6   Booting the Supervisor from 10 Mb Disk drive                 64
+        4.7   Booting the Supervisor from 160 and 300 Mb disk              65
+        4.8   Loading a Slave Slot from Disk                               66
+        4.9   Initializing the Accounting Logical Unit                     66
+        4.10  Initializing the Logfile Logical Unit                        67
+        4.11  Checking for Disk Integrity after Formatting                 68
+        4.12  Loading the Supervisor Slot from Disk                        68
+        4.13  Superclock Initialization                                    69
+        4.14  Staging the Supervisor Engine                                72
+        4.15  Initial Installation of the Supervisor                       74
+
+
+                                    INDEX
+                                    =====                                  82
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Staging the Supervisor                                   March 28, 1986
+
+
+
+
+
+
+                            1 -  Staging the Supervisor
+
+
+
+
+
+
+
+                                 1.1  Introduction
+
+
+                Although functional target software is normally  provided for
+      staging purposes,  due to the complex nature of the subject familiarity
+      with the sysgen  process is necessary beyond  a step by  step procedure
+      for  staging.  The  purpose  of this  document is  to  provide detailed
+      sysgen,  startup  &  initialization  and  checkout  of  the Supervisor.
+      Companion documents will provide  similar infor mation for  the various
+      related processes such as  Netval, Ram, TMCS, NEM and  Network Console.
+      The intended audience is the experienced Tymnet Network  Consultant who
+      has participated in a Supervisor related project at least once, but who
+      needs more understanding of the system and a bit of a "cookbook"  to be
+      comfortable with the subject.  This document is not intended to replace
+      or condense any existing Tymnet documentation, but rather to supplement
+      available documentation.  Frequent references will be made to available
+      documents, and the bibliography  at the end will direct  the interested
+      student to additional information.
+
+                This  document is  divided  into four  major  sections.  Each
+      section  describes a  particular aspect  of the  Supervisor,  and taken
+      together  they describe  the Supervisor  from basic  concepts  to final
+      check out.
+
+                The  first section  provides  an overview  of  the Supervisor
+      structure, along with some general theory of operation  describing it's
+      major  functions, and  the various  "slave" processes  it uses  and the
+      functions they serve.
+
+                Section two provides a functional description of  the various
+      sysgen  files which  make up  the Supervisor.   These include  the disk
+      allocation files for the newer 300 and 160 Mbyte disk drives as well as
+      the disk and  load files for the  older 10 Mbyte disk.   The Supervisor
+      Tym file for both the older  system and the newer all macro  format are
+      discussed.
+
+                Section  three describes  the major  differences  between the
+      older  versions  of  the  Supervisor  and  the  new  all  macro  format
+      introduced  in Version  41.  The  primary emphasis  is on  upgrading an
+      existing Version 40.01 or prior system to Version 41.01.  This may seem
+
+
+      1                       SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Introduction                                             March 28, 1986
+
+
+      to normally be outside the province of staging, but the very  first 160
+      Mbyte disk staged by NSSU required just this upgrade.
+
+                The  forth  and final  section  provides a  series  of canned
+      procedures for  common and sometimes  un-common network  support tasks.
+      This section  may be  viewed as a  sort of  "cookbook" for  the network
+      support  consultant where  he can  turn for  "recipes" for  those tasks
+      which  he has  either  not thoroughly  learned, or  has  forgotten from
+      disuse.
+
+
+
+
+
+
+                            1.2  The Tymnet Supervisor
+
+
+                A  Tymnet technology  network  is a  centrally  directed data
+      communications network.  The primary attribute of a  centrally directed
+      data network is a central control program which monitors  and allocates
+      the resources  of the network.   In a Tymnet  network, this  program is
+      called  the Supervisor.   The Supervisor  employs a  dynamic  scheme by
+      which it  keeps a  current picture  of the  network and  it's resources
+      (e.g., bandwidth, nodes, ports, hosts).
+
+                The existence of central control provides a number of natural
+      advantages.  Information related to  the global picture of  the network
+      is readily available, as are accounting and security information.  This
+      information  enables  operational  monitoring,  and  efficient  use  of
+      network resources.
+
+                The  Supervisor provides  four  chief functions  for  the net
+      work.  The most fundamental of these and the one which is  most visible
+      to the end user  is the process by which  a user is assigned  a logical
+      path  through  the  network  from  an  origination  point  to   an  end
+      destination.   This function,  called circuit  building, provides  as a
+      natural side effect a single  point in which to implement a  high level
+      of network security.
+
+                In a Tymnet technology network, Security is one of the strong
+      points.   The  central control  provided  by the  Supervisor  serves to
+      provide  nearly  any  level of  security  restriction  the  customer is
+      willing to use, or if  desired, none at all.  Access may  be controlled
+      based on  user ID and  password, origination or  destination.  Critical
+      network functions such as Probe  are protected by double login  and two
+      passwords, and  the Supervisor can  enforce password protection  at the
+      network level above and beyond that at the destination host itself.
+
+                Perhaps even more important to the network itself  than login
+      processing  is  another  function  whereby  the  various  resources and
+      topological  data  are  managed.   This  process  ensures  that control
+
+
+      2                       SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The Tymnet Supervisor                                    March 28, 1986
+
+
+      circuits are built to each available network node and that each node is
+      in the state  called takeover, a state  whereby each node  is available
+      for  use  by  the  network.   Further,  active  management  of  network
+      resources such as nodes, hosts, and links is required to ensure optimum
+      use of available resources.
+
+                The  Supervisor  provides a  convenient  central  point where
+      individual nodes or interfaces  may send reports of normal  or abnormal
+      operation.  Each report is timestamped and filed on disk in  a circular
+      first in, first out buffer  where it is stored for later  access.  Thus
+      centralized data collection  and storage is another  primary Supervisor
+      function.  In  addition to operational  events and error  conditions, a
+      node may report accounting data.
+
+                Where billing of end users for their use of network resources
+      is required, the Supervisor provides a convenient cen tral  point where
+      Accounting data  may be collected.   Detailed records of  every session
+      are  generated  by each  node  in the  net  work, and  sent  at regular
+      intervals to  the Supervisor where  they are stored  on disk  for later
+      access.
+
+                The fourth major function of the Supervisor  provides network
+      operators  with  valuable  performance  monitoring   capability.   This
+      includes such  things as  login rate,  communication delay  and various
+      types of  activity reports  such as  takeover, condition  changes, etc.
+      Availability of this information allows the net work operators  to take
+      action when major problems such as line or node outage arise as well as
+      to intelligently plan for growth.
+
+                In  summary, the  four  major functions  of  topological data
+      management,   login   processing,  data   collection   and  performance
+      monitoring are provided by the Tymnet Supervisor.  These  functions are
+      the same in any Tymnet technology network whether it is a 16 node small
+      scale private network  or a 2500+ node  public data network.   The same
+      software and  the same  hardware are  used in  both cases,  albeit with
+      widely varying configurations  to accommodate the  varying requirements
+      for different networks.
+
+
+
+
+
+
+                          1.3  Major Supervisor Functions
+
+
+                The  Supervisor provides  four  major functions  in  a Tymnet
+      technology network as outlined below.
+
+
+
+
+
+
+      3                       SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Major Supervisor Functions                               March 28, 1986
+
+
+
+           I.   Topological Data Management
+                     - Control Circuits
+                     - Takeover
+                     - Link Reports
+                     - Host Reports
+                     - Node Status
+                     - Link Status
+                     - Host Status
+           
+           II.  Login Processing
+                     - Authentication
+                     - Access Control/Target set selection
+                     - Path Selection
+                     - Circuit Building
+                     - Accounting Preamble
+
+           III. Centralized Data Collection & Buffering
+                     - Accounting Reports
+                     - Event/Error Log
+
+           IV.  Monitoring and Logger functions
+                     - Login Monitoring
+                     - Communication Delay monitoring
+                     - Activity Reports
+                     - Anomoly Detection
+
+
+
+
+
+
+
+                        1.4  Typical ISIS Supervisor Layout
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      4                       SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Typical ISIS Supervisor Layout                           March 28, 1986
+
+
+
+          ________________________
+          |\        ISIS         |
+          | D\     KERNEL        |
+          | I |------------------|
+          | S |      Slot 0      |___
+          | P | Network Interface|_  |
+          | A |------------------| | | 
+          | T |      Slot 1      | | |  Rings for Supervisor/Node Code 
+          | C |   Code Loading   | | |      Communications
+          | H |------------------| | |
+          | E |      Slot 2      | | |
+          | R |    Validations   | | |
+          |   |------------------| | |
+          |---|      Slot 3      |-/ |    All internal communication 
+          | S      Supervisor    |---/       via shared memory
+          | H |------------------|        
+          | A        Slot 4      |        
+          | R        Probe       |      Supervisor/Node Code via shared
+          | E |------------------|           memory ring buffers
+          | D        Slot 5      |
+          |         Error Log    |      Supervisor/Slave Communication
+          | M |------------------|      via common memory data areas
+          | E |      Slot 6      |
+          | M       Account      |      Slave external communication via
+          | O |------------------|      character oriented SVC's
+          | R        Slot 7      |
+          | Y       Sysmsg1      |
+          |   |------------------|
+          |          Slot 8      |
+          |           UN2        |
+          |---|------------------|
+          |          Slot 9      |
+          |         Utility      |
+          ------------------------
+
+
+
+
+
+
+
+                            1.5  Supervisor Core Layout
+
+
+
+
+
+
+
+
+
+
+
+      5                       SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Supervisor Core Layout                                   March 28, 1986
+
+
+                                                              
+                        -----------------       ---          
+                    |                       ^                90000
+                    |       AREA 2 (CODE)   | SUPA2          
+                    |                       v                       
+            SUPA2B- -----------------       -   --           80000
+                    |       AREA 1 (NODE COMMUNICATIONS)             
+                    |                                                 
+            SUPA1B- -----------------                        70000
+                    |                                                 
+                    |                                                 
+                    +    Privileged                                
+                    |                       ___      ___           
+                    |                        ^        ^
+                    +                        |        | SCA2S
+                    |                        |        |
+                    |                        | SUPA0  |
+                    +       AREA 0 (DATA)    |        |
+                    |                        |        |  (COAREAS)
+                    |   R/ONLY AREA          |        |
+                    +                        |        |
+                    |                        |        v
+                    |                        |       --- SCA2O
+                    +   R/W AREA             | SCA1S  | Sup Common area 1
+                    |                        |       --- SCA1O     size
+                    |  Privileged (R/W)      v
+                    -----------------       ---                  00000
+
+
+
+
+
+
+                  1.5.1  Parameters affecting Layout
+
+          RWAREA  EQ  4200      : Start of read/write area
+          SUPDSZ  EQ  105       : Pages in sup data area
+          SCBASE  EQ  70000     : Start of node-sup communication area
+          SUPCSZ  EQ  1B00      : Size of Node-Sup Com. area bytes
+          SUPEST  EQ  800       : Start of code area, Mac Pages
+          SUPESZ  EQ  110       : Pages for sup code area 
+          SUPA0B  EQ  0         : SUP core allocation area 0 base (pages)
+          SUPA0   EQ  SUPDSZ    : SUP core allocation area 0 length (pages)
+          SCA1O   EQ  RWAREA^-8 : SUPERVISOR common area 1 offset
+          SCA1S   EQ  1         : SUPERVISOR common area 1 size (Mac pages)
+          SCA2O   EQ  SCA1O+1   : SUPERVISOR common area 2 offset
+          SCA2S   EQ  SUPA0-SCA2O : SUPERVISOR common area 2 size
+          SUPA1B  EQ  SCBASE^-8 : SUP core allocation area 1 base (MAC
+          SCSIZ   EQ  SUPCSZ    : SUP CORE ALLOCATION AREA 1 SIZE
+          SUPA2B  EQ  SUPEST    : SUPERVISOR area 2 (code) base (MAC pages)
+          SUPST   EQ  SUPEST^8  : Starting address for SUP
+          SUPA2   EQ  SUPESZ    : SUP area 2 base [executable] (MAC pages)
+
+
+      6                       SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Supervisor Core Layout                                   March 28, 1986
+
+
+                The  Supervisor  memory  space is  divided  into  three major
+      areas.  They are designated AREA 0, AREA 1, and AREA 2.  Each  area has
+      a uniquely specialized function.
+
+                The actual executable code  for the Supervisor is in  AREA 2.
+      This area always resides  in Segment 8, beginning at  relocated address
+      80000 hex.  Until Version 39, the Supervisor was less than 64k  in size
+      and could  reside completely  in one  segement.  Recently  however, the
+      growth of the code has caused it to over flow into segment 9 for  a mac
+      page (256 bytes) or two, so  the actual top of memory for the  sup will
+      be  a little  more  than 90000.   The  actual size  will  vary slightly
+      depending on what options are selected at sysgen time.
+
+                Supervisor Area 1 is  the Node Communications Area.   This is
+      the area where the shared memory ring buffers for  Node Code/Supervisor
+      communication are located.  This area  is much smaller than 64k  and is
+      defined  by the  parameter SUPCSZ.   The  Node/Supervisor communication
+      area location is defined by  the parameter SCBASE and is  always 70000.
+      Do not attempt to locate the communications area in any  other segment.
+      This segement will appear in the memory map as owned by the node code.
+
+                Supervisor Area  0 is  the Data Area.   This area  is further
+      subdivided into four sections, two of which are called common areas and
+      two of  which are called  privileged areas.  The  first area  starts at
+      logical address zero within the  slot and is a privileged area.   At an
+      offset into this  area defined by the  parameter SCA10, the  RWAREA, or
+      Supervisor Common  area 1 begins.   This usually is  only one  mac page
+      (256 bytes) in length, and  is shared memory with Probe,  Erlog, Sysmsg
+      and UN2.  This  area is used for  communication between the  slaves and
+      the Supervisor.  Immediately after Common Area 1 resides Common  Area 2
+      which is also shared  memory with the slaves,  but to the slaves  it is
+      read only.  The Supervisor  may write and  the slave  may read  but not
+      write.  This is the area where Node Descriptors, Host tables,  Bad line
+      timeouts, timeouts, remove lists,  free lists, etc. are  stored.  Above
+      the read only area is another privileged area which is reserved for the
+      Supervisor only.  All  of these areas  comprise the shared  memory used
+      for interprocess communication.
+
+
+
+
+
+
+
+           )
+                        1.6  Core Layout, Non-Sup ISIS Node
+
+
+
+
+
+
+
+
+      7                       SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Core Layout                Non-Sup ISIS Node
+
+
+
+          Core Absolute Physical|
+          addresses output by |       Mac assignments under ISIS
+          Merlin at link time |               Slot 0 only
+                              |
+                   SLOT MAP   |
+                              |
+          SLOT BEGINS ENDS    |
+                              |
+           0   1D800  75000   |
+           1   75000  B37FF   |
+                              | 
+                              |
+          MAP OF SLOT  0      |
+                              |
+          SEG  BEGINS ENDS    | Slot starts at 1D800
+                              |
+           0   1E800  27DFF   | MAC seg. 0 has 9600x, execution prot.
+           1   27E00  332FF   | MAC seg. 1 has B500x, no prot.
+           2   33300  432FF   | MAC seg. 2 has 10000x, execution prot.
+           3   43300  490FF   | MAC seg. 3 has 5E00x, execution prot.
+                              | MAC seg. 4 has 300x, execution prot.:SHARED
+           6   49100  590FF   | MAC seg. 6 has 10000x, execution prot.
+           7   59100  690FF   | MAC seg. 7 has 10000x, execution prot.
+           8   69100  6AEFF   | MAC seg. 8 has 1E00x, execution prot.
+          11   6AF00  6BBFF   | MAC seg. B has D00x, execution prot.
+          12   6BC00  6E2FF   | MAC seg. C has 2700x, execution prot.
+          13   6E300  74FFF   | MAC seg. D has 6D00x, no prot.
+          14   1D800  1E7FF   | MAC seg. E has 1000x, write exec. prot.
+                              | MAC seg. F has 500x, write exec. prot.
+                              |
+                              |
+          MAP OF SLOT  1      |
+                              |
+          SEG  BEGINS ENDS    |
+                              |
+           0   75300  7EE4B   |
+           1   7EF00  8EEFE   |
+           2   8EF00  9496D   |
+           3   94A00  96370   |
+           5   96400  A58A5   |
+           9   A5900  AAAB0   |
+          14   75000  752E7   |
+                              |
+                              |       
+
+
+
+
+
+
+
+
+
+      8                       SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Core Layout              ISIS Supervisor Node
+
+
+           )
+                      1.7  Core Layout, ISIS Supervisor Node
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      9                       SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Core Layout              ISIS Supervisor Node
+
+
+
+          Core Absolute Physical|
+          addresses output by |       Mac assignments under ISIS
+          Merlin at link time |               
+                              |                       
+                              |
+                              |
+               SLOT MAP       |
+                              |
+          SLOT BEGINS ENDS    |
+                              |
+           0   19800  64800   |
+           1   66300  8BAFF   |
+           2   8BB00  982FF   |
+           3   98300  D4EFF   |
+           4   D4F00  E02FF   |
+           5   E0300  E16FF   |
+           6   E1700  E1EFF   |
+           7   E1F00  E2EFF   |
+           8   E2F00  E3AFF   |
+           9   E3B00  E83FF   |
+                              |
+                              |
+                              |
+                              |
+          MAP OF SLOT  0      |
+                              |
+          SEG  BEGINS ENDS    | Slot starts at 19800
+                              |
+           0   1A800  22FFF   | MAC seg. 0 has 8800x, execution prot.
+           1   23000  2F7FF   | MAC seg. 1 has C800x, write prot.
+           2   2F800  3E7FF   | MAC seg. 2 has F000x, execution prot.
+                              | MAC seg. 4 has C00x, exec. prot.:SHARED
+                              | MAC seg. 5 has 1B00x, exec. prot.:SHARED
+           6   3E800  4E7FF   | MAC seg. 6 has 10000x, execution prot.
+           7   4E800  5ABFF   | MAC seg. 7 has C400x, execution prot.
+          11   5AC00  5B2FF   | MAC seg. B has 700x, execution prot.
+          12   5B300  5D9FF   | MAC seg. C has 2700x, execution prot.
+          13   5DA00  647FF   | MAC seg. D has 6E00x, write prot.
+          14   19800  1A7FF   | MAC seg. E has 1000x, write exec. prot.
+                              | MAC seg. F has 500x, write exec. prot.
+                              |
+                              |
+                              |
+                              |
+          MAP OF SLOT  1      |
+                              |
+          SEG  BEGINS ENDS    |
+                              |
+           0   66400  697C9   |
+           1   69800  6E5BF   |
+           2   6E600  7E5FF   |
+           3   7E600  8BAFF   |
+
+      10                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Core Layout              ISIS Supervisor Node
+
+
+          14   66300  663E7   |
+                              |
+                              |
+                              |
+          MAP OF SLOT  2      |
+                              |
+          SEG  BEGINS ENDS    |
+                              |
+           0   8BE00  8E5E3   |
+           1   8E600  90EDF   |
+           2   90F00  91F7F   |
+          14   8BB00  8BDDB   |
+                              |
+                              |
+                              |
+                              |
+          MAP OF SLOT  3      |
+                              |
+          SEG  BEGINS ENDS    | Slot starts at 98300
+                              |
+           0   98300  A82FF   | MAC seg. 0 has 10000x, execution prot.
+           1   A8300  B82FF   | MAC seg. 1 has 10000x, execution prot.
+           2   B8300  C2AFF   | MAC seg. 2 has A800x, execution prot.
+                              | MAC seg. 7 has 1B00x, exec. prot.:SHARED
+           8   C2B00  D2AFF   | MAC seg. 8 has 10000x, write prot.
+           9   D2B00  D4EFF   | MAC seg. 9 has 2400x, write prot.
+                              | MAC seg. F has 500x, write exec. prot.
+                              |
+                              |
+                              |
+          MAP OF SLOT  4      |
+                              |
+          SEG  BEGINS ENDS    | Slot starts at D4F00
+                              |
+           0   D4F00  E02FF   | MAC seg. 0 has B400x, no prot.
+                              | MAC seg. 1 has 100x, exec. prot.:SHARED
+                              | MAC seg. 2 has 10000x, write exec. prot.
+                              | MAC seg. 3 has 10000x, write exec. prot.
+                              | MAC seg. 4 has 6300x, write exec. prot.
+                              | MAC seg. F has 500x, write exec. prot.
+                              |
+          MAP OF SLOT  5      |
+                              |
+          SEG  BEGINS ENDS    | Slot starts at E0300
+                              |
+           0   E0300  E16FF   | MAC seg. 0 has 1400x, no prot.
+                              | MAC seg. 1 has 100x, exec. prot.:SHARED
+                              | MAC seg. 2 has 10000x, write exec. prot.
+                              | MAC seg. 3 has 10000x, write exec. prot.
+                              | MAC seg. 4 has 6300x, write exec. prot.
+                              | MAC seg. F has 500x, write exec. prot.
+                              |
+          MAP OF SLOT  6      |
+
+      11                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Core Layout              ISIS Supervisor Node
+
+
+                              |
+          SEG  BEGINS ENDS    | Slot starts at E1700
+
+                              |
+           0   E1700  E1EFF   | MAC seg. 0 has 800x, no prot.
+                              | MAC seg. 1 has 10000x, write exec. prot.
+                              | MAC seg. F has 500x, write exec. prot.
+                              |
+          MAP OF SLOT  7      |
+                              |
+          SEG  BEGINS ENDS    | Slot starts at E1F00
+                              |
+           0   E1F00  E2EFF   | MAC seg. 0 has 1000x, no prot.
+                              | MAC seg. 1 has 100x, exec. prot.:SHARED
+                              | MAC seg. F has 500x, write exec. prot.
+              MAP OF SLOT  8  |
+                              |
+          SEG  BEGINS ENDS    | Slot starts at E2F00
+                              |
+           0   E2F00  E3AFF   | MAC seg. 0 has C00x, no prot.
+                              | MAC seg. 1 has 100x, exec. prot.:SHARED
+                              | MAC seg. 2 has 10000x, write exec. prot.
+                              | MAC seg. F has 500x, write exec. prot.
+              MAP OF SLOT  9  |
+                              |
+          SEG  BEGINS ENDS    | Slot starts at E3B00
+                              |
+           0   E3B00  E70FF   | MAC seg. 0 has 3600x, no prot.
+           1   E7100  E83FF   | MAC seg. 1 has 1300x, write prot.
+                              | MAC seg. F has 500x, write exec. prot.
+
+
+
+
+
+
+
+                          1.8  Supervisor Data Structures
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      12                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Supervisor Data Structures                               March 28, 1986
+
+
+
+           I.   Data structures in memory
+
+                - List Structures
+                     - Bad Line Timeout List
+                     - Timeout list
+                     - Multi-based Host Timeout list
+                     - Takeover Data and Control
+                     - Incomplete input
+                     - Remove list
+                     - Permuter response lists
+                     - Zapper Timeout lists
+                     - Free list
+
+                - Queue Structures
+                     - Login Queue
+                     - Auxillary Circuit Queue
+                     - T-I output queue
+                     - T-II inhibited output queue
+                     - Mud read request queue
+
+                - Table Structures
+                     - Node Descriptor table
+                     - Host Descriptor table
+                     - Class and Group table
+                     - IRC Rotation table 
+
+                  - Mud Cache
+
+
+           II.  Data Structures on Disk
+
+                - Login/Targetting related files
+                     - MUD (lu 0)
+                     - Accounting (lu 1)
+                     - Class and Group Table (lu 3)
+                     - Subnet Table (lu 3)
+                     - Target Profile Table  (lu 3)
+                     - Shut Lines Table (lu 6)
+                     - IRC Rotation Table (lu 6)
+                     - Host Down Messages (lu 6)
+
+                - Save Files (lu 2)
+                     - Code Save Area 
+                     - Backup Code Save Area 
+                     - Crash 1 Data Save Area 
+                     - Crash 2 Data Save Area 
+                     - Crash 3 Data Save Area
+
+                - Error Log Buffer (lu 5)
+
+                - History File (lu 7)
+
+
+      13                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Supervisor Disk Logical Unit                             March 28, 1986
+
+
+                         1.9  Supervisor Disk Logical Unit
+
+
+                The Supervisor  maintains eight logical  units on  disk which
+      are  files used  for various  purposes.  Some  Logical units  perform a
+      single function while others are subdivided into sub units for multiple
+      functions.
+
+                Logical unit 0  is dedicated to  the User Directory,  or MUD.
+      This  is the  file  where username  profiles  are stored.   The  Mud is
+      nothing more than a specialized database where a special number arrived
+      at by a  process called "hashing" applied  to the username is  the key.
+      Because  this  hash  is  the physical  location  on  disk,  lookups are
+      extremely fast, normally a fraction of a second.
+
+                Logical  unit  1   is  First-in  First-out   circular  buffer
+      expressly for  the storage of  accounting data.  The  Supervisor places
+      accounting data into the buffer  as received from the network,  and the
+      network accounting process (RAM) pulls the data from the buffer, oldest
+      record first.
+
+                Logical  unit  2 is  subdivided  into many  areas  which have
+      similar functions.  All are  areas whef Supervisor re  n toftwarekeepch
+      inst stervisor  crash  of the Super  visor itself.  This  capability is
+      rarely used, but when problems are encountered it can be invaluable.
+
+                Logical unit 3  is subdivided into  three areas, only  one of
+      which is of major concern,  the Class and Group table.  The  others are
+      the  Subnet  table, which  is  not fully  implemented,  and  the target
+      profile table which  is used to  allow for multi-targeting.   The Class
+      and Group tables  perform a major role  in most network logins,  thus a
+      more detailed discussion is warranted.
+
+
+
+
+
+
+                          1.10  The Class and Group Table
+
+
+                The Class table is an auxillary access control table which is
+      used to define "classes" of originations (by class number).   The Group
+      table similarly permits the  definition of "groups" of  destinations by
+      group number.  Both of these  tables can be used to enhance  the access
+      control function by defining an explicit profile of access  for various
+      segments of the user population.
+
+                The  Class and  Group tables  reside on  disk where  they are
+      easily accessed as needed.   However due to their relative  small size,
+      and the time required  if it were necessary to  do a disk read  on each
+      the class and group table for each login processed, the Class and Group
+
+
+      14                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The Class and Group Table                                March 28, 1986
+
+
+      tables are  read in  each time the  Supervisor wakes  up and  stored in
+      memory.  All subsequent access to the tables occurs in memory.
+
+                Prior to Version  41 of the  Supervisor, the Class  and Group
+      tables were treated as  a single file and  defined in the .SUP  file as
+      CLSSIZ and GRPSIZ.  Starting with Version 41, the tables  are logically
+      seperated at sector boundries and treated as seperate files.
+
+                The Class and Group  tables share a similar  structure.  They
+      are  both  divided  into  two  seperate  sections.   The  first section
+      consists of a  series of 32 bit  entries each entry being  divided into
+      two 16  bit sections.   Bit 15  of each entry  is used  as a  switch to
+      select between two options.  Refer to the sample Class table  below for
+      clarification.  The  first column  is the  relative address  within the
+      tables.  Class one is defined as "0078 8066", Class two is "00DE 0002",
+      etc.  If bit 15 is a one, as in the Class one entry, the  Class defined
+      is a list of exceptions,  that is, a list of unacceptable  origins.  If
+      the bit  is a  zero, then  the list  is a  list of  acceptable origins.
+      Similarly,  in the  group file,  if the  bit is  a one  the list  is an
+      exception list of unacceptable  destinations.  The number in  the first
+      section of each  entry is a relative  offset from the beginning  of the
+      table where the  class or group is  described, while the number  in the
+      low  15 bits  of  the second  section  is a  length  value.  Therefore,
+      refering to Class one below,  the description of Class one, which  is a
+      list of unacceptable origins, begins at 78 hex bytes into the table and
+      is 66 bytes long.
+
+                The second section of the Class and Group tables  consists of
+      a list of hosts or nodes.  Bit 15 of the first entry  indicates whether
+      the list consists of hosts  or nodes.  Mixing hosts and nodes  within a
+      class or  group is not  allowed, only the  first entry is  checked, and
+      each additional entry is  assumed to be the same  type.  Unfortunately,
+      this is contrary to  Netval documentation which insists mixing  them is
+      allowed.  This  anomoly has been  written up and  submitted to  NTD for
+      correction.  It is not known  at this time whether the  correction will
+      be  revised documentation  for Netval,  or a  change in  the Supervisor
+      logic, but the responsible support person is advised to remain aware of
+      the problem.
+
+                The Class and Group table  may be read directly from  disk by
+      using the  Utility slot.  First  log into DDT  in the Utility  slot and
+      issue the disk load command with the following arguments.
+
+          * L6000,1,0
+
+
+                The command  says to  read from  Utility LU  #3, Sector  0, 1
+      Block (4 sectors), and place  it at address 0 within the  Utility slot.
+      Refer to either the FENCE macro  (if V. 41) or the CLSSIZ value  (if V.
+      40 or before)for the length of the Class Table, and then read address 0
+      for the  specified number  of bytes.   Read 100  bytes for  each sector
+      specified in the FENCE Macro.  The CLSSIZ parameter will usually not be
+      equal to an integral number of sectors, so use the actual value.
+
+      15                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The Class and Group Table                                March 28, 1986
+
+
+
+          * R0,300
+
+
+                The  Group  table  will reside  immediately  after  the Class
+      table, and can be read in a similar manner.  The sample tables attached
+      below were read from  a production Supervisor in the  manner described.
+      The  command  L6001,1,0 will  read  the disk  starting  with  the fifth
+      sector, allowing both tables to  be read in two steps.  In  the example
+      described, the group table begins  at address 0300 (start of  sector 4)
+      and continues for two sectors to address 04FF.
+
+          * R300,100          (Read the first sector of Group table)
+          * L6001,1,0         (Get next block)
+          * R0,100            (Read second sector)
+
+
+
+
+
+
+
+                             1.11  Sample Class Table
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      16                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Sample Class Table                                       March 28, 1986
+
+
+
+          00000  0078  8066  00DE  0002  00E0  0004  0092  8002  <== List of
+          00010  0078  0016  0094  004A  00E4  0002  0000  0000  classes
+          00020  0092  0002  0000  0000  0000  0000  0000  0000
+          00030  0000  0000  0000  0000  0000  0000  0000  0000
+          00040  0000  0000  0000  0000  0000  0000  0000  0000
+          00050  0000  0000  0000  0000  0000  0000  0000  0000
+          00060  0000  0000  0000  0000  0000  0000  0000  0000
+          00070  0000  0000  0000  0000  0469  046B  046C  046D
+          00080  0001  0002  0003  0004  0005  0006  0007  0468  <== Host/nod
+          00090  046A  045E  040C  040D  040E  040F  0410  0411  Comprising 
+          000A0  0412  0413  0414  0415  0416  0417  0418  0419  the classes
+          000B0  041A  041B  041C  041D  041E  041F  0420  0428
+          000C0  0429  042A  042B  042C  042D  042E  042F  0430
+          000D0  0431  0438  0439  043A  043B  043C  043D  8271
+          000E0  8272  8276  8273  0000  0000  0000  0000  0000
+          000F0  0000  0000  0000  0000  0000  0000  0000  0000
+          00100  0000  0000  0000  0000  0000  0000  0000  0000
+          00110  0000  0000  0000  0000  0000  0000  0000  0000
+          00120  0000  0000  0000  0000  0000  0000  0000  0000
+          00130  0000  0000  0000  0000  0000  0000  0000  0000
+          00140  0000  0000  0000  0000  0000  0000  0000  0000
+          00150  0000  0000  0000  0000  0000  0000  0000  0000
+          00160  0000  0000  0000  0000  0000  0000  0000  0000
+          00170  0000  0000  0000  0000  0000  0000  0000  0000
+          00180  0000  0000  0000  0000  0000  0000  0000  0000
+          00190  0000  0000  0000  0000  0000  0000  0000  0000
+          001A0  0000  0000  0000  0000  0000  0000  0000  0000
+          001B0  0000  0000  0000  0000  0000  0000  0000  0000
+          001C0  0000  0000  0000  0000  0000  0000  0000  0000
+          001D0  0000  0000  0000  0000  0000  0000  0000  0000
+          001E0  0000  0000  0000  0000  0000  0000  0000  0000
+          001F0  0000  0000  0000  0000  0000  0000  0000  0000
+          00200  0000  0000  0000  0000  0000  0000  0000  0000
+          00210  0000  0000  0000  0000  0000  0000  0000  0000
+          00220  0000  0000  0000  0000  0000  0000  0000  0000
+          00230  0000  0000  0000  0000  0000  0000  0000  0000
+          00240  0000  0000  0000  0000  0000  0000  0000  0000
+          00250  0000  0000  0000  0000  0000  0000  0000  0000
+          00260  0000  0000  0000  0000  0000  0000  0000  0000
+          00270  0000  0000  0000  0000  0000  0000  0000  0000
+          00280  0000  0000  0000  0000  0000  0000  0000  0000
+          00290  0000  0000  0000  0000  0000  0000  0000  0000
+          002A0  0000  0000  0000  0000  0000  0000  0000  0000  
+          002B0  0000  0000  0000  0000  0000  0000  0000  0000
+          002C0  0000  0000  0000  0000  0000  0000  0000  0000
+          002D0  0000  0000  0000  0000  0000  0000  0000  0000
+          002E0  0000  0000  0000  0000  0000  0000  0000  0000
+          002F0  0000  0000  0000  0000  0000  0000  0000  0000
+
+
+
+
+
+      17                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Sample Group Table                                       March 28, 1986
+
+
+                             1.12  Sample Group Table
+
+
+          00300  0028  00EE  0108  000E  0116  0008  011E  0014  <== List of
+          00310  0132  0012  0144  001C  0000  0000  0000  0000  groups
+          00320  0000  0000  0000  0000  000A  000B  000C  000D
+          00330  000E  000F  0010  0011  0014  0015  0016  0017  <== Lists of
+          00340  0018  0019  001A  001B  001E  001F  0020  0021  host and 
+          00350  0022  0023  0024  0025  0028  0029  002A  002B  nodes
+          00360  002C  002D  002E  002F  0032  0033  0034  0035  comprising
+          00370  0036  0037  0038  0039  003C  003D  003E  003F  the groups
+          00380  0040  0041  0042  0043  0046  0047  0048  0049
+          00390  004A  004B  004C  004D  0064  0065  0066  0067
+          003A0  0068  0069  006A  006B  006E  006F  0070  0071
+          003B0  0072  0073  0074  0075  0082  0083  0084  0085
+          003C0  0086  0087  0088  0089  008C  008D  008E  008F
+          003D0  0090  0091  0092  0093  0096  0097  0098  0099
+          003E0  009A  009B  009C  009D  00A0  00A1  00A2  00A3
+          003F0  00A4  00A5  00A6  00A7  00AA  00AB  00AC  00AD
+          00400  00AE  00AF  00B0  00B1  0079  007A  007B  007C
+          00410  007D  007E  007F  0136  0137  0138  0139  012C
+          00420  012D  012E  012F  0130  0131  0132  0133  0134
+          00430  0135  0001  0002  0003  0004  0005  0006  0007
+          00440  0008  0009  013C  013D  013E  02CB  02CC  02CD
+          00450  02D0  02D1  02D2  02D3  02D4  02D5  02D6  02D7
+          00460  0000  0000  0000  0000  0000  0000  0000  0000
+          00470  0000  0000  0000  0000  0000  0000  0000  0000
+          00480  0000  0000  0000  0000  0000  0000  0000  0000
+          00490  0000  0000  0000  0000  0000  0000  0000  0000
+          004A0  0000  0000  0000  0000  0000  0000  0000  0000
+          004B0  0000  0000  0000  0000  0000  0000  0000  0000
+          004C0  0000  0000  0000  0000  0000  0000  0000  0000
+          004D0  0000  0000  0000  0000  0000  0000  0000  0000
+          004E0  0000  0000  0000  0000  0000  0000  0000  0000
+          004F0  0000  0000  0000  0000  0000  0000  0000  0000
+
+
+                Logical unit 4 performs for the slaves the function performed
+      by LU #2 for the  Supervisor, that is, object code storage.   The slave
+      software is saved here manually  or by the LOA file software  at system
+      load time.  The  slaves may then  be re loaded  from this space  as the
+      need arises without recourse to Elf or Loadii.
+
+                Logical unit 5 is a  curcular buffer like LU #1,  except that
+      instead  of  containing accounting  data,  it contains  the  event log.
+      Messages from the network are  stored here and may be accessed  via the
+      Error Log slave or the Probe LOG command.
+
+                Logical unit 6 is subdivided into three areas, the Shut Lines
+      table, IRC rotation  table and Host down  messages.  Of these  only the
+      Shut Lines table has  significance to the normal private  network.  The
+      shut  lines table  is a  simple  list of  hex node  number  pairs which
+
+
+      18                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Sample Group Table                                       March 28, 1986
+
+
+      indicate links  in the  network overwhich  no traffic  is to  be built.
+      Like the Class and Group table, this table is stored and  referenced in
+      memory, but unlike Class and Group, it is updated once a minute and not
+      just at start-up.  This table is accessed via the Probe commands ESHUT,
+      LSHUT, NSHUT and RSHUT.
+
+                Logical unit 7  is a circular buffer  like 1 and 5,  but this
+      buffer is normally ignored.  It is optional and should be treated  as a
+      debugging tool.  It maintains  a circular buffer of  Supervisor traffic
+      for analysis in the event of a malfunction.  Due to the system overhead
+      it  imposes,  it  should  not  normally  be  enabled  in  a  production
+      environment.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      19                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Functional  Description                                  March 28, 1986
+
+
+
+
+
+
+                           2 -  Functional  Description
+
+
+
+
+
+
+
+                                2.1  The .DSC File
+
+
+                In an ISIS system, the disk drive is divided into  a distinct
+      number of partitions which are  referred to as Global Logical  Units or
+      GLU's.  Each GLU is  defined to the system  by a statement in  the .DSC
+      file.  A  single statement  will normally have  five arguments  but one
+      special GLU may have a  sixth argument.  A typical GLU  definition will
+      look like this:
+
+                SGU.DEF(0A,MS,0,0043,0001)
+
+
+                The first argument is  the Global Unit number in  Hex.  There
+      will  normally  be consecutive  global  unit numbers  from  one  to the
+      highest GLU.
+
+                The second  argument is the  mneumonic device type,  that is,
+      the type  of controller  we are asking  ISIS to  deal with.   There are
+      three types of  controllers currently supported  by ISIS.  Two  are for
+      disk drives and one is for tape drives.  The disk drives are designated
+      DK if we are talking about the nearly obsolete 10 Megabyte disks and MS
+      if referring to the newer  160 and 300 Megabyte disk drives.   The tape
+      controllers are always MT.
+
+                The  third argument  is the  device unit  number.   Since one
+      controller of any of the  three types may support more than  one drive,
+      this number designates the physical drive for this logical unit.
+
+                The fourth and fifth  arguments apply only to disk  and serve
+      to define the physical location on the drive and the size of  this GLU.
+      The fourth argument is the start cylinder and the fifth argument is the
+      size in cylinders of the GLU.  These may overlap, that is two different
+      partitions may share some or  all of the same cylinders.  Care  must be
+      used  to  ensure that  such  overlap does  not  occur  unles explicitly
+      intended  to  do so,  else  the integrity  of  the data  stored  may be
+      compromised.  A single cylinder is smallest unit of storage that can be
+      so described.  It is impossible to subdivide cylinders among GLU's.
+
+                The sixth argument,  if used, can  only be in  one definition
+
+
+      20                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The .DSC File                                            March 28, 1986
+
+
+      statement per node, and is  used to designate a special  system logical
+      unit.  If a  system logical unit  is defined, ISIS  will read it  in on
+      system start up and if  this area of disk contains valid  DDT commands,
+      ISIS will execute those commands at start up time exactly as if entered
+      from the TTY port on the multifunction board.  This provides for one of
+      two methods used to start the ISIS system from disk.  The .LOA  file is
+      used  to  generate  the  text  which  is  then  placed  in  this space.
+      Therefore if the system uses  a .LOA file, a system logical  unit needs
+      to be defined, and if a system logical unit is defined, an .LOA file is
+      expected.
+
+                There are three different  types of disk drives which  may be
+      used with ISIS, in addition to the tape drives.  Refer to Example 1 for
+      a sample .DSC file for the CDC 160 Megabyte drive.
+
+                Actually, there  are two different  disk drives which  may be
+      treated as one type by the  system.  The first is the CDC MMD  drive, a
+      14 inch sealed media  drive, and the second is  the CDC FSD, an  8 inch
+      sealed  media drive.   Both  drives have  the same  physical  number of
+      heads,  sectors,  tracks  and  cylinders,  and  thus  may   be  treated
+      identically, although the FSD is physically about half the size  of the
+      MMD.
+
+                The  .DSC file  is divided  into three  sections.   The first
+      section describes the physical media configuration to  ISIS.  Necessary
+      information  includes  MXGLU, or  the  actual number  of  distinct disk
+      partitions, actual address of  the controller, MSCDA0, or if  more than
+      one  present  MSCDAx  where  x  is  the  controller  number.   The tape
+      controller address is left defaulted, although it could be specified if
+      need be.   The next  six parameters describe  the physical  disk media.
+      Total cylinders on each drive, MSCCYx, number of tracks or platters per
+      cylinder for each drive, MSCTKx, and number of sectors per  track, also
+      for each drive, should they be different.
+
+                The second section contains the GLU definitions for the node.
+      GLU's are defined for all drives, and each GLU equals one partition.
+
+                The third section is the most complex, and the most critical.
+      This is where  the relationship between  the GLU's described  above and
+      the various slot level  functions are established.  There is  a section
+      here for each slot, and each slot logical unit references a  GLU above.
+      The  same  GLU may  be  assigned to  multiple  slots, so  care  must be
+      exercised to  ensure that  no such  references occur  unless specificly
+      intended.   A  typical  SLOT  GLOBAL  UNIT  reference  will  have  four
+      parameters and look something like this:
+
+            SGU.REF(slot#,sgu #, glu #, license)
+
+
+                The first argument, the slot number, obviously designates the
+      ISIS slot which this unit is associated with. The SGU number is  a slot
+      level version of the GLU number in the SGU.DEF statements  above, while
+
+
+      21                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The .DSC File                                            March 28, 1986
+
+
+      the GLU number refers to  the actual physical GLU above which  this SGU
+      corresponds to. License is a  combination of one or more of  Read (RD),
+      Write (WR), Attach (AT) and System (SS).  Proper assignment of licenses
+      will  protect data  from improper  access or  modification  by specific
+      slots or processes.
+
+                Each slot will  have zero or  more logical units  assigned to
+      it.  The actual number assigned is  given as NXLUx where x is  the slot
+      number. Each ISIS slot may be assigned logical units in any  order with
+      two reservations.  First, by  convention, when  tape LU's  are assigned
+      they normally  the lowest  SGU numbers, and  secondly, although  it may
+      seem obvious, it  is necessary for the  slot slftware to have  the same
+      knowledge of which LU is which.  Supervisor slot and it's slaves are an
+      exception to this however.
+
+                The Supervisor and it's slaves always expect  certain logical
+      units to be attached to definate logical units.  For example, the error
+      log is  always SGU.REF  5 in probe  although only  4 lu's  are defined.
+      Since two SGU's are skipped over, the number of LU's given in  the NXLU
+      statement must be 7, even though only 4 are actually used.  The special
+      cases for the Supervisor and it's slaves are contrary to  simple logic,
+      but must nevertheless be followed religiously.  Changing  parameters in
+      this area is not done lightly.
+
+                The  last slot  is  the Utility  slot, and  may  contain many
+      additional  logical  units.  Although  the  admonitions  about changing
+      parameters in  supervisor slaves  cannot be ignored  here, they  can be
+      modified slightly.   The Utility  slot logical  units should  match the
+      Supervisor  logical  units where  they  are in  common,  but additional
+      logical units may  be defined.  Utility is  a general purpose LU  to LU
+      copy facility.  It's processes are called upon by the Supervisor, hence
+      the need to have common LU numbers with the Supervisor, but it can also
+      be entered  by the operator  via DDT for  the express purpose  of doing
+      such a copy.  One common use would be to back up a sealed media disk LU
+      by LU to tape, or another drive, for the purpose of doing maintenance.
+
+
+
+
+
+                  2.1.1  Tips for Supervisor DSC files
+
+           -  Group  the  MUD/CUD,  accounting  and  error  log  global units
+      together  with   MUD/CUD  in  the middle  to minimize  disk  drive head
+      movement and speed   since these files are the main ones the supervisor
+      works with  after   initialization.   If another  utility such  as ELF,
+      RAM, or NETVAL is   also to  be on the supervisor, place its  main work
+      area adjacent to the   areas mentioned above.
+
+           - For the  160/300 mbyte drives, always  make the core  image save
+      area the   first global unit on the disk.
+
+
+
+      22                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The .DSC File                                            March 28, 1986
+
+
+           -  Be  sure  to  observe  the  logical  unit  number  (XLU  in the
+      SGU.REF's) order   convention inside the SUPERVISOR, PROBE,  ERROR LOG,
+      ACCOUNT, SYSMSG,   UN2, slot NXLU assignments. This is VERY important!.
+      A future version   of the Supervisor code will allow  flexibility here,
+      but for now each   important slave's internal logical unit number order
+      must map to the   others. The order must be:
+
+             XLU            AREA TYPE
+
+              0             MUD/CUD
+              1             ACCOUNTING
+              2             SUPERVISOR SAVE AREA
+              3             CLASS AND GROUP DEFINITIONS
+              4             SOURCE/DESTINATION FILE
+              5             ERROR LOG
+              6             HOST MESSAGE
+              7             SUPERVISOR HISTORY
+              8             (RESERVED)
+              9             REGIONAL DATA SET
+              10            CLOSURE WORK FILE
+
+
+             The XLU order inside the  UTIL slot does not have to  conform to
+      this.
+
+           - When setting up the total user space and the format area  on 160
+      drives,   be sure to leave a gap of 5 cylinders unused at the end.  The
+      160's will   reassign a limited number of bad tracks to the end  of the
+      total area.    This  area could be  up to 5  cylinders and if  you have
+      used any of these,   you run the risk of trying to use bad  tracks.  An
+      example for the   SGU.DEF would be:
+
+            SGU.DEF(#,MS,0,0000,0332)    :User Area
+            SGU.DEF(#,MS,0,0000,0337)    :Format Area
+
+
+
+
+
+
+                  2.1.2  RAM disk Tip's
+
+           - If  you are installing  on one  of the sup's,  put the  RAM disk
+      assignment   right next to the ACCT/MUD/ERR areas to minimize  the head
+      movement of the   drive.
+
+
+
+
+
+
+
+
+
+      23                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The .DSC File                                            March 28, 1986
+
+
+                  2.1.3  NETVAL disk Tip's
+
+           -  The DISK_UNIT_ONE_SIZE  in the  NVAL pascal  configuration file
+      (.A0#)   absolutely must exactly equal the same as the area  defined in
+      the   .DSC file.   Do not make  the value in  the .DSC file  larger for
+      growth!
+
+           - The MUD/CUD size in the .DSC file must be greater than  or equal
+      to the  DEFMUD in  the supervisor configuration  file, which  must ALSO
+      agree  with  MAXIMUM_CUD_BLOCK  *  MAXIMUM_CUD_BLOCK_SIZE  in  the .AO#
+      Netval file.
+
+           - This area  should also be adjacent  to the ACCT/MUD/ERR  area if
+      NETVAL   resides on a supervisor, to minimize head movement.
+
+
+
+
+
+
+                     2.2  Example 1. - Ampex 10 Mb disk drive
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      24                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Example 1. - Ampex 10 Mb disk drive                      March 28, 1986
+
+
+           
+           :       DUPONT DE NEMOURS - NODE 2001 - 84/04/16   J-F.R
+           :  ISIS-II - DISK & TAPE PARAMETERS
+           : de2001.dsc
+           :
+              IF      NDISC+NTAPE+MSCDSK
+           
+           :  ISIS CONFIGURATION CONSTRAINTS
+           MXGLU      EQ      21              :MAX NO. OF DISTINCT UNITS 
+           
+           :  ALLOCATION OF GLOBAL UNITS
+           :          EACH ENTRY HAS 5 PARAMETERS PLUS 1 IF SYSTEM DEVICE:
+           :          F1=     GLOBAL-UNIT NUMBER IN HEX
+           :          F2=     MNEUMONIC DEVICE TYPE: DK, MT, MS
+           :          F3=     DEVICE UNIT NUMBER IN DECIMAL
+           :          F4=     AREA START CYLINDER IN HEX (DISCS ONLY)
+           :          F5=     AREA SIZE IN HEX - NUMBER OF CYL (DISCS ONLY).
+           :                  1 CYL = 12,288 BYTES (AMPEX 10 MB DISC)
+           :                  1 CYL = 12 DECIMAL BLOCKS WITH 1024 BYTES/BLOCK
+           :          F6=     SYSTEM DEVICE FLAG = '1' (ASSIGN ONLY ONE)
+           
+           :  TAPE UNIT ASSIGNMENTS
+           
+              SGU.DEF(15,MT,0)                :MAGNETIC TAPE DRIVE 0
+           
+           :  DISC UNIT 0 - REMOVABLE PLATTER ASSIGNMENTS:
+           
+              SGU.DEF(1,DK,0,0000,001C)       :NODE & KERNEL SAVE AREA
+              SGU.DEF(2,DK,0,001C,0005)       :RAM SAVE AREA
+              SGU.DEF(3,DK,0,0021,000F)       :NETVAL SAVE AREA
+              SGU.DEF(4,DK,0,0030,000E)       :E.L.F SAVE AREA
+           
+           
+           
+              SGU.DEF(7,DK,0,0040,0002)       :UTILITY SLOT SAVE AREA
+              SGU.DEF(8,DK,0,0042,002B)       :SUPERVISOR SAVE AREA
+              SGU.DEF(9,DK,0,006D,0100)       :ACCOUNTING DATA
+              SGU.DEF(0A,DK,0,016D,0007)      :HOST MESSAGE AREA
+              SGU.DEF(0B,DK,0,0174,0004,1)    :UTILITY SAVE AREA
+              SGU.DEF(14,DK,0,0178,000C)      :RAM WORK AREA
+           
+              SGU.DEF(0D,DK,0,0000,0156)      :MUD COPY (REM) - UTILITY ONLY
+           
+           :  DISC UNIT 1 - FIXED PLATTER ASSIGNMENTS
+           
+              SGU.DEF(10,DK,1,0000,0100)      :MUD
+              SGU.DEF(11,DK,1,0100,0025)      :ERROR LOG
+              SGU.DEF(12,DK,1,0125,0006)      :MUD CHANGE AREA
+              SGU.DEF(13,DK,1,012B,000B)      :CLASS & GROUP DEFINITIONS
+              SGU.DEF(0C,DK,1,0136,0028)      :SUPERVISOR HISTORY
+           
+           
+           
+
+      25                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Example 1. - Ampex 10 Mb disk drive                      March 28, 1986
+
+
+           :  DISC UNIT 2 - REM PLATTER ASSIGNMENTS:
+           
+              SGU.DEF(17,DK,2,0000,0193)      :ELF LU 0 IN SLOT
+           
+           :  DISC UNIT 3 - FIXED PLATTER ASSIGNMENTS:
+           
+              SGU.DEF(18,DK,3,0000,0193)      :ELF LU 1 IN SLOT
+           
+           :  DISC SPACE ASSIGNMENTS - UTILITY USE ONLY
+           
+              SGU.DEF(19,DK,0,0000,0193)      :USER SPACE - 1ST REM DISK
+              SGU.DEF(1A,DK,1,0000,0193)      :USER SPACE - 1ST FIXED DISK
+              SGU.DEF(1B,DK,0,0000,0198)      :FORMAT SPACE - 1ST REM DISK
+              SGU.DEF(1C,DK,1,0000,0198)      :FORMAT SPACE - 1ST FIXED DISK
+           
+              SGU.DEF(1D,DK,2,0000,0193)      :USER SPACE - 2ND REM DISK
+              SGU.DEF(1E,DK,3,0000,0193)      :USER SPACE - 2ND FIXED DISK
+              SGU.DEF(1F,DK,2,0000,0198)      :FORMAT SPACE - 2ND REM DISK
+              SGU.DEF(20,DK,3,0000,0198)      :FORMAT SPACE - 2ND FIXED DISK
+           
+           :  FLAGS
+           :  (SLOT,XLU,GLU,ACCESS)
+           :  SLOT    = SLOT NUMBER ASSIGNED (DECIMAL)
+           :  XLU     = EXTENDED LU NUMBER FOR THIS SLOT (DECIMAL)
+           :  GLU     = GLOBAL UNIT NUMBER (HEXIDECIMAL)
+           :  ACCESS  = RD-READ, WR-WRITE, AT-ATTACH, SS-SAVE LICENSE
+           
+           :  SLOT 0 - NODE CODE
+           NXLU0      EQ      0
+           
+           
+           :  SLOT 1 - RAM (RAW ACCOUNTING MERGER)
+           NXLU1      EQ      $A 4
+              SGU.REF(1,0,15,RD+WR+AT)        :MT0
+              SGU.REF(1,2,14,SS+RD+WR)        :RAM WORK AREA
+              SGU.REF(1,3,2,SS+RD+WR+AT)      :SLOT SAVE AREA
+           
+           :  SLOT 2 - VAL (VALIDATIONS)
+           NXLU2      EQ      5
+              SGU.REF(2,0,15,RD+WR+AT)        :MT0
+              SGU.REF(2,2,10,SS+RD+WR)        :MUD
+              SGU.REF(2,3,12,SS+RD+WR)        :MUD CHANGE
+              SGU.REF(2,4,3,SS+RD+WR+AT)      :SLOT SAVE AREA
+           
+           :       SLOT 3 - E.L.F
+           NXLU3   EQ      3
+                   SGU.REF(3,0,4,SS+RD+WR+AT)      :SLOT SAVE AREA
+                   SGU.REF(3,1,17,SS+RD+WR+AT)     :ELF DATA BASE REMOV DISC 
+                   SGU.REF(3,2,18,SS+RD+WR+AT)     :ELF DATA BASE FIXED DISC 
+              SGU.REF(3,3,15,SS+RD+WR+AT)     :MT0
+           
+           
+           
+
+      26                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Example 1. - Ampex 10 Mb disk drive                      March 28, 1986
+
+
+           :  SLOT Q - SUPERVISOR
+           
+           Q  EQ      NSLOT+1
+              RA      $A 10
+           NXLU|Q| EQ 8                       :SLOT Q
+              SGU.REF(Q,0,10,RD)              :MUD
+              SGU.REF(Q,1,9,SS+RD+WR)         :ACCOUNTING DATA
+              SGU.REF(Q,2,8,SS+RD+WR)         :SUP SAVE AREA
+              SGU.REF(Q,3,13,RD)              :CLASS & GROUP DEF
+              SGU.REF(Q,5,11,SS+RD+WR)        :ERROR LOG
+              SGU.REF(Q,6,0A,RD)              :HOST MESSAGE AREA
+              SGU.REF(Q,7,0C,SS+RD+WR)        :SUPERVISOR HISTORY
+           Q  EQ      Q+1
+           
+           :  PROBE
+           
+              RA      $A 10
+           NXLU|Q| EQ 7
+              SGU.REF(Q,1,9,SS+RD+WR)         :ACCOUNTING DATA
+              SGU.REF(Q,4,0B,SS+RD+WR)        :UTILITY SAVE AREA
+              SGU.REF(Q,5,11,SS+RD+WR)        :ERROR LOG
+              SGU.REF(Q,6,0A,SS+RD+WR)        :HOST MESSAGE AREA
+           Q  EQ      Q+1
+           
+           :  ERRLOG
+           
+              RA      $A 10
+           NXLU|Q| EQ 6
+              SGU.REF(Q,4,0B,SS+RD+WR)        :UTILITY SAVE AREA
+              SGU.REF(Q,5,11,SS+RD+WR)        :ERROR LOG
+           Q  EQ      Q+1
+           
+           :  ACCOUNT
+           
+              RA      $A 10
+           NXLU|Q| EQ 5
+              RA      0
+              SGU.REF(Q,1,9,SS+RD+WR)         :ACCOUNTING DATA
+              SGU.REF(Q,4,0B,SS+RD+WR)        :UTILITY SAVE AREA
+           Q  EQ      Q+1
+           
+           :  SYSMSG1
+           
+              RA      $A 10
+           NXLU|Q| EQ 8
+              RA      0
+              SGU.REF(Q,4,0B,SS+RD+WR)        :UTILITY SAVE AREA
+              SGU.REF(Q,6,0A,SS+RD+WR)        :HOST MESSAGE AREA
+              SGU.REF(Q,7,13,SS+RD+WR)        :CLASS & GROUP DEF
+           Q  EQ      Q+1
+           
+           :  UN2
+           
+
+      27                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Example 1. - Ampex 10 Mb disk drive                      March 28, 1986
+
+
+              RA      $A 10
+           NXLU|Q| EQ 5
+              RA      0
+              SGU.REF(Q,0,10,SS+RD+WR)        :MUD
+              SGU.REF(Q,4,0B,SS+RD+WR)        :UTILITY SAVE AREA
+           Q  EQ      Q+1
+           
+           :  UTILITY
+           
+              RA      $A 10
+           NXLU|Q| EQ $A 16
+              RA      0
+              SGU.REF(Q,0,10,SS+RD+WR+AT)     :MUD
+              SGU.REF(Q,1,9,SS+RD+WR+AT)      :ACCOUNTING DATA
+              SGU.REF(Q,2,8,SS+RD+WR+AT)      :SUP SAVE AREA
+              SGU.REF(Q,3,13,SS+RD+WR+AT)     :CLASS & GROUP DEF
+              SGU.REF(Q,4,0B,SS+RD+WR+AT)     :UTILITY SAVE AREA
+              SGU.REF(Q,5,11,SS+RD+WR+AT)     :ERROR LOG
+              SGU.REF(Q,6,0A,SS+RD+WR+AT)     :HOST MESSAGE AREA
+              SGU.REF(Q,7,0C,SS+RD+WR+AT)     :SUPERVISOR HISTORY
+              SGU.REF(Q,8,1B,SS+RD+WR+AT)     :DK0 - FORMAT SPACE - REM
+              SGU.REF(Q,9,1C,SS+RD+WR+AT)     :DK1 - FORMAT SPACE - FIXED
+              SGU.REF(Q,10,1F,SS+RD+WR+AT)    :DK2 - FORMAT SPACE - REM
+              SGU.REF(Q,11,20,SS+RD+WR+AT)    :DK3 - FORMAT SPACE - FIXED
+              SGU.REF(Q,12,15,RD+WR+AT)       :MT0 - MAGNETIC TAPE 0
+              SGU.REF(Q,14,7,SS+RD+WR+AT)     :UTILITY SLOT SAVE AREA
+              SGU.REF(Q,15,0D,SS+RD+WR+AT)    :MUD COPY TO REM PLATTER
+           
+              EI      (NDISC+NTAPE+MSCDSK)
+           
+           
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      28                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Example 1. - Ampex 10 Mb disk drive                      March 28, 1986
+
+
+                    2.3  Example 2. CDC MMD/FSD 160 MB DSC File
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      29                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Example 2. CDC MMD/FSD 160 MB DSC File                   March 28, 1986
+
+
+
+           :*****************************************************************
+           :
+           :  CUSTOMER        :       DUPONT
+           :  NETWORK NAME    :       DUNET (EUROPE)
+           :  NODE NUMBER     :       2001            SITE      :     GENEVA
+           :  SLOT NUMBER     :       **              SLOT NAME :     ****
+           :  VERSION NUMBER  :       ****
+           :  NETWORK SUPPORT :       JEAN-FRANCOIS RETHO
+           :
+           ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+           :
+           :  HISTORY FILE :
+           :  ============
+           :
+           :  DATE    : YY/MM/JJ      ACTION : 
+           :            85/03/06      ASHOK   RECONFIGURE FOR 160 MB MSC DRIV
+           :            85/03/21      NATHAN  REMOVE DISK UNIT #1 FROM CONFIG
+           :*****************************************************************
+           : DE2001.DSC
+           :
+           :       DUPONT DE NEMOURS - NODE 2001 - 85/03/04   J-F.R
+           :  ISIS-II - DISK & TAPE PARAMETERS
+           
+              IF      NDISC+NTAPE+MSCDSK
+           
+           :  ISIS CONFIGURATION CONSTRAINTS
+           MXGLU      EQ      14              :MAX NO. OF DISTINCT UNITS 
+           NMSC0      EQ      1               :ONE DRIVE  ON CONTROLLER 0
+           MSCDA0     EQ      0F8             :CONTROLLER DRIVE 0 ADDRESS
+           MSCCY0     EQ      $A 823          :CYLINDERS PER DRIVE FOR DRIVE0
+           MSCTK0     EQ      $A 10           :TRACKS PER CYLINDER FOR DRIVE0
+           MSCST0     EQ      $A 53           :SECTORS PER TRACK   FOR DRIVE0
+           :MSCCY1    EQ      $A 823          :CYLINDERS PER DRIVE FOR DRIVE1
+           :MSCTK1    EQ      $A 10           :TRACKS PER CYLINDER FOR DRIVE1
+           :MSCST1    EQ      $A 53           :SECTORS PER TRACK   FOR DRIVE1
+           
+           :  ALLOCATION OF GLOBAL UNITS
+           :          EACH ENTRY HAS 5 PARAMETERS PLUS 1 IF SYSTEM DEVICE:
+           :          F1=     GLOBAL-UNIT NUMBER IN HEX
+           :          F2=     MNEUMONIC DEVICE TYPE: DK, MT, MS
+           :          F3=     DEVICE UNIT NUMBER IN DECIMAL
+           :          F4=     AREA START CYLINDER IN HEX (DISCS ONLY)
+           :          F5=     AREA SIZE IN HEX - NUMBER OF CYL (DISCS ONLY).
+           :                  1 CYL = 530d SECTORS (160 MB MSC-1400 DISK)
+           :                        = 135680 BYTES
+           :          F6=     SYSTEM DEVICE FLAG = '1' (ASSIGN ONLY ONE)
+           
+           :  TAPE UNIT ASSIGNMENTS
+           
+              SGU.DEF(13,MT,0)                :MAGNETIC TAPE DRIVE 0
+           
+           :  DISC UNIT 0
+
+      30                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Example 2. CDC MMD/FSD 160 MB DSC File                   March 28, 1986
+
+
+           
+              SGU.DEF(1,MS,0,0000,0008)  :CORE SAVE AREA, 1,085,440 BYTES
+           
+              SGU.DEF(2,MS,0,0008,0003)  :SUPERVISOR SAVE AREA, 1492480 BYTES
+              SGU.DEF(3,MS,0,000B,0018)  :ACCOUNTING DATA, 3,256,320 BYTES
+              SGU.DEF(4,MS,0,0023,0001)  :HOST MESSAGE AREA, 135,680 BYTES
+              SGU.DEF(6,MS,0,0024,0001)  :SLAVE SAVE AREA, 135,680 BYTES
+              SGU.DEF(7,MS,0,0025,0002)  :RAM WORK AREA, 271,360 BYTES
+           
+              SGU.DEF(8,MS,0,0027,0018)  :MUD, 3,256,320 BYTES
+              SGU.DEF(9,MS,0,003F,0004)  :ERROR LOG, 542,720 BYTES
+              SGU.DEF(0A,MS,0,0043,0001) :MUD CHANGE AREA, 135,680 BYTES
+              SGU.DEF(0B,MS,0,0044,0001) :CLASS & GROUP DEFINITIONS, 135680
+           
+              SGU.DEF(0D,MS,0,0000,0335) :USER SPACE
+              SGU.DEF(0E,MS,0,0000,0337) :FORMAT SPACE
+           
+           :  DISC UNIT 1
+           
+           :  SGU.DEF(0F,MS,1,0000,019C)  :ELF LU 0
+           :  SGU.DEF(10,MS,1,019C,019A)  :ELF LU 1
+           :  SGU.DEF(11,MS,1,0000,0335)  :USER SPACE
+           :  SGU.DEF(12,MS,1,0000,0337)  :FORMAT SPACE
+           
+           :  FLAGS
+           :  (SLOT,XLU,GLU,ACCESS)
+           :  SLOT    = SLOT NUMBER ASSIGNED (DECIMAL)
+           :  XLU     = EXTENDED LU NUMBER FOR THIS SLOT (DECIMAL)
+           :  GLU     = GLOBAL UNIT NUMBER (HEXIDECIMAL)
+           :  ACCESS  = RD-READ, WR-WRITE, AT-ATTACH, SS-SAVE LICENSE
+           
+           :  SLOT 0 - NODE CODE
+           NXLU0      EQ      0
+           
+           
+           :  SLOT 1 - RAM (RAW ACCOUNTING MERGER)
+           NXLU1      EQ      $A 2
+              SGU.REF(1,0,13,RD+WR+AT)  :MT0
+              SGU.REF(1,1,7,SS+RD+WR)   :RAM WORK AREA
+           
+           :  SLOT 2 - NETVAL (NETWORK VALIDATIONS)
+           NXLU2      EQ      3
+              SGU.REF(2,0,13,RD+WR+AT)  :MT0
+              SGU.REF(2,1,8,SS+RD+WR)   :MUD
+              SGU.REF(2,2,0A,SS+RD+WR)  :MUD CHANGE
+           
+           :       SLOT 3 - E.L.F
+           :NXLU3   EQ      3
+           :  SGU.REF(3,0,0F,SS+RD+WR+AT)  :ELF DATA BASE
+           :  SGU.REF(3,1,10,SS+RD+WR+AT)  :ELF DATA BASE
+           :  SGU.REF(3,2,13,SS+RD+WR+AT)  :MT0
+           
+           
+
+      31                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Example 2. CDC MMD/FSD 160 MB DSC File                   March 28, 1986
+
+
+           
+           :  SLOT Q - SUPERVISOR
+           
+           Q  EQ      NSLOT+1
+              RA      $A 10
+           NXLU|Q| EQ 8                 :SLOT Q
+              SGU.REF(Q,0,8,RD)         :MUD
+              SGU.REF(Q,1,3,SS+RD+WR)   :ACCOUNTING DATA
+              SGU.REF(Q,2,2,SS+RD+WR)   :SUP SAVE AREA
+              SGU.REF(Q,3,0B,RD)        :CLASS & GROUP DEF
+              SGU.REF(Q,5,9,SS+RD+WR)   :ERROR LOG
+              SGU.REF(Q,6,4,RD)         :HOST MESSAGE AREA
+           Q  EQ      Q+1
+           
+           :  PROBE
+           
+              RA      $A 10
+           NXLU|Q| EQ 7
+              SGU.REF(Q,1,3,SS+RD+WR)   :ACCOUNTING DATA
+              SGU.REF(Q,4,6,SS+RD+WR)   :SLAVE SAVE AREA
+              SGU.REF(Q,5,9,SS+RD+WR)   :ERROR LOG
+              SGU.REF(Q,6,4,SS+RD+WR)   :HOST MESSAGE AREA
+           Q  EQ      Q+1
+           
+           :  ERRLOG
+           
+              RA      $A 10
+           NXLU|Q| EQ 6
+              SGU.REF(Q,4,6,SS+RD+WR)   :SLAVE SAVE AREA
+              SGU.REF(Q,5,9,SS+RD+WR)   :ERROR LOG
+           Q  EQ      Q+1
+           
+           :  ACCOUNT
+           
+              RA      $A 10
+           NXLU|Q| EQ 5
+              RA      0
+              SGU.REF(Q,1,3,SS+RD+WR)   :ACCOUNTING DATA
+              SGU.REF(Q,4,6,SS+RD+WR)   :SLAVE SAVE AREA
+           Q  EQ      Q+1
+           
+           :  SYSMSG1
+           
+              RA      $A 10
+           NXLU|Q| EQ 8
+              RA      0
+              SGU.REF(Q,4,6,SS+RD+WR)   :SLAVE SAVE AREA
+              SGU.REF(Q,6,4,SS+RD+WR)   :HOST MESSAGE AREA
+              SGU.REF(Q,7,0B,SS+RD+WR)  :CLASS & GROUP DEF
+           Q  EQ      Q+1
+           
+           :  UN2
+           
+
+      32                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Example 2. CDC MMD/FSD 160 MB DSC File                   March 28, 1986
+
+
+              RA      $A 10
+           NXLU|Q| EQ 5
+              RA      0
+              SGU.REF(Q,0,8,SS+RD+WR)   :MUD
+              SGU.REF(Q,4,6,SS+RD+WR)   :SLAVE SAVE AREA
+           Q  EQ      Q+1
+           
+           :  UTILITY
+           
+              RA      $A 10
+           NXLU|Q| EQ $A 12
+              RA      0
+              SGU.REF(Q,0,8,SS+RD+WR+AT)  :MUD
+              SGU.REF(Q,1,3,SS+RD+WR+AT)  :ACCOUNTING DATA
+              SGU.REF(Q,2,2,SS+RD+WR+AT)  :SUP SAVE AREA
+              SGU.REF(Q,3,0B,SS+RD+WR+AT) :CLASS & GROUP DEF
+              SGU.REF(Q,4,6,SS+RD+WR+AT)  :SLAVE SAVE AREA
+              SGU.REF(Q,5,9,SS+RD+WR+AT)  :ERROR LOG
+              SGU.REF(Q,6,4,SS+RD+WR+AT)  :HOST MESSAGE AREA
+           :  SGU.REF(Q,7,11,SS+RD+WR+AT) :USER AREA 0-335 DRIVE 1
+           :  SGU.REF(Q,8,12,SS+RD+WR+AT) :FORMAT AREA 0-337 DRIVE 1
+              SGU.REF(Q,9,13,RD+WR+AT)    :MT0 - MAGNETIC TAPE 0
+              SGU.REF(Q,10,0D,SS+RD+WR+AT)  :USER AREA 0-335 DRIVE 0
+              SGU.REF(Q,11,0E,SS+RD+WR+AT)  :FORMAT AREA 0-337 DRIVE 0
+           
+              EI      (NDISC+NTAPE+MSCDSK)
+           
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      33                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Example 2. CDC MMD/FSD 160 MB DSC File                   March 28, 1986
+
+
+                      2.4  Example 3. CDC SMD 300 MB DSC File
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      34                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Example 3. CDC SMD 300 MB DSC File                       March 28, 1986
+
+
+
+           :*****************************************************************
+           :
+           :  CUSTOMER  :     DUPONT
+           :  NETWORK NAME  : DUNET (EUROPE)
+           :  NODE NUMBER  :  2001            SITE      :     GENEVA
+           :  SLOT NUMBER  :  **              SLOT NAME :     ****
+           :  VERSION NUMBER  :       ****
+           :  NETWORK SUPPORT  :      JEAN-FRANCOIS RETHO
+           :
+           ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+           :
+           :  HISTORY FILE :
+           :  ============
+           :
+           :  DATE  : YY/MM/JJ        ACTION : 
+           :            85/03/06      ASHOK   RECONFIGURE FOR 160 MB MSC DRIV
+           :            85/03/21      NATHAN  REMOVE DISK UNIT #1 FROM CONFIG
+           :            85/12/17      ASHOK   RECONFIGURE FOR 300 MB MSC DRIV
+           :*****************************************************************
+           : DE2001.DSC
+           :
+           :       DUPONT DE NEMOURS - NODE 2001 - 85/03/04   J-F.R
+           :  ISIS-II - DISK & TAPE PARAMETERS
+           
+              IF      NDISC+NTAPE+MSCDSK
+           
+           :  ISIS CONFIGURATION CONSTRAINTS
+           MXGLU      EQ      14        :MAX NO. OF DISTINCT UNITS
+           NMSC0      EQ      1         :ONE DRIVE  ON CONTROLLER 0
+           MSCDA0     EQ      0F8       :CONTROLLER DRIVE 0 ADDRESS
+           MSCCY0     EQ      $A 823    :CYLINDERS PER DRIVE FOR DRIVE 0
+           MSCTK0     EQ      $A 19     :TRACKS PER CYLINDER FOR DRIVE 0
+           MSCST0     EQ      $A 53     :SECTORS PER TRACK   FOR DRIVE 0
+           :MSCCY1    EQ      $A 823    :CYLINDERS PER DRIVE FOR DRIVE 1
+           :MSCTK1    EQ      $A 19     :TRACKS PER CYLINDER FOR DRIVE 1
+           :MSCST1    EQ      $A 53     :SECTORS PER TRACK   FOR DRIVE 1
+           
+           :  ALLOCATION OF GLOBAL UNITS
+           :          EACH ENTRY HAS 5 PARAMETERS PLUS 1 IF SYSTEM DEVICE:
+           :          F1=     GLOBAL-UNIT NUMBER IN HEX
+           :          F2=     MNEUMONIC DEVICE TYPE: DK, MT, MS
+           :          F3=     DEVICE UNIT NUMBER IN DECIMAL
+           :          F4=     AREA START CYLINDER IN HEX (DISCS ONLY)
+           :          F5=     AREA SIZE IN HEX - NUMBER OF CYL (DISCS ONLY).
+           :                  1 CYL = 530d SECTORS (160 MB MSC-1400 DISK)
+           :                        = 135680 BYTES
+           :          F6=     SYSTEM DEVICE FLAG = '1' (ASSIGN ONLY ONE)
+           
+           :  TAPE UNIT ASSIGNMENTS
+           
+              SGU.DEF(13,MT,0)          :MAGNETIC TAPE DRIVE 0
+           
+
+      35                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Example 3. CDC SMD 300 MB DSC File                       March 28, 1986
+
+
+           :  DISC UNIT 0
+           
+              SGU.DEF(1,MS,0,0000,0005)  :CORE SAVE AREA, 1,085,440 BYTES
+           
+              SGU.DEF(2,MS,0,0005,0002)  :SUP SAVE AREA, 1492480 BYTES
+              SGU.DEF(3,MS,0,0007,000D)  :ACCTING DATA, 3,256,320 BYTES
+              SGU.DEF(4,MS,0,0014,0001)  :HOST MESSAGE AREA, 135,680 BYTE
+              SGU.DEF(6,MS,0,0015,0001)  :SLAVE SAVE AREA, 135,680 BYTES
+              SGU.DEF(7,MS,0,0016,0002)  :RAM WORK AREA, 271,360 BYTES
+           
+              SGU.DEF(8,MS,0,0018,000D)  :MUD, 3,256,320 BYTES
+              SGU.DEF(9,MS,0,0025,0003)  :ERROR LOG, 542,720 BYTES
+              SGU.DEF(0A,MS,0,0028,0001)  :MUD CHANGE AREA, 135,680 BYTE
+              SGU.DEF(0B,MS,0,0029,0001)  :CLASS & GROUP DEFN, 135680
+           
+              SGU.DEF(0D,MS,0,0000,0335)  :USER SPACE
+              SGU.DEF(0E,MS,0,0000,0337)  :FORMAT SPACE
+           
+           :  DISC UNIT 1
+           
+           :  SGU.DEF(0F,MS,1,0000,019C)  :ELF LU 0
+           :  SGU.DEF(10,MS,1,019C,019A)  :ELF LU 1
+           :  SGU.DEF(11,MS,1,0000,0335)  :USER SPACE
+           :  SGU.DEF(12,MS,1,0000,0337)  :FORMAT SPACE
+           
+           :  FLAGS
+           :  (SLOT,XLU,GLU,ACCESS)
+           :  SLOT    = SLOT NUMBER ASSIGNED (DECIMAL)
+           :  XLU     = EXTENDED LU NUMBER FOR THIS SLOT (DECIMAL)
+           :  GLU     = GLOBAL UNIT NUMBER (HEXIDECIMAL)
+           :  ACCESS  = RD-READ, WR-WRITE, AT-ATTACH, SS-SAVE LICENSE
+           
+           :  SLOT 0 - NODE CODE
+           NXLU0      EQ      0
+           
+           
+           :  SLOT 1 - RAM (RAW ACCOUNTING MERGER)
+           :NXLU1     EQ      $A 2
+           :  SGU.REF(1,0,13,RD+WR+AT)  :MT0
+           :  SGU.REF(1,1,7,SS+RD+WR)   :RAM WORK AREA
+           
+           :  SLOT 2 - NETVAL (NETWORK VALIDATIONS)
+           :NXLU2     EQ      3
+           :  SGU.REF(2,0,13,RD+WR+AT)  :MT0
+           :  SGU.REF(2,1,8,SS+RD+WR)   :MUD
+           :  SGU.REF(2,2,0A,SS+RD+WR)  :MUD CHANGE
+           
+           :       SLOT 3 - E.L.F
+           :NXLU3   EQ      3
+           :  SGU.REF(3,0,0F,SS+RD+WR+AT)  :ELF DATA BASE
+           :  SGU.REF(3,1,10,SS+RD+WR+AT)  :ELF DATA BASE
+           :  SGU.REF(3,2,13,SS+RD+WR+AT)  :MT0
+           
+
+      36                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Example 3. CDC SMD 300 MB DSC File                       March 28, 1986
+
+
+           
+           
+           :  SLOT Q - SUPERVISOR
+           
+           Q  EQ      NSLOT+1
+              RA      $A 10
+           NXLU|Q| EQ 8                 :SLOT Q
+              SGU.REF(Q,0,8,RD)         :MUD
+              SGU.REF(Q,1,3,SS+RD+WR)   :ACCOUNTING DATA
+              SGU.REF(Q,2,2,SS+RD+WR)   :SUP SAVE AREA
+              SGU.REF(Q,3,0B,RD)        :CLASS & GROUP DEF
+              SGU.REF(Q,5,9,SS+RD+WR)   :ERROR LOG
+              SGU.REF(Q,6,4,RD)         :HOST MESSAGE AREA
+           Q  EQ      Q+1
+           
+           :  PROBE
+           
+              RA      $A 10
+           NXLU|Q| EQ 7
+              SGU.REF(Q,1,3,SS+RD+WR)   :ACCOUNTING DATA
+              SGU.REF(Q,4,6,SS+RD+WR)   :SLAVE SAVE AREA
+              SGU.REF(Q,5,9,SS+RD+WR)   :ERROR LOG
+              SGU.REF(Q,6,4,SS+RD+WR)   :HOST MESSAGE AREA
+           Q  EQ      Q+1
+           
+           :  ERRLOG
+           
+              RA      $A 10
+           NXLU|Q| EQ 6
+              SGU.REF(Q,4,6,SS+RD+WR)   :SLAVE SAVE AREA
+              SGU.REF(Q,5,9,SS+RD+WR)   :ERROR LOG
+           Q  EQ      Q+1
+           
+           :  ACCOUNT
+           
+              RA      $A 10
+           NXLU|Q| EQ 5
+              RA      0
+              SGU.REF(Q,1,3,SS+RD+WR)   :ACCOUNTING DATA
+              SGU.REF(Q,4,6,SS+RD+WR)   :SLAVE SAVE AREA
+           Q  EQ      Q+1
+           
+           :  SYSMSG1
+           
+              RA      $A 10
+           NXLU|Q| EQ 8
+              RA      0
+              SGU.REF(Q,4,6,SS+RD+WR)   :SLAVE SAVE AREA
+              SGU.REF(Q,6,4,SS+RD+WR)   :HOST MESSAGE AREA
+              SGU.REF(Q,7,0B,SS+RD+WR)  :CLASS & GROUP DEF
+           Q  EQ      Q+1
+           
+           :  UN2
+
+      37                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Example 3. CDC SMD 300 MB DSC File                       March 28, 1986
+
+
+           
+              RA      $A 10
+           NXLU|Q| EQ 5
+              RA      0
+              SGU.REF(Q,0,8,SS+RD+WR)   :MUD
+              SGU.REF(Q,4,6,SS+RD+WR)   :SLAVE SAVE AREA
+           Q  EQ      Q+1
+           
+           :  UTILITY
+           
+              RA      $A 10
+           NXLU|Q| EQ $A 12
+              RA      0
+              SGU.REF(Q,0,8,SS+RD+WR+AT)  :MUD
+              SGU.REF(Q,1,3,SS+RD+WR+AT)  :ACCOUNTING DATA
+              SGU.REF(Q,2,2,SS+RD+WR+AT)  :SUP SAVE AREA
+              SGU.REF(Q,3,0B,SS+RD+WR+AT)  :CLASS & GROUP DEF
+              SGU.REF(Q,4,6,SS+RD+WR+AT)  :SLAVE SAVE AREA
+              SGU.REF(Q,5,9,SS+RD+WR+AT)  :ERROR LOG
+              SGU.REF(Q,6,4,SS+RD+WR+AT)  :HOST MESSAGE AREA
+           :  SGU.REF(Q,7,11,SS+RD+WR+AT)  :USER AREA 0-335 DRIVE 1
+           :  SGU.REF(Q,8,12,SS+RD+WR+AT)  :FORMAT AREA 0-337 DRIVE 1
+              SGU.REF(Q,9,13,RD+WR+AT)  :MT0 - MAGNETIC TAPE 0
+              SGU.REF(Q,10,0D,SS+RD+WR+AT)  :USER AREA 0-335 DRIVE 0
+              SGU.REF(Q,11,0E,SS+RD+WR+AT)  :FORMAT AREA 0-337 DRIVE 0
+           
+              EI      (NDISC+NTAPE+MSCDSK)
+           
+
+
+
+
+
+
+                             2.5  The LOA 'load' file
+
+
+                The LOA File is  not, strictly speaking, a  Supervisor sysgen
+      file.  Rather it is  a sysgen file for  a small section of  code called
+      DINS  which  is  executed  at  node  start  up  time  which  takes  the
+      responsibility  for  loading  and  starting  the  various  ISIS  slots,
+      including any Sup slots.  It  supports only the Ampex 10 Mb  disk drive
+      system.  MSC based disk systems are supported by the DINP program which
+      does not  require an LOA  file.  It could  be used in  a non-Supervisor
+      environment if desired.  When the Node code and Kernel are exeEcuted in
+      an ISIS machine, one of the earliest actions executed is the  output of
+      the "LOGIN" prompt to the multifunction port.  There is a  little known
+      switch in ISIS which when set  will cause this output to occur,  not to
+      the multi function port, but to a phantom device.  This  phantom device
+      is then  read for input,  and any commands  input from this  device are
+      executed just as though they had come from the multifunction port.  The
+      LOA file is used to generate this phantom device and it's data,  and it
+
+
+      38                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The LOA 'load' file                                      March 28, 1986
+
+
+      is assembled and stored within the system waiting until startup time to
+      execute.
+
+                Part of the .LOA file  will look like the following.   I have
+      added line numbers to the left to aide in my explanations. They are not
+      present in the actual file.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      39                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The LOA 'load' file                                      March 28, 1986
+
+
+
+          1   :  SUP SLOTS
+          2      SLOTX(NSLOT+1); SUPSEG(4000,40,80000); :Load & start Sup
+          3                      SUPSEG(4040,2,90000);ESLOTE :Load 2nd seg.
+          4   :  SLOTX(V+1);     SUPSEG(8000,3,0) ***RESERVED FOR IPL & PROBE
+          5      SLOTX(V+1);     SUPSEG(8003,22,0);ESLOTE :Load & Enable Prob
+          6      SLOTX(V+1);     SUPSEG(8025,2,0);ESLOTE :Load & Enable Erlog
+          7      SLOTX(V+1);     SUPSEG(8027,1,0);ESLOTE :Load & Enable Accou
+          8      SLOTX(V+1);     SUPSEG(8028,2,0);ESLOTE :Load & Enable Sysms
+          9      SLOTX(V+1);     SUPSEG(802A,1,0);ESLOTE :Load & Enable Un2
+          10      
+          11  :      F1= DISC BLOCK ADDRESS  (BIT 0-2 = EXTEND LOG UNIT)
+          12  :      F2= NUMBER OF 1024 D BYTE BLOCKS
+          13  :          (SET BETEEN ACTUAL & ISIS CORE RANGE)
+          14  :      F3= CODE SEGMENT ADDRESS
+          15      
+          16      
+          17  :  UTILITY SLOT
+          18     SLOTX(V+1,0E)  :(SLOT #, EXT LOG UNIT OF SAVE AREA ON DISC)
+          19     SEGMENT(0,3500):(SEGMENT, BYTES IN HEX FROM ASSEMBLY)
+          20     SEGMENT(1,1400)
+          21     ESLOT
+          22  UTIL    EQ      V     :REMEMBER SLOT NO.
+          23      
+          24     CHAIN(UTIL,SYS,1)  :CHAIN COMMANDS FILE 
+          25                        :ALLOW READ ACROSS BOUNDARY
+          26                        :(SLOT#, EXTEND LOG UNIT#, SECTOR#)
+          27
+          28  :  CONSAT
+          29     SLOTX(1,0)
+          30     SEGMENT(0E,200)
+          31     SEGMENT(0,1E00)
+          32     SEGMENT(1,3D00)
+          33     ESLOTE
+          34
+          35  :  X.25 INTERFACE
+          36     SLOTX(2,0)
+          37     SEGMENT(0E,200)
+          38     SEGMENT(1,0A400)
+          39     SEGMENT(3,1200)
+          40     SEGMENT(4,0E00)
+          41     SEGMENT(6,1400)
+          42     SEGMENT(7,100)
+          43     SEGMENT(8,1700)
+          44     ESLOTE
+          45      
+          46      
+          47     CHAIN(UTIL,SYS,2)  :CHAIN COMMAND FILE
+          48  :  RAW ACCOUNTING MERGER
+          49     SLOTX(3,3)
+          50     SEGMENT(0E,100)
+          51     SEGMENT(0,9200)
+          52     SEGMENT(1,6600)
+
+      40                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The LOA 'load' file                                      March 28, 1986
+
+
+          53     ESLOTE
+
+
+                Lines 2  and 3  define the  number of  blocks needed  for the
+      Supervisor.  The total number of blocks between the two lines should be
+      greater than or equal to the "Code Save to Disk" specified in  the Supe
+      slot gen.  Since 64k is the maximum segment size, 40 hex or  64 decimal
+      is the maximum you can have in one of these statements so line 2 should
+      remain  constant.  Line  3 should  contain the  remainder of  the Total
+      Amount less 40.  Rounding the  remainder up to be divisible by  2 seems
+      to cause no problems and  may in fact be necessary.   However, rounding
+      up to be divisible by 4 caused crashes for me when I tried to boot from
+      disk.  The 80000 in line 2 and the 90000 in line 3 are constants as are
+      the 4000 and 4040.
+
+                Line 5 should contain  the number of blocks specified  by the
+      label NPROBE#  in the  Probe slot gen.   The 8003  is the  disk address
+      where the  code is  stored and the  0 is  the relocated  memory address
+      where the code is loaded.
+
+                Line 6 should contain the number of blocks specified by label
+      NERLOG#  in  the  Errlog  gen.   The  Disc  Block  Address   should  be
+      8003+NPROBE#.  Again the code resides at address 0.
+
+                Lines 7, 8, and 9 follow the same format as line 6.  You need
+      to  look at  NACCOUNT#, NSYSMSG#,  and NUN2#  in the  appropriate gens.
+      Each  Disk Block  Address will  be calculated  by summing  the previous
+      address with the previous number of blocks.
+
+                Lines 24 and 47 are examples of Chain statements.   There can
+      be up to 3 of these statements in the file.  When genning the CMD file,
+      this .LOA  file is  brought in  and Sector  Totals are  calculated.  No
+      Sector Total should exceed 100 bytes.  If it does and you have used all
+      three  Chain statements,  you  must reconfigure  the LOA  file  or else
+      reconfigure the entire node until it does.
+
+                Lines 3,  5 through  9, 21, 33,  44, and  53 all  contain the
+      ESLOTE command.  Note that in line 21 the command is ESLOT.  The ESLOTE
+      message tells JRINDE to log into each slot upon initial  ization, check
+      it out,  and execute  it.  The  ESLOT command  says to  log in  but not
+      execute the slot.  This ESLOT can be used any time you want  to include
+      code to be loaded  but do not want  the slot started up.   For example,
+      BOA has backup RAM and VAL slots that are loaded this way.
+
+                Lines 19 and 20  contain information about the  segment sizes
+      of the Utility slot.  Segments 0 and 1 are always saved for Utility and
+      their sizes, which are included here, are available in the Utility slot
+      gen.
+
+                Lines 28  through 44  are examples  of user  interface slots.
+      The SLOTX statement specifies  the slot number and device  number where
+      the code is to be stored.  In the case of most user slots which  do not
+
+
+      41                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The LOA 'load' file                                      March 28, 1986
+
+
+      themselves use disk or tape,  the device number is always  0.  Segments
+      to be saved for each  interface are specified in the slot  command file
+      at the end with statements looking like SEG#, S#SIZE;P.  All slots save
+      segment 0E and then each  saves the particular segments it  needs.  All
+      segments that are saved this  way must be specified in this  .LOA file.
+      The sizes are available in the gens.  Note: if a segment size  is 10000
+      and the next segment does  not get saved, include it anyway  as overrun
+      from the previous segment.
+
+                Lines 48 through 53  show the Ram slot.  The  only difference
+      between this slot and other user slots is in the SLOTX  statement.  You
+      still specify the slot number,  but in this case, the device  number is
+      3.  This matches the .DSC file in which the code save logical  unit for
+      this particular slot is 3.  This type of situation will  normally occur
+      when tape is used by the slot, and by default is expected to be  LU's 0
+      and 1.
+
+
+
+
+
+
+                           2.6  The Supervisor Tym File
+
+
+                The Supervisor  Tym file is  the essential sysgen  file which
+      defines  the critical  parameters  of the  Supervisor.   Beginning with
+      Version 41, the Tym file underwent major changes in form.  Prior  to V.
+      41, the Tym file was  a rather imposing construct with  many parameters
+      which  were  not  intended  to be  modified  by  field  support.  Until
+      recently, the Supervisor had been largely supported and  maintained out
+      of the developement group in NTD, and little thought had been  given to
+      the field support  perspect ive.  Version 41  was the culmination  of a
+      major attempt to change to a simpler format.
+
+                Major changes were indeed  made in the format,  but virtually
+      all the  parameters which existed  in Version 40  and before  are still
+      available but have been moved "below the surface" so the  field support
+      person  doesn't  have  to  be concerned  as  long  as  default  or pre-
+      calculated values can serve.  The most significant change of  course is
+      the introduction of  the macro format,  which allows error  checking of
+      entered values much more  extensive than the simple equate  format used
+      before.   For two  reasons, we  will concentrate  first upon  the older
+      format before moving on to the newer format.  The first reason  is that
+      the parameters and equa tions  given in the older file  are instructive
+      in the lower level functioning of the software, and secondly  there are
+      still many older system still to be supported.  Once the  consultant is
+      familiar with the older format, the all macro format is very simple and
+      easy to deal with.
+
+                On  the next  page  is a  sample Supervisor  Tym  file, circa
+      Version 40.01, with greatly expanded comments.  This file  when studied
+
+
+      42                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The Supervisor Tym File                                  March 28, 1986
+
+
+      in  conjunction  with the  explanation  of the  Supervisor  core layout
+      located in the previous chapter will be largely self explanatory.
+
+
+
+
+
+                  2.6.1  Sample Version 40.01 Sup Tym file
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      43                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The Supervisor Tym File                                  March 28, 1986
+
+
+
+              IF      1-\SUP
+              REMARK %ASSEMBLY FOR : Customer Name %
+                                : Print customers name at assembly time
+              LIST    -F
+      ISIT    EQ      1         : Switch to not assemble (IF 0)
+              ELSE
+      ISIT    EQ      SUP       : Don't assemble if 'SUP' defined & false
+              EI                : That is SUP  EQ  0 in ISIS Tym file
+      :
+              IF      ISIT      : Continue if all ok..
+              IF      1-\SUP
+      :
+      :***************************************************************
+      :********************    CONFIGURATION CONSTANTS    ************
+      :***************************************************************
+      :
+              MO      .,SUPER
+      SUPERN  EQ      .         : Opened at assembly time to sup #
+      :.= TAKE NUMBER FROM SUP C0X FILE SO IT IS POSSIBLE TO USE ONE 
+      :.SUP file AND JUST HAVE DIFFERENT SUP C0X FILES.  NOT RECOMMENDED.
+      :Preferred method is to have a seperate Tym file for each Sup with
+      :actual Sup number (1,2,3 etc) instead of the period.
+
+      ISIS    EQ      1         : ISIS supervisor
+      : CAN HAVE SPLIT SUP (SUP IN ONE, NODE CODE IN ANOTHER) OR SINGLE
+      STANDALONE
+      : ISIS is only legal configuration today
+
+      PUB     EQ      0
+      :DEFAULT = 0  1 = PUBLIC NET SUP  SPECIAL MICRO CODE  (high 
+      :speed path finding)
+
+      TIGOUG  EQ      1         : full T-I gouging
+      :4 LEVELS OF THROUGHPUT CLASSES CTL-A,B,C,D  Only legal 
+      :configuration today.
+
+      HDSMAX  EQ      0         : # OF HOSTS TO RECEIVE MSG
+      :HOST MESSAGE AREA FACILITY - DISABLED AND GOING AWAY  Do not use!
+      :
+      :MSC-NEW DISK ADDRESSING  BMSC-OLD DISK ADDRESSING - DEFAULT
+      :DKHMSG - USED TO SUPRESS HOST DOWN MESSAGES
+      :DSKHST - DEFAULT EQ 1 FOR DISABLING HISTORY SAVE AREA ON DISK  
+      :CAN BE ENABLED
+      :         TO SAVE DISK SPACE  NOT RECOMMENDED TO DISABLE
+      :DSKCSH - SAME AS ABOVE FOR CRASH INFO
+      :
+      :***************************************************************
+      :**************************  TIME CONSTANTS  *******************
+      :***************************************************************
+      :
+      NSLEEP  EQ      28+28*(SUPERN-1) : Normal sleep time for sup
+      :28 HEX=40d  SUPERN FROM PREVIOUS PAGE 40d+40d*1=80 SECS  
+
+      44                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The Supervisor Tym File                                  March 28, 1986
+
+
+      :LINK OUTAGES = 16d
+      : SECONDS SO MUST BE OF SOME LENGTH
+
+      ADTIME  EQ      28        : Add'l sleep time for exceptions
+      : ADDED TO SLEEP TIME IF CRASH HAPPENED, NO SUPER CLOCK (NO
+      TIME)-HIGHER?
+
+      LOGTIM  EQ      $A 120    : 2.0 login timeout
+      : IN SECONDS, LOGIN TIMEOUT FOR DROP OF USERS CIRCUIT
+
+      SCLOCK  EQ      1         : 1 if superclock
+
+      :debug  eq      1         : Include debugging options
+      : USED FOR SPECIAL PURPOSES ONLY BY NTD  SHOULDN'T BE HERE
+      :
+      :***************************************************************
+      :***********************   ASSEMBLY CONSTANTS   ****************
+      :***************************************************************
+      :
+      :  RANGES SHOULD BE KEPT TO A LOGICAL MINIMUM.  LEAVE ROOM FOR 
+      :GROWTH BUT
+      :  IF ALLOCATING TOO LARGE IT TAKES UP TABLE SPACE.  CODE MAPS 
+      :INTO TABLES
+      :  USING INDEXES.  IF ENTIRE TABLE USED, NO MAPPING REQUIRED 
+      :SPEEDING UP  SEARCH.  USE SPACE VS. PERFORMANCE.  
+
+      MXNODE  EQ      $A 141    : MAXIMUM NUMBER OF NODES
+      : FOUND BY SUPTRACTING THE GAPS FROM # OF TI BASES AND TI 
+      :REMOTES = TII NODES
+      : TOTAL TI BASES, TI REMOTES AND TII NODES = MXNODE
+
+      MXBASE  EQ      $A 10     : MAXIMUM NUMBER OF BASES
+      : BASES 1-777 OCTAL  10 DEC = RANGE 1-12 OCTAL NODE #'S  GATEWAYS,
+      : BASES. THESE ARE RANGE PARAMETERS  10 = RANGE OF 1-10 OCT AND 
+      : TOTAL NUMBER
+
+      MXREM   EQ      210       : Max Tymnet I remote #  (1000 OCTAL)
+      : 210 HEX = 1020 OCTAL  20 TI REMOTES  1000-1020 RANGE
+
+      MXHOST  EQ      200       : Maximum number of hosts+1 (power of 2)
+      : REMEMBER  TOTAL NUMBER AND RANGE  SO VALID HOST #'S EQ 1-511
+      :(200HX-1) DEC.
+      : MAX VALID HOST = 511.
+
+      ERRSIZ  EQ      180       : Size of error log in 1k blocks
+      : ERROR FILE IS WRAP AROUND.  SUP MUST KNOW HOW BIG.  180 HEX 
+      : BLOCKS =  600 SECTORS = 20 CYLINDERS  DSC FILE
+
+      ACTEND  EQ      2BFF      : End disk addr of accounting area
+      : OLD ADDRESSING, FIRST 3 BIT=LU REST=SECTOR ENDING ADDRES
+      : 2BFF= 0010 1011 1111 1111 = LU 1 SECTOR BFF BFF*400x/12288d=FF 
+      : CYLINDERS DSC FILE ALLOCATES 100 
+
+
+      45                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The Supervisor Tym File                                  March 28, 1986
+
+
+      SAVSIZ  EQ      37        : # of blocks to save core image
+      : WAS 34 BEFORE CHANGE  IF TOO BIG SUP WILL HALT  CRASH SAVE 
+      :SIZE FROM DSC
+      : CRASH DATA AREA ONLY  NOT CODE.  37 BLCKS * 400 BYTS = DC00 
+      :BYTES (DSC)
+
+      DSAV1   EQ      40C0      : Addr to save first core image
+      DSAV2   EQ      40F4      : Addr to save second core image
+      DSAV3   EQ      4128      : Addr to save third core image
+      : AREAS TO SAVE CRASH DATA.  40C0 = LU 2 SECTOR C0 + 37 BLOCKS = 
+      : 40F7 + 37 = 412E   MUST CHANGE
+      RBDEND  EQ      0E1E0     : End of sup history file on disk
+      : LU=7  1E0 BLOCKS*400 BYTES=78000x or 491520d / 12288d=40d or 28x
+      CYLINDERS
+
+      L1MAX   EQ      0AA       : Max size of IRC list1
+      L3MAX   EQ      200       : Max size of IRC overall list
+      : IRC ROTATION NOT APPLICABLE IN PRIVATE NET.  SHOULD NOT BE HERE.
+
+      :lnseg  eq      20        : # segments of login list
+      :tnseg  eq      20        : # segments of timeout list
+      : FOR SEGMENTING LISTS TO SPEED UP SEARCH  DEFAULT OF 16 OK.  
+      : THIS WOULD SPEED UP SEARCHING OF LISTS IF MANY MANY LOGINS.
+
+      BLETSIZ EQ      400       : # of b'lets in b'let space
+      : FREE SPACE LIST TO HANDLE TEMPORARY DATA AREA  LOGIN 
+      :PROCESSING, TAKEOVER
+      : COMMANDS, TIMEOUT LISTS, ETC.
+      : 400 MINIMUM RECOMMENDED SIZE  PUB USES 1800  IF SUP RUNS OUT 
+      : WILL CRASH.  SPACE ALLOCATION BUFFERLETS.
+
+      NOTAK1  EQ      $8 2265   : INTERFACE NODE TO AVOID
+      : ONE NODE.  IN 41 EIGHT
+
+      NORATE  EQ      1         : 0 to report login rate to errfil
+      :                         : 1 for no login rate report
+      : ONCE A MINUTE REPORT WILL BE ISSUED IF ENABLED  LSTMIN TO 
+      :GET STATS FOR
+      : LAST MINUTE.  SAMPLE OF REPORT:
+      : :LSTMIN
+      : LOGIN RATE 2
+      : CIRCUITS AVG LENGTH 1.0, COST 5.0; MAX LENGTH 1, COST 5
+      : MAX LENGTH CIRCUIT WAS BETWEEN NODES 2003 2021
+      : MAX COST CIRCUIT WAS BETWEEN NODES 2021 2003
+      : TOTAL LOGINS 474, ALU 1.5, AVG COST 6.5 PLUS 14 INTERNAL CKTS.
+      : NOPERF   PARAMETER DEFAULTS TO DISABLE PERFORMANCE STATS.
+
+      DESCSZ  EQ      1400      : Size of node descriptor space
+      : IN BYTES  500*TI  50*TII  + SPACE
+
+      MXCLASS EQ      $A 30     : Max # of classes
+      MXGROUP EQ      $A 10     : Max # of groups
+      : MXC 1-30  MXG 1-10  # OF TABLES
+
+      46                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The Supervisor Tym File                                  March 28, 1986
+
+
+
+      CLSSIZ  EQ      280       : CLASS SIZE
+      GRPSIZ  EQ      180       : GROUP SIZE
+      : 180+280=400x  MUST BE A MULTIPLE OF PAGES  MUST BE COORDINATED
+      : WITH WHO OR WHATEVER BUILDS THESE TABLES (NETVAL)
+      :
+      :***************************************************************
+      :***************************   PROBE   *************************
+      :***************************************************************
+      :
+      TIMLIM  EQ      $A 60     : Time limit MINUTES for restricted
+      users
+      SLEVEL  EQ      1         : ENABLE STATUS LEVEL 02
+      NDBUF   EQ      $A 4
+      : NUMBER OF DISK USERS AT ONE TIME THROUGH PROBE
+
+      DFLPSW  EQ      67CEC9F6
+      : DEFAULT PASSWORD FOR NEW USERS = WELCOME
+
+
+      Q       MACRO   (A1,A2,A3) [  : Macro to set up the entry of 
+      P       AC      'A1'    : parameters in the ANAME macro
+              ORG     P+8     : Defines 'A1' to be an ASCII string
+              HC      A2^-10,A2&0FFFF,(A3^$09)+8000 ]   
+      : and provides range checking on the numeric params
+      ANAME   MACRO [
+              Q(CONTROL,364BEBF6,$837) : Define the hard coded probe 
+              Q(JOE,0BADB27EE,$837)    : names. Fewer the better, for
+              Q(JEANGUY,9F15BEE0,$837) : security reasons
+              Q(CARL,7A6D49E3,$837)
+              Q(GAZEL,0E8E5F59D,$835)
+      : CAN BE USED IF DISK OFF LINE OR BAD.  ARGUMENTS ARE NAME, 
+      :PASSWORD CIPHER,  AND LICENSE PRIVILEGE
+
+      OPCIPH  EQ      1         : ALLOW PROBE DEFINED USERNAMES
+      : CAN CREATE SPECIAL USERNAMES ONLINE WITH DISK DOWN
+
+      :***************************************************************
+      :***************************   ERLOG   *************************
+      :***************************************************************
+      :
+      DERLOG  EQ      8025      : DISK SAVE START ADDRESS FOR ERLOG
+      : THERE ARE DISK AREAS SET ASIDE IN LU 4 THAT ARE COMMON TO ALL 
+      : SLAVES. THIS IS USED TO SAVE CODE.  SHOULD EQUAL DISK BLOCK 
+      :ADDRESS IN LOA FILE
+
+              EM
+              EI
+              IF      \SUP
+              GL      NCSS,SRING,NSP,SCSIZ
+              MO      .,SUPDEF  : ISIS assembly module
+              ELSE
+              MO      .,SUPER   : Supervisor or slave module
+
+      47                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The Supervisor Tym File                                  March 28, 1986
+
+
+              EI
+      :
+      :***************************************************************
+      :******************   SHARED SUPERVISOR PARAMETERS   ***********
+      :***************************************************************
+      :
+      : THESE PARAMETER RELATE TO COMMON AREAS.  IF CHANGED, REGEN.
+
+      RWAREA  EQ      3F00      : Start of read/write area
+      : FROM SUP GEN  SET 100-200 HIGH (SPARE BYTES)
+
+      SUPDSZ  EQ      0DC       : Pages in sup data area
+      : GET FROM TEST GEN
+
+      SCBASE  EQ      70000     : Start of node-sup com. area
+      : FIXED  VIRTUAL LOCATION THAT STARTS THE SUP NODE
+      : INTERFACE AREA
+
+      SUPCSZ  EQ      1B00            :SIZE OF NODE-SUP 
+      :COMMUNICATION AREA, BYTES FROM GEN  AREA SIZE
+
+      SUPEST  EQ      800       : Start of code area
+      : FIXED  PAGE START FOR SUP AREA
+
+      SUPESZ  EQ      108       : Pages for sup code area
+      : FROM GEN  SET RIGHT AT.  BE LIBERAL  WERE NOT.
+
+      SRING   EQ      1         : NEW STYLE RING FORMAT
+      : Has since become default, and old style no longer supported.
+
+      NSP     EQ      $A 256    : # OF SUPERVISOR PORTS
+      : NUMBER OF SUPERVISOR CONTROL PORTS  ONE PORT/CONTROL CIRCUIT
+      : MUST BE MULTIPLE OF 32 (WORD)  # TII NODES+2 + TI NODES 
+      : AND ROUND EACH VALUE UP TO # DIVISABLE BY 32.
+      :
+      :***************************************************************
+      :*******************   SHARED PROBE PARAMETERS   ***************
+      :***************************************************************
+      :
+      NUMUSE  EQ      $A 15
+      : MAX PROBE USERS AT ONE TIME.
+      :
+      :***************************************************************
+      :*******************   CONFIGURATION CONSTRAINTS   *************
+      :***************************************************************
+      :
+      NCSS    EQ      7         : No. of controlling DDT blocks for sup
+      : NORMAL NUMBER OF DEVICES THROUGH DDT - SLAVES USE DDT.
+
+              GL      SUPNKU    : Parameter for TII node code
+      :
+
+      :@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+      48                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The Supervisor Tym File                                  March 28, 1986
+
+
+      :
+      :               SUPERVISOR CORE LAYOUT
+      :               ======================
+      :               -----------------       ---
+      :               |                       ^
+      :               |       AREA 2 (CODE)   | SUPA2
+      :               |                       v
+      :       SUPA2B- -----------------       ---
+      :               |       AREA 1 (NODE COMMUNICATIONS)
+      :               |
+      :       SUPA1B- -----------------
+      :               |
+      :               |
+      :               +
+      :               |                       ___      ___
+      :               |                        ^        ^
+      :               +                        |        | SCA2S
+      :               |                        |        |
+      :               |                        | SUPA0  |
+      :               +       AREA 0 (DATA)    |        |
+      :               |                        |        | (COMMON
+      :               |                        |        |  AREAS)
+      :               +                        |        |
+      :               |                        |        v
+      :               |                        | SCA2O ---
+      :               +                        |        | SCA1S
+      :               |                        | SCA1O ---
+      :               |                        v
+      :       0---    -----------------       ---
+      :
+      :@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+      :
+      :***************************************************************
+      :***********************   SUP PARAMETERS   ********************
+      :***************************************************************
+      :
+      SUPA0B  EQ      0         : SUP core allocation area 0 base 
+                                : (MAC Pages)
+      SUPA0   EQ      SUPDSZ    : SUP core allocation area 0 length 
+                                : (MAC Pages)
+      SCA1O   EQ      RWAREA^-8 : SUPERVISOR common area 1 offset
+      SCA1S   EQ      1         : SUPERVISOR common area 1 size
+      SCA2O   EQ      SCA1O+1   : SUPERVISOR common area 2 offset
+      SCA2S   EQ      SUPA0-SCA2O   : SUPERVISOR common area 2 size
+      SUPA1B  EQ      SCBASE^-8 : SUP core allocation area 1 base 
+                                : (MAC Pages)
+      SCSIZ   EQ      SUPCSZ    : SUP CORE ALLOCATION AREA 1 SIZE
+      SUPA2B  EQ      SUPEST    : SUPERVISOR area 2 (code) base (MAC
+      Pages)
+      SUPST   EQ      SUPEST^8  : Starting address for SUP
+      SUPA2   EQ      SUPESZ    : SUP core allocation area 2 base
+                                : [executable] (MAC PAGES)
+      :
+
+      49                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The Supervisor Tym File                                  March 28, 1986
+
+
+      :***************************************************************
+      :*************************   PROBE PARAMETERS   ****************
+      :***************************************************************
+      : 
+      SUPNP   EQ      NUMUSE-1  : Number of simultaneous PROBE ports
+      : NUMUSE=15  15-1=14 PROBE USERS.  1 SAVED FOR DDT ACCESS
+
+      PROSA   EQ      10+SUPNP*2: PROBE start address
+      : FOR EXECUTABLE CODE  = 10 + 14 * 2 = 38
+
+      PROSAI  EQ      -2        : PROBE start address increment
+
+      PROA0   EQ      92        : Core allocation (MAC Pages)
+      : SHOULD BE MULTIPLE OF 4.  FROM GEN  GEN REPORTS HEX BYTES  
+      : 100 HEX BYTES = 1 PAGE.  TAKE GEN REPORT AND / 100 = MAC PAGES.  
+      : MULTIPLE OF 4 SO IT WILL BE IN BLOCKS  100 BYTES= 1 BLOCK  FOR 
+      : ADDRESSING TO BE EVEN
+
+      :
+      :***************************************************************
+      :************************  ERRLOG PARAMETERS   *****************
+      :***************************************************************
+      :
+      SUPNER  EQ      1         : Number of simultaneous ERRLOG ports
+      ERRSA   EQ      14        : ERRLOG start address
+      ERRSAI  EQ      -2        : ERRLOG start address increment
+      ERRA0   EQ      12        : Core allocation (MAC Pages)
+      :
+      :***************************************************************
+      :***********************   ACCOUNT PARAMETERS   ****************
+      :***************************************************************
+      :
+      SUPNAC  EQ      1         : Number of simultaneous ACCOUNT ports
+      ACCSA   EQ      12        : ACCOUNT start address
+      ACCSAI  EQ      -2        : ACCOUNT start address increment
+      ACCA0   EQ      8         : Core allocation (MAC Pages)
+      :
+      :***************************************************************
+      :***********************   SYSMSG1 PARAMETERS   ****************
+      :***************************************************************
+      :
+      SUPNSY  EQ      1         : Number of simultaneous SYSMSG1 ports
+      SYSSA   EQ      12        : SYSMSG1 start address
+      SYSSAI  EQ      -2        : SYSMSG1 start address increment
+      SYSA0   EQ      10        : Core allocation (MAC Pages)
+      : SHOULD BE A MULTIPLE OF 4
+      :
+      :***************************************************************
+      :***********************   UN2 PARAMETERS   ********************
+      :***************************************************************
+      :
+      SUPNUN  EQ      1         : Number of simultaneous UN2 ports
+      UN2SA   EQ      12        : UN2 start address
+
+      50                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The Supervisor Tym File                                  March 28, 1986
+
+
+      UN2SAI  EQ      -2        : UN2 start address increment
+      UN2A0   EQ      0C        : Core allocation (MAC Pages)
+      :
+      :***************************************************************
+      :********************   UTILITY PARAMETERS   *******************
+      :***************************************************************
+      UTILA0  EQ      35        : Utility seg 0 allocation (MAC Pages)
+      : FROM GEN  3500 BYTES OF CORE.
+
+      UTILA1  EQ      14        : Utility seg 1 allocation (MAC Pages)
+      : FROM GEN  1400 BYTES OF CORE.
+      :
+      :       define "SUPNKU" as number of simultaneous ports
+      :
+      SUPNKU  EQ      SUPNP+SUPNER+SUPNAC+SUPNSY+SUPNUN+NCSS
+      :                14     1      1      1       1    7  = 26d
+              EM
+              EI
+      :
+              KILL ISIT
+      : KILLS LABLE ISIT
+      :
+      :===============================================================
+      : - eof -
+
+
+
+
+
+
+
+                            2.7  General Consideration
+
+
+           1.  When upgrading versions of any network code, be sure  to check
+      all available sources, Baseline, etc. for any effects            to the
+      Supervisor.
+
+           2.  All slots  should be regenned, even  if they don't seem  to be
+      affected and should not change.
+
+           3.  All gens need to be saved.
+
+           4.  After .LOA, .DSC, and .SUP files have been changed,  all slots
+      which access them  absolutely must be regenned.   Again,           keep
+      the gens for the necessary cross-referencing.
+
+           5.  Before loading, ascertain  whether any disk LU's  have changed
+      size or location on the physical platter.  If so, then            it is
+      necessary to format the  platter before loading.            If  using a
+      10 MB drive, this may be done from SCP/UTIL,      otherwise it  will be
+      necessary to load the disk           maintenance program.
+
+
+      51                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      General Consideration                                    March 28, 1986
+
+
+           6.  On  occasion it will  be necessary to  format the  entire disk
+      system.  Again, this can be done through the utility            slot in
+      the case of  the 10 Mb systems  or with the  disk           maintenance
+      program.   If  this is  done,  it will  be            necessary  to re-
+      initialize the  cud.  If  the network           uses  Val then  this is
+      done by logging into the  VAL slot           in DDT and doing  a ?stat.
+      It will  ask something about            whether you want  to initialize
+      the cud.  Say  Y.  When           done, the  username Netpriv;privilege
+      will have  been            validated.  At this  point you can  log into
+      Netpriv and           restore the  system from tape.  If the  system is
+      using           Netval, an  entirely different procedure using  the Net
+      val Disk Maintaince program is required.  Please refer           to the
+      Netval  documentation  for  the version  in  use  for           further
+      information.
+
+           7.  All supes will need to  be loaded and tested in a  lab environ
+      ment before being installed at the customer's site.
+
+           8.  Testing  should at  least include logging  into each  slot via
+      DDT to check for  error messages and booting from  disk.            The
+      supe should come awake by itself and if running            alone should
+      awaken by itself after being put to sleep.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      52                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The Macro Supervisor                                     March 28, 1986
+
+
+
+
+
+
+                             3 -  The Macro Supervisor
+
+
+                Perhaps  the  single  most difficult  part  of  configuring a
+      completely new  Supervisor has always  been configuring  the Supervisor
+      TYM file.  This was for a  couple of reasons, first the file  itself is
+      very  complex,  and  contains  a number  of  parameters  which  are not
+      intended to be changed by  the consultant.  Further, in many  places it
+      contains actual  code which is  not explained, thus  lending additional
+      confusion to the support person who has to deal with it.   Referring to
+      the Version 40.01  sample Tym file above,  the ISIT switches and  the Q
+      Macro are examples  of this.  The Supervisor  TYM file justly  became a
+      target  of  criticism  and  a  determined  effort  has  been   made  to
+      restructure and simplify the Supervisor generation procedure.  Ideally,
+      the Supervisor TYM file would consist of one Macro in a  format similar
+      to this:
+
+           SUPERVISOR(number, size)
+                number = Supervisor Number, 1-7
+                size   = network size, small, medium or large
+                          or alternately, the number of nodes.
+
+
+           All other macros and  parameters should be optional  with defaults
+      chosen so as to intelligently reflect differing size selections.
+
+                Unfortunately, this  ideal has not  been quite  met, although
+      even the most cynical observer must agree that the new format  is quite
+      an  improvement.   But   beyond  simplifying  the  file   and  removing
+      extraneous  text, the  new  format embodies  an  important enhancement,
+      improved error checking for entries.  Consider the Q macro  referred to
+      in the 40.01 file.  This defines precisely the elements 'A1',  'A2' and
+      'A3' so that if the arguments are not reasonable values, a sysgen error
+      will result.  If we place the Q macro itself in an initialization file,
+      then  we  can  specify the  statement  Q(CONTROL,364BEBF6,$837)  in the
+      Supervisor Tym file  and know that if  the values are not  correct then
+      Nad will  reject it.  by  contrast, specifying a  value by means  of an
+      'EQ' statement  will not  easily allow such  error checking.   Nad will
+      blithely allow anything to be defined as equal to almost anything else,
+      and this can create some strange problems, thus the emphasis on the use
+      of Macros for all newer software coming out of NTD.
+
+                It is  not the  purpose of this  article to  provide in-depth
+      sysgen information about genning the Supervisor in the new format as an
+      excellent manual (SUPGEN.DOC) already exists for that purpose.  Rather,
+      the purpose  here is  to illustrate  the major  changes from  the older
+      Supervisor, and provide some guidance for upgrading the earlier system.
+
+
+
+      53                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      The Macro Supervisor                                     March 28, 1986
+
+
+                Much has been retained from before, with only  minor changes.
+      Comparing the example below with the Version 40.01 sample given before,
+      we see the similar remark statement which nicely prints  the customer's
+      name on the hardcopy output from the assembly.  The next macro, TYMSTR,
+      is simply a macro equivalent  for the SUPERN equate.  The  OPTION macro
+      is a convenient grouping for  some of the common switches in  the older
+      Tym file.  The  Equates replaced are  MSC,ISIS,T1GOUG,NORATE,NOPERF and
+      OPCIPH.   A  new option,  NOSPAS,  prevents normal  user  circuits from
+      passing  through  the  Supervisor  base  node  while  allowing  command
+      circuits.  The ISIS option NPTHR prohibits all circuits, an undesirable
+      choice as employing it  will result in a  one node network as  the base
+      refuses to allow the Supervisor access to the other  nodes.  Similarly,
+      the DEFTIM macro  is a convenient grouping  of all the  equates located
+      under  the  'TIME CONSTANTS'  heading  before.  The  macros  DEFNOD and
+      DEFHST define the numbers of nodes and hosts in the network.
+
+                The Macro  Supervisor Tym  file consists  of two  parts.  The
+      first  section contains  parameters needed  only by  the  Supervisor or
+      slaves.  The  second section contains  parameters which are  related to
+      machine resource allocation, such as memory page allocations or control
+      ports.  These parameters will need to be examined by ISIS and Node code
+      at assembly time.  As you  can readily see, these are  merely different
+      renditions of the  various parameters residing  in the older  Tym file.
+      Many of  these Macros  are not required,  or if  required can  be given
+      without  any  arguments, and  allowed  to default.   By  only expressly
+      listing the required items, the Supervisor Tym file can be  kept simple
+      appearing despite the overall complexity of the system.
+
+                Although Supervisors version 41 and above are very similar in
+      many  respects  the the  earlier  versions, there  are  occasions where
+      significant differances arise to complicate things.  Com pare the Fence
+      Macro  to the  CLSSIZ and  GRPSIZ values  in Version  40.01.   Prior to
+      Version 41,  these files were  treated as  a single file  in LU  #3 and
+      spanned  sector  boundries.   Beginning  with  Version  41,   they  are
+      separated and treated as  two unrelated files, although  still residing
+      in LU #3.   The impact of this  is that now each  table must be  one or
+      more whole sectors.  Upgrading  an older file will require  the platter
+      containing  LU  #3 to  be  formatted  and the  class  and  group tables
+      rebuilt.  Changes may also be required in the Validations  program, and
+      of course, the Sysmsg and UN2 slave must be updated as well.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      54                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Example 1. All Macro Sup Tymfile                         March 28, 1986
+
+
+                       3.1  Example 1. All Macro Sup Tymfile
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      55                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Example 1. All Macro Sup Tymfile                         March 28, 1986
+
+
+
+      :****************************************************************
+      :         FILE:  SUPERVISOR TYMFILE
+      : COMPANY NAME:  Customer Name
+      :  NODE NUMBER:  2001                     LOCATION:  City, Site
+      :  KERNEL HOST:  121
+      :  SLOT NUMBER:  03
+      :      VERSION:  41.01                           DATE:  date
+      :     INITIALS:  consultant
+      :****************************************************************
+      :>>>>>>>>>>>>>>>>>>>>>>>>>>>>REVISION
+      HISTORY<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+      :  appropiate revision comments
+      :****************************************************************
+              REMARK %ASSEMBLY FOR customer name%
+
+              TYMSTR(1)
+
+              OPTION(TIGOUG,MSC,NORATE) :OPTIONS
+
+
+              :TIME CONSTANT DEFINITIONS-
+        :  SLEEP FACTOR = 15, NORMAL TIME = 15, ADD'L TIME = 35
+        :  LOGIN TIMEOUT = 144
+        :  SUPERCLOCK
+              DEFTIM(15,15,35,144,CLOCK)
+
+
+              :BASIC CONFIGURATION CONSTANTS
+              DEFHST(999)     :MAX HOST 999, NONE OK FOR 1DOWN
+              DEFNOD((BASE,10,2),(REMOTE,1000,0),(TII,2160,70))
+              NDASIZ(260,0,1E00) :EST 260 LINKS, 0 T-I GROUPS.
+                                 :DESCSZ=1E00X.
+
+
+              :DISK RELATED MACROS
+              DEFMUD(0,4)        :STANDARD MUD WITH 4 SECTORS/BLOCK
+              DEFACT(0,9180)     :ACCOUNTING FILE TOTALLING 9180 SECTORS
+              DEFSAV(2C0,3,0AB8) :START OFFSET, SAVE COUNT & AREA SIZE
+              DEFERR(0,300)      :STANDARD ERROR LOG, 300 SECTORS IN SIZE
+              HISTRY(750)        :750 SECTOR HISTORY FILE
+
+
+              :LOGIN/TARGETING DEFS
+              CACHE(1024)        :CACHE OF 1024D PROFILES
+              FENCE(30,3,10,2)   :30 CLASSES, 3 SECTORS/10 GROUPS 2
+                                 :SECTORS
+              DEFTPF(4)          :4 SECTORS OF TARGET PROFILE
+              TARGET(6)          :MAX MULTI-TARGETS IS 6
+
+
+              :DEFINE FREE LIST SIZE
+              BUFLET(1024)       :1024 BUFFERLETS (DECIMAL)
+
+      56                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Example 1. All Macro Sup Tymfile                         March 28, 1986
+
+
+
+
+              :PROBE NAMES
+              PRBNAM((CONTROL,364BEBF6,$837))
+
+              TYMSUP             :START SECOND SECTION
+
+
+              DEFNSP(192)        :192 DECIMAL PORTS TO BASE
+
+              SUPDAT(2A8,44)     :SUP DATA SIZE & RWAREA OFFSET IN PAGES
+              SUPCOM(1B)         :PAGES IN SUP COMMUNICATION AREA
+              SUPCOD(124)        :PAGES OF SUP CODE
+
+
+              PRBPRM(364BEBF6,7,160,,,10,0A0)  :7 PROBE USERS, 160 MIN
+                                               :TIMEOUT
+
+              ERRPRM(14,0B0,10)  :20 DECIMAL PAGES
+
+              ACCPRM(8,0C0,8)    :8 PAGES
+
+              SYSPRM(10,0C8,10)  :16 PAGES
+
+              UN2PRM(0C,0D8,0C)  :12 PAGES
+
+              UTLPRM(36,13)      :36 PAGES SEG 0, 13 PAGES SEG 1
+
+              TYMEND             :END OF TYMFILE
+
+
+                Although  Version 41  and above  of the  Supervisor  does not
+      expressly  require the  160 or  300 meg  disk drive,  it  is frequently
+      required to  upgrade the  hardware at  the same  time as  upgrading the
+      Supervisor version.  The  300 and 160  Mb drives are  treated logically
+      very much like the 10 Mb drive, the major difference being the physical
+      size of the cylinders  involved.  Since the smallest logical  unit that
+      can be  allocated is  one cylinder, you  will often  find that  you are
+      forced to allocate larger than necessary numbers of sectors to  a given
+      logical unit.   This normally  causes no  harm, and  in fact  will make
+      implementing future versions of software easier as there will  often be
+      no need to reconfigure the  disk to allocate more space.   For example,
+      on the  10 Mb  drive example  given above,  the Sup  LU #3  requires 11
+      decimal cylinders which is  528 sectors (11 *  48) while on the  300 Mb
+      drive  1  Cyl =  1007  sectors,  seeming to  waste  479  sectors.  This
+      apparent waste is  of no consequence as  the 300 Mb drive  provides far
+      more space than can be intelligently used in any case.  It is important
+      to  remember  to allocate  space  in  terms of  the  minimum  number of
+      cylinders needed for a required number of sectors.
+
+
+
+
+
+      57                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Procedures                                               March 28, 1986
+
+
+
+
+
+
+                                  4 -  Procedures
+
+
+
+
+
+
+
+                          4.1  Formatting a Disk from SCP/UTIL
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      58                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Formatting a Disk from SCP/UTIL                          March 28, 1986
+
+
+
+                  (10 Mb Ampex only) - 
+
+              1. log in to slot through DDT
+
+              2. typ G10000
+
+              3. HELP will give you the list of possible commands
+
+              4. LUN will list the unit numbers of your disks
+
+              5. Removable Disk
+                      a. Should be unit 8
+                      b. On LUN list will be 1st unit with
+                         DA=C6, and STCYL=0, and ENCYL=197
+
+              6. Fixed Disk
+                      a. Should be unit 9
+                      b. On LUN list will be 1st unit with
+                         DA=C7, and STCYL=0, and ENCYL=197
+
+              7. FORM will start format process
+
+              8. Make sure disk drive is not set in write 
+                       protected mode.
+
+              9. Utility will ask you to confirm position of 
+                       the Format Switch by entering unit 
+                       number.
+
+             10. Move format switch on engine to right
+
+             11. Enter appropriate unit number
+
+             12. Utility will tell you it is going to format a 
+                 certain unit, starting at head 0, 
+                 cylinder 0, OK?
+
+             13. Y carriage return will start the format
+
+             14. When finished, Utility will tell you to return 
+                 the format switch to original position 
+                 (all the way to the left)
+
+
+
+
+
+
+
+
+
+
+
+      59                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Formatting a Disk - 10 Mb only                           March 28, 1986
+
+
+                        4.2  Formatting a Disk - 10 Mb only
+
+
+                Format.Nib is a disk  formatting program which simply  does a
+      brute force format of the platter.  Because of the way in which this is
+      done it is  a slow and time  consuming process.  This program  makes no
+      attempt to re-assign defective  cylinders in the event of  errors, thus
+      it becomes necessary to  run the companion program  "DSKINI.NIB" should
+      any problems arise.  DSKINI  cannot run on a MAC-II  machine, rendering
+      it incompatible with todays environment.  Additionally, Format does not
+      support  any  MSC  disk  drives.  For  these  reasons,  the  newer disk
+      diagnostic "DISK03.NIB" should be used instead of Format.  However, due
+      to the number of older systems installed and the slight  possibility of
+      needing to use it, the procedure is presented here.
+
+              1. Boot node
+
+              2. Be sure disk drive is not write protected
+
+              3. Move format switch to right
+
+              4. Using loadii, load format.nib
+
+              5. Loadii will ask questions about a restart 
+                       address, go for manual restart (-1).
+       
+              6. When loaded, unlock console and enter [DTA] then
+                       3000 for device C6 (removable disk 0)
+                       2900 for device C7 (fixed disk 0)
+                       2800 for device D6 (removable disk 1)
+                       or
+                       2700 for device D7 (fixed disk 1)
+                 depending on device to be formatted.  Then [ADR]
+                 [RUN]
+
+              7. When done the console should show: 0 D15C 00xx 
+                       with xx being the device formatted
+
+
+
+
+
+
+
+                         4.3  Establishing the initial MUD
+
+
+                After  initializing the  CUD  through VAL,  the  username Net
+      priv; Privilege  is now valid.   When using Netval,  the ADC  user name
+      must be  used.  Log in  with the appropiate  username and  validate the
+      following lists of names.
+
+
+
+      60                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Establishing the initial MUD                             March 28, 1986
+
+
+
+                    IGNORE
+                     COLON  HOME   ADD'L                 PASSWORD
+            NAME    OPTION  HOST    HOST   CLASS  GROUP  REQUIRED
+          
+          SYSMSG1     NO     121  122,ETC    0      NO      YES
+          ACCOUNT     NO     121  122,ETC    0      NO      YES
+          UN2         NO     121  122,ETC    0      NO      YES
+          ERLOG       NO     121  122,ETC    0      NO      YES
+          RPROBE      NO     121  122,ETC    0      NO      YES
+          PROBE       NO     121  122,ETC    0      NO      YES
+          RAM         YES    193             0      NO      YES
+          RAMDBUG     YES    193             0      NO      YES
+          NETPRIV     YES    194             0      NO      YES
+          NETVAL      YES    194             0      NO      YES
+          TMCS        YES    197             0      NO      NO
+          NETEVENT    YES    198             0      NO      YES
+          NETEVOP     YES    198             0      NO      YES
+          XRAY        NO     121             0      0       YES
+          DLOAD       NO     120             0      0       YES   
+          GATEWAY     NO     120             0      0       YES
+
+
+                Any password for DLOAD and GATEWAY is OK, but they  must have
+      the same password.  This password  is used later with the G  command in
+      LOADII.
+
+           You may want to validate any other names included in the Kernel or
+      Node Code goodgy lists
+
+           Don't overlook  the need  to change the  password to  NETPRIV from
+      it's default to a new password  which will only be known by  the System
+      Administrator of  the network.  This  is highly important  for security
+      reasons.
+
+           You may  wish to perform  a manual consistency  after establishing
+      this initial list of names.  Although Netval will  automatically update
+      the MUD of any Supervisors in the network, a manual consistency has not
+      only the advantage of speed, but should there be any problems  with the
+      UN2 slave or Netval itself which prevent updating the MUD, they will be
+      obvious.
+
+
+
+
+
+
+
+
+
+
+
+
+
+      61                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Sample VAL session after logging into Netpriv            March 28, 1986
+
+
+                4.4  Sample VAL session after logging into Netpriv
+
+
+          >new user
+          DOES THIS USER BELONG TO A NEW ACCOUNT? y
+          USERNAME: ram
+          PASSWORD REQUIRED? y
+          TRANSPARENT GATEWAY LOGON? n
+          IGNORE COLON OPTION? y
+          PASSWORD:
+          ENTER IT AGAIN:
+          CLASS: 0
+          GROUP? n
+          HOST: 193
+          HOME HOST? y
+          ANOTHER GROUP OR HOST FOR THIS CLASS? n
+
+          ALL ENTRIES CORRECT? y
+
+          ENTRY COMPLETED
+
+          >quit
+
+
+
+
+
+
+
+            4.5  Sample 1.14 NETVAL session after logging into Netpriv
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      62                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Sample 1.14 NETVAL session after logging into Netpriv    March 28, 1986
+
+
+
+          please log in: NETPRIV;password
+
+          ISIS NETWORK VALIDATION SYSTEM - VERSION  1.14
+
+          *NEW USER
+
+
+          DOES THIS USER BELONG TO A NEW ACCOUNT? Y
+
+          USER NAME: TEST
+          LOGIN OVER SHUT? Y
+          PASSWORD REQUIRED? Y
+          TRANSPARENT GATEWAY LOGON? N
+          IGNORE COLON OPTION? N
+          ACCOUNT SUPERVISOR? N
+          SYSTEM ADMINISTRATOR? N
+
+          PASSWORD: 
+          ENTER IT AGAIN: 
+          
+          DISTRICT: 1
+          IRC: 0
+          
+          IS THE CLASS USER DEFINED? N
+          CLASS: 0
+          GROUP OR HOST? H
+          HOST: 199
+          IS THIS A HOME? Y
+          GROUP, HOST OR END? END
+          ANOTHER CLASS? N
+
+          ALL ENTRIES CORRECT? Y
+
+
+          GAN:     22
+          UUN:    165
+          ENTRY COMPLETED. 
+
+          *QUIT
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      63                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Booting the Supervisor from 10 Mb Disk drive             March 28, 1986
+
+
+                 4.6  Booting the Supervisor from 10 Mb Disk drive
+
+
+                The  Supervisor must  be test  booted from  disk  after being
+      loaded for the first time to ensure that the software generated  by the
+      LOA  file  functions  properly and  all  slots  are  fully operational.
+      Further, after maintaince has  been performed or after a  power failure
+      or system crash which  leaves the system non-functional  or functioning
+      improperly, the re-boot procedure  should be used instead  of reloading
+      from Elf or Loadii.  The step by step procedure below will successfully
+      re-boot the normally healthy system.
+
+                1. Unlock console
+
+                2. Clear memory by entering [PSW] [DTA] [WRT] [INC] 
+                     [RPT] and waiting until the leftmost digit of the 
+                     console cycles past F, or about 10 seconds.
+
+                3. Flip watchdog timer to place node in Boot.
+
+                4. Enter [PSW] and wait for console to freeze
+
+                5. enter [DTA] [SET] 66 [ADR] [RUN]
+
+                6. Wait for C0DE 800E to appear on console
+
+                7. Enter [INI] and wait for node to come up
+
+
+                Failure of a normally  stable node to re-boot can  usually be
+      traced to hardware failure, disk head crash, or similar  problems.  The
+      error code displayed in step 6  above is an often valuable clue  to the
+      failure.  Complete description  of the codes can  be found in  the Boot
+      Documentation   "LBOOT.DOC"   maintained  on   most   Tymnet  PDP-10's.
+      Successful display  of CODE  800E and  then failure  to run  most often
+      indicates  the node's  software  was not  saved properly  on  disk, and
+      obviously was not tested by re-booting after the initial load.  Careful
+      examination of the  LOA file and slot  segment sizes should  reveal the
+      problem.  Still, it is possible that the hardware could fail in  such a
+      way  that the  node  could boot  and  fail to  run,  although unlikely.
+      Should an  LOA file problem  not be found,  in depth  diagnostics would
+      then be in order.
+
+
+
+
+
+
+
+
+
+
+
+
+      64                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Booting the Supervisor from 160 and 300 Mb disk          March 28, 1986
+
+
+               4.7  Booting the Supervisor from 160 and 300 Mb disk
+
+
+                The  Supervisor must  be test  booted from  disk  after being
+      loaded for the first time to ensure that the software generated  by the
+      save  to  disk  system  functions  properly  and  all  slots  are fully
+      operational.  Further, after maintaince  has been performed or  after a
+      power failure or system crash which leaves the system non-functional or
+      functioning improperly, the re-boot procedure should be used instead of
+      reloading from Elf  or Loadii.  The step  by step procedure  below will
+      successfully re-boot the normally healthy system.  Particular attention
+      should be paid to the Utility Slot after re-boot.
+
+                1. Unlock console
+
+                2. Clear memory by entering [PSW] [DTA] [WRT] [INC] 
+                     [RPT] and waiting until the leftmost digit of the 
+                     console cycles past F, or about 10 seconds.
+
+                3. Flip watchdog timer to place node in Boot.
+
+                4. Enter [PSW] and wait for console to freeze
+
+                5.  Enter [DTA], [SET], F,F,0,0,A 
+
+                6.  Enter [ADR], [RD],  Display: FF00A 0130
+
+                7.  Enter [DTA], [WRT], [INC], [DTA], [SET], 2,0,0,0
+
+                8.  Enter [WRT], [DTA], [SET], 4, E
+
+                9.  Enter [ADR], [RUN], Wait for Console to 
+                    Display: CODE 800E
+
+                10. Hit INI, system will go into start up routine.
+
+
+                Failure of a normally  stable node to re-boot can  usually be
+      traced to hardware failure, disk head crash, or similar  problems.  The
+      error code displayed in step 6  above is an often valuable clue  to the
+      failure.  Complete description  of the codes can  be found in  the Boot
+      Documentation   "LBOOT.DOC"   maintained  on   most   Tymnet  PDP-10's.
+      Successful display  of CODE  800E and  then failure  to run  most often
+      indicates  the node's  software  was not  saved properly  on  disk, and
+      obviously was not tested by re-booting after the initial load.  Careful
+      examination of the various files should reveal the problem.   Still, it
+      is possible that the  hardware could fail in  such a way that  the node
+      could  boot and  fail  to run,  although unlikely.   Should  a software
+      problem not be found, in depth diagnostics would then be in order.
+
+
+
+
+
+      65                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Loading a Slave Slot from Disk                           March 28, 1986
+
+
+                        4.8  Loading a Slave Slot from Disk
+
+
+                At times it may be necessary to load one of  the Supervisor's
+      Slave slots from disk.  This is certainly not an everyday need,  and in
+      fact one  which would often  be best refered  to higher  support levels
+      within HQTech or NTD.  Nevertheless, given sufficient expertise  on the
+      part of the  Consultant, this procedure  may prove useful.   Execute as
+      follows:
+
+              1. Through DDT, log into the slot you wish to load
+
+              2. Freeze the slot with ?FREZ
+
+              3. Get the SUPSEG parameter from the .LOA file that
+                      corresponds to that slot.  
+                      Example: SUPSEG(802A,1,0)
+
+              4. Load the slot using the disk address provided here.
+                      Example: L 802A,1,0
+
+              5. Thaw the slot with ?THAW
+
+
+                This is a specialized troubleshooting and  recovery procedure
+      and should not  be used as  general practice or  merely as a  matter of
+      course.  It is far better  to reload the entire machine  when possible,
+      and avoid possible complications or errors resulting from  typo's, etc.
+      Most important, it should never be attempted on an active Supervisor.
+
+
+
+
+
+
+                   4.9  Initializing the Accounting Logical Unit
+
+
+                The Accounting buffer on the disk should be  initialized when
+      a  Supervisor  engine  is first installed and whenever  the  disk drive
+      or  it's  platters  are  replaced.    It  should  not    be initialized
+      during  normal maintenance  as  uncollected  accounting  data   will be
+      lost.    Failure to  initialize  can result  in the  Sup  "picking  up"
+      eroneous  data  and  reporting  false   accounting information.
+
+                The Supervisor must be frozen for this procedure.   Connect a
+      terminal   to  the  Multifunction  port and  log into  probe  with  the
+      RPROBE username as follows:
+
+
+
+
+
+
+      66                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Initializing the Accounting Logical Unit                 March 28, 1986
+
+
+
+          LOGON:  RPROBE    (Note:   Use only uppercase letters.)
+          Slot 07
+          *G C              (Enter Probe)
+
+          NAME: CONTROL
+          PASSWORD:
+          121
+          SUP FROZEN        (If you don't get "SUP FROZEN" freeze the
+          :INITL             Sup and start over)
+          SUP FROZEN
+          :EXI              (Done, exit out)
+
+
+          LOGON:
+
+
+
+
+
+
+
+                    4.10  Initializing the Logfile Logical Unit
+
+
+                The  Error Log buffer on the disk should be  initialized when
+      a  Supervisor  engine is first installed and  whenever  the  disk drive
+      or   platters  are replaced.    It  should not  be   initialized during
+      normal maintenance as Error Log information will be  lost.   Failure to
+      initialize  can  result  in  the Sup  "picking  up"  eroneous  data and
+      reporting false or garbage entries in the error log.
+
+                The Supervisor must be frozen for this procedure.   Connect a
+      terminal   to  the  Multifunction  port and  log into  probe  with  the
+      RPROBE username as follows:
+
+          LOGON:  RPROBE    (Note:   Use only uppercase letters.)
+          Slot 07
+          *G C              (Enter Probe)
+
+          NAME: CONTROL
+          PASSWORD:
+          121
+          SUP FROZEN        (If you don't get "SUP FROZEN" freeze the
+          :INITA             Sup and start over)
+          SUP FROZEN
+          :EXI              (Done, exit out)
+
+
+          LOGON:
+
+
+
+
+      67                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Checking for Disk Integrity after Formatting             March 28, 1986
+
+
+                4.11  Checking for Disk Integrity after Formatting
+
+
+                The  Supervisor and it's slaves absolutely require  that  the
+      disk  be filled with '00's by the formatting program.    Sometimes this
+      is  not  done due  to  human carelessness  or  inexperience   using the
+      format utility.   Strange problems can occur if a Supervisor is allowed
+      to  return  to  production  with  garbage  or  test   patterns  on  the
+      platter.   Here are  a couple of quick  checks which  will  verify that
+      the platter is acceptable in this context.
+
+                Immediately  after  loading the Supervisor  node,   log  into
+      PROBE.   The Multifunction port provides an easy method to  access this
+      function,  but assuming the  Supervisor is part of an   active network,
+      normal network login can be used as well.
+
+          LOGON:  PROBE    (Note:   Use only uppercase letters.)
+          Slot 07
+          *G C              (Enter Probe)
+
+          NAME: CONTROL
+          PASSWORD:
+          121
+          :LSHUT 
+          :EXI              (Done, exit out)
+
+
+          LOGON:
+
+
+                If  the response to LSHUT is nothing then at least  the  line
+      shut table on  disk is filled with  zero's.   Another quick test  is to
+      use  LIST.   Only valid  names should  be  reported.    Garbage present
+      indicated trouble.
+
+
+
+
+
+
+                    4.12  Loading the Supervisor Slot from Disk
+
+
+                This is a specialized troubleshooting and  recovery procedure
+      and should not  be used as  general practice or  merely as a  matter of
+      course.  It is far better  to reload the entire machine  when possible,
+      and avoid possible complications or errors resulting from  typo's, etc.
+      Most important, it should never be attempted on an active Supervisor.
+
+           Again, we will use the  SUPSEG statements from the .LOA  file.  In
+      the case of the Supervisor, they may be:
+
+
+
+      68                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Loading the Supervisor Slot from Disk                    March 28, 1986
+
+
+
+              SUPSEG(4000,40,80000)
+              SUPSEG(4040,2,90000)
+
+            Perform the following steps:
+
+              1. Through DDT, log into the Supe slot
+
+              2. ?FREZ will freeze the Supe
+
+              3. L 4000,40,80000
+
+              4. L 4040,2,90000
+
+              5. ?THAW to thaw the Supe
+
+
+                Careful  testing of  the  Supervisor before  returning  it to
+      production is very important.   Even afterward, it should  be carefully
+      monitored for several hours.
+
+
+
+
+
+
+                          4.13  Superclock Initialization
+
+
+                The Superclock is a board which resides in the  Supervisor to
+      provide  an  accurate and  stable  time source  for  network processes.
+      Normally, the Superclock is calibrated at time of manufacture and as it
+      contains a  battery which  has an expected  life of  in excess  of five
+      years, it should  not need attention.   However, as you  might suspect,
+      the need to calibrate a Superclock will likely present itself from time
+      to time.   In particular, after  maintenance or hardware  failures, and
+      especially  upon  initial  installation  of  the   network,  Superclock
+      calibration should be checked and performed if necessary.
+
+                1.   First and most important, you will need a known accurate
+      time  source.   Ideally  a quality  digital  timepiece  which  has been
+      carefully synchronised to the National Bureau of Standards  WWV station
+      in Colorado.   Next best is  to set to  a major national  television or
+      radio network.   Local tv and  radio stations, as  well as  local phone
+      company time service should be avoided if possible.
+
+
+
+
+
+
+
+
+
+      69                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Superclock Initialization                                March 28, 1986
+
+
+
+           2.   Enter the following PROBE commands as shown in the 
+                example below:
+
+          TIME = Display time as known by the Supervisor
+          RTIME= Display time as known by the Superclock
+          FTIME= fix time, difference between reference and 
+                 RTIME + or -in seconds
+          ETIME= enter time, Supervisor reads the super clock and 
+                 updates its time
+          DIFF = + or - time difference between  REF and RTIME in
+                 DATE:HRS:MIN:SEC 
+          REF  = reference source used for the calibration, such as WWV 
+                 or digital watch (add 8hrs to local time)
+          >>   = probe response
+
+
+          EXAMPLE:
+              :RTIME                                 114:17:41:00 REF
+          >>  1985:114:17:42:15 ..................   114:17:42:15 RTIME
+                                                     ------------
+                                                          +  1:15 DIFF
+                       
+              :FTIME -75
+          >>  BUSY - WAITING 700 SEC  (note: The wait can be very long 
+                                       as the clock can only be set
+          >>  DONE                     when certain bit patterns occur.
+                                       Disconnecting terminal will
+              :ETIME                   abort.)
+
+          >>  :
+              :RTIME                                 114:17:15:00 REF
+          >>  1985:114:17:15:00 ..................   114:17:15:00 RTIME
+                                                     ------------
+                                                                0 DIFF
+       
+
+          NOTE:   If the RTIME is faster than the REF time,then 
+                  FTIME will be -. If the RTIME is slower than the 
+                  REF time,then FTIME will be +
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      70                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Staging the Supervisor Engine                            March 28, 1986
+
+
+                        4.14  Staging the Supervisor Engine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      71                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Staging the Supervisor Engine                            March 28, 1986
+
+
+
+        A.   Visual Inspection:
+
+          1.  Ensure all boards are installed per order requirements
+          2.  Check to ensure disk drive is properly installed
+          3.  Ensure all boards are configured per order requirements
+          4.  Observe that the Backplane is wired correctly per order
+          5.  Check to ensure all interconnect cables are properly 
+              seated
+          6.  Ascertain that all I/O panels are correct per order 
+              requirements
+          7.  Verify that tape or any other peripherals are correct 
+              per order
+
+        B.   Rear Panel Configuration:
+
+          1.  Position the AC power switch to the off position
+          2.  Connect AC power cord to proper AC voltage 
+              (115/230-50HZ/60HZ) drop
+          3.  Install all appropiate loopback plugs for the I/O 
+              panel(s) used
+          4.  Connect the test node sync port 0 to a neighbor with 
+              a cross over (-20)
+          5.  Install a disk pack and/or test tape as appropiate
+          6.  Connect disk and tape as well as any other peripherals 
+              to power
+
+        C.   Power-up Check:
+
+          1.  Power on all peripherals by means of the respective 
+              on/off switch
+          2.  Position the AC power switch on the back panel to the 
+              on position
+          3.  Position the front console key to the on position
+          4.  Depress the boot switch momentarily to the up position
+          5.  Confirm that the 2 leftmost digits indicate correct 
+              memory size (7F,FF)
+          6.  Confirm that the boot is initialized and cycling 0-F 
+              on leftmost digit
+       
+        D.   Pretest/test code load:
+
+           Note: Code loaded in this exercise is test code for the 
+                 purpose of running the diagnostics.  The node will 
+                 not be running as a Supervisor at this point.
+
+          1.  Connect clock jumpers to sync port 0     
+          2.  Clear memory using procedure outlined in boot from 
+              disk procedures
+          3.  Flip Watchdog timer
+          4.  Ascertain that the TYM file of the test code is 
+              reasonable for the hardware configuration under test.  
+              If not, modify code to match.
+
+      72                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Staging the Supervisor Engine                            March 28, 1986
+
+
+          5.  Load test code through a neighbor node
+            
+          EXAMPLE: -R
+
+          LOADII;G,3382,BIG-ENOUGH,L,2007,127,6,(NET1STAGE)ST2420.BND
+
+          6.  Upon completion of the code load, verify that the node 
+              is in the network
+              
+        E.   Sync/Async test:
+
+          1.  Connect a terminal to the Multifunction port, type 
+              "ISISTECH" to logon
+          2.  Enter slot 0 and verify network sync lines are up 
+              and functioning
+          3.  Transfer into remaining sync test slots and test all 
+              sync ports for a minimum of 30 minutes per port
+          4.  Transfer into SLASYNC slots and start testing of all 
+              assigned async ports for a minimum of 24 hrs per 
+              group of 16
+          5.  Verify that no errors have occurred at the end of 
+              the test period
+
+        F.   SIO/V.24 SYNC/ASYNC & OCL test:
+
+          1.  Transfer into each applicable SIO test slot and test 
+              each port for  a minimum 2 hour period
+          2.  Verify that no errors have occured
+
+        G.   Battery back-up Module test:
+
+          1.  Verify that the battery backup cable is attached properly
+              to the memory board and the battery backup unit
+          2.  Verify that the AC power switch is set to the on
+              position and the red LED is lit
+          3.  Verify that the battery backup switch on the memory
+              board is set to that normal position
+          4.  Turn the front console key to the off position
+          5.  Disconnect the AC power cord from the battery backup unit
+          6.  Wait 1-3 minutes, turn the front console key to the 
+              on position
+          7.  Check to ensure that memory has been retained 
+              (code still runs)
+          8.  Verify that Battery backup unit has had full 24 hour 
+              charge time
+          9   Turn front console key to the off position for 2 hours 
+              precisely
+         10.  At completion of allotted time, turn front console key 
+              to the on position and verify that memory has been 
+              retained
+         11.  Reconnect the AC power cord to the battery backup 
+              unit and set the AC power switch to the off position, 
+              Test complete
+
+      73                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Staging the Supervisor Engine                            March 28, 1986
+
+
+              
+        H.   Peripheral test: (160 MB,300 MB,TAPE DRIVE)
+
+          1.  Flip the watchdog timer switch to place the machine 
+              in boot
+          2.  Connect hardcopy terminal to the TTY PORT to record 
+              any failures
+          3.  Load Disk diagnostic into Engine and follow directions 
+              as stated in the diagnostic documentation guide
+          4.  Record any problems on LOG.FRM
+          5.  Repeat above for Tape diagnostic
+
+        I.   Post test Activities:
+
+          1.  Upon completion of all staging requirements, 
+              disconnect all AC power
+          2.  Remove all external cables and return them to their 
+              appointed boxes
+          3.  Remove all loopback plugs and return to their proper 
+              drawer location
+          4.  Complete ass LOG.FRM requirements & release unit(s) 
+              to plant clearance
+          5.  Complete and send Ontyme of RLEASE.FRM to all 
+              participating groups
+
+
+
+
+
+
+
+                   4.15  Initial Installation of the Supervisor
+
+
+           The initial installation of software in the Supervisor node 
+      presents a few problems different from merely upgrading an 
+      existing machine.  First, we have a machine which has never run 
+      Supervisor software, and we have software which has never been 
+      run in a machine.  The combination presents a large number of 
+      variables should problems arise. Further more none of the disk
+	logical units have been initialized.  This can present some
+      unusual problems should the disk not be properly formatted.  Here 
+      are some guidelines which will help ensure that a virgin 
+      Supervisor starts up with minimum problems.
+
+           When first bringing up a virgin system, a neighbor node from 
+      which to load is obviously required.  However, if this is a 
+      virgin system, there are no nodes or gateways from which to load.  
+      It becomes necessary to "bootstrap" the Supervisor by loading 
+      from a node connected to another network.  This "host" network 
+      can be any network, but in practice will usually be Bubb-net or 
+      the Public net.  When performing this action, risk of a Supervisor 
+      Fight with significant impact upon the host network is very real.  
+
+      74                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Initial Installation of the Supervisor                   March 28, 1986
+
+
+      Precautions must be taken to prevent such an occurance.
+
+           Here then, are some guidelines for bringing up that initial 
+      system with minimum problems.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      75                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Initial Installation of the Supervisor                   March 28, 1986
+
+
+
+           1.   Verify the Engine passes all standard diagnostics.
+                CPU, Mac, Memory, Sync/Async, Sio
+
+           2.   Verify the peripherals pass their respective 
+              diagnostics  MAGTAP, DISK, MSCTST
+
+           3.   Verify the disk is properly formatted.
+                Platter should be all '00's and not 'BD's
+
+           4.   Verify the hardware configuration matches the software.
+                Ascertain that all boards and peripherals are connected.
+
+           5.   If a known stable Lab Engine of the proper 
+                configuration is available, it would be wise to check 
+                the software on known good hardware before proceeding.  
+                Due to time and resource constraints, this may not be 
+                practical.
+
+           6.   Clear Engine memory ([DTA], [WRT], [INC], [RPT] 
+                for 10 sec.)
+
+           7.   Connect a temporarily unused network line from a Public 
+                net or Bubb-net node to an unconfigured port on the
+                new machine. This is to ensure that the link cannot
+                come up after the load as our Supervisor node code
+                will not know about it.
+
+           8.   Log into Probe on the host network (Public net or
+                Bubbnet) and enter a shut with the node we are 
+                loading from and the new Supervisor node as the
+                argument. E.G.  ESHUT 2154 2003. This is a little
+                extra insurance against a disastrous Supervisor
+                fight with the host network.
+
+           9.   If possible, the new Supervisor should have it's
+                host net neighbour listed in a NOTAKE statement in
+                the Supervisor TYM file. This provides further
+                insurance againstt a Supervisor fight.
+
+           10.  Load the Supervisor node using LOADII, or possibly
+                ELF. Remove the connection to the host network
+                IMMEDIATELY upon completion of the load.
+
+           11.  Connect a hardcopy terminal to the Multifunction port 
+                and logon to DDT with a valid good guy name.  ISISTECH 
+                is usually used.  At the slot prompt enter an 
+                exclamation point "!" to enter the Kernel.
+
+           12.  Enter "?WHO" and note who has logged into any slots.  
+                If using a 10 Mb disk system with an LOA file, you 
+                should see the username "JRINDE" entered into each slot 
+                defined in the LOA file.  Presence of "no one" in the 
+
+      76                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Initial Installation of the Supervisor                   March 28, 1986
+
+
+                list may mean an error in the LOA file.
+
+           13.  If using a 300 Mb or 160 Mb drive without an LOA file, 
+                all slots should have "no one" as the previous logon.
+
+           14.  From the terminal, Log into the Supervisor slot.  DDT 
+                may report something like "not loaded" on entering the 
+                slot.  If so, ignore the report.  Enter "?FREZ" to 
+                freeze the Supervisor.
+
+           15.  Move to the Probe slot.  Enter "G C" to enter Probe 
+                itself.  At the probe prompt, enter "INITA" to 
+                initialize the accounting buffer.  This will take a few 
+                minutes.  When the prompt returns, enter "INITL" to 
+                initialize the Error log.  This will also take a few 
+                minutes.  Log off from Probe.
+
+           16.  Log back into the Supervisor slot and enter "?THAW" the 
+                thaw out the Supervisor.
+
+           17.  Wait approximately 5-10 minutes, and then observe the 
+                front panel.  The fifth digit should be cycling "0" & 
+                "4" to indicate a sleeping Supervisor, or even "0" & 
+                "5" to indicate an active Supervisor.  If still showing 
+                "0" & "3" it may mean there is a problem with Supervi
+                sor initialization.  This is suspect will be 
+                the software unless previously tested in a lab environ
+                ment.
+
+           18.  If all is well at this point, then from the 
+                Multifunction port log into each application slot and 
+                verify that it is running properly and not crashed, 
+                etc.  Finally, log into the Utility Slot and enter "G 
+                10000" to activate SCP/UTIL.  Execute a few commands to 
+                verify proper operation.
+
+           19.  In order to verify that the software has been properly 
+                stored on disk, it is necessary to reload the machine 
+                with the object file(s) on disk and repeat steps 11-18 
+                except for 14, 15 and 16.  It is not necessary to re-
+                initialize the accounting and log files.
+
+                19a. Hit [PSW] to halt the processor
+
+                19b. Clear memory ([DTA], [WRT], [INC], [RPT] for 10 
+                     seconds)
+
+                19c. Flip watchdog timer to place node in boot.
+
+                19d. Boot node from disk using the correct procedure 
+                     for the type of disk in use.
+
+                19e. Perform steps 11, 12, 13, 17, 18 above to verify 
+
+      77                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Initial Installation of the Supervisor                   March 28, 1986
+
+
+                     proper operation.  Pay particular attention to the 
+                     last ISIS slot and the SCP/UTIL functions in the 
+                     Utility slot. (Step 18)
+
+           20.  Log into Probe again and try a few commands to verify 
+                proper operation.  Finally, if it hasn't already 
+                awakened by itself, then awaken the Supervisor and 
+                allow it to take over any nodes connected to it.  
+                Normally only itself will be available at this point.
+
+           21.  Using a known accurate time source, verify the proper 
+                time.  See the procedure for initializing the 
+                Superclock for more details.
+
+           22.  If all is well, we should have a fully operational 
+                Supervisor, although one which does not have any MUD 
+                files installed.  It is now time to proceed to the 
+                VAL or NETVAL installation.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      78                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      Initial Installation of the Supervisor                   March 28, 1986
+
+
+
+      Information from many sources was gathered together for this
+      document. It wold be inappropriate to close without at least
+      a partial listing of those sources. Obviously, the majority of the
+      documents listed below are internal Tymnet documents, some of 
+      which are no longer available, having been replaced by newer and 
+      more up to date material.  The Consultant wishing to know more 
+      is encouraged to acquire as many of these as possible for his or 
+      her personal library.  
+
+          SUPGEN.DOC
+          Supervisor Generation Using Standard TYMFILE Macros
+          Carl Holmberg
+          Network Technology Division
+          January 12, 1984
+
+          SUPCLK.CAL
+          Superclock Calibration
+          Bil Stalling
+          Network Systems Staging Unit
+          April 24, 1984
+
+          STD.PRO
+          Staging Procedure for Standard Engines
+          Doug Zisa
+          Network Systems Staging Unit
+
+
+          Supervisor Principles of Operation
+          (Out of print)
+          Data Networks Division
+          June 15, 1981
+          
+          SUP.DOC
+          Supervisor Concepts
+          Ishan Wu
+          Network Technology Division
+          January 24, 1983
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      79                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+
+      INDEX                                                    March 28, 1986
+
+
+                                       INDEX
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      80                      SUPERVISOR FIELD GUIDE               SUPFLD.DOC
+ 
+ no
