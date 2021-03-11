@@ -1,0 +1,376 @@
+set fmsg off.
+o   (perstats)hsthst.dms (netstat)ckts.dms (pmellet)homing 
+    (pmellet)eurhst.dms
+    (netstat)00220d.dms  (perstats)nodnod.dms (perstats)sitsit.dms .
+
+init  1 tmp.dmi.
+init  2 tty:.
+init  3 hostd.tra.
+define integer xnode.
+define integer ynode.
+define real    xcps12.
+define real    xcps21.
+define real    xsesln.
+define  real    x.
+define  real    y.
+define  real    z.
+define integer xsesnu.
+define integer xnumss.
+define integer xohost.
+define integer xthost.
+define text 1  iresp.
+define text 4  xsite1.
+define text 4  xsite2.
+define text 15 xcity1.
+define text 15 xcity2.
+define integer xstart.
+define integer xend.
+define text 1 xori.
+define text 1 xdest.
+define real xchar.
+
+dpl start.
+
+print on 2 fmt " do you want to clean hstshst.dms (y/n)? ->"$ end.
+accept iresp.
+if iresp eq 'n' then lab300.
+if iresp eq 'N' then lab300.
+dbs 1.
+f all.
+delete.
+lab300:print on 2 fmt " do you want to clean nodnod.dms (y/n)? ->"$ end.
+accept iresp.
+if iresp eq 'n' then lab301.
+if iresp eq 'N' then lab301.
+dbs 6.
+f all.
+delete.
+!let x eq 0.0.
+!if x  eq 0.0 then lab77.
+lab301:print on 2 fmt " do you want to clean sitsit.dms (y/n)? ->"$ end.
+accept iresp.
+if iresp eq 'n' then lab400.
+if iresp eq 'N' then lab400.
+dbs 7.
+f all.
+delete.
+
+lab400:dbs 4.
+f all.
+print on 2 fmt " searching for sessions originating in europe" end.
+lab20:dbs 4.
+getrec lab100.
+let xohost eq host.
+dbs 5.
+f all.
+f orighost eq xohost.
+lab200:dbs 5.
+getrec lab20.
+let xnode eq orignode.
+let ynode eq termnode.
+let xthost eq termhost.
+let xcps12 eq 0.0 + inputchar/1000.0.
+let xcps21 eq 0.0 + outputchar/1000.0.
+let xsesln eq 0.0 + totmin/60.0.
+let xsesnu eq sessno.
+let xstart starttime.
+let xend   endtime.
+if startdate eq enddate goto lab692.
+let xstart eq 0.
+lab692:let xori 'E'.
+let xdest 'U'.
+if xnode gt ynode goto lab103.
+print on 1 xnode  ynode  xcps12  xcps21  xsesln  xsesnu xohost xthost
+           xori xdest xstart xend
+fmt    i5 1x i5 1x f4.5 1x f4.5 1x f4.5 1x i10 1x i10 1x i10 1x a1 1x
+       a1 i10 1x i10 end.
+goto lab200.
+lab103:print on 1 xnode  ynode  xcps12  xcps21  xsesln  xsesnu xohost xthost
+           xori xdest xstart xend
+fmt    i5 1x i5 1x f4.5 1x f4.5 1x f4.5 1x i10 1x i10 1x i10 1x a1 1x
+       a1 i10 1x i10 end.
+goto lab200.
+
+
+lab100: dbs 4.
+print on 2 fmt " searching for sessions terminating in europe" end.
+f all.
+lab21:dbs 4.
+getrec lab999.
+let xthost eq host.
+dbs 5.
+f all.
+f termhost eq xthost.
+lab202:getrec lab21.
+let xnode eq orignode.
+let ynode eq termnode.
+let xohost eq orighost.
+let xcps12 eq 0.0 + inputchar/1000.0.
+let xcps21 eq 0.0 + outputchar/1000.0.
+let xsesln eq 0.0 + totmin/60.0.
+let xsesnu eq sessno.
+let xstart starttime.
+let xend   endtime.
+let xori 'U'.
+let xdest 'E'.
+if xnode gt ynode goto lab203.
+print on 1 xnode  ynode  xcps12  xcps21  xsesln  xsesnu xohost xthost
+           xori xdest xstart xend
+fmt    i5 1x i5 1x f4.5 1x f4.5 1x f4.5 1x i10 1x i10 1x i10 1x a1 1x a1
+       i10 1x i10 end.
+goto lab202.
+lab203:print on 1 xnode  ynode  xcps12  xcps21  xsesln  xsesnu xohost xthost
+           xori xdest xstart xend
+fmt    i5 1x i5 1x f4.5 1x f4.5 1x f4.5 1x i10 1x i10 1x i10 1x a1 1x a1
+       i10 1x i10 end.
+goto lab202.
+
+lab999: init 1 garbage.
+print on 2 fmt " loading the results in a temporary database" end.
+dbs 1.
+append data tmp.dmi.
+!load tmp.
+
+lab555:let xsesnu eq -1.
+print on 2 fmt " illiminating duplicate records" end.
+dbs 1.
+f all.
+update on.
+sort sesnu.
+lab800:getrec lab899.
+if sesnu ne xsesnu goto lab801.
+delete.
+goto lab800.
+lab801: let xsesnu eq sesnu.
+goto lab800.
+
+lab899:update off.
+print on 2 fmt "updating orig-desti" end.
+dbs 4.
+f all.
+lab701:dbs 4.
+getrec lab702.
+let xohost host.
+dbs 1.
+update on.
+f all.
+f orighost xohost.
+lab677:getrec lab676.
+change orig 'E'.
+goto lab677.
+lab676:f all.
+f termhost xohost.
+lab678:getrec lab679.
+change desti 'E'.
+goto lab678.
+lab679:goto lab701.
+
+lab702:dbs 1.
+update off.
+f all.
+lab704:getrec lab703.
+let xori orig.
+let xdest desti.
+let xstart startime. 
+let xend  endtime.
+let xsesln seslen.
+let xchar (kcps12+kcps21).
+print on 3 xori xdest xstart xend xsesln xchar
+format     1x a1 2x a1 2x i4 2x i4 2x f5.4 2x f5.4 end.
+goto lab704. 
+
+lab703:dbs 1.
+print on 2 fmt " compressing records for nodnod file" end.
+f all.
+sort node1 node2.
+getrec lab777.
+lab600:let xnode eq node1.
+let ynode eq node2.
+let xcps12 eq kcps12.
+let xcps21 eq kcps21.
+let xsesln eq seslen.
+let xnumss eq 1.
+lab700:getrec lab778.
+if xnode ne node1 goto lab750.
+if ynode ne node2 goto lab750.
+let x eq kcps12.
+let y eq kcps21.
+let z eq seslen.
+let xcps12 eq xcps12 + x.
+let xcps21 eq xcps21 + y.
+let xsesln eq xsesln + z.
+let xnumss eq xnumss + 1.
+goto lab700.
+lab750: dbs 2.
+let xsite1 eq '-1'.
+let xsite2 eq '-1'.
+let xcity1 eq '-- '.
+let xcity2 eq '-- '.
+f all.
+f pt1 eq xnode.
+lab531:getrec lab550.
+if pty1 eq 'HOST' goto lab531.
+let xsite1 eq site1.
+let xcity1 eq place1.
+lab550: f all.
+f pt1 eq ynode.
+lab532:getrec lab560.
+if pty1 eq 'HOST' goto lab532.
+let xsite2 eq site1.
+let xcity2 eq place1.
+lab560:dbs 6.
+!print on 2 fmt " adding record to nodnod" end.
+add node1 xnode node2 ynode kcps12 xcps12 kcps21 xcps21 seslen xsesln 
+    numses xnumss site1 xsite1 site2 xsite2 city1 xcity1 city2 xcity2.
+goto lab600.
+lab778:dbs 6.
+!print on 2 fmt " adding record to nodnod" end.
+add node1 xnode node2 ynode kcps12 xcps12 kcps21 xcps21 seslen xsesln 
+    numses xnumss site1 xsite1 site2 xsite2 city1 xcity1 city2 xcity2.
+lab777:dbs 1.
+close.
+dbs 2.
+close.
+dbs 6.
+print on 2 fmt " compressing records for site file" end.
+f all.
+sort site1 site2.
+getrec lab802.
+lab625:let xsite1 eq site1.
+let xsite2 eq site2.
+let xcity1 eq city1.
+let xcity2 eq city2.
+let xcps12 eq kcps12.
+let xcps21 eq kcps21.
+let xsesln eq seslen.
+let xnumss eq numses.
+lab725:getrec lab803.
+if xsite1 ne site1 goto lab775.
+if xsite2 ne site2 goto lab775.
+let x eq kcps12.
+let y eq kcps21.
+let z eq seslen.
+let xcps12 eq xcps12 + x.
+let xcps21 eq xcps21 + y.
+let xsesln eq xsesln + z.
+let xnumss eq xnumss + numses.
+goto lab725.
+lab775:dbs 7.
+!print on 2 fmt " adding record to sitsit" end.
+add     numses xnumss site1 xsite1 site2 xsite2 city1 xcity1 city2 xcity2
+        kcps12 xcps12 kcps21 xcps21 seslen xsesln .
+
+goto lab625.
+lab803:dbs 7.
+!print on 2 fmt " adding record to sitsit" end.
+add     numses xnumss site1 xsite1 site2 xsite2 city1 xcity1 city2 xcity2
+        kcps12 xcps12 kcps21 xcps21 seslen xsesln .
+
+lab802:dbs 7.
+f all.
+lab33:dbs 7.
+getrec lab44.
+let xsite1 eq site1.
+let xsite2 eq site2.
+dbs 3.
+f oldsit eq xsite1.
+getrec lab39.
+let xsite1 eq newsit.
+let xcity1 eq city.
+dbs 7.
+change site1 xsite1.
+change city1 xcity1.
+lab39:dbs 3.
+f oldsit eq xsite2.
+getrec lab33.
+let xsite2 eq newsit.
+let xcity2 eq city.
+dbs 7.
+change site2 xsite2.
+change city2 xcity2.
+goto lab33.
+
+lab44:dbs 7.
+f all.
+lab360:dbs 7.
+getrec lab99.
+let xsite1 eq site1.
+let xsite2 eq site2.
+dbs 4.
+f all.
+f site eq xsite1.
+getrec lab138.
+goto lab139.
+lab138:dbs 7.
+print on 2 xsite1 city1 fmt "changing" a4 2x a12 end.
+change site1 'US'.
+change city1 'US' .
+lab139: dbs 4.
+f site eq xsite2.
+getrec lab141.
+goto lab360.
+lab141:dbs 7.
+print on 2 xsite2 city2 fmt "changing" a4 2x a12 end.
+change site2 'US'.
+change city2 'US' .
+goto lab360.
+lab99:DBS 7.
+f all.
+lab47:getrec lab77.
+if site1 ne 'US' goto lab47.
+let xsite1 eq site2.
+let xcity1 eq city2.
+change site1 xsite1.
+change city1 xcity1.
+change site2 'US'.
+change city2 'US'.
+let x eq kcps12.
+let y eq kcps21.
+change kcps12 y.
+change kcps21 x.
+goto lab47.
+lab77:print on 1 fmt " finish with file d" end.
+dpl end.
+!dbs 7.
+!f all.
+!sort site1 site2.
+!getrec lab1802.
+!type site1 site2.
+!lab1625:dbs 7.
+!let xsite1 eq site1.
+!let xsite2 eq site2.
+!let xcity1 eq city1.
+!let xcity2 eq city2.
+!let xcps12 eq kcps12.
+!let xcps21 eq kcps21.
+!let xsesln eq seslen.
+!let xnumss eq numses.
+!lab1725:getrec lab1803.
+!type site1 site2.
+!if xsite1 ne site1 goto lab1775.
+!if xsite2 ne site2 goto lab1775.
+!let x eq kcps12.
+!let y eq kcps21.
+!let z eq seslen.
+!let xcps12 eq xcps12 + x.
+!let xcps21 eq xcps21 + y.
+!let xsesln eq xsesln + z.
+!let xnumss eq xnumss + numses.
+!goto lab1725.
+!lab1775:dbs 8.
+!print on 2 fmt " adding record to sitsit" end.
+!add     numses xnumss site1 xsite1 site2 xsite2 city1 xcity1 city2 xcity2
+!        kcps12 xcps12 kcps21 xcps21 seslen xsesln .
+!goto lab1625.
+!lab1803:dbs 8.
+!print on 2 fmt " adding record to sitsit" end.
+!add     numses xnumss site1 xsite1 site2 xsite2 city1 xcity1 city2 xcity2
+!        kcps12 xcps12 kcps21 xcps21 seslen xsesln .
+!lab1802: dbs 7.
+!f all.
+!delete.
+!dbs 8.
+!f all.
+!dbs 7.
+!append set 8.
+!dpl end.    
