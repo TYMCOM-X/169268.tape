@@ -1,0 +1,490 @@
+***********************************************************************
+*                                                                     *
+*                       COMMAND: SELECT                               *
+*                                                                     *
+*       THIS COMMAND OPENS A DATA BASE, READS IN THE APPROPRIATE      *
+*       DATA BASE DEFINITION, SETS THE DATA BASE NUMBER, AND SELECTS  *
+*       A PARTICULAR RECORD OR SET OF RECORDS FROM THE DATA BASE.     *
+*       SELECTION IS BASED ON THE PRIMARY AND SECONDARY CONTROL       *
+*       NUMBERS.                                                      *
+*                                                                     *
+*                                                                     *
+*       O:      IERR    ERROR FLAG. SET AS FOLLOWS.                   *
+*                       -1 = FATAL ERROR                              *
+*                        0 = NO ERROR                                 *
+***********************************************************************
+
+
+        SUBROUTINE SELECT(IERR)
+
+        INTEGER DBNUM,SELNAM(24),CMDNUM,ATTNUM,TABLE(1234),TBL22
+
+        COMMON/DBNUM/DBNUM
+        COMMON/CMDNUM/CMDNUM
+
+
+        IFATAL=-1
+        INOERR=0
+        ATTNUM=0
+
+        IERR=INOERR
+        INAME='     '
+
+*               GET ACCESS TO DATA BASE IDENTIFIERS
+
+        COMMON/SELNAM/SELNAM
+
+*               GET ACCESS TO COMMAND-10 TABLE
+
+        COMMON/COMPKG/TABLE
+
+*               INITIALIZE THE DATA BASE NUMBER TO ZERO
+
+5       DBNUM=0
+
+*               CALL TSTHLP TO CHECK FOR HELP REQUEST OR BLANK 
+*               LINE.
+
+10      CALL TSTHLP(ATTNUM,IERR2)
+
+*               CK IF SOMETHING OTHER THAT HELP OR A BLANK LINE WAS
+*               FOUND
+
+        IF (IERR2.LT.0) GO TO 20
+
+*               OTHERWISE PROMPT FOR DATA BASE IDENTIFIER AND ADJUST
+*               THE AUTO ARROW POINTER FOR THE NEW PROMPT
+
+15      TABLE(22)=24
+        TYPE 17
+17      FORMAT (1X,'DATA BASE IDENTIFIER : ',$)
+
+*               GET THE RESPONSE
+
+        CALL NEWLINE
+        GO TO 10
+
+*               GET THE DATA BASE NAME FROM THE INPUT LINE.
+
+20      CALL GETSTR(INAME2,ILGTH,5)
+
+*               IF STRING RETURNED IS LESS THAN 5 CHARS. WE NEED TO 
+*               REPLACE NULL CHARS WITH SPACES.
+
+        IF (ILGTH.GE.5) GO TO 25
+
+        INULL="001004020100
+        ISPACE='     '
+        DO 22 I=1,4
+        CALL RTC(ICHAR,INAME2,I)
+        IF (ICHAR.EQ.INULL) ICHAR=ISPACE
+        CALL STC(ICHAR,INAME,I)
+22      CONTINUE
+
+*               GO TEST AGAINST DATA BASE IDENTIFIERS
+
+        GO TO 30
+
+*               STRING WAS 5 CHARS LONG OR LONGER. TEST STRING
+*               RETURNED FROM GETSTR AGAINST DATA BASE IDENTIFIERS.
+
+25      INAME=INAME2
+
+*               LOCATE THE DATA BASE IDENTIFIER IN THE SELNAM ARRAY.
+
+30      DO 40 I=1,24
+        IF (SELNAM(I).EQ.INAME) GO TO 60
+40      CONTINUE
+
+*               ERROR. CAN'T FIND DATA BASE IDENTIFIER.
+
+        TYPE 50
+50      FORMAT (1X,'? INVALID DATA BASE IDENTIFER ?',/)
+        INAME='     '
+        GO TO 15
+
+*               BRANCH ON DATA BASE IDENTIFIER
+
+60      GO TO (100,100,100,200,200,300,300,400,400,400,
+     X         500,500,500,600,600,700,700,800,800,
+     X         900,900,1000,1000,1000),I
+
+
+*               MAKE SELECTION ON CUSTOMER DATA BASE
+
+100     CALL SELCUS(IERR)
+        GO TO 9999
+
+*               MAKE SELECTION ON ORDACC DATA BASE
+
+200     CALL SELACC(IERR)
+        GO TO 9999
+
+*               MAKE SELECTION ON ORDASY DATA BASE
+
+300     CALL SELASY(IERR)
+        GO TO 9999
+
+*               MAKE SELECTION ON BISYNC DATA BASE
+
+400     CALL SELSNI(IERR)
+        GO TO 9999
+
+*               MAKE SELECTION ON DEDICATED REMOTE DATA BASE
+
+500     CALL SELDTI(IERR)
+        GO TO 9999
+
+*               MAK ESELECTION ON PRIVATE PORT DATA BASE
+
+600     CALL SELPAP(IERR)
+        GO TO 9999
+
+*               MAKE SELECTION ON POLLED TERMINAL DATA BASE
+
+700     CALL SELPOL(IERR)
+        GO TO 9999
+
+*               MAKE SELECTION ON TRAFFIC DATA BASE
+
+800     CALL SELTAN(IERR)
+        GO TO 9999
+
+*               MAKE SELECTION ON TELCO DATA BASE
+
+900     CALL SELTEL(IERR)
+        GO TO 9999
+
+*               MAKE SELECTION ON MANUFACTUREING DATA BASE
+
+1000    CALL SELMFG(IERR)
+        GO TO 9999
+
+9999     RETURN
+        END
+
+***********************************************************************
+*                                                                     *
+*                       SUBROUTINE: SELCUS                            *
+*                                                                     *
+*       THIS SUBROUTINE MAKES THE FINAL RECORD SELECTION FOR          *
+*       THE ORDCUS.DMS DATA BASE.                                     *
+*                                                                     *
+*                                                                     *
+*       O:      IERR    ERROR FALG. SET AS FOLLOWS.                   *
+*                       -1 = FATAL ERROR                              *
+*                        0 = NO ERROR                                 *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE SELCUS(IERR)
+
+        INTEGER DBNUM,NAME(2)
+
+        COMMON/DBNUM/DBNUM
+        COMMON/CMDNUM/CMDNUM
+
+        IFATAL=-1
+        INOERR=0
+
+        IERR=INOERR
+
+*               GET ACCESS TO CONTROL NUMBER
+
+        COMMON/CNTRL/CNTRL
+
+
+*               OPEN CUSORD DATA BASE
+
+100    CALL OPNX22('ORDCUS','C')
+
+*               LOCATE THE DATA BASE NUMBER
+
+110     NAME(1)='ORDCU'
+        NAME(2)='S    '
+       CALL FINDBN(NAME,INUM,IERR)
+        IF (IERR.NE.0) GO TO 999
+
+*               READ IN DATA BASE DEFINITION
+
+115    CALL GETDEF(INUM)
+*
+*                       GET THE LTB FILE FOR THE CUS DB
+*
+        CALL GETLTB('(RDDATA)ORDCUS.LTB  ')
+
+*               SELECT ALL RECORDS WITH PRIMARY CONTROL NUMBER.
+
+120    CALL DBFIND('ORDERNUMBER','EQ',CNTRL)
+
+*               DETERMINE NUMBER OF RECORDS SELECTED
+
+125    CALL DBNREC(IREC)
+
+*               IF NO RECORDS SELECTED STAY HERE
+
+130    IF (IREC.GT.0) GO TO 150
+
+*               NO RECORDS SELECTED
+
+135    TYPE 140,CNTRL
+140    FORMAT (5X,'? NO CUSTOMER INFORMATION EXISTS FOR ORDER CONTROL',
+     X             '  NUMBER: ',I6,/)
+
+*               RETURN TO COMAND PROMPT
+
+        GO TO 999
+
+*               SINCE THIS IS A SINGLE RECORD DATA BASE. MAKE USRE
+*               NO MORE THAN ONE RECORD EXISTS FOR CONTROL NUMBER.
+
+150    IF (IREC.EQ.1) GO TO 155
+
+*               ERROR. MULTIPLE RECORDS
+
+        TYPE 152,CNTRL
+152     FORMAT (5X,'? ERROR. SUBROUTINE: SELCUS.  MULTIPLE RECORDS',/
+     X          5X,'  FOR ORDER NUMBER: ',I6,/)
+        IERR=IFATAL
+        GO TO 999
+
+*               SELECTION COMPLETE
+
+155     TYPE 157
+157     FORMAT (5X,'SELECTION COMPLETED.',/
+     X          5X,'1 RECORD SELECTED.',/)
+
+
+*               SET DATA BASE NUMBER
+
+160    DBNUM=INUM
+
+*               FINISHED. RETURN.
+
+999     RETURN
+        END
+
+***********************************************************************
+*                                                                     *
+*                       SUBROUTINE: SELREC                            *
+*                                                                     *
+*       THIS SUBROUTINE MAKES THE FINAL SELECTION OF RECORDS          *
+*       FOR MULTIPLE RECORD DATA BASES.  THE SELECT SUBROUTINE MAKES  *
+*       THE INITIAL SELECTION FROM A DATA BASE USING THE PRIMARY      *
+*       CONTROL NUMBER, THEN SELREC IS CALLED TO MAKE THE FINAL       *
+*       SELECTION USING THE SECONDAY CONTROL NUMBER.                  *
+*                                                                     *
+*       I:      IREC    INTEGER VARIABLE CONTAINING NUMBER OF RECORDS *
+*                       SELECTED DURING INITIAL SELECTION.            *
+*                                                                     *
+*       I:      NAME    5 WORD ARRAY CONTAINING NAME OF SECONDARY     *
+*                       CONTROL NUMBER ATTRIBUTE.                     *
+*                                                                     *
+*       O:      IERR    ERROR FLAG. SET AS FOLLOWS.                   *
+*                       -1 = NO RECORDS SELECTED BEFORE CALLING       *
+*                            SUBROUTINE.                              *
+*                                                                     *
+*                        0 = NO ERROR                                 *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE SELREC(IREC,NAME,IERR)
+
+        INTEGER DBNUM,NAME(5),CTLNUM(200),IARR(12),IASY(2),IANS(2)
+
+*               INIT SOME VARIABLES
+
+        IFATAL=-1
+        INOERR=0
+        IERR=INOERR
+        MAXCTL=200
+        ICPOS=1
+
+*               SET UP ARRAY: IARR AS COMMAND ARRAY FOR FIND COMMAND
+
+        IARR(1)='FIND '
+        IARR(2)='LAST '
+        IARR(3)='AND  '
+        IARR(4)=NAME(1)
+        IARR(5)=NAME(2)
+        IARR(6)=NAME(3)
+        IARR(7)=NAME(4)
+        IARR(8)=NAME(5)
+        IARR(9)='EQ   '
+
+*               BRANCH ON NUMBER OF RECORDS SELECTED DURING INITIAL
+*               SELECTION
+
+100     IF (IREC.EQ.1) GO TO 150
+        IF (IREC.GT.1) GO TO 175
+
+*               ERROR. NO RECOREDS SELECTED.
+
+110     TYPE 115
+115     FORMAT (5X,'? ERROR. SUBROUTINE: SELREC.  NO RECORDS SELECTED',/
+     X         5X,'  BEFORE CALLING ROUTINE.',/)
+        IERR=IFATAL
+        GO TO 999
+
+*               ONE RECORD SELECTED.
+
+150     TYPE 155
+155     FORMAT (5X,'SELECTION COMPLETED.',/,
+     X          5X,' 1 RECORD SELECTED.',/)
+
+*               RETURN
+
+        GO TO 999
+
+
+*               MULTIPLE RECORDS. DISPLAY AVAILABLE SECONDARY
+*               CONTROL NUMBERS
+
+175     TYPE 180
+180     FORMAT (5X,'AVAILABLE SECONDARY CONTROL NUMBERS ARE: ',/)
+
+*               PROCESS A RECORD
+
+185     CALL DBGREC($195)
+        CALL DBVAL(NAME,IASY)
+
+
+        TYPE 190,IASY
+190     FORMAT(10X,A5,A1)
+
+*               PUT CONTROL NUMBER INTO ARRAY: CTLNUM AND GO PROCESS
+*               NEXT RECORD
+
+        CTLNUM(ICPOS)=IASY(1)
+        CTLNUM(ICPOS+1)=IASY(2)
+        ICPOS=ICPOS+2
+        IF (ICPOS.LE.MAXCTL) GO TO 185
+
+        TYPE 192
+192     FORMAT (5X,'? ERROR SUBROUTINE: SELREC. ',/,
+     X          5X,'  EXCEEDED MAX SIZE OF ARRAY: CTLNUM',/)
+        IERR=IFATAL
+        GO TO 999
+
+
+*       DISPLAYED ALL CONTROL NUMBERS. NOW, INPUT THE CONTROL
+*               NUMBER USER WANTS TO SELECT.
+
+195     TYPE 200
+200     FORMAT (/,5X,'ENTER ONE OF THE ABOVE KEYS OR "ALL": ',$)
+        ACCEPT 205,IANS
+205     FORMAT (A5,A1)
+
+*               CK IF USER WANTS 'ALL' RECORDS IN CURRENT SELECTION.
+
+210     IF (IANS(1).NE.'ALL') GO TO 235
+
+*               SELECT ALL RECORDS IN CURRENT SELECTION.
+
+215     CALL DBEXEC('STARTREC')
+        CALL DBNREC(IREC)
+
+*               OUTPUT NUMBER OF RECORDS SELECTED
+
+        TYPE 220,IREC
+220     FORMAT (5X,'SELECTION COMPLETED.',/,
+     X          2X,I4,' RECORDS SELECTED.',/)
+
+*               RETURN
+
+        GO TO 999
+
+*               USER WANTS ONLY ONE OF THE RECORDS.
+*               CK THAT NUMBER ENTERED BY USER IS IN CURRENT SELECTION.
+
+235     DO 240 I=1,ICPOS-1,2
+        IF (CTLNUM(I).EQ.0) GOTO 245
+        IF (IANS(1).EQ.CTLNUM(I).AND.IANS(2).EQ.CTLNUM(I+1)) GO TO 260
+240     CONTINUE
+
+
+245     TYPE 250
+250     FORMAT (5X,'? MUST ENTER ONE OF THE INTERFACE CONTROL NUMBERS',/
+     X          5X,'  LISTED ABOVE. ?',/)
+
+*               GO TRY AGAIN
+
+        GO TO 195
+
+*               SELECT RECORD USER WANTS
+
+260     IARR(10)=IANS(1)
+        IARR(11)=IANS(2)
+        IARR(12)=0
+        CALL DBEXEC(IARR)
+        CALL DBNREC(IREC)
+        IF (IREC.EQ.1) GO TO 275
+
+*               SOMETHING WENT WRONG. EITHER THAT RECORD'S DISAPPEARED
+*               OR ANOTHER ONE WITH SAME CONTROL NUMBER WAS ADDED.??
+
+        TYPE 265,IREC
+265     FORMAT (5X,'ERROR SUBROUTINE: SELREC.',/,
+     X          5X,'SHOULD HAVE SELECTED ONLY ONE RECORD, INSTEAD',/
+     X          5X,'SELECTED: ',I4,/)
+        IERR=IFATAL
+        GO TO 999
+
+*               RECORD SELECTED. OUTPUT MESSAGE
+
+275     TYPE 155
+
+*               FINISHED. RETURN
+
+999     RETURN
+        END
+
+
+***********************************************************************
+*                                                                     *
+*                       SUBROUTINE: FINDBN                            *
+*                                                                     *
+*       THIS SUBROUTINE SEARCHES THE DATA BASE NAME ARRAY FOR         *
+*       SPECIFIED DATA BASE NAME AND RETURNS THE DATA BASE NUMBER.    *
+*                                                                     *
+*       I:      NAME    2 WORD ARRAY CONTAINING DATA BASE NAME.       *
+*                                                                     *
+*       O:      INUM   INTEGER VARIABLE CONTAINING DATA BASE NUMBER. *
+*                                                                     *
+*       O:      IERR    ERROR FLAG. SET AS FOLLOWS.                   *
+*                       -1 = FATAL ERROR. NAME NOT FOUND IN NAME ARRAY  *
+*                        0 = NO ERROR.                                *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE FINDBN(NAME,INUM,IERR)
+
+        INTEGER NAME(2),INUM,DBNAME(60)
+
+        COMMON/DBNAME/DBNAME
+
+*               LOOP THROUGH ARRAY LOOKING FOR NAME
+
+100     DO 120 I=1,60,2
+        IF (NAME(1).EQ.DBNAME(I).AND.NAME(2).EQ.DBNAME(I+1)) GO TO 140
+120     CONTINUE
+
+*               ERROR NAME NOT IN DATA BASE ARRAY
+
+125     TYPE 130,NAME
+130     FORMAT (5X,'? SUBROUTINE FINDBN: DATA BASE ',2A5,/,
+     X          5X,'  NOT FOUND IN DBNAME ARRAY.',//)
+        IERR=IFATAL
+
+*               RETURN
+
+        GO TO 999
+
+*               CALCULATE DATA BASE NUMBER
+
+140     INUM=I/2+1
+
+*               RETURN
+
+999     RETURN
+        END
