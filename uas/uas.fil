@@ -1,0 +1,314 @@
+                        2.1  CCT -- Circuit Characteristic Type
+
+
+             Each  circuit has  associated  with it  (at the  point  of circuit
+        origination) a Circuit Characteristic Type (CCT).  If a  terminal port,
+        it may also have associated with it a Terminal-ID (TID).
+
+           TC: Throughput  Class:  Specifies  the "Bandwidth"  of  the circuit.
+               Increasing value  corresponds to increased  bandwidth available:
+               0 = minimum (64  characters/second max.);  3 =  maximum (limited
+               to circuit paths available).
+           Service Type: Specifies  the  prefered circuit  routing:  B  = Batch
+               (route over Satellite paths); I = Interactive (route over normal
+               paths).
+            (NOTE: Throughput Class and Service Type are used by the Supervisor
+               to initialize and route  the circuit for the  service requested.
+               The values shown are defaults; they may be over-ridden as a part
+               of the normal login-process.)
+           HDX: Half-Duplex.
+           *:  Auxiliary circuit is a special case;  It is not a  CCT presented
+               to  the  supervisor  as  a  part  of  a  normal circuit-building
+               request,  rather  it is  keyed  to the  METHOD  of  building the
+               circuit.   It is  thus not  valid in  a normal  request,  but is
+               information made available to the destination host.
+           **: Aux Through Gateway is another special case;  It  is effectively
+               the complement of Auxiliary circuit.  That is, an  interface can
+               request a normal circuit using this CCT;  it is presented to the
+               host as an Auxiliary circuit.
+
+             The following CCT's are defined:
+
+
+
+
+
+
+
+        10                     TYMNET Circuit Protocols             CIRCUIT.DOC
+        Circuit Origination                                    February 4, 1986
+
+
+           Circuit             Input     Default:        Protocol
+        Characteristic   TID [/Output] TC:   Service   
+           Type              Baud Rate        type:
+           (CCT)
+
+            0*            -      -      2       B       Auxiliary circuit
+            1             A     300     0       I       ASYNC: ASCII
+            2             C     300     0       I       ASYNC: ASCII
+            3            E,I    300     0       I       ASYNC: ASCII
+            4             G     300     0       I       ASYNC: ASCII
+            5             B     150     0       I       ASYNC: ASCII
+            6             F     150     0       I       ASYNC: ASCII
+            7             J     150     0       I       ASYNC: ASCII
+            8            <CR>   300     0       I       ASYNC: 3767
+            9            <CR>   134     0       I       ASYNC: 2741
+           10             D     110     0       I       ASYNC: ASCII
+           11             -      -      3       B       SYNC: HSA
+           12           A,G,I   1200    1       I       ASYNC: ASCII
+           13             -      -      1       B       ASYNC: Polled Terminal
+           14**           -      -      2       B       Aux Through Gateway
+           15             -     Var.    0       I       ASYNC: Baudot
+           16           A,G,I   2400    2       I       ASYNC: ASCII
+           17             -      -      2       B       SYNC: Polled Terminals
+           18             -      -      3       B       SYNC: Point-to-Point
+           19           A,G,I   4800    2       I       ASYNC: ASCII
+           20           A,G,I   9600    3       I       ASYNC: ASCII
+           21             -      -      2       I       Multiplexed PVC
+           22             -      -      1       B       ASYNC: Audio Response
+           23             -     75/1200 1       I       ASYNC: ASCII
+           24             -      -      3       I       SYNC: SDLC
+           25             Y      -      0       I       Transaction Terminals
+           26             -      -      2       B       Host-Originated
+         27-30                                          not in use
+           31**           -      -      2       B       Aux Through Gateway
+                                                        (Transparant;  NET940
+                                                         Gateway ONLY!)
+           32*            -      -      2       B       HDX Auxiliary circuit
+           33             A     300     0       I       ASYNC: HDX ASCII
+           34             C     300     0       I       ASYNC: HDX ASCII
+           35            E,I    300     0       I       ASYNC: HDX ASCII
+           36             G     300     0       I       ASYNC: HDX ASCII
+           37             B     150     0       I       ASYNC: HDX ASCII
+           38             F     150     0       I       ASYNC: HDX ASCII
+           39             J     150     0       I       ASYNC: HDX ASCII
+         40-41                                          not in use
+           42             D     110     0       I       ASYNC: HDX ASCII
+           43                                           not in use
+           44           A,G,I   1200    1       I       ASYNC: HDX ASCII
+           45                                           not in use
+           46**           -      -      2       B       HDX Aux Through Gateway
+           47             -     Var.    0       I       ASYNC: HDX Baudot
+           48           A,G,I   2400    2       I       ASYNC: HDX ASCII
+         49-50                                          not in use
+
+        11                     TYMNET Circuit Protocols             CIRCUIT.DOC
+        Circuit Origination                                    February 4, 1986
+
+
+           51           A,G,I   4800    2       I       ASYNC: HDX ASCII
+           52           A,G,I   9600    3       I       ASYNC: HDX ASCII
+         53-62                                          not in use
+           63**           -      -      2       B       HDX Aux Through Gateway
+                                                        (Transparant;  NET940
+                                                         Gateway ONLY!)
+
+
+
+
+
+
+                                    2.2  Logging In
+
+
+             After the  terminal is  connected, the  calling port  enters login
+        state.  Variables are initialized according to the requirements  of the
+        terminal.
+
+             In this state  there is no network  circuit to the port.   A login
+        string is  requested, and  then ASCII characters  are accepted  for the
+        login string.  The login  consists of two parts:  the  username string,
+        and  the password  string.  The  username characters  are  echoed.  The
+        following characters, which may appear anywhere in the username string,
+        have special significance:
+
+           Control-A:  Causes the Throughput Class  of the circuit to  be built
+               using this logon string to be 64cps.
+           Control-B:  Causes the Throughput Class  of the circuit to  be built
+               using this login string to be 128 cps.
+           Control-C:  Causes the Throughput Class  of the circuit to  be built
+               using this login string to be 512 cps.  This is the  default for
+               type 0 (Aux circuit).
+           Control-D:  Causes the Throughput Class  of the circuit to  be built
+               using this login string to be 2048 cps.
+           Control-I:  Requests that  the circuit path  be selected  to enhance
+               response time, for Interactive usage.
+           Control-H:  Sets the Half Duplex (HDX) variable to 1.
+           Control-K:  Sets   the   KATAKANA  variable   to   1  (Configuration
+               dependent).
+           Control-P:  Sets the Parity variable to 1.
+           Control-R:  Sets the Reverse X-enable variable to 1.
+           Control-U:  Sets   the   Uppercase   (KATAKANA)   variable    to   1
+               (Configuration dependent).
+           Control-V:  Requests that  the circuit path  be selected  to enhance
+               bandwidth  (potentially at  the expense  of response  time), for
+               high-Volume traffic usage.
+           Control-W:  Erases characters in the login string back to a colon or
+               to the beginning  of the string  (i.e.  cancels the  username or
+               system number typed so far.
+           Control-X:  Sets the X-enable variable to 1.
+
+             The following characters apply to both the username and password:
+
+        12                     TYMNET Circuit Protocols             CIRCUIT.DOC
+        Circuit Origination                                    February 4, 1986
+
+
+           Escape:  Erases the login string and re-enters login state.
+           Carriage Return:  Terminates the login string.
+           Semicolon:  Terminates the login string.
+
+
+             The  username string  consists of  a username  (and  optionally, a
+        colon,  and the  "destination  host number").   If the  colon  and host
+        number are omitted,  the "home" system of  the username is used  as the
+        callee (destination host number).
+
+             The Supervisor  searches the Master  User Directory (MUD)  for the
+        specified username.
+
+             If the username is not  in the MUD, an error diagnostic  is issued
+        and the port re-enters login state.
+
+             If the username is in  the MUD, then a password is  accepted.  The
+        password and its terminator are not echoed.  The terminator  causes the
+        password to be verified;  if good, the circuit will be built.
+
+             If  the  login string  and  password are  not  completely received
+        within  about  2  minutes  of  entering  login  state,  then  an  error
+        diagnostic is issued, after which the terminal is disconnected.
+
+             A function  ("cipher") of  the password  is computed  and compared
+        with the  value stored in  the MUD.  If  they do not  match, or  if the
+        username is not valid on  the destination host, an error  diagnostic is
+        issued and the port re-enters login state.
+
+             If the passwords match, the supervisor tries to build a circuit to
+        the callee.  The originating  port is the caller.  If  unsuccessful, an
+        error diagnostic is issued and the port re-enters login state.
+
+             The terminal type  code for the circuit  is the type (CCT)  of the
+        terminal, plus 32d if the terminal is half-duplex (e.g. a Control-H was
+        typed in the login string);  this is passed to the callee.
+
+             A  variant  form of  login  is the  Auxiliary  Circuit.   This can
+        originate only at valid hosts, and requires a special form of protocol.
+        Usage is  similar to  that described for  normal circuits,  except that
+        there is  no password;  there  is also no  facility for retry  on error
+        conditions.
+
+
+
+
+
+
+
+
+
+
+
+
+        13                     TYMNET Circuit Protocols             CIRCUIT.DOC
+        Interface Information Exchange in TYMNET               February 4, 1986
+
+
+
+
+
+
+                     3 -  Interface Information Exchange in TYMNET
+
+
+             Several  interfaces  in the  network  have a  need  to communicate
+        information at a level that is below the level of the end  user ("super
+        signal").   Both  the  circuit  originator  (caller)  and  the  circuit
+        terminator (callee) of a circuit  need to know what form of  message is
+        acceptable to the other end before this communication may begin.
+
+             This  chapter describes  the  method that  is used  to  solve this
+        problem.
+
+             First, the method used to determine if both ends of a  circuit are
+        intelligent enough to communicate their needs is described.
+
+             Second, the method used to communicate these needs is defined.
+
+
+
+
+
+
+                             3.1  Determining Intelligence
+
+
+             Each end of a circuit must  know that the other end is  capable of
+        supporting IIX.   An interface  capable of  IIX is  considered "smart".
+        One that is not capable of IIX is "dumb".
+
+             Whenever  a  host status  message  is sent  to  the  supervisor an
+        indication of whether  this callee is smart  or dumb is also  sent.  If
+        this  information is  lacking (as  in older  interfaces) the  callee is
+        considered dumb.
+
+             When  an  caller  requests  a  circuit  from  the   supervisor  an
+        indication of whether  this caller is smart  or dumb is also  sent.  If
+        this  information is  lacking (as  in older  interfaces) the  caller is
+        considered dumb.
+
+             When the  circuit is  completed the  supervisor will  inform smart
+        interfaces (both ends if both are smart) whether the other end is smart
+        or dumb.  Dumb ends are  told nothing of the intelligence of  the other
+        end.  Therefore, if an end is smart it will expect an indication of the
+        other ends intelligence before it consideres the circuit  complete.  If
+        the other end is dumb this end will revert to being dumb.
+
+             At this point  both ends are either  smart or dumb.  If  both ends
+        are dumb then the  interaction is complete and  communication continues
+
+
+        14                     TYMNET Circuit Protocols             CIRCUIT.DOC
+        Interface Information Exchange in TYMNET               February 4, 1986
+
+
+        as if IIX had never been  invoked.  If both ends are smart then  IIX is
+        invoked.
+
+
+
+
+
+
+                          3.2  Interface Information Exchange
+
+
+             Before any other information  can be exchanged the caller  and the
+        callee must know  what dialect (if any)  will be used.   Therefore, the
+        callee of  a circuit will  send this information  as soon as  a circuit
+        from a  smart caller  is established.   The callee  will then  wait for
+        response from the caller.  The callee will send nothing on a circuit to
+        a smart caller until it has received this response from the caller.
+
+             This first message from the  circuit callee  is a list of  all the
+        dialects that the callee is willing to support at this time.   They are
+        listed in decending order of desirability.  The caller will pick one of
+        these dialects and send a  dialect accepted message to the  callee that
+        indicates the chosen dialect.   The callee can not send  anything until
+        it receives the response from the caller.  It then may start  using the
+        chosen dialect immediately.  The caller may use the dialect as  soon as
+        it sends the response.
+
+             A  dialect exchange  may be  initiated again  at any  time  and by
+        either  end of  the circuit.   It  is not  necessary to  list  the same
+        dialects each time the exchange is initiated.
+
+             For example, it may be desirable to start out  communicating using
+        only ASCII characters so as  to allow the user to perform  some initial
+        call setup.  Later the user might trigger a dialect message to  be sent
+        either from the caller or the callee.
+
+
+
+
+
+    
