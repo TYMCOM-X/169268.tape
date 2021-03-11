@@ -1,0 +1,276 @@
+.SS(TEST MECHANICS)
+
+.begin box
+ I.  Quality Ceritification of Test Environment
+
+     Purpose & Objective of this section I is to establish
+     confidence that all equipment is properly configured
+     and performing nominally:
+
+     A.  Data Scope Calibration
+
+	 1.  Check Service/Calibration Dates of Scopes
+	     Record Dates/Serialization
+
+         2.  Pass test packet from Scope to Scope, confirm time
+	     intervals are equal relative to each other
+	     Record baseline interval ratios/averages
+
+     B.  Network Event Monitors
+
+	 NTSNET Circuit Multiplexer Host 0010 will be utilized as a
+	 Primary Network LOGON point.  All subsequent circuits will
+	 be constructed and "pathed" to via MUX 10, Username: NTS.
+	     
+	 1.  LOGON to (TELERATE:37) set Aux Circuit license and open
+	     RECORD file to log all subsequent data into.  Filespec =
+	     PROBE.LOG.  Execute GO (SPL)TAUX and LOGON to NTSNET
+	     gateway Host 267.  Upon transit of gateway, LOGON to
+	     PROBE process.  (Usernames/passwords will be provided
+	     to STI and TELERATE consultants at actual test time,
+	     not for publication)
+
+        2.   PROBE status of network
+	     Execute/record the following:
+
+	     a:AN (All Nodes, Node types, Node Code versions, Host
+		  numbers, crash counts and upstream Node numbers)
+
+	     b:LSHUT (List all pairs of Nodes with Shut links, 
+		     updated only once/minute)
+
+	     c:NODE XXXX (XXXX = variable for each Node in Telerate
+		         Test network.  Execute for each Node on 
+			 Figure 1 Topological Reference Sheet)
+
+	*    At this time leave the PROBE log file open and prepare
+	     for another network LOGON.  Do not execute the SHUT
+	     commands prior to performing the individual Nodal
+	     diagnostics.
+
+*	     d:NSHUT YYYY (YYYY = variable for Nodes 2130, 2131,
+		          2132, 2133, 2134, 2135, 2136, 2137)
+
+*	     e:LSHUT (Wait 1 minute and verify shuts of target Nodes)
+
+
+	 C.  Nodal Event Monitors
+
+	     3. LOGON to (TELRATE:37), open a second RECORD file,
+	        filespec = DDT.LOG.  Set the AC license and LOGON
+	        to NTSNET gateway Host again.  LOGON to DDT processes
+		in primary Nodes 2130, 2131, 2132, 2133, 2134, 2135,
+		2136, 2137  and perform the following commands to
+		establish baseline evaluation off primarily the 
+		Switching Nodes, secondarily the Access Nodes and
+		tertiarily the DTE Simulation/Support Nodes:
+
+		a:?STAT (Slot 00 only)
+
+		b>ND
+
+		c>NS
+
+		d>KSS
+
+		e>SS
+
+		f>BS
+
+		g>PQ
+
+		h>HS
+
+		i>CL20
+
+		j>[CNTL]C, ?CPU, ?LU, ^FF, ?VERN
+
+*		At this step LOGOFF from Nodes 2130, 213 and
+		proceed to examine the Access Nodes and DTE
+		simulators executing additional commands.  
+
+	     4. Access Node and Support Node DDT commands:
+
+		a:^1, ?CPU, ?HOST, ?LU, ?VERN
+
+		b:?STAT, SIO, [CNTL]C
+
+*		Determination of fundamental machine conditions is
+		complete.  Leaving the existing DDT circuits pathed
+		to Nodes 2132, 2133, 2135 and 2137 Slot 01 return to
+		the original PROBE Aux circuit from (TELRATE:37) and
+		execute the commands specified in section B2d (NSHUT)
+		to control all subsequent circuit routing throughout
+		the testing.
+	
+	 D. Establish that the methodology prescribed in the Acceptance
+	    Unit/System test plan performs as advertised, and establish
+	    the baseline end to end traffic delay time measurements.
+
+	     1. LOGON to TPUT Hosts 2000, 2002, 2004, 2006 and
+		generate discreet circuits with 20 byte/packet
+		data transfers
+
+	       a:Return to PROBE and remove link shuts from Node pairs
+		 2132-2133, 2134-2135, 2135-2136, 2136-2137, 2034-2134,
+		 2034-2135 enabling symmetrical end to end circuit paths
+		 from TPUT Host through Access Nodes and parallel TPUT
+		 Hosts with the RSHUT command.
+
+	       b:From MUX 10 path to TPUT Hosts 2000, 2006
+
+	       c:Make 1 circuit, M1
+
+	       d:LOGON to DTE simulator, NTS:2750;password[CR][CR]
+		 DTE will "home" circuit to A2 DCE Host 2720
+	
+	       e:LOGON from A2 DCE to A1 DCE, NTS:2710;password[CR]
+		 DCE will be "homed" circuit to DTE Host 2730 
+
+	       f:LOGON from DTE Host 2730 to TPUT Slave Host 2007,
+		 NTS:2007;password[CR][^Z]
+
+	       g:Set a BURST value of 16 Bytes to send to ISIS, B16[CR]
+
+               h:Set a CPS rate of 16 CPS, C16[CR]
+
+	       i:Output the data bursts, N[CR]
+
+
+.end
+
+.SS(TYMNET X.25 I/O PROCESSES)
+
+     It is appropriate at this moment to provide a brief explanation of
+the theory of operation driving the Tymnet X.25 which will be used to
+observe the data flow through the Access Nodes I/O channels.  In the
+Telerate application each Tymnet DCE Host will service one (1) LAN over
+a V.24 9600 bps I/O port.  As we expect to normally service three (3) LANs 
+and six (6) LANs under full backup duty cycles, the Acceptance X.25 test
+presents six (6) Hosts/Ports per slot interface.  Each port translates to
+a specific logical unit which has a unique serial I/O area.  The start
+and end slot addresses (virtual) are located at XCOM labels SIOTn and SIOXn.
+Let n equal the slot logical unit number 0 - 5 for the six LUs assigned to
+the Telerate interface.
+
+     At the start of the SIO area for each LU is the SIO status area.  The
+contents of the Zilog SIO device Read Registers R0,R1 are written here along
+with miscellaneous error counts (CRC, ABORT, IDLE counts) and any non-zero
+SIO interrupts with an associated FASTC time stamp.  The SIO command issued
+as per instructions under the DDT commands will be reading this field.
+Non-zero return codes here would be: 2 - CCW (Channel Command Word) error,
+6 - Receive overrun/Transmit underrun or 8 - I/O Command Error (at which
+time we would probably stop and replace the IOC processor).  Following the
+status area are the initialization, transmit, receive channel programs and
+their transmit, receive buffers.
+
+     INCWn, the slot's X.25 input channel command program, sets up the
+size of the input buffer and the maximum record size allowable determined
+in the X.25 slot Tymfile.  The input channel routine is executed either
+after the slot start execution time, LUn line initialization and/or after
+the non-zero return status code 6 is read (receive underrun).  We will
+monitor the receive buffer which follows the INCWn area for the 20 byte
+packets being sent from the DTE simulator.  The address for the receive buffer
+is associated with the label RBUFn.  Specifying the NAD command %P in the
+slot command file at assembly time will put the state information and all
+of the symbols we will use for debugging and verifying the Acceptance
+process.  The first halfword of RBUFn should be FFFFx indicating a record
+has been read in.  8 bytes later is the byte count of the data record read
+followed by the input data and another halfword FFFFx which marks the 
+current end of the last record received.  The receive buffer is a circular
+buffer which will wrap when the received record can not be aligned in the
+remaining RBUFn area.
+
+     The SIO Tymnet X.25 output structure is divided into three separate
+output data fields.  A transmit rotor (control) list and two separate data
+areas, an I-Frame and a non-I-Frame field.  We are most interested in 
+observing the 20 byte CCWs (packets) in the I-Frame field.  The rotor list
+of commands field length is equal to the max packet window size specified in
+the slot Tymfile for the link.  Each entry consists of an output command
+followed by a jump to the next output command.  The last entry in the field
+contains a jump to the first entry.  With each new entry, the output command,
+address of its output buffer are put on the list.  If chaining commands the
+jump is placed in the entry being chained to and the next entry gets its output
+command and address.  If chaining the completion status is 100x, if complete
+the status is 200x.  By reading the fields at the addresses associated with
+the labels TCCLn (transmit channel control list), OSECn (output sector) and
+TCCWn (transmit CCW) we will monitor the size and state of the output X.25
+records.
+
+.begin box
+
+	2.  Return to DDT circuits and verify origination DTE is
+	    transmitting 20 Byte packets to A1 DCE.
+            Access Nodes 2132,2133 monitor address fields:
+
+	    ICCW0=21C50x  RBUF0=221E0x  TCCW0=21D80x  SIOT0=21C00x
+	    ICCW1=22750x  RBUF1=22CE0x  TCCW1=22880x  SIOT1=22700x
+	    ICCW2=23250x  RBUF2=237E0x  TCCW2=23380x  SIOT2=23200x
+	    ICCW3=23D50x  RBUF3=242E0x  TCCW3=23E80x  SIOT3=23D00x
+	    ICCW4=24850x  RBUF4=24DE0x  TCCW4=24980x  SIOT4=24800x
+	    ICCW5=25350x  RBUF5=258E0x  TCCW5=25480x  SIOT5=25300x
+
+	    a:Read the address fields specified in the table to
+	      verify the actual data records being received and
+	      transmitted on the port.  
+
+	    b:Open a receive file on the data scopes and record the
+	      transitting data to disk with time interval stamps for
+	      correlation being the internal Nodal data descriptors
+	      and the independent external descriptors created.
+
+	    c:LOGOFF from all internal DDT processes on all nodes at
+	      this time, reset the data scopes acquisition sampling
+	      and record 1000 samples of the single channel end to end
+	      transfer.
+
+	    d:MUX to TPUT Host 2002 and create an additional 14
+              circuits through the DTE Hosts 2751, 2752 which again
+              home to the Access DCE Hosts at which time the circuits
+              will be directed to TPUT Slave Host 2005.
+
+            e:Set the Burst to 81 and 111 as on the measured circuit
+              and set for continuous output.  Set CPS rates of 81 and
+              111 per circuit to achieve the background load across the
+              Access Nodes Network link.   Return to PROBE,
+	      Shut the 2132-2133 link, RShut the links 2130-2132 and
+	      2131-2133, return to Host 2004 and construct the additonal
+	      8 circuits through Hosts 2760-2723-2740-2713, 2761-2724-
+	      2741-2714 and 2762-2725-2742-2715 all destined to TPUT
+	      Host 2003.  Set a Burst of 51 and CPS of 51 per circuit.
+	      Open new receive files and sample 1000 passes.
+
+.end
+
+     We now have a total end to end delay from A1 to A2 with a load of
+1750 CPS in + 1750 CPS out each Access Node.  Halt the testing at this
+time and kill the test measurement circuit and rebuild it over the
+network path from A2-S2-S1-A1 to measure the added Switcher delays.
+
+     Repeat exactly every previous test up to this point.  The difference
+between the first time intervals and the second time intervals will translate
+to the delays of Switching Nodes S1 and S2 under a single circuit 16 byte
+/packet load with up to a 3500 CPS load.  Open a new receive file
+to save 1000 samples to data scope disks.
+
+     At this time remove S1 from the circuit path and directly connect S2 to
+A1, and again repeat every previous test for 1000 passes.  Save the samples
+to disks.  We now can calculate the delay of Switcher S1.  [(DS1+DS2)/2 -
+the 56K bps serialization delay] will establish the average XL Switcher Nodal
+delays.  We can at this time also calculate then the Access Nodal delays from
+the end to end time stamps less serialization and Switching Nodal delays.
+
+     At this time reestablish the "normal" S1 to S2 56 KB link and connect
+A1 and A2 as per Figure 1.  Return to the PROBE circuit and remove the
+link shuts from 2132-2133.  The test bed has been modified to provide
+switcher node 2131 with four (4) network neighbors all on 56 KB, V.35
+lines.  The baseload traffic will be constructed across 2131 from these
+four nodes at the rate of 12,150 CPS.  The measured circuit will still
+be pathed via nodes 2132, 2133.  The Switching Node performance tests can
+be now completed.  From PROBE execute the LSHUT to review the remaining
+shut links and remove all shuts between the Switching Nodes and their neighbors
+with the resident TPUT load Hosts (2030,2031,2142,2143,2035,2140,2144,
+2145,2003,2034).  The traffic load will be a bidirectional, symmetrically
+balanced load.  Each of the Switching neighbor nodes contains two (2)
+TPUT load Hosts.
+
