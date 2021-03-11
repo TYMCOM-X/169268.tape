@@ -1,0 +1,745 @@
+C	PROGRAM:(MSANAL)FRCST.FTF
+C	AUTHOR:	EDSEL GARCIAMENDEZ BUDAR
+C	DATE:	NOVEMBER 30, 1984.
+C	UPDATED: JULY 15,1987 (BY TRUDY L. LEONHARD)
+C	VERSION:2.2
+C	PURPOSE:To produce a forecast for the connect-hours in each one of
+C		our rotaries with 4 methods. It uses a flat growth rate  for
+C		all the network, a flat growth rate for each rotary, a linear
+C		regression model, and also an Exponential Smoothing with trend
+C		algorithm. The program output (forecast) should be very useful
+C		to engineer our rotaries properly, taking into account
+C		future growth.
+
+C	PROCED.:To run the program, run the procedure CONNECT.HISTORY.REPORT,
+C		under MAGNUM ROTARY.PGRADE in Pgrade (system 28). Run it for as
+C		many as 36 months of history, but not earlier than March 1983.
+C		Obtain the output file sorted by City. Then, rename the output
+C		file HISTRY.CNT to HISTRY.DMI. Get into X22 data ase system and
+C		load the data base HISTRY.DMS. Use then the DPL program
+C		(MSANAL)HISTRY.DMC to clean the data base.
+
+C		Now you can run this FRCST.FTF program with the most recent
+C		data available. The default input file name for the program
+C		is (PGRADE:38)HSTRY1.CNT, and the default output file name
+C		is FRCST.DAT.
+
+C	DOCUM.:	For further information, please consult the Documentation
+C		under (PGRADE:38)FRCST.DOC. A statistical valiation on the
+C		forecasting methods has been performed (refer to my memo
+C		entitled "Statistical Forecast Validation" on October 25,
+C		1985). Please address any chages and suggestions to
+C		Edsel Garciamendez Budar, TYMNET Management Sciences.
+
+C	STRUCT.:The program is structured in 7 subroutines:
+C		BEGINNING:		Initializes parameters.
+C		READING:		Accepts historical observations.
+C		CORREC:			Corrects starting/ending dates.
+C		FLATGROW:		Computes flat/rotary growth forecast.
+C		LINREGR:		Computes Linear regression forecast.
+C		EXPSMO:			Computes Expntl. Smoothng. forecast.
+C		WRITING:		Writes outputs to files.
+
+
+	DIMENSION X(1250,36), ELX(1250), EEX(1250), IT(5)
+	DIMENSION ELX2(1250), ELX3(1250)
+	DIMENSION EEX2(1250), EEX3(1250)
+	DIMENSION ENX(1250), ERX(1250), GR(1250)
+	DIMENSION BINTE(1250), SLOPE(1250), PILOT(1250,4)
+	DIMENSION NODE(1250), DENSI(1250), MODEM(1250,3)
+	DIMENSION CITY(1250,4), INFILE(4), OUTFIL(4)
+	DIMENSION ISTR(1250), IEND(1250)
+	DIMENSION ACOEF(1250), BCOEF(1250)
+	DIMENSION Y(1250,36), Z(1250,36)
+C		Main Program starts here
+
+C		The first thing to do is to ask for the parameters,
+C		or to notify of the default values.
+
+	CALL BEGINNING (ALPHA, BETHA, N, IT, G, INFILE, OUTFIL,
+     1                   ANSWER)     
+
+C		Now the program reads the input file that contains
+C		the average connect-hours for the last N months.
+
+	CALL READING (X, N, PILOT, NODE, DENSI, MODEM, CITY,
+     1			MAXROT, INFILE, MAXSIT, ANSWER)
+
+C		Before computing the forecast estimates, the program
+C		checks the records to disregard months for which no
+C		service was available.
+
+	CALL CORREC (X, N, IT, MAXSIT, ISTR, IEND, CITY)
+
+C		The first forecast consists of applying a flat growth
+C		rate per rotary and network-wise.
+
+
+C	CALL SMOO1 (X, N, MAXSIT, ISTR, Y)
+C	CALL SMOO2 (X, N, MAXSIT, ISTR, Z)
+
+	CALL FLATGROW (X, N, MAXROT, G, ENX, ERX, IT, GR, MAXSIT,
+     1		ISTR, IEND)
+
+C		The next step is to compute the forecast EX(IT(t)) using linear
+C		regresion for the iT period from now (N+IT month).
+
+	CALL POW (X, N, MAXROT, IT, BINTE, SLOPE, ELX, MAXSIT,
+     1		ISTR, IEND, ACOEF, BCOEF)
+	
+C	CALL POW (Y, N, MAXROT, IT, BINTE, SLOPE, ELX2, MAXSIT,
+C    1		ISTR, IEND, ACOEF, BCOEF)
+
+C	CALL POW (Z, N, MAXROT, IT, BINTE, SLOPE, ELX3, MAXSIT,
+C    1          ISTR, IEND, ACOEF, BCOEF)
+	
+
+
+C		Now we compute the forecast EX(IT(t)) using the method of
+C		exponential smoothing with trend.
+
+	CALL EXPSMO (X, N, MAXROT, IT, BINTE, SLOPE, EEX,
+     1		ALPHA, BETHA, MAXSIT, ISTR, IEND)
+
+C	CALL EXPSMO (Y, N, MAXROT, IT, BINTE, SLOPE, EEX2,                
+C    1		ALPHA, BETHA, MAXSIT, ISTR, IEND)
+
+C	CALL EXPSMO (Z, N, MAXROT, IT, BINTE, SLOPE, EEX3,                
+C    1		ALPHA, BETHA, MAXSIT, ISTR, IEND)
+
+
+
+
+C		Finally we print the results into a file.
+	OPEN(20, OUTFIL, OUTPUT)
+	OPEN (25, 'ANALYS.DAT', OUTPUT)
+	CALL DATE (DIA)
+	CALL WRITING (PILOT, NODE, DENSI, MODEM, CITY,
+     1	ENX, ERX, ELX, EEX, MAXROT, OUTFIL, ALPHA, BETHA, G, IT,
+     2	X, BINTE, SLOPE, GR, N, MAXSIT, ISTR, IEND, ANSWER, ACOEF,
+     3  BCOEF)
+
+C	CALL WRITING (PILOT, NODE, DENSI, MODEM, CITY,
+C    1	ENX, ERX, ELX2, EEX2, MAXROT, OUTFIL, ALPHA, BETHA, G, IT,
+C    2	Y, BINTE, SLOPE, GR, N, MAXSIT, ISTR, IEND, ANSWER, ACOEF,
+C    3  BCOEF)
+
+C	CALL WRITING (PILOT, NODE, DENSI, MODEM, CITY,
+C     1	ENX, ERX, ELX3, EEX3, MAXROT, OUTFIL, ALPHA, BETHA, G, IT,
+C     2	Z, BINTE, SLOPE, GR, N, MAXSIT, ISTR, IEND, ANSWER, ACOEF,
+C     3  BCOEF)
+
+	CALL EXIT
+	END
+
+C		End of main program.
+
+
+C	**********************************************************************
+C	*	SUBROUTINE BEGINNING
+C	**********************************************************************
+
+	SUBROUTINE BEGINNING (ALPHA, BETHA, N, IT, G, INFILE, OUTFIL,
+     1                        ANSWER)
+
+	DIMENSION IT(5), INFILE(4), OUTFIL(4)
+
+C		This subroutine accepts the input parameters to use in
+C		the forecast. Otherwise, it displays the default values.
+
+	TYPE 10
+10	FORMAT (///,40('* '),/,5X,'WELCOME TO THE PROGRAM FRCST.FTF (',       
+     1		'2.2). IT WILL PROVIDE YOU ',/,5X,'WITH A FORECAST OF',
+     2		' THE AVERAGE DAILY CONNECT-HOURS PER ROTARY/CITY',
+     3		'.',/,5X,'YOU NEED TO CREATE THE FILE ',
+     4		'(PGRADE:28)HSTRY1.CNT UNDER MAG ROTARY.PG',
+     5		'RADE',/,5X,'FOR 5-36 MONTHS BEFORE RUNNING THIS ',
+     6		'PROGRAM. PLEASE TYPE IN AS NEEDED.',/,5X,'CONSULT ',
+     7		'(PGRADE)FRCST.DOC, OR EDSEL GARCIAMENDEZ BUDAR.',/)
+
+	ALPHA = 0.2
+	BETHA = 0.2
+	N = 36
+	JT = 1
+	IT(1) = 6
+	G=3.44
+	G1=(((G/100.0+1)**12)-1.0)*100.0
+	INFILE(1) = '(PGRA'
+	INFILE(2) = 'DE)HS'
+	INFILE(3) = 'TRY1.'
+	INFILE(4) = 'CNT  '
+	OUTFIL(1) = 'FRCST'
+	OUTFIL(2) = '.DAT '
+	OUTFIL(3) = '     '
+	OUTFIL(4) = '     '
+        ANSWER = 'Y'
+
+	TYPE 20, ALPHA,BETHA,N,IT(1),G,G1,ANSWER,(INFILE(K),K=1,4),
+     1		(OUTFIL(L),L=1,4)
+20	FORMAT (/,3X,'THE DEFAULT PARAMETERS ARE AS ',
+     1		'FOLLOWS:',//,5X,'ALPHA= ',F3.1,/,5X,'BETA= ',
+     2		' ',F3.1,/,5X,'NUMBER OF HISTORICAL MONTHS=',
+     3		' ',I2,/,5X,'FUTURE MONTH TO FORECAST=IT(1)=',
+     4		' ',I2,/,5X,'AVERAGE MONTHLY GROWTH RATE=G=% ',
+     5		' ',F4.2,' (',F5.1,' % ANNUALLY)',/,5X,'SEPARATED',
+     6		' 1200 FROM 2400 BPS ROTARIES ? : ',A1,/,5X,'IN',
+     7		'PUT FILE NAME= ',4A5,/,5X,'OUTPUT FILE NAME ',
+     8		'= ',4A5,/)
+
+	G= G/100.0
+
+30	TYPE 40
+40	FORMAT (//,5X,'WOULD YOU LIKE TO INPUT YOUR OWN ',
+     1		'PARAMETERS? Y/N: ',$)
+	READ (5,50)REPON
+50	FORMAT(A1)
+	IF (REPON.EQ.'Y'.OR.REPON.EQ.'y')GO TO 60
+	IF (REPON.EQ.'N'.OR.REPON.EQ.'n')GO TO 300
+	GO TO 30
+
+60	TYPE 70
+70	FORMAT (///,5X,'ALPHA = ',$)
+80	READ (5,90,ERR=60)ALPHA
+90	FORMAT (F4.2)
+100	TYPE 110
+110	FORMAT (/,5X,'BETA = ',$)
+	READ (5,90,ERR=100)BETHA
+120	TYPE 130
+130	FORMAT (/,5X,'NUMBER OF HISTORICAL MONTHS = N = ',$)
+	READ (5,140,ERR=120)N
+140	FORMAT (I2)
+150	TYPE 160
+160	FORMAT (/,5X,'HOW MANY DIFFERENT FORECASTS DO YOU WANT?: ',$)
+	READ (5,140,ERR=150)JT
+	DO 190 I = 1,JT
+170		TYPE 180,I
+180		FORMAT (/,5X,'HOW MANY MONTHS FROM NOW YOU WANT THE ',
+     1			'FORECAST? IT(',I1,') = ',$)
+		READ (5,140,ERR=170)IT(I)
+190	CONTINUE
+200	TYPE 210
+210	FORMAT (/,5X,'AVERAGE MONTHLY GROWTH RATE = % ',$)
+	READ (5,220,ERR=200) G
+220	FORMAT (F7.3)
+	G = G/100.0
+
+222     TYPE 225
+225     FORMAT (/,5X,'WOULD YOU LIKE TO SEPARATE 1200/2400 ROTARIES ',
+     1		'?',/,10X,'PLEASE ANSWER Y/N = ',$)
+        READ (5,226,ERR=222)ANSWER
+226     FORMAT(A1)
+	IF (ANSWER.EQ.'Y'.OR.ANSWER.EQ.'y'.OR.ANSWER.EQ.'N'.OR.
+     1		ANSWER.EQ.'n') GO TO 230
+	GO TO 222
+
+230	TYPE 240
+240	FORMAT (/,5X,'TYPE THE INPUT FILE NAME (MAX 20 CHAR):',$)
+	READ (5,250,ERR=230)INFILE
+250	FORMAT (4A5)
+260	TYPE 270
+270	FORMAT (/,5X,'TYPE THE OUTPUT FILE NAME (MAX 20 CHAR):',$)
+	READ (5,250,ERR=260)OUTFIL
+
+300	RETURN
+	END
+
+
+C	********************************************************************
+C	*		SUBROUTINE READING
+C	********************************************************************
+
+	SUBROUTINE READING (X, N, PILOT, NODE, DENSI, MODEM, CITY,
+     1			MAXROT, INFILE, MAXSIT, ANSWER)
+
+	DIMENSION X(1250,36), PILOT(1250,4), NODE(1250),XX(1250,36)
+	DIMENSION DENSI(1250), MODEM(1250), CITY(1250,4), INFILE(4)
+
+	OPEN (10, INFILE , INPUT)
+	TYPE 1
+1	FORMAT (/,5X,'HOLA. READING INPUT FILE...')
+
+	MAXROT = 1250
+	I = 1
+
+	DO 60 M=1,MAXROT
+10		READ (10,15,ERR=10,END=50)
+     1			(PILOT(M,K),K=1,3), NODE(M), DENSI(M),
+     2			MODEM(M),(CITY(M,L),L=1,4),
+     3			 (XX(M,J),J=1,N)
+15		FORMAT (3A4,1X,I5,1X,A3,1X,A5,2X,4A4,36(F6.2,1X))
+		TYPE 18,
+     1			(PILOT(M,K),K=1,3), NODE(M), DENSI(M),
+     2			MODEM(M),(CITY(M,L),L=1,4),
+     3			 XX(M,1)
+18		FORMAT (1X,3A4,1X,I4,1X,A3,1X,A5,2X,4A4,1X,F6.1)
+
+C					Skip blank lines:
+
+		IF (PILOT(M,2).EQ.'    '.AND.CITY(M,1).EQ.'    ')
+     1			GO TO 10
+
+		IF (M.EQ.1) GO TO 40
+
+C				Depending on wheter we want to do the analysis
+C				at the city level or at the rotary speed level,
+C				we checkkfor modem type:
+
+                IF (ANSWER.EQ.'Y'.OR.ANSWER.EQ.'y')GO TO 20
+                   GO TO 24
+C				We need to compare originating city
+C				and modem type (speed)
+C				to see if we can merge together traffic:
+
+20              IF ((CITY(M,1).EQ.CITY(M-1,1)).AND.(PILOT(M,1).EQ.
+     1                 PILOT(M-1,1)).AND.(MODEM(M-1).EQ.MODEM(M)))
+     2		GO TO 25
+                GO TO 40     
+
+C				If we aggregate traffic at the city level,
+C				we oly need to compare area code and city name:
+
+24		IF ((CITY(M,1).EQ.CITY(M-1,1)).AND.(PILOT(M,1).EQ.
+     1				PILOT(M-1,1))) GO TO 25
+			GO TO 40
+
+C			If the city name (and speed, if applicable)is the same
+C			one, we gather together
+C			the traffic at the same city. But we make sure that
+C			the pilot number assigned to that city is the current
+C			one (since a site might change its pilot number several
+C			times).
+C                                                            Begin from here..
+25		IF (XX(M-1,N).LE.0.0) GO TO 27
+
+		DO 26 KKK =1,4
+			PILOT(M,KKK)=PILOT(M-1,KKK)
+26		CONTINUE
+		NODE(M) = NODE(M-1)
+		DENSI(M) = DENSI(M-1)
+		MODEM(M) = MODEM(M-1)
+
+C				Accumulate connect-hours from the same
+C				city (and same speed, if applicable):
+
+27		DO 30 J = 1,N
+			X(I-1,J) = X(I-1,J) + XX(M,J)
+30		CONTINUE
+C				If the current record has zero in its last
+C				month, we should not record the old pilot:
+
+                IF (XX(M,N).LE.0.0)GO TO 60
+		DO 35 LK=1,4
+			PILOT(I-1,LK) = PILOT(M,LK)
+			CITY(I-1,LK) = CITY(M,LK)
+35		CONTINUE
+		NODE (I-1) = NODE(M)
+		DENSI(I-1) = DENSI(M)
+		MODEM(I-1) = MODEM(M)
+
+		GO TO 60
+C                                                             ..end til here.
+
+C				If the two last records do not have the city
+C				name (and speed, if applicable) in common,
+C				we process them as independent rotaries.
+
+40		DO 45 J = 1,N
+			X(I,J) = XX(M,J)
+45		CONTINUE
+		DO 48 LK=1,4
+			PILOT(I,LK) = PILOT(M,LK)
+			CITY(I,LK) = CITY(M,LK)
+48		CONTINUE
+		NODE (I) = NODE(M)
+		DENSI(I) = DENSI(M)
+		MODEM(I) = MODEM(M)
+			
+		I = I + 1
+C		TYPE 44,I,M
+C44		FORMAT ('  I= ',I4, '   M= ',I4)
+
+		GO TO 60
+
+50		MAXROT = M-1
+		MAXSIT = I-1
+		TYPE 55, MAXROT, MAXSIT
+55		FORMAT (//,5X,'MAXROT= ',I4,'   MAXSIT= ',I4)
+
+60	CONTINUE
+
+
+	RETURN
+	END
+C	**********************************************************************
+C	*		SUBROUTINE CORREC
+C	**********************************************************************
+
+	SUBROUTINE CORREC (X, N, IT, MAXSIT, ISTR, IEND, CITY)
+
+C		The purpose of this subroutine is to correct the stating
+C		and  ending months for which traffic information exists
+C		in each rotary site. If the first "j" months have zero
+C		traffic (new site up until j+1 month), we should not
+C		consider these zeroes for traffic forecast. The
+C		pointer ISTR(I) contains the value of the month for
+C		which traffic in rotary I started the first time (usually 1).
+C		The pointer IEND(I) contains the last month for which there
+C		is traffic information on rotary I (usually N).
+
+	DIMENSION X(1250,36), ISTR(1250), IEND(1250), IT(5)
+	DIMENSION CITY (1250,4)
+
+	DO 50 I = 1, MAXSIT
+		ISTR(I) = N
+		IEND(I) = N
+		NANA = N
+
+		DO 20 JJ = 1,NANA
+C					Find the first month with non-zero
+C					traffic:
+			IF (X(I,JJ).LE.0.0) GO TO 20
+				ISTR(I)=JJ
+				NANA = JJ
+20		CONTINUE
+
+		NANA = N
+		DO 30 KK = ISTR(I),NANA
+C					Lets check which month is the last
+C					non-zero value month:
+			IF (X(I,KK).GT.0.0) GO TO 30
+C					There may be a city that has a zero
+C					traffic value in between months:get it!
+			IF (KK.LT.N.AND.X(I,KK+1).GT.0.0)GO TO 30
+C					Otherwise, KK-1 is the last month with
+C					non-zero values, and stop:
+				IEND(I)=KK-1
+				NANA = KK
+30		CONTINUE
+
+		IF (ISTR(I).GE.IEND(I).AND.X(I,IEND(I)).EQ.0.0)
+     1			TYPE 40, I, (CITY(I,L),L=1,2)
+40			FORMAT(30X,'CITY "',I3,'" ',2A4,' SHOWS',
+     1				' NO TRAFFIC.')
+C		TYPE 66, I, ISTR(I), IEND(I)
+C66		FORMAT (' I=',I4,2I4)
+
+50	CONTINUE
+
+
+	RETURN
+	END
+
+
+
+
+
+
+
+
+
+
+C	**********************************************************************
+C	* THE NEXT TWO SUBROUTINES SMOOTH THE VALLEYS IN THE GSITES' DATA
+C	***********************************************************************
+
+	SUBROUTINE SMOO1 (X, N, MAXSIT, ISTR, Y)
+
+	DIMENSION X(1250,36), ISTR(1250), Y(1250,36)
+	ICOUNT = 0
+
+	DO 50 I = 1, MAXSIT
+	Y(I, ISTR(I)) = X(I, ISTR(I))
+	DO 45 J = ISTR(I) + 1, N
+	IF (X(I,J).LT.X(I,J - 1)) GO TO 20
+	GO TO 30
+20	ICOUNT = ICOUNT + 1
+	GO TO 45
+30	IF (ICOUNT.GT.0) GO TO 35
+	GO TO 40
+35	STEP = (X(I,J) - X(I,J - (ICOUNT + 1)))/(ICOUNT + 1)
+	DO 38 IBKCT = ICOUNT, 1, -1
+	Y(I,J - IBKCT) = Y(I, J-IBKCT - 1) + STEP
+38      CONTINUE
+	ICOUNT = 0
+40	Y(I,J) = X(I,J)
+45	CONTINUE
+	IF (ICOUNT.EQ.0) GO TO 50
+	IF (STEP.GT.0) GO TO 46
+	STEP = (X(I,J- ICOUNT - 1) + X(I,J - ICOUNT - 2))/2
+46	DO 48 IBKCT = ICOUNT, 1, -1
+	Y(I, J - IBKCT) = Y(I, J - IBKCT - 1) + STEP
+48	CONTINUE
+50	CONTINUE
+	RETURN
+	END
+
+
+C	******************************************************************
+	SUBROUTINE SMOO2 (X, N, MAXSIT, ISTR, Z)
+	DIMENSION X(1250,36), ISTR(1250), Z(1250, 36)
+
+	ICOUNT = 0
+
+	DO 50 I = 1, MAXSIT
+	Z(I, ISTR(I)) = X(I, ISTR(I))
+	MIN = Z(I, ISTR(I)) 
+	DO 45 J = ISTR(I) + 1, N
+	IF((X(I, J).GT.MIN).OR.(X(I, J).EQ.MIN)) GO TO 30
+	ICOUNT = ICOUNT + 1
+	GO TO 45
+30	IF (X(I, J).LT.X(I, J - 1)) GO TO 32
+	GO TO 33
+32	MIN = X(I, J)
+33	Z(I, J) = X(I, J)
+	IF (ICOUNT.EQ.0) GO TO 45
+	STEP = (X(I, J) - X(I, J - (ICOUNT + 1)))/(ICOUNT + 1)
+	DO 35 IBKCT = ICOUNT, 1, -1
+	Z(I, J - IBKCT) = Z(I, J - IBKCT - 1) + STEP
+35	CONTINUE
+	COUNT = 0
+45	CONTINUE
+50	CONTINUE
+
+	RETURN
+	END
+
+
+
+
+
+C	**********************************************************************
+C	*		SUBROUTINE FLATGROW
+C	**********************************************************************
+
+	SUBROUTINE FLATGROW (X, N, MAXROT, G, ENX, ERX, IT, GR,
+     1		MAXSIT, ISTR, IEND)
+
+C		The purpose of this subroutine is to create the
+C		forecast for the connect-hours based on two methods: a flat
+C		growth rate for all the network, and a flat growth rate for
+C		each rotary. Hence, we need to compute the average growth
+C		rate for each rotary.
+
+	DIMENSION X(1250,36), ENX(1250), ERX(1250), GROW(1250,36)
+	DIMENSION GR(1250), IT(5), ISTR(1250), IEND(1250)
+
+C		ENX is the forecast using a flat network growth rate per
+C		month of G. ERX is the forecast using a flat growth rate
+C		for each rotary per month of GR(i).
+
+	TYPE 1
+1	FORMAT (/,5X,'..... COMPUTING FORECAST WITH FLAT GROWTH...')
+
+	DO 200 I = 1, MAXSIT
+
+		GR(I) = 0.0
+C				There might be sites for which the only traffic
+C				has occured in one month (N or other?) Do not
+C				perform any calculations, else an error occurs:
+
+		IF (ISTR(I).EQ.N)GO TO 110
+
+C				Compare the incremental traffic relative
+C				to a month, for all months available:
+
+		DO 100 J =ISTR(I),N-1
+			GROW(I,J)=0.0
+
+			IF (X(I,J).LT.0.1) GO TO 50
+			GROW(I,J)=(X(I,J+1)-X(I,J))/X(I,J)
+50			GR(I) = GR(I) + GROW(I,J)
+
+100		CONTINUE
+
+		GR(I) = GR(I)/FLOAT(N-ISTR(I))
+110		ERX(I) = X(I,N)*((1.0+GR(I))**IT(1))
+		ENX(I) = X(I,N)*((1.0+G)**IT(1))
+200	CONTINUE
+
+	RETURN
+	END
+
+
+
+C	**********************************************************************
+C	*		SUBROUTINE POW
+C       *
+C       *THIS SUBROUTINE COMPUTES THE A AND B COEFFICIENTS FOR THE POWER 
+C       *EQUATION Y = AX**B. THE EQUATION IS LINEARIZED BY TAKING ITS LOG.
+C       *THEN LINEAR REGRESSION IS USED. TO GET THE PREDICTED TRAFFIC THE A 
+C       *VALUE CALCULATED IN THE LINEAR REGRESSION IS RETRANSFORMED 
+C	**********************************************************************
+	SUBROUTINE POW (X, N, MAXROT, IT, BINTE, SLOPE, ELX, 
+     1		MAXSIT, ISTR, IEND, ACOEF, BCOEF)
+
+C		This subroutine uses the mean square mehod to fit a straight
+C		line through the observed connect-hours values. This is what
+C		is called linear regression.( Y = mX + b)
+
+	DIMENSION X(1250,36), IT(5), SLOPE(1250), BINTE(1250)
+	DIMENSION ELX(1250), ISTR(1250), IEND(1250)
+	DIMENSION ACOEF(1250), BCOEF(1250)
+	TYPE 1
+1	FORMAT (/,5X,'..... COMPUTING GSITE FORECAST...')
+
+	DO 100 I = 1, MAXSIT
+C		Compute the linear regression coefficients for the logs:
+
+		SUMPRO = 0.0
+		SUMSQR = 0.0
+		SUMX   = 0.0
+		SUMY   = 0.0
+		DO 50 J = ISTR(I),N
+			SUMPRO = SUMPRO +ALOG(X(I,J))*ALOG(FLOAT(J-ISTR(I)+1))
+			SUMSQR = SUMSQR +(ALOG(FLOAT(J-ISTR(I)+1)))**2
+			SUMY   = SUMY   + ALOG(X(I,J))
+			SUMX   = SUMX   + ALOG(FLOAT(J-ISTR(I)+1))
+50		CONTINUE
+
+C			If we only have one month of traffic (Nth month),
+C			assume that the slope is the X(I,N) value:
+		SLOPE(I) = ALOG(X(I,N))
+		IF (ISTR(I).EQ.N) GO TO 60
+
+		SLOPE(I) = (SUMPRO-(SUMX*SUMY/FLOAT(N-ISTR(I)+1)))/
+     1			    (SUMSQR - (SUMX**2/FLOAT(N-ISTR(I)+1)))
+60		BINTE(I) = (SUMY-SLOPE(I)*SUMX)/FLOAT(N-ISTR(I)+1)
+
+C		ELX(I) = SLOPE(I)*((N-ISTR(I)+1+IT(1)))
+C    1			   + BINTE(I)
+
+		ACOEF(I) = Exp(BINTE(I))
+		BCOEF(I) = SLOPE(I)
+		ELX(I) = ACOEF(I)*(FLOAT(N-ISTR(I)+1+IT(1)))**BCOEF(I)
+100	CONTINUE
+
+	RETURN
+	END
+
+C	*********************************************************************
+C	*		SUBROUTINE EXPSMO
+C	*********************************************************************
+
+	SUBROUTINE EXPSMO (X, N, MAXROT, IT, BINTE, SLOPE, EEX,
+     1			ALPHA, BETHA, MAXSIT, ISTR, IEND)
+
+C		This subroutine computes the forecast of connect-hours
+C		per rotary using the method of Exponential Smoothing with
+C		trend.
+
+	DIMENSION X(1250,36), BINTE(1250), SLOPE(1250)
+	DIMENSION EEX(1250), IT(5), EXPCX(36), EXPCS(36)
+	DIMENSION ISTR(1250), IEND(1250)
+
+	TYPE 1
+1	FORMAT (/,5X,'..... COMPUTING EXPONENTIAL SMOOTHING VALUES.')
+
+	DO 100 I = 1, MAXSIT
+		EXPCS(ISTR(I)-1)=SLOPE(I)
+C		EXPCX(ISTR(I)-1)=BINTE(I)
+		DO 50 J=ISTR(I),N
+			IF ((J-ISTR(I)+1).GT.1) GO TO 10
+				CEXPCX=BINTE(I)
+				GO TO 15
+10			CEXPCX = EXPCX(J-1)
+15			EXPCX(J) = ALPHA*X(I,J) + (1.0-ALPHA)*
+     1				    (CEXPCX + EXPCS(J-1))
+			EXPCS(J) = BETHA*(EXPCX(J)-CEXPCX) +
+     1				    (1.0-BETHA)*EXPCS(J-1)
+
+50		CONTINUE
+
+		EEX(I)=EXPCX(N)+FLOAT(IT(1))*EXPCS(N)
+
+100	CONTINUE
+
+	RETURN
+	END
+
+C	**********************************************************************
+C	*		SUBROUTINE WRITING
+C	**********************************************************************
+
+	SUBROUTINE WRITING (PILOT, NODE, DENSI, MODEM, CITY, 
+     1	ENX, ERX, ELX, EEX, MAXROT, OUTFIL, ALPHA, BETHA, G, IT,
+     2	X, BINTE, SLOPE, GR, N, MAXSIT, ISTR, IEND, ANSWER, ACOEF,
+     3  BCOEF)
+
+	DIMENSION PILOT(1250,4), NODE(1250), DENSI(1250)
+	DIMENSION CITY(1250,4), ENX(1250), ERX(1250), IT(5)
+	DIMENSION ELX(1250), EEX(1250), MODEM(1250), OUTFIL(4)
+	DIMENSION X(1250,36), GR(1250), BINTE(1250), SLOPE(1250)
+	DIMENSION ISTR(1250), IEND(1250), DIA(2)
+	DIMENSION ACOEF(1250), BCOEF(1250)
+
+	TYPE 1, OUTFIL
+1     	FORMAT(/,11X,'THE OUTPUT FILE IS ',4A5,/,11X,'THE ',
+     1		'FILE WITH PARAMETERS IS (MSANAL)',
+     2		'ANALYS.DAT ! GRACIAS!',/)
+
+        VAR1 = 'CITY '
+        IF (ANSWER.EQ.'Y'.OR.ANSWER.EQ.'y')VAR1 = 'ROTOR'
+
+    	WRITE (20,10)VAR1, IT(1), DIA(1), DIA(2)
+10      FORMAT (/,5X,'TRAFFIC FORECAST FOR EACH LOCAL ACCESS ',A5,
+     1         ' IN CONNECT-HOURS',/,15X,'PER BUSINESS DAY ',
+     2         'FOR ',I2,' MONTHS AHEAD.',15X,2A5,/,80('='),///,
+     3         'PILOT NUMBER',1X,'NODE',2X,'DEN',1X,'MODEM',
+     4         6X,'CITY',7X,'HISTORIC',1X,'CONSTNT.',1X,
+     5         'EXPNENT.','  G',/,45X,'DATA',4X,'GROWTH',3X,'SMOOTHNG',
+     6         ' SITE', /,'============',1X,'=====',1X,'===',1X,
+     7         '=====',6X,'====',6X,'========',1X,'========',
+     8         1X,'========',1X,'====',/)          
+	WRITE (25,20)VAR1, IT(1), DIA(1), DIA(2)
+C20      FORMAT (/,5X,'TRAFFIC FORECAST FOR EACH LOCAL ACCESS ',A5,
+C     1         ' IN CONNECT-HOURS',/,13X,'PER BUSINESS DAY ',
+C     2         'FOR ',I2,'MONTHS AHEAD  ',2A5,/,80('='),///,1X,
+C     3         'PILOT NUMBER',1X,'NODE',1X,'DENSI',1X,'MODEM',
+C     4         6X,'CITY',7X,'HIST VALUE',2X,'ROTOR GROW',1X,
+C     5         2X,'GSITE FRCST',/,36X,'FLAG',6X,'COEFF A',
+C     6         2X,'POWER B',2X,'AVG. GROW%',/,80('='),//)
+ 
+20      FORMAT (/,13X,'TRAFFIC FORECAST FOR EACH LOCAL ACCESS ',
+     1        A5,' IN CONNECT-HOURS  PER  BUSINESS DAY FOR ',
+     2        I2,' MONTHS AHEAD  ',2A5,/,13X,100('='),//,5X,
+     3        'PILOT NUMBER  NODE DENSI MODEM',8X,'CITY',12X,
+     4        'HIST',4X,'ROTOR',6X,'GSITE ','B=INTERCEP  ',
+     5        'M = SLOPE',6X,'AVG.',3X,'FLAG',/,58X,'VALUE',5X,
+     6        'GROW',5X,'FRCST',28X,'GROW%',/,5X,12('='),2X,4('='),
+     7        1X,5('='),1X,5('='),2X,15('='),6X,5('='),4X,5('='),
+     8        5X,5('='),2X,10('='),2X,9('='),5X,5('='),/)
+                                              
+	DO 100 I = 1,MAXSIT
+		FLAG = ' '
+		IF (ISTR(I).GE.IEND(I))FLAG = '*'
+		WRITE (20,50)(PILOT(I,J),J=1,3),NODE(I),DENSI(I),
+     1			MODEM(I),(CITY(I,J),J=1,4),X(I,N),ENX(I),
+     2			EEX(I),ELX(I)
+50              FORMAT(3A4,1X,I5,1X,A3,1X,A5,4A4,2X,F7.2,
+     1                 2(1X,F8.2),1X,F6.2)  
+		GR(I) = GR(I)*100.0
+
+		WRITE (25,60)I,(PILOT(I,J),J=1,3),NODE(I),DENSI(I),
+     1			MODEM(I),(CITY(I,J),J=1,4),X(I,N),ERX(I),
+     2			ELX(I),ACOEF(I),BCOEF(I),GR(I),FLAG
+C60              FORMAT(I3,')',3A4,1X,I5,1X,A3,2X,A5,1X,4A4,1X,F9.2,
+C     1                2(3X,F9.2),/,38X,A1,8X,F9.2,2(3X,F9.2))     
+
+60              FORMAT(I3,')',1X,3A4,1X,I5,2X,A3,2X,A5,1X,4A4,2X,
+     1                 2(F9.2,1X),2(F9.2,2X),F9.2,1X,F9.2,5X,A1/)    
+
+100	CONTINUE
+        WRITE(20,1)OUTFIL                
+	G = G*100.0
+
+
+	WRITE (20,150)G, ALPHA, BETHA, DIA(1), DIA(2)
+150	FORMAT (///,10X,'CONSTANT GROWTH CONSIDERED AT ',F7.3,' ',
+     1		'% PER MONTH',/,10X,'ALPHA = ',F7.4,/,10X,'BETA  ',
+     2		'= ',F7.4,/,7X,'*  UNRELIABLE FORECAST',///,40X,'P',
+     3		'REPARED BY EDSEL GARCIAMENDEZ BUDAR.',/,50X,2A5)
+	WRITE (25,150)G, ALPHA, BETHA, DIA(1), DIA(2)
+
+	RETURN
+	END
+"@m3
