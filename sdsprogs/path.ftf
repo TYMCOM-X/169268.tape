@@ -1,0 +1,236 @@
+
+************************************************************************
+*
+*                       PATH
+*
+*       VERSION 1                               MAR. 20, 1980
+*
+* THIS PROGRAM WILL BE USED TO ESTABLISH THE PROCESSING PATH THAT 
+* EACH SERVICE REQUEST  TO TYMNET WILL FOLLOW.
+*
+************************************************************************
+
+
+        CALL DBSTRT(1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
+     X  1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
+     X  1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
+     X  1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
+     X  1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0)
+
+*               DEFINE VARIABLES
+        INTEGER DBNUM,CMDNUM,CMDTXT,SELNAM(60),DBNAME(60),HEADSW
+     X  ,PASWRD,SELMAX,MSGARR(100,5),MSGPNT,MSGMAX,DBMAX
+
+*                       SET HEADSW TO INDICATE THE VERSION NUMBER AND
+*                       DATE AND TIME AND OTHER HEADER INFO NOT PRINTED YET
+        HEADSW=0
+
+
+        COMMON/CMDNUM/CMDNUM
+        COMMON/DBNUM/DBNUM
+        COMMON/DBMAX/DBMAX
+        COMMON/CNTRL/CNTRL
+        COMMON/PASWRD/PASWRD
+        COMMON/MSGARR/MSGARR,MSGPNT,MSGMAX
+
+        MSGMAX=100
+        MSGPNT=1
+
+
+*                       CLEAR THE MESSAGE SENDING FLAGER ARRAY
+
+        COMMON/MSGFLG/MSGFLG
+
+        INTEGER MSGFLG(20)
+
+        DO 17 I=1,20
+        MSGFLG(I)=0
+17      CONTINUE
+
+        DBMAX=2
+        SELMAX=3
+
+*               SET UP DATA BASE IDENTIFIERS FOR SELECT COMMAND
+
+        COMMON/SELNAM/SELNAM
+        COMMON/SELMAX/SELMAX
+
+        SELNAM(1)='PAT'
+        SELNAM(2)='PA'
+        SELNAM(3)='P'
+
+*               SET UP DATA BASE NAME ARRAY
+
+        COMMON/DBNAME/DBNAME
+
+        DBNAME(1)='ORDCU'
+        DBNAME(2)='S    '
+        DBNAME(3)='ORDPA'
+        DBNAME(4)='T    '
+
+*               PUT VARIABLE TO CONTAIN USERS PPN INTO COMMON
+
+        COMMON/USRPPN/USRPPN
+
+*                                  PUT ESCAPE HANDLERS ADDRESS IN COMMON
+
+        COMMON /ESCADR/ ESCADR
+
+
+*       ****************************************************************
+*               DATA BASE DEFINITION MODULE DECLARATIONS        
+*       **************************************************************
+
+        INTEGER DEFARR(7,100),ATTNAM(500),PROMPT(900),VARVAL(1000),
+     X          VALID(1000),IMAGE(200),DEFSEC(40),ATTSEC(40,100),
+     X          MAXUSR,MAXDEF,TABLE(1234)
+
+        REAL REALVL(100)
+
+        COMMON/DBDEF/DEFARR,ATTNAM,PROMPT,VARVAL,VALID,REALVL,IMAGE,
+     X               DEFSEC,ATTSEC,MAXUSR,MAXDEF
+
+
+        COMMON/COMPKG/TABLE
+
+        MAXUSR=40
+        MAXDEF=100
+
+*       ****************************************************************
+*               END OF MODULE
+*       *************************************************************8*
+
+
+
+*               GET PPN OF USER CALLING PROGRAM
+
+        USRPPN=GETPPN(PP)
+
+*               GET PASSWORD FOR 1022 DATA BASES
+
+        CALL USCRAM(PASWRD)
+
+*               SET UP TABLE FOR COMMAND 1O'S NEWLINE COMMAND
+
+        TABLE(3)=5
+        TABLE(5)=70
+        TABLE(6)=800
+        TABLE(8)=810
+
+
+*       INITIALIZE ALL FIELD VARIABLES TO ZERO
+        CALL INIT(IERR)
+
+*
+*               TURN ON INTERRUPT HANDLING
+
+10      ASSIGN 20 TO ESCADR
+        CALL ESCTRP
+        IF((CMDNUM.EQ.3).OR.(CMDNUM.EQ.2)) GOTO 100
+        GO TO 25
+
+20      TYPE 21
+21      FORMAT (/,1X,'(ESC)',//)
+        CALL ONINT($20)
+
+*               GO TO COMMAND PROMPT
+
+        GO TO 100
+
+*                       ALLOW (ESC) TO INTERRUPT PROGRAM EXECUTION
+*                       SO THAT THEY DON'T GET INTO PROGRAM WITHOUT A ORDER
+*                       NUMBER AND THEREFORE ASSUME ORDER NUMBER 0
+
+25      CALL OFFINT
+
+*               CALL THE START UP ROUTINE.  IT OUTPUTS VERSION NUMBER
+*               AND INPUTS THE CONTROL NUMBER.
+
+        CALL START(HEADSW,IERR)
+
+*               CK FOR FATAL ERROR
+
+        IF (IERR.EQ.-1) GO TO 999
+
+*
+*                       RE-INABLE (ESC) TRAPPING SO THAT CONTROL GOES
+*                       TO THE COMMAND PROMPT
+
+        CALL ESCTRP
+
+*               TEST IF NO CNTRL NUMBER SPECIFIED. IF NOT REPROMPT
+*
+
+30      IF (CNTRL.EQ.0) GOTO 25
+
+*
+*               STORE THE CONTROL NUMBER
+
+45      IPOS=1
+        CALL STORE(IPOS,CNTRL,IERR)
+        IF (IERR.EQ.-1) GO TO 999
+
+
+
+
+*               CALL LOKREC TO LOOK UP THE SPECIFIED ORDER
+*
+
+60      CALL LOKREC(IERR)
+
+*                       TEST IF RECORD WAS NOT FOUND
+
+        IF (IERR.NE.0) GOTO 25
+
+*               SET DATA BASE NUMBER TO ZERO
+
+        DBNUM=0
+*
+*               OUTPUT PROMPT AND GET COMMAND
+
+100     CALL GETCMD(CMDTXT)
+
+*                       TEST IF TIME TO TERMINATE EXECUTION
+
+        IF ((CMDNUM.EQ.6).OR.(CMDNUM.EQ.7)) GO TO 999
+
+
+*                       OTHERWISE EXECUTE THE COMMAND
+
+110     CALL CMDEXE(IERR)
+
+*                       TEST IF TERMINAL ERROR
+        IF (IERR.NE.-1) GO TO 112
+        TYPE 111
+111     FORMAT(//,1X,'PROGRAM EXECUTION HALTED DUE TO TERMINAL ERROR'
+     X  ,//)
+        GO TO 999
+
+*                       TEST IF ADD OR CHANGE CMD DONE (THEY BOTH DISABLE INTER
+*                       -RUPTS
+112     IF((CMDNUM.EQ.3).OR.(CMDNUM.EQ.2)) GOTO 10
+
+
+*                       OTHERWISE GO GET ANOTHER COMMAND
+
+        GO TO 100
+
+*               COMMAND -10 ERRORS
+
+800     TYPE 805
+805     FORMAT (5X,'? COMMAND-10 ERROR. LINE LENGTH EXCEEDS MAX',/)
+        GO TO 100
+
+810     TYPE 815
+815     FORMAT (5X,'? COMMAND-10 ERROR. REACHED END-OF-FILE')
+        GO TO 100
+
+*               FINISHED. SEND ANY MAIL THAT NEEDS TO BE SENT AND
+*               EXIT PROGRAM.
+
+999     CALL MAILOT
+        CALL DBEND
+
+
+        CALL NEXIT
+        END
