@@ -1,0 +1,557 @@
+ IF \ENGINE
+ IF \NSLOT
+        RA      $0 0A
+
+        REMARK %TYMNET I
+        IF TII
+        REMARK I
+        EI
+        REMARK  ISIS
+
+        REMARK %%KERNEL VERSION: 
+        NUMBER $A VERSION/100
+        REMARK .
+        NUMBER $A VERSION-((VERSION/100)*100)
+
+        REMARK %%HARDWARE CONFIGURATION
+
+        REMARK %ENGINE  EQ  $A 
+        NUMBER $A ENGINE
+
+        REMARK %MICRO   EQ  $A 
+        NUMBER $A MICRO
+
+        REMARK %N.ADA   EQ  $A 
+        NUMBER $A N.ADA
+
+        REMARK %NASYNG  EQ  $A 
+        NUMBER $A NASYNG
+
+        REMARK %XSYNC   EQ  $A 
+        NUMBER $A XSYNC
+
+        REMARK %%ISIS CONFIGURATION
+
+        REMARK %NSLOT   EQ  $A 
+        NUMBER $A NSLOT
+
+        REMARK %NLU     EQ  $A 
+        NUMBER $A NLU
+
+        REMARK %%NODE CONFIGURATION
+
+        REMARK %TII     EQ  $A 
+        NUMBER $A TII
+
+        IF      TII
+        REMARK %NSP     EQ  $0 
+        NUMBER $0 NSP
+        EI
+
+        IF      SYSDBG
+        REMARK %SYSDBG  EQ  $A 
+        NUMBER SYSDBG
+        EI
+
+        IF      SUP
+        REMARK %SUP     EQ  $A 
+        NUMBER SUP
+        EI
+
+        IF      DI.TRC
+        ELSE
+        REMARK %DI.TRC  EQ  $A 
+        NUMBER DI.TRC
+        EI
+
+        IF      WWVB
+        REMARK %WWVB    EQ  $A 
+        NUMBER WWVB
+        EI
+
+        IF      NXSIO
+        REMARK %NXSIO   EQ  $A 
+        NUMBER NXSIO
+        EI
+
+        IF      NPRINT
+        REMARK %NPRINT  EQ  $A 
+        NUMBER NPRINT
+        EI
+
+        IF      XSELCH
+        REMARK %XSELCH  EQ  $A 
+        NUMBER XSELCH
+        EI
+
+        IF      NDISC
+        REMARK %NDISC   EQ  $A 
+        NUMBER NDISC
+        EI
+
+        IF      NTAPE
+        REMARK %NTAPE   EQ  $A 
+        NUMBER NTAPE
+        EI
+
+        IF      M.NCARD
+        REMARK %M.NCARD EQ  $A 
+        NUMBER M.NCARD
+Q       EQ      0
+        RE      M.NCARD
+        REMARK %M.NP
+        NUMBER Q
+        REMARK    EQ  $A 
+        NUMBER M.NP|Q|
+        REMARK %M.DA
+        NUMBER Q
+        REMARK    EQ  $0 
+        NUMBER $0 M.DA|Q|
+Q       EQ      Q+1
+        ER      :M.NCARD
+        EI
+
+        IF      MSCDSK
+        REMARK %MSCDSK  EQ  $A 
+        NUMBER MSCDSK
+Q       EQ      0
+        RE      MSCDSK
+        REMARK %NMSC
+        NUMBER Q
+        REMARK    EQ  $A 
+        NUMBER NMSC|Q|
+        REMARK %MSCDA
+        NUMBER Q
+        REMARK   EQ  $0 
+        NUMBER $0 MSCDA|Q|
+Q       EQ      Q+1
+        ER      :MSCDSK
+        EI
+
+        REMARK %MACHNM  EQ  $8 
+        NUMBER $8 MACHNM
+
+        REMARK %HST0    EQ  $A 
+        NUMBER $A HST0
+
+        REMARK %NLINES  EQ  $A 
+        NUMBER $A NLINES
+
+        IF \NUMWS8
+        REMARK %NUMWS8  EQ  $A 
+        NUMBER $A NUMWS8
+        ELSE
+        IF \NUMSAT
+        REMARK %NUMSAT  EQ  $A 
+        NUMBER $A NUMSAT
+        EI
+        EI
+
+        REMARK %%NETWORK CONFIGURATION
+
+Q       EQ      0
+        IF      TII
+        ELSE
+XLINKS  EQ      0
+        EI
+ IF NLINES-XLINKS
+ RE NLINES-XLINKS
+ IF TII
+ REMARK %    TIILNK(
+ ELSE
+ REMARK %    TYMNET(
+ NUMBER Q
+ REMARK ,
+ EI
+Y EQ NEIG|$A Q|
+ IF $8 1000-Y
+ REMARK 0
+ IF $8 100-Y
+ REMARK 0
+ IF $8 10-Y
+ REMARK 0
+ EI; EI; EI
+ NUMBER $8 Y
+ REMARK ,
+Y EQ NGRP|$A Q|
+ NUMBER $A Y
+ IF TII
+ REMARK ,
+Y EQ WSIZ|$A Q|
+ NUMBER $A Y
+ EI
+ REMARK )
+Q EQ Q+1
+ ER :NLINES-XLINKS
+ EI :NLINES-XLINKS
+
+        IF TII
+        REMARK %%XLINKS  EQ  $A 
+        NUMBER $A XLINKS
+        IF SILINS
+        REMARK %SILINS  EQ  $A 
+        NUMBER $A SILINS
+        EI
+        EI
+
+        KILL    LUNITS,SLOTN,LUN,STIMES
+LUNITS  MACRO(SLOTN,LUN)[
+ REMARK %S
+ NUMBER SLOTN
+ REMARK L
+ NUMBER LUN
+ IF 10-LUN
+ REMARK  
+ EI
+W EQ S|SLOTN|L|LUN|
+Z EQ W^-24
+ IF 1-Z
+ REMARK    S
+ ELSE
+ IF 2-Z
+ REMARK    A
+ ELSE
+ IF 3-Z
+ REMARK    P
+ ELSE
+ IF 4-Z
+ REMARK    X
+ ELSE
+ IF 5-Z
+ REMARK    M
+ EI; EI; EI; EI; EI
+ REMARK .REF(
+V EQ W-Z^24
+ IF Z-3
+ NUMBER V^-4
+ REMARK ,
+V EQ V-((V^-4)^4)
+ EI
+ NUMBER V
+ REMARK )
+]
+
+STIMES  MACRO(SLOTN)[
+ IF \Q.FG|Q|
+ IF SLOTN
+Z EQ 2+(NLUS|Q|/3)
+ ELSE
+Z EQ 2+(NLUS|Q|^-1)
+ EI
+ IF Q.FG|Q|-Z
+Z EQ 1
+ ELSE
+ IF Z-Q.FG|Q|
+Z EQ 1
+ ELSE
+Z EQ 0
+ EI; EI
+ IF Z
+ REMARK %Q.FG
+ NUMBER Q
+ REMARK    EQ  $A 
+ NUMBER Q.FG|Q|
+ EI; EI
+ IF \Q.BG|Q|
+ IF Q.BG|Q|-30
+Z EQ 1
+ ELSE
+ IF 30-Q.BG|Q|
+Z EQ 1
+ ELSE
+Z EQ 0
+ EI; EI
+ IF Z
+ REMARK %Q.BG
+ NUMBER Q
+ REMARK    EQ  $A 
+ NUMBER Q.BG|Q|
+ EI; EI
+]
+
+Q EQ 0
+ RE NSLOT+1
+ REMARK %%SLOT 
+ NUMBER Q
+ IF TII!Q
+ REMARK %S
+ NUMBER Q
+ REMARK CORE  EQ  $A 
+ NUMBER S|Q|CORE
+ EI
+ IF Q
+ REMARK %S
+ NUMBER Q
+ REMARK LIC   EQ  
+ IF S|Q|LIC; REMARK TL.AUX; ELSE; REMARK 0; EI
+ EI
+ STIMES(Q)
+ REMARK %NLUS
+ NUMBER Q
+ REMARK    EQ  $A 
+X EQ NLUS|Q|
+ NUMBER X
+Y EQ 0
+ IF X
+ RE X
+ LUNITS(Q,Y)
+Y EQ Y+1
+ ER
+ EI
+Q EQ Q+1
+ ER
+ ELSE
+
+        REMARK %TYMNET I STAND ALONE
+
+        REMARK %%VERSION EQ    $8 
+        NUMBER $8 VERSION
+
+        REMARK  %%MACHNM  EQ    $8  
+        NUMBER  $8 MACHNM
+
+        REMARK  %REMOTE  EQ    $A  
+        NUMBER  $A REMOTE
+
+        REMARK  %%:REMOTE PARAMETERS%
+
+        REMARK  %NOZAPDE EQ    $A  
+        NUMBER  $A NOZAPDE
+
+        REMARK  %CZAPTO  EQ    $A  
+        NUMBER  $A CZAPTO
+
+        REMARK  %SYNCT   EQ    $A  
+        NUMBER  $A SYNCT
+
+        REMARK  %SECLOV  EQ    $A  
+        NUMBER  $A SECLOV
+
+        REMARK  %TIMING  EQ    $A  
+        NUMBER  $A TIMING
+
+        REMARK  %PERMEA  EQ    $A  
+        NUMBER  $A PERMEA
+
+        REMARK  %CPS     EQ    $A  
+        NUMBER  $A CPS
+
+        REMARK  %TTYDBG  EQ    $A  
+        NUMBER  $A TTYDBG
+
+        REMARK  %MICRO   EQ    $A  
+        NUMBER  $A MICRO
+
+        REMARK  %ENGINE  EQ    $A  
+        NUMBER  $A ENGINE
+
+        REMARK  %N.ADA   EQ    $A  
+        NUMBER  $A N.ADA
+
+        REMARK  %T120LO  EQ    $A  
+        NUMBER  $A T120LO
+
+        REMARK  %T120HI  EQ    $A  
+        NUMBER  $A T120HI
+
+        REMARK  %TYP8    EQ    $A  
+        NUMBER  $A TYP8
+
+        REMARK  %TTS     EQ    $A  
+        NUMBER  $A TTS
+
+        REMARK  %NACARD  EQ    $A  
+        NUMBER  $A NACARD
+
+        REMARK  %HD202   EQ    $A  
+        NUMBER  $A HD202
+
+        REMARK  %IDPORT  EQ    $A  
+        NUMBER  $A IDPORT
+
+        REMARK  %NUMPRN  EQ    $A  
+        NUMBER  $A NUMPRN
+
+        REMARK  %NBISYN  EQ    $A  
+        NUMBER  $A NBISYN
+
+        REMARK  %NBRK    EQ    $A  
+        NUMBER  $A NBRK
+
+        REMARK  %%:NETWORK CONFIGURATION PARAMETERS%
+
+        REMARK  %NLINES  EQ    $A  
+        NUMBER  $A NLINES
+
+        REMARK  %PTHRU   EQ    $A  
+        NUMBER  $A PTHRU
+
+        REMARK  %%:NEIGHBOR,GROUPS,WINDOW SIZE%
+
+Q       EQ      0
+        IF      NLINES-9
+ RE $A 10
+ REMARK %NEIGH
+ NUMBER $A Q
+ REMARK   EQ    $8  
+ IF $8 1000-NEIGH|$A Q|
+ REMARK 0
+ IF $8 100-NEIGH|$A Q|
+ REMARK 0
+ IF $8 10-NEIGH|$A Q|
+ REMARK 0
+ EI; EI; EI
+QQ EQ NEIGH|$A Q|
+ NUMBER $8 QQ
+ REMARK      NGRPS
+ NUMBER $A Q
+ REMARK   EQ  
+ IF $8 100-NGRPS|$A Q|
+ REMARK  
+ IF $8 10-NGRPS|$A Q|
+ REMARK  
+ EI; EI
+QQ EQ NGRPS|$A Q|
+ NUMBER $8 QQ
+ IF LINE|$A Q|
+ REMARK    LINE
+ NUMBER $A Q
+ REMARK    EQ  WS8
+ EI
+Q EQ Q+1
+ ER
+ RE $A NLINES-10
+ REMARK %NEIG
+ NUMBER $A Q
+ REMARK   EQ    $8  
+ IF $8 1000-NEIG|$A Q|
+ REMARK 0
+ IF $8 100-NEIG|$A Q|
+ REMARK 0
+ IF $8 10-NEIG|$A Q|
+ REMARK 0
+ EI; EI; EI
+QQ EQ NEIG|$A Q|
+ NUMBER $8 QQ
+ REMARK      NGRP
+ NUMBER $A Q
+ REMARK   EQ  
+ IF $8 100-NGRP|$A Q|
+ REMARK  
+ IF $8 10-NGRP|$A Q|
+ REMARK  
+ EI; EI
+QQ EQ NGRP|$A Q|
+ NUMBER $8 QQ
+ IF LINE|$A Q|
+ REMARK    LINE
+ NUMBER $A Q
+ REMARK   EQ  WS8
+ EI
+Q EQ Q+1
+ ER
+        ELSE
+ RE $A NLINES
+ REMARK %NEIGH
+ NUMBER $A Q
+ REMARK   EQ    $8  
+ IF $8 1000-NEIGH|$A Q|
+ REMARK 0
+ IF $8 100-NEIGH|$A Q|
+ REMARK 0
+ IF $8 10-NEIGH|$A Q|
+ REMARK 0
+ EI; EI; EI
+QQ EQ NEIGH|$A Q|
+ NUMBER $8 QQ
+ REMARK      NGRPS
+ NUMBER $A Q
+ REMARK   EQ  
+ IF $8 100-NGRPS|$A Q|
+ REMARK  
+ IF $8 10-NGRPS|$A Q|
+ REMARK  
+ EI; EI
+QQ EQ NGRPS|$A Q|
+ NUMBER $8 QQ
+ IF LINE|$A Q|
+ REMARK    LINE
+ NUMBER $A Q
+ REMARK    EQ  WS8
+ EI
+Q EQ Q+1
+ ER
+        EI
+ EI
+ ELSE
+        RA      $0 0A
+
+        REMARK %TYMNET II STAND ALONE
+
+        REMARK %%KERNEL VERSION: 
+        NUMBER $8 VERSION/100
+        REMARK .
+        NUMBER $8 VERSION-((VERSION/100)*100)
+
+        REMARK %%MICRO   EQ  $A 
+        NUMBER $A MICRO
+
+        REMARK %NSP     EQ  $0 
+        NUMBER $0 NSP
+
+        REMARK %MACHNM  EQ  $8 
+        NUMBER $8 MACHNM
+Q       EQ      0
+        RE      8
+        IF      \M.DA|Q|
+        REMARK %M.NP
+        NUMBER Q
+        REMARK    EQ  $A 
+        NUMBER M.NP|Q|
+        REMARK %M.DA
+        NUMBER Q
+        REMARK    EQ  $0 
+        NUMBER $0 M.DA|Q|
+Q       EQ      Q+1
+        EI
+        ER      :8
+
+        REMARK %NPTHR   EQ  $A 
+        NUMBER $A NPTHR
+
+        REMARK %KERNEL  EQ     
+        NUMBER KERNEL
+
+        REMARK %HST0    EQ  $A 
+        NUMBER $A HST0
+
+        REMARK %%NETWORK CONFIGURATION
+
+Q       EQ      0
+ RE $A 50
+ IF \NEIG|Q|
+ REMARK %    TIILNK(
+Y EQ NEIG|$A Q|
+ IF $8 1000-Y
+ REMARK 0
+ IF $8 100-Y
+ REMARK 0
+ IF $8 10-Y
+ REMARK 0
+ EI; EI; EI
+ NUMBER $8 Y
+ REMARK ,
+Y EQ NGRP|$A Q|
+ NUMBER $A Y
+ REMARK ,
+Y EQ WSIZ|$A Q|
+ NUMBER $A Y
+ REMARK )
+ EI
+Q EQ Q+1
+ ER :$A 50
+
+        REMARK %%XLINKS  EQ  $A 
+        NUMBER $A XLINKS
+ EI
+    
