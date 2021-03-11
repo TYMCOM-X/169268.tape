@@ -1,0 +1,230 @@
+.	<<	file	ISIS.DDT	>>
+.SEC(|ISIS DDT COMMANDS|)
+.TOPIC(|DDT|)
+	ISIS DDT is a subset of the KERNEL process on the interdata.
+One may log into ISIS on any given interdata, by directing
+the log-in to that machine's host 0.
+	The kernel has a good-guy list, used to verify the username logging in.
+If the user-name is valid, login may proceed;  otherwise the user is dropped.
+If valid, the list is checked for slot assignment.
+If no slot is assigned to this user,
+the kernel asks for a slot number.
+Once the slot has a valid slot number, and if that slot is available, the
+kernel will connect the user to DDT.
+The user sees (USER TYPES, kernel types):
+.BEGIN VERBATIM
+
+USER:377;PASSWORD
+slot# :3		(only if no slot is pre-assigned)
+*
+.END
+	When the "*" prompt occurs, the user is connected to DDT.
+Then the commands below can be used.
+	Each user name in the good-guy list has certain status assigned.
+In particular, a user may be privileged or non-privileged.
+	A non-privileged user may perform certain operations, such as reading
+any location in the slot's address-space, or writing into those
+segments of the address-space that the program can write into.
+	A privileged user can execute additional commands, which change the
+state of the slot, and can write into all of the slot's address space.
+This includes loading, or placing patches, into the write-protected
+segments.
+.SS(|A|)
+.TOPIC(|MAC initialization for slot|)
+.TOPIC(|initialization of MAC for slot|)
+.TOPIC(|slot MAC initialization|)
+.TOPIC(|DDT MAC initialization for slot|)
+	Address::
+[PRIVILEGED COMMAND]  Set up address space for slot (other
+than slot 0).  At the next prompt, can enter MAC description:
+	R SEG SIZE----set up mac register SEG to hold at least
+SIZE bytes.  If size is >10000, will allocate
+multiple successive segments.  Segments need
+not be defined in order.  The command may abort
+if more segments are invoked than are supported.
+	I----initialize the mac.  May abort if more core is
+required than is available for slot.  All segments
+(other than seg 1) have write/no-execute access;
+segment 1 has read/execute access.  Segments which
+were not defined are not accessible.  (Note...
+if NO segments were defined, then segment 0 is
+set up for full size, read/write/execute access.)
+.SS(|B ADDR NUM|)
+.TOPIC(|DDT breakpoints|)
+.TOPIC(|breakpoints, DDT|)
+	Breakpoint::
+Set breakpoint NUM at ADDR.  B will undo any old breakpoint
+NUM.  If ADDR is zero B will undo the old breakpoint only.
+.SS(|E|)
+.TOPIC(|DDT slot connection|)
+.TOPIC(|connecting a slot|)
+.TOPIC(|bringing a slot online|)
+.TOPIC(|online, bringing a slot|)
+	Execute:: [PRIVILEGED COMMAND]  connects the job associated with a slot
+(other than slot 0), and starts execution independent of DDT.
+.SS(|G ADDR|)
+.TOPIC(|DDT execution|)
+.TOPIC(|executing a program under DDT|)
+	Go::
+Causes your program to start at ADDR.  It creates a PSW using
+a half word in the user block.  The status bits may be
+changed by a privileged user through the U command.
+.SS(|H|)
+.TOPIC(|DDT slot disconnection|)
+.TOPIC(|disconnecting a slot|)
+.TOPIC(|taking a slot offline|)
+.TOPIC(|offline, taking a slot|)
+	Halt::
+[PRIVILEGED COMMAND]  halts the job associated with a
+slot (other than slot 0).
+.SS(|I|)
+.TOPIC(|DDT initalization|)
+	Initialize::
+Should only be typed after a new load.
+.SS(|L DISK-ADDR NUMBER-OF-BLOCKS MEM-ADDR|)
+	Load memory from disk.::
+[VALID ONLY IF SYSTEM INCLUDES DISK]
+Reads NUMBER-OF-BLOCKS starting at user's virtual DISK-ADDR
+storing the result starting at user's MEM-ADDR.
+.SS(|M MASK START-ADDR END-ADDR|)
+.TOPIC(|DDT memory searches|)
+	Mask for search::
+Set search MASK and range FOR X AND Y commands.  The MASK is one word
+(a MASK of 0 translates to -1).
+.SS(|N|)
+.TOPIC(|DDT program stepping|)
+	Next::
+Sets a special breakpoint after the current
+instruction and then executes the current instruction.
+.SS(|P|)
+.TOPIC(|DDT:  proceeding from a breakpoint|)
+	Proceed::
+Must be used to continue from a breakpoint.  Restores 
+identical status that existed when breakpoint was reached.
+.SS(|R ADDR COUNT|)
+.TOPIC(|DDT:  examining memory|)
+	Read memory::
+Prints contents of COUNT bytes starting at ADDR.
+.SS(|RR REG COUNT|)
+.TOPIC(|DDT:  examining registers|)
+	Read registers::
+Prints contents of COUNT registers starting at REG.
+These are the register values at the time the last user
+instruction was executed.
+.SS(|S DISK-ADDR NUMBER-OF-BLOCKS MEM-ADDR|)
+	Save memory on disk.::
+[VALID ONLY IF SYSTEM INCLUDES DISK]
+Has opposite effect of L.
+.SS(|T|)
+.TOPIC(|DDT:  examining program status|)
+	Type old PSW::
+Types PSW as it was when last user instruction was
+executed.  Two additional digits are typed indicating
+the cause of the last MAC interrupt or machine malfunction.
+.SS(|U NUM|)
+	User Status::
+When executed by a non-privileged user makes NUM (4 bits)
+the condition code in the new psw created by all
+subsequent G commands.  When executed by a privileged user
+makes NUM (half word) the status bits used for all subsequent
+G commands.  In addition the users old psw is changed to NUM
+for the status bits and zero for the location counter.
+	!!!!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!!!!!!!!
+All breakpoints must be cleared bfore the U command is used
+to turn the MAC on or off!
+.SS(|W ADDR COUNT|)
+.TOPIC(|DDT:  modifying memory|)
+	Write memory::
+Reads COUNT bytes from the terminal and deposits them
+starting at ADDR.
+.SS(|WR REG COUNT|)
+.TOPIC(|DDT: modifying registers|)
+	Write registers::
+Reads 4*COUNT bytes from the terminal and
+deposits them in the register save area starting at REG.
+.SS(|X (0,1) (1,2,4) VALUE|)
+.TOPIC(|DDT memory searches|)
+	Data search::
+0 or 1 (match or non-match) 1,2 or 4 (number of bytes
+long).  VALUE is one word.  The search range set in M is used
+with the mask set in M.  The mask is applied only the memory
+value, not the search value.  In a match search only the
+addresses of matched cells are printed, in non-match search
+both address & value are printed (on seperate lines).
+.SS(|Y (1,2,3) VALUE1 VALUE2 VALUE3|)
+.TOPIC(|DDT memory searches|)
+	Instruction search::
+1,2 or 3 (length of instruction in half words).
+enter search value in appropriate number of half words.
+Search is match only and used search range set in M but not
+the mask.  Addresses of matches are printed.
+.SS(|Z|)
+	Zap::
+.TOPIC(|disconnection from DDT|)
+Command to log off.  Responds with ZAP? to confirm your
+intentions.  Type Z to log off, anything else to abort log off.
+	Other debugger commands exist but should not be used.  They and their
+consequences are:
+.SS(|C  don't use!|)
+	The C command is used to switch from ascii input to binary and
+back again.  It is used primarily by NAD, and use by logging in directly
+may cause strange operations.
+.SS(|control-C|)
+.TOPIC(|DDT: interrupting a program|)
+	A control-C is used to interrupt a user program and return control to
+DDT.  It also flushes all characters previously input.
+.SS(|control-O|)
+	A control-O is used to flush the input and output buffers.
+This also terminates any output SVC in progress.
+.SS(|\|)
+	"\" is normally used to recover from an unrecognizable command.
+It effectively restarts DDT.
+Starting (or restarting) DDT includes the examination of a diagnostic
+to determine if any abnormal conditions have occured since the last
+start.  These conditions include parity error, illegal memory references,
+illegal SVC's, or KERNEL crashes, either within DDT, or within any of
+the domain controlled by DDT (Background, Foreground, etc.).
+"\" may be used instead of any command to examine this diagnostic.
+.SS(|^ NUM|)
+	"^" attempts to transfer control from the DDT of the slot currently
+logged into, to the slot specified by NUM, if all criteria for logging
+into that slot are otherwise satisfied.  If not successful, diagnostics
+are generated.
+.SS(|?COMMAND|)
+	"?" followed by a command string (with possible arguments), terminated
+with any delimiter, invokes special commands:
+.SSS(|?B	--query Breakpoints|)
+	?B outputs a table showing where breakpoints are currently set.
+.SSS(|?MAC	--query MAC|)
+	?MAC outputs a table showing the slot's current MAC configuration.
+.SSS(|?SLOT	--query SLOT number|)
+	?SLOT outputs the current slot's key.
+.SSS(|?BT	--query Background PSD|)
+	?BT outputs the current (running) background PSD.  Approximate!
+.SSS(|?FT	--query Foreground PSD|)
+	?FT outputs the current (running) foreground PSD.  Approximate!
+.SSS(|?BRR R N	--query Background's Read Registers|)
+	?BRR outputs the current (running) background registers.  Approximate!
+"?BRR" works like "RR", with "R" being the starting register, and "N" being
+the number of registers to display.
+.SSS(|?FRR R N	--query Foreground's Read Registers|)
+	?FRR outputs the current (running) foreground registers.  Approximate!
+"?FRR" works like "RR", with "R" being the starting register, and "N" being
+the number of registers to display.
+	NOTE..."APPROXIMATE" indicates that the multiple-words output are not
+necessarily correlated.  DDT will "snapshot" each successive word and output
+it, but may be dismissed after any word is output, allowing the process
+being monitored to run, and change the items being examined.  USE THIS
+FACILITY WITH CAUTION!
+.SSS(|?CT	--query Channels Terminating|)
+	?CT outputs a table (for slots connected to DDT) of channels
+connected to the slot.  Each is of form:
+.ONCE VERBATIM
+	PORT i -->Sn:j
+	where i is the port number on that slot, n is the slot it connects to,
+and j is the port number on that slot.
+.SSS(|?RET	--query return|)
+	If you have a user-name assigned to a specific slot, and have transfered
+to DDT, ?RET will take you back (equivalent to the "^" command, except
+that you don't have to know what slot key is assigned to you).
+ 
