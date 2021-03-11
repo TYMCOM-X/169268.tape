@@ -1,0 +1,386 @@
+
+
+
+                     G E N E R A L   I N F O R M A T I O N
+
+
+
+
+
+          CHCOST.SAV resides in username UAS on system 35.  CHCOST  changes
+     the  COSTCODE attribute in the three accounting validations data bases
+     that have a costcode attribute:  CUSTDB, USERDB and TUSRDB in CUD10 on
+     system  35.   CUSTDB  is  a data base of customer information with one
+     active record per system type for every customer.  USERDB contains one
+     active  record  of  information  for each username valid on a Tymshare
+     host.  TUSRDB contains one active record of information for each  user
+     name  valid  on  non-Tymshare  hosts  available  through  Tymnet.  The
+     program refers to USERDB records as Tymshare users and TUSRDB  records
+     as Tymnet users.  Because of the need to access these three accounting
+     validations data bases; the CHCOST program must reside on  system  35.
+     Files  that  must  be  present  in (UAS:35) for the program to run are
+     CHCOST.SAV, CHCCOD.MNU and USPRNT.DMC.
+
+
+          The starting point of the program is a menu of 5 choices:
+                              0.  QUIT
+                              1.  CHANGE NEW CUSTOMERS
+                              2.  CHANGE NEW USERS
+                              3.  CHANGE CUSTOMERS
+                              4.  CHANGE USERS
+
+     Typing an <ESCAPE> key while the program is  running  or  waiting  for
+     input  will  return you immediately to this menu.  if you hit <ESCAPE>
+     while the program is in the  process  of  changing  user  or  customer
+     costcodes,  some or all of the costcodes may have already been changed                                              ___ ____
+     before your <ESCAPE> interrupted the process.
+
+
+          The four "change" commands can also be used as  "list"  commands.
+     Each  begins  by  finding  the customers or users that you specify for
+     changing.  Next  it  lists  such  information  as  district,  customer
+     number,  UUN  and current costcode.  Then it proceeds through the list
+     making changes, either singly and consecutively or simultaneously,  as
+     you  specify.   By  typing  <ESCAPE>  after the program has listed the
+     selected customers or users, and before you  enter  any  new  costcode
+     values,  you  will  have  simulated  a  command that lists significant
+     attributes of the selected records.
+
+
+          Take  note  that  changing  customer  costcodes  allows  you  the
+     opportunity  to  change  all,  any,  or none of that customer's users'
+     costcodes.  However, changing a user's costcode will not  affect  that
+     user's customer's costcode.
+                                                                         Page 2
+
+
+             THE FOUR COMMANDS:  FINDING A SET OF RECORDS TO CHANGE
+
+
+     1.  CHANGE NEW CUSTOMERS
+
+     This command will find all records in CUSTDB with  a  recent  Date  of
+     Entry (in the data base).  The command begins by asking:
+
+               "FOR PAST HOW MANY DAYS?".
+
+     The number you supply will be subtracted from today's date to supply a
+     test  date.  The program will then find all CUSTDB records with a Date
+     of Entry > the test date, that also have a costcode of 0 and an active              _
+     STOPDATE :  in other words, all active records with a costcode of zero
+     that have been entered in the data base within the past number of days
+     (which the user supplies).
+
+
+          When examining the records found, it is worth knowing  that  this
+     does  not  find  customers  which  are  new to the data base, it finds                      _________
+     customer records which are new to the data base.   The  difference  is     ________ _______
+     important.   Whenever  information  in a CUSTDB record is changed (for
+     instance, district) the change is accomplished by changing  the  DSTOP
+     of  the  current  active  record  to  today's  date,  with  all  other
+     attributes unchanged, and  creating  a  new  active  record  for  that
+     customer  with the new value of the attribute you changed (district in
+     this example).  Thus we are able to maintain not only a record of each
+     customer's  current  information,  but  a  history  of past districts,
+     customer numbers, etc.  The consequence of this relevant to the CHANGE
+     NEW  CUSTOMERS  (and also CHANGE NEW USERS) command is that any active
+     record of an old customer who has had  a  district,  customer  number,
+     detail  code or other CUSTDB attribute changed will have a recent Date
+     of Entry despite that the customer is an old one.  Such  records  will
+     show  up in your found set with either of these commands if the record
+     also has a costcode value of zero.
+
+
+     2.  CHANGE NEW USERS
+
+
+          Works in exactly the same fashion as CHANGE NEW CUSTOMERS but  it
+     operates  on  USERDB instead of CUSTDB.  This command will not operate
+     on TUSRDB.  All the others will.
+                                                                         Page 3
+
+
+     3.  CHANGE CUSTOMERS
+
+
+          This command enables you to select specific customers you  desire
+     to  change  by  entering  customer  numbers.  It is worth knowing that
+     there may be more than 1 active record  per  customer;   specifically,
+     there  is  one record for every system type that the customer is valid
+     on.  The command begins with the sentence:
+
+               "ENTER CUSTOMER NUMBERS TO CHANGE (END WITH EXTRA <CR>)"
+
+     and then on the next line the prompt "0 :".  When you enter a customer
+     and  press  return  the  program will find all active records for that
+     customer and return the number of active records in it's found set  as
+     part  of  the next prompt.  For example, the screen might look like so
+     after five customers have been entered:
+               0:  11234
+               2:  12345
+               3:  66666
+               3:  5
+               7:  11234
+               7:
+
+     By examining the increments of the numbers to the left  of  the  colon
+     (the  number  of found records) you can read that customer 11234 has 2
+     active records in CUSTDB, 12345 has 1  active  record,  66666  has  no
+     active records and customer 5 has 4 active records.  The increment was
+     zero when we reentered customer 11234 because the active  records  for
+     that customer were already part of our found set when we reentered it.
+     An extra carriage return at this point  would  move  us  out  of  this
+     section  of  the  program,  allowing  us to begin changing the records
+     we've found.
+
+
+          Note that when this command is used, the section of  the  program
+     that  does  the  actual  changing  of customer costcodes will show you
+     customer numbers in the order that you enter them  here.   When  using
+     command  1  the customer numbers are offered to you sorted by customer
+     district.   You  can  use  this  to   your   advantage   by   entering
+     consecutively  (contiguously,  if  you  like  that  word better) those
+     customer numbers to which you intend to give the same  costcode.   The
+     advantage  to  this  will become clear in the section of this document
+     dealing with the actual costcode changing process.
+                                                                         Page 4
+
+
+     4.  CHANGE USERS
+
+
+          This command operates in precisely  the  same  manner  command  3
+     does,  with  two noteworthy exceptions.  First, the number included to
+     the left of the colon as part of  the  prompt  (each  time  you  press
+     return  after  entering  a  new  user) will only increment by one user
+     record for each active user you enter.  In  both  USERDB  and  TUSRDB,
+     there is only one active record per username.
+
+
+          The second difference between this command and  CHANGE  CUSTOMERS
+     is  that  this command offers you your choice of data bases to change.
+     The command begins with the question:
+
+               "TYMSHARE (Y) OR TYMNET (N) UUNS?".
+
+     Type "Y" if you plan to change costcodes of USERDB user records.  Type
+     "N" if you plan to change costcodes of TUSRDB user records.
+
+
+          A <CR> response to the prompt for another UUN will move you on to
+     the section of the program that actually changes user costcodes.
+                                                                         Page 5
+
+
+     CHANGING COSTCODES OF THE RECORDS YOU'VE SELECTED
+
+
+
+          If you've used commands 1 or 3 you  will  have  a  found  set  of
+     active  customer  records from CUSTDB.  If you've used commands 2 or 4
+     you will have a found set  of  active  user  records  from  USERDB  or
+     TUSRDB.
+
+
+     CHANGING CUSTOMER COSTCODES
+
+
+          When you have a found set of customer records to change,  whether
+     the  records  are  selected  by  the program (CHANGE NEW CUSTOMERS) or
+     selected by you (CHANGE CUSTOMERS);  the program  will  list  all  the
+     records in the found set, in the order that they will appear to prompt
+     you for changes.  
+
+
+          Customer records must be changed one customer at a time;  but  if
+     there  are  multiple  active records for a particular customer, all of
+     that customer's active CUSTDB records will be changed  simultaneously.
+     If  you used CHANGE CUSTOMERS, the records will be listed in the order
+     you entered the customer numbers.  If you used CHANGE  NEW  CUSTOMERS,
+     the  records  will  be sorted by district and then customer number and
+     will be listed from smallest to  largest  district  and,  within  each
+     district,  from  smallest  to  largest  customer number.  The customer
+     records list supplies  customer  number,  system  type,  district  and
+     current costcode.
+
+
+          When the program is finished typing it's  current  set  of  found
+     CUSTDB  records, it will prompt you by typing information from each of
+     the first customers active records (one line  per  record)  using  the
+     following format:
+
+               345543 1 202 1187 NEW C.C.=>
+               345543 3 202 1187 NEW C.C.=>
+               345543 9 202 1187 NEW C.C.=>
+
+     When you've entered  a  new  costcode  and  pressed  return,  the  new
+     costcode  will  be  applied  to all three customer records, whether by
+     putting a stopdate on these three records and adding three new records
+     containing  active STOPDATES and the new costcode (if the old costcode
+     value was non-zero) or by simply changing the costcode  in  all  three
+     records (if the old costcode was zero).
+
+
+          Costcodes entered should be between 1 and 9999, or you will get a
+     "COSTCODE  OUT  OF  RANGE"  message  and  will be prompted for another
+     costcode.  If you press return without entering a number you will move
+     on  to  the  next  customer  number  without  changing this customer's
+     costcode.  Entering a "-1" will change this customer's costcode to the
+     last new costcode value you entered for a previous customer.
+
+                                                                         Page 6
+
+
+     A sequence like so:
+
+               CUSTOMER              COSTCODE              COSTCODE ENTERED
+                                  VALUE YOU TYPE             IN DATA BASE
+
+                  A                   1010 <CR>                  1010
+                  B                        <CR>                NO CHANGE
+                  C                    -1  <CR>                  1010
+                  D                        <CR>                NO CHANGE
+                  E                    -1  <CR>                  1010
+                  F                    -1  <CR>                  1010
+                  G                   1099 <CR>                  1099
+                  H                    -1  <CR>                  1099
+
+
+          Thus, when using the CHANGE CUSTOMERS command, it is advantageous
+     to  enter  consecutively  those  customer  numbers  that  are going to
+     receive the same costcode.
+
+
+          After each customer costcode change that you enter (this  doesn't
+     apply if you didn't change the customer's costcode) there are a series
+     of prompts regarding  that  customer's  users.   After  you  enter  an
+     acceptable new customer costcode value, the program will prompt with:
+
+               "DO USERS FOR THIS CUSTOMER?".
+
+     An "N" reply will move you on to change the  next  customer;   or,  if
+     that  was the last customer in the "found" set, will return you to the
+     command menu allowing you to select a new found  set  of  customer  or
+     user  records.   A  "Y"  reply  will  cause  the  program  to find the
+     customer's user records.  If there was a customer  record  for  system
+     type  1 (PDP10), 2 (XDS940), or 3 (IBM370) the program will first look
+     for active user records belonging to that customer in USERDB, and will
+     then type out the number of users followed by "TYMSHARE USERS FOR THIS
+     CUSTOMER".  If there is also an active CUSTDB record for the  customer
+     with an accounting system type 9 (valid for non-Tymshare hosts);  then
+     after you've changed all the active USERDB records for that  customer,
+     the program will find all the active TUSRDB records for that customer,
+     and print the number of active user  records  in  TUSRDB  followed  by
+     "TYMNET  USERS  FOR  THIS CUSTOMER".  If the only active CUSTDB record
+     for this customer has a system type of 9, then you will see
+
+               "0 TYMSHARE USERS FOR THIS CUSTOMER"
+               "# TYMNET USERS FOR THIS CUSTOMER".
+
+     Having informed you of which user data base it is referring to and how
+     many active users the customer has in that data base, the program will
+     then prompt with:
+
+               "SAME COSTCODE AS CUSTOMER FOR ALL USERS?".
+
+     A "Y" response will cause the program to change the costcode  for  all
+     of  this  customer's  active  user  records in either USERDB or TUSRDB
+     (whichever you're in) to the costcode value you just entered  for  the
+     CUSTDB  record.   An  "N" response will cause the program to list each
+     user  record's  information,  one  at  a  time,  with  each  line   of
+                                                                         Page 7
+
+
+     information  (UUN,  customer  number,  district in user data base, old
+     costcode) followed by "NEW C.C.=>=>".  The user records will be sorted
+     by UUN.  Note that "NEW C.C.=>=>" prompts for a user costcode and "NEW
+     C.C.=>=>=>=>" prompts for a customer costcode.
+
+
+          If you choose to enter the user costcodes individually,  you  can
+     use  some  shortcuts  similar  to  those  used  when entering customer
+     costcodes.  A <CR> with no number means you don't want to change  that
+     user's  costcode.   A  "-1"  means change it to the last user costcode
+     entered (typed by you) for this customer.  A "-9" means give the  user
+     the  customer's  new  costcode.   If you enter "-1" for the first user
+     record belonging to a given customer, you will get a "COSTCODE OUT  OF
+     RANGE"  message  because the program doesn't have a previously entered
+     user costcode value (the value is zeroed with each new customer record
+     that  is  changed).   Typing  <ESCAPE>  will return you to the command
+     menu, skipping all further changes for the  command  you  are  already
+     doing.
+                                                                         Page 8
+
+
+     CHANGING USER COSTCODES
+
+
+          When you have a found set of user records to change, whether  the
+     records  are selected by the program (CHANGE NEW USERS) or selected by
+     you (CHANGE USERS);  the program will list  all  the  records  in  the
+     found  set,  sorted  by  customer number and then by UUN.  This is the
+     order in which they will appear to prompt you for changes.
+
+
+          When the program is finished typing out the found records it will
+     prompt with:
+
+               "SAME COSTCODE FOR ALL THESE USERS?".
+
+     A "Y" response causes the program  to  prompt  you  to  enter  a  user
+     costcode,  which  will  then be applied to all the user records in the
+     found set.  When it has changed all the  user  costcodes  the  program
+     will prompt with:
+
+               "# USERS CHANGES.  LIST THEM?".
+
+     An "N" at this point will return you to the command menu.  A "Y"  will
+     list  the  original  found set of records.  For each of the records in
+     this list:  if the previous costcode was zero the record will  contain
+     the  new  costcode  and  a  stopdate  of 12/31/99 (stopdate for active
+     record);  and if the previous costcode was non-zero  the  record  will
+     contain  the  old  costcode and a stopdate with the current date.  The
+     new user record won't be listed because it isn't part of the found set
+     being printed;  but as long as the stopdate on the old record has been
+     changed to the current date you can count on a new record with the new
+     costcode  and  an active startdate added to the data base despite that
+     the new record doesn't appear in your list.
+
+
+          Backtracking to the "SAME COSTCODE FOR ALL  USERS?"  prompt;   if
+     you  answer "N" to this, the program will type each user's information
+     (UUN, costomer number,  district,  old  costcode),  followed  by  "NEW
+     C.C.=>=>,  and  then wait for you to supply a new costcode.  The range
+     of valid costcodes is still 1 -> 9999.  Typing  <ESCAPE>  will  return
+     you  immediately  to  the  command  menu.   Typing <CR> with no number
+     entered will leave that user's costcode unchanged.  Typing a "-1" will
+     give  this  user the last costcode you typed in.  If this is the first
+     user you've changed since restarting at the command menu a  "-1"  will
+     return  a  "COSTCODE OUT OF RANGE".  Typing a "-9" while changing user
+     costcodes with the "CHANGE NEW USERS" or "CHANGE USERS"  command  will  return  a  "COSTCODE  OUT OF RANGE" message.  The "-9" entry will give
+     the user the customer's costcode only if you  are  changing  users  as
+     part of the "CHANGE NEW CUSTOMERS" or "CHANGE CUSTOMERS" command, have
+     just  assigned  a  customer  costcode,  and  are  now  changing   that
+     customer's users' costcodes.
+                                                                         Page 9
+
+
+     QUESTIONS
+
+
+     Obviously, with such thorough documentation, no questions should  ever
+     arise;   but  just  in case they do through some aberration of nature,
+     circumstance or X22 system software, the person  to  contact  is  Joel
+     Morine  at  446-7164.  Most X22 errors you get will be due to keytable
+     problems with the three validations data bases.  You can  either  call
+     Joel  Morine  or  call  Ed Gauci at 446-7679;  or you can just try the
+     program again after a few hours, depending on the fact  that  we  will
+     undoubtedly  hear  about  validations data base problems from somebody
+     else if you don't tell us.  If the same X22 error occurs for an entire
+     day  or more, chances are it isn't a data base problem, and Joel or Ed
+     should be informed.
+                                                                        Page 10
+
+
+     that's all folks...!
+ U/j	
