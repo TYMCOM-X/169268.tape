@@ -1,0 +1,1799 @@
+                                                              December 11, 1986
+
+
+
+
+
+
+
+                            GENERAL EXTERNAL DESIGN
+                            CMT HALF-DUPLEX SUPPORT
+
+
+
+
+                                    TYMNET
+                        NETWORK TECHNOLOGY DEVELOPMENT
+                               December 11, 1986
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+     ====================================================================
+     |   TYMNET's   proprietary  rights  are  included  in  the         |
+     |   information disclosed herein.   The recipient,  by receiving   |
+     |   this document,  agrees  that neither this  document nor  the   |
+     |   information  disclosed  herein nor any part thereof shall be   |
+     |   reproduced or transferred to  other  documents  or  used  or   |
+     |   disclosed  to  others  for  manufacturing  or  for any other   |
+     |   purpose except  as  specifically authorized  in  writing  by   |
+     |   TYMNET                                                         |
+     ====================================================================
+
+
+
+
+                                                           G.E.D OF HALF-DUPLEX
+                                                              December 11, 1986
+
+
+
+
+
+
+
+                                   TABLE OF CONTENTS
+
+        Section                                                            Page
+
+
+
+        1.   INTRODUCTION                                                     1
+          1.1   WHAT IS HALF-DUPLEX?                                          1
+          1.2   ADVANTAGES OF HALF-DUPLEX                                     1
+
+
+        2.   TYMFILE FOR HALF-DUPLEX MODE SUPPORT                             2
+
+
+        3.   LOGGING IN TO CMT                                                3
+
+
+        4.   FUNCTION KEYS                                                    4
+          4.1   FCNCLR (clear)                                                4
+          4.2   KILL (zap circuit)                                            4
+          4.3   FCNENT (enter)                                                4
+          4.4   DELCHA (delete char)                                          5
+          4.5   RESET (reset)                                                 5
+          4.6   FLDTAB (tab)                                                  6
+          4.7   BACKTA (back tab)                                             6
+          4.8   CURSEL (cursor select)                                        6
+          4.9   EEOF (erase to end of field)                                  7
+          4.10  NEWLIN (new line)                                             7
+          4.11  REDSPY (redisplay)                                            7
+          4.12  HOME (home cursor)                                            8
+          4.13  INSMOD (insert mode)                                          8
+          4.14  FCNF1 - FCNF24                                                8
+          4.15  FCNPA1 - FCNPA3                                               8
+          4.16  ARROW KEY                                                     9
+             4.16.1   CURSOR LEFT                                             9
+             4.16.2   CURSOR RIGHT                                            9
+             4.16.3   CURSOR UP                                               9
+             4.16.4   CURSOR DOWN                                            10
+
+          4.17  FSYS (system request)                                        10
+          4.18  STATLN (status line selection)                               10
+
+
+        5.   OPTIMAL TERMINALS                                               13
+          5.1   ADDS VIEWPOINT 60                                            13
+             5.1.1    FUNCTIONS PERFORMED LOCALLY                            13
+             5.1.2    FUNCTIONS SUPPORTED REMOTELY                           15
+             5.1.3    ADDS-VP-60 HALF-DUPLEX MODE SET-UP                     16
+
+                                                           G.E.D OF HALF-DUPLEX
+                                                              December 11, 1986
+
+
+          5.2   ADM 12 PLUS                                                  17
+             5.2.1    FUNCTIONS PERFORMED LOCALLY                            17
+             5.2.2    FUNCTIONS SUPPORTED REMOTELY                           19
+             5.2.3    ADM 12 PLUS SET-UP                                     19
+
+          5.3   Terminal emulation specification                             20
+             5.3.1    Remote sequences                                       21
+                5.3.1.1     Data area qualifications                         21
+                5.3.1.2     Visual attributes                                21
+                5.3.1.3     Cursor Movement Commands                         22
+                5.3.1.4     Erase in Display                                 22
+                5.3.1.5     Erase in Line                                    23
+                5.3.1.6     Keyboard Action                                  23
+
+             5.3.2    Transmitted Codes                                      23
+                5.3.2.1     PF Keys                                          24
+                5.3.2.2     PA Keys                                          24
+                5.3.2.3     Enter Key                                        25
+                5.3.2.4     Cursor Movement Commands                         25
+                5.3.2.5     Erasure Sequences                                26
+
+
+        6.   COMPARE OPTIMAL TERMINAL FUNCTIONS WITH 3270                    27
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                           G.E.D OF HALF-DUPLEX
+        INTRODUCTION                                          December 11, 1986
+
+
+
+
+
+
+                                   1 -  INTRODUCTION
+
+
+
+
+
+
+
+                               1.1  WHAT IS HALF-DUPLEX?
+
+
+                  Half-Duplex operation is similar to the original CMT  mode of
+        operation, Full-Duplex.  Both  are character modes  - 1 character  at a
+        time is  sent from the  terminal to  CMT.   The difference is  echo: in
+        Full-Duplex the network  must echo (either CMTI  or the Consat)  and in
+        Half-Duplex  the  terminal  itself  echos  each  character.   Thus  the
+        terminal must have certain local functions in order for the  local echo
+        to  work  correctly  and  not  destroy  parts  of  the  screen.  Escape
+        sequences are not echoed in either mode.
+
+             Terminals  can work  in Half-Duplex  if they  have the  ability to
+        support  locally controlled  protected areas  on the  screen,  and have
+        sufficiently flexible local editing functions.  Otherwise, the terminal
+        would be used in a Full-Duplex mode.
+
+
+
+
+
+
+                            1.2  ADVANTAGES OF HALF-DUPLEX
+
+
+                  Half-Duplex mode  gives a response  time advantage  since the
+        local  echo  means  that  local  editing  functions  like  tab,  insert
+        character, delete character,  etc all occur immediately.   The operator
+        does not  have to wait  for a network  response to an  escape sequence.
+        This is of  particular use when the  terminal is located far  away from
+        the echoing interface, such as  between Europe and the USA,  or through
+        multiple networks.
+
+             There are also less escape  sequences for the operator to  have to
+        remember, since the local functions are all key-labeled.
+
+
+
+
+
+
+
+        1                                                  G.E.D OF HALF-DUPLEX
+        TYMFILE FOR HALF-DUPLEX MODE SUPPORT                  December 11, 1986
+
+
+
+
+
+
+                       2 -  TYMFILE FOR HALF-DUPLEX MODE SUPPORT
+
+
+        With Half-Duplex mode operation, the Tymfile requires :
+
+
+        1. Define macro for Half-Duplex mode terminal in macro DEFTRM.
+           
+           For example :
+
+           DEFTRM macro [
+                    .
+                    .
+                  VT100M        :VT100 terminal with Full-Duplex mode
+                  ADD69M        :ADDS 60 or ADDS 90 with Full-Duplex mode
+                  ADD60H        :ADDS 60 with Half-Duplex mode
+                  ADM12H        :ADM 12PLUS with Half-Duplex mode
+                    .
+                    .
+           ]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        2                                                  G.E.D OF HALF-DUPLEX
+        LOGGING IN TO CMT                                     December 11, 1986
+
+
+
+
+
+
+                                3 -  LOGGING IN TO CMT
+
+
+             The  logon procedure  for CMT  Half-Duplex mode  operation  is the
+        following :
+
+        1. The user must set up his terminal in Half-Duplex mode.
+
+        2. Enter a control-H before his username to force the CONSAT into
+           Half-duplex mode.
+
+        3. After logging in to CMT, select the Half-Duplex terminal when
+           the select terminal type screen is present.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        3                                                  G.E.D OF HALF-DUPLEX
+        FUNCTION KEYS                                         December 11, 1986
+
+
+
+
+
+
+                                  4 -  FUNCTION KEYS
+
+
+             Most of  the 3270  functions are supported  by CMT.   This section
+        will list the 3270 functions  that CMT does support in  the Full-Duplex
+        mode operation.
+
+
+
+
+
+
+                                  4.1  FCNCLR (clear)
+
+
+             The screen is cleared locally, CMT clears its internal  screen and
+        the host is notified.  The cursor is moved to the first position on the
+        screen.
+
+
+
+
+
+
+                                4.2  KILL (zap circuit)
+
+
+             CMT will zap the circuit and the operator is returned  to  'please
+        log in :'.
+
+             This function is invoked  by entering a control sequence  from the
+        keyboard.
+
+
+
+
+
+
+                                  4.3  FCNENT (enter)
+
+
+             The application  program is  notified that  an ENTER  function has
+        been requested.  Areas of  the screen  that have  been modified  by the
+        operator are reported back to the application, as is the current cursor
+        position.
+
+
+
+
+
+        4                                                  G.E.D OF HALF-DUPLEX
+        FUNCTION KEYS                                         December 11, 1986
+
+
+                               4.4  DELCHA (delete char)
+
+
+             This function is handled  locally by the terminal and  CMT updates
+        its internal screen buffer.
+
+             The character  at the  current cursor position  is moved,  and all
+        characters in the  field to the right  of that position are  shift left
+        one position.
+
+             The delete  character function  in 3270  and CMT  Full-Duplex mode
+        operation does not wrap a line,  but it does for the ADDS  VIEWPOINT 60
+        terminal.
+
+
+
+
+
+
+                                  4.5  RESET (reset)
+
+
+             The RESET function in  3270 or CMT Full-Duplex mode  operation can
+        do either one of the followings :
+
+             1. Exit insert mode.
+
+                For  the  ADDS  VIEWPOINT  60  terminal,  in  Half-Duplex mode,
+        exiting  from the  insert mode  is by  striking the  INS C  key  on the
+        keyboard.
+
+             2. Unlock the keyboard.
+
+                Normally  the  keyboard  is locked  when  any  transmit  key is
+        struck.  A subsequent message  from the host will unlock  the keyboard.
+        In some cases this may not happen. Then the operator may use  the RESET
+        key to unlock the keyboard.  When the keyboard is considered  locked by
+        CMT, the only entry from the terminal operator that will be accepted is
+        the  RESET  key. All  other  entries  will be  ignored  and  the cursor
+        position remains unchanged.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        5                                                  G.E.D OF HALF-DUPLEX
+        FUNCTION KEYS                                         December 11, 1986
+
+
+                                   4.6  FLDTAB (tab)
+
+
+             The TAB  function moves the  cursor to the  beginning of  the next
+        unprotected field. At the end of the screen, the cursor wraps around to
+        the first unprotected field.
+
+             This  function  is handled  locally  and CMT  updates  its current
+        cursor position in the internal screen buffer.
+
+
+
+
+
+
+                                4.7  BACKTA (back tab)
+
+
+             The BACKTAB function moves the cursor backward to the beginning of
+        an unprotected field. If the  cursor is already at the beginning  of an
+        unprotected field, or if it  is in a protected field, the  cursor moves
+        to the beginning of  the preceding unprotected field; at  the beginning
+        of the screen, it wraps  around to the last unprotected field.   If the
+        cursor is past the first position within an unprotected field, it moves
+        to the beginning of the current field.
+
+             This function is handled  locally by the terminal and  CMT updates
+        its current cursor position in the internal screen buffer.
+
+
+
+
+
+
+                              4.8  CURSEL (cursor select)
+
+
+             The  CURSEL   function  allows   the  selector-light-pen-detection
+        function to be performed from a keyboard.
+
+             This function is invoked  by entering a control sequence  from the
+        keyboard.
+
+
+
+
+
+
+
+
+
+
+
+
+        6                                                  G.E.D OF HALF-DUPLEX
+        FUNCTION KEYS                                         December 11, 1986
+
+
+                           4.9  EEOF (erase to end of field)
+
+
+             The  EEOF function  clears the  rest of  the field,  including the
+        current  position,  if  the  cursor is  in  an  unprotected  field. The
+        operation can wrap lines or the screen. The cursor does not  move.  The
+        MDT bit is set.
+
+             This function is handled  locally by the terminal and  CMT updates
+        its internal screen buffer.
+
+
+
+
+
+
+                                4.10  NEWLIN (new line)
+
+
+             The  NEWLIN function  moves the  cursor to  the  first unprotected
+        position on the  next line.  The cursor  may wrap the screen.  If there
+        are  no unprotected  fields  on the  screen,  the cursor  will  move to
+        character position 0; if there are no formatted fields, the cursor will
+        be positioned at the first character on the next line.
+
+             If this function can not be handled locally, it can be  invoked by
+        entering a control sequence from keyboard.
+
+
+
+
+
+
+                               4.11  REDSPY (redisplay)
+
+
+             The REDSPY function clears the screen and redisplays  its contents
+        as seen by  CMT.  The cursor is  moved to the first  unprotected field.
+        If the screen is unformatted the cursor is moved to the  first position
+        on the screen.
+
+             This  function is  not  supported locally.  It can  be  invoked by
+        entering a control sequence from the keyboard.
+
+
+
+
+
+
+
+
+
+
+
+        7                                                  G.E.D OF HALF-DUPLEX
+        FUNCTION KEYS                                         December 11, 1986
+
+
+                               4.12  HOME (home cursor)
+
+
+             The HOME function moves the  cursor to the beginning of  the first
+        unprotected  field  on the  screen.  If the  cursor  is  already there,
+        nothing happens.
+
+             This function is handled  locally by the terminal and  CMT updates
+        its cursor position accordingly.
+
+
+
+
+
+
+                              4.13  INSMOD (insert mode)
+
+
+             The  INSMOD  function  causes  CMT  to  enter  insert  mode.  Each
+        character  typed  in  this  mode  is  inserted  at  the  current cursor
+        position; data from  that position to the  end of the field  is shifted
+        right one position, and the cursor moves right one position. The fields
+        may wrap a line or the screen.
+
+             This function is handled  locally by the terminal and  CMT updates
+        the internal screen buffer.
+
+
+
+
+
+
+                                 4.14  FCNF1 - FCNF24
+
+
+             The application  program is  notified that  the function  has been
+        requested. Areas of the screen that have been modified by  the operator
+        are reported back to the application.
+
+
+
+
+
+
+                                 4.15  FCNPA1 - FCNPA3
+
+
+             The application  program is  notified that  the function  has been
+        requested. No modifed fields are sent to the host, unlike the PF keys.
+
+
+
+
+
+        8                                                  G.E.D OF HALF-DUPLEX
+        FUNCTION KEYS                                         December 11, 1986
+
+
+                                    4.16  ARROW KEY
+
+
+             The  cursor  can  be  moved  in  the  up,  down,  right  and  left
+        directions.  With these  four  keys, the  cursor  can be  moved  to any
+        location on the screen.
+
+
+
+
+
+                    4.16.1  CURSOR LEFT
+
+             The CURLEFT function moves the cursor left one character position.
+        At the left edge of a  line, the cursor wraps around to the  right edge
+        of the previous line.
+
+             This function is handled  locally by the terminal and  CMT updates
+        its cursor position for the internal screen.
+
+
+
+
+
+               4.16.2  CURSOR RIGHT
+
+             The  CURRIGHT  function  moves  the  cursor  right  one  character
+        position.  At the right edge of a line, the cursor wraps around  to the
+        left edge at the next line.
+
+             This function is handled  locally by the terminal and  CMT updates
+        its cursor position for the internal screen.
+
+
+
+
+
+                    4.16.3  CURSOR UP
+
+             The CURUP function moves the  cursor up to the same column  in the
+        line preceding the current line.  At the top of the screen,  the cursor
+        wraps around to the bottom line.
+
+             This function is handled  locally by the terminal and  CMT updates
+        its cursor position for the internal screen.
+
+
+
+
+
+
+
+
+
+        9                                                  G.E.D OF HALF-DUPLEX
+        FUNCTION KEYS                                         December 11, 1986
+
+
+                    4.16.4  CURSOR DOWN
+
+             The CURDOWN function moves the  cursor down to the same  column in
+        the line  following the  current line.   At bottom  of the  screen, the
+        cursor wraps around to the top line.
+
+             This function is handled  locally by the terminal and  CMT updates
+        its cursor position for the internal screen.
+
+
+
+
+
+
+                              4.17  FSYS (system request)
+
+
+             In  the SNA  environment, the  SYSREQ function  performs  a switch
+        procedure for SSCP-LU, LU-LU and the unowned session.  This key will be
+        defined as a control sequence entered by the user from the keyboard.
+
+             This key locks  the keyboard, clears the  screen, and waits  for a
+        message from the host to unlock the keyboard.
+
+             During  the  keyboard  lock,  if  for  any  reason,  the  SNA host
+        interface does not respond, the RESET key can not unlock  the keyboard;
+        only the KILL key is allowed to zap the circuit.
+
+             In the BSC environment, the SYSREQ key is not allowed.
+
+
+
+
+
+
+                         4.18  STATLN (status line selection)
+
+
+             CMT has  a status line  which performs a  similar function  to the
+        3270 status line.
+
+             This function allows  the user to  enter the status  display, exit
+        the status display, or select the status display area.
+
+             The CMT status line (in Full-Duplex mode) indicates  the following
+        conditions :
+
+         *  1. Host interface type. (BSC/SNA/X.25)
+           
+         *  2. Session type. (APPL/SYS/?)
+
+         *  3. CRT luname. (CRT: crt lu string)
+
+
+        10                                                 G.E.D OF HALF-DUPLEX
+        FUNCTION KEYS                                         December 11, 1986
+
+
+         *  4. PRT luname. (PRT: prt lu string)
+
+         *  5. Printer busy. (WAIT)
+
+         *  6. Unavailable function was requested. (-F)
+
+            7. Insert mode. (ISRT)
+
+            8. Protected field. (PROT)
+
+            9. Numeric lock. (NULK)
+
+           10. Keyboard lock. (LOCK)
+
+
+             In  Full-Duplex mode  operation, all  the above  status  items are
+        displayed by the CMT  status line. In Half-Duplex mode  operation, some
+        of them are displayed locally  by the terminal, therefore, it  need not
+        be displayed  again by  CMT status line  in order  to avoid  the remote
+        delay.
+
+             * In Half-Duplex  mode, only status items  1 - 6 are  displayed on
+        the CMT status  line, other status items  depend on the  terminal local
+        status line.
+
+             *  In Half-Duplex  mode, only  line  1 to  24 is  used  to display
+        status.  No upper-corner, no 25th status line is displayed.
+
+        For example, 
+
+          1. With the ADDS VIEWPOINT 60 terminal in Half-Duplex mode 
+             operation :
+            
+             a. Insert mode, locally displays "INSERT EOF".
+
+             b. During keyboard lock, locally displays "KEYBOARD LOCK".
+         
+             c. Moving cursor into a protected field, locally displays
+                "PROTECTED".
+             
+             d. No Numeric Lock.
+
+          2. With the ADM 12 PLUS terminal in Half-Duplex mode operation :
+
+             a. Insert mode, locally displays "INS".
+
+             b. During keyboard lock, locally displays "KBLK".
+
+             c. No protected field indication because cursor is not
+                allowed to move to a protected field.
+
+             d. No Numeric Lock.
+
+
+        11                                                 G.E.D OF HALF-DUPLEX
+        FUNCTION KEYS                                         December 11, 1986
+
+
+             In Half-Duplex mode,  the status line automatically  displays, and
+        defaults to the  24th line. It  will not be  turned off until  the user
+        enters a control sequence to turn it off.
+
+             In order  to keep  the terminal screen  data accurate,  before the
+        status line is displayed, the keyboard is locked locally by  CMT. After
+        the  status  line  display  is  complete,  the  keyboard   is  unlocked
+        automatically.
+
+             The whole status  line display area  is protected on  the terminal
+        screen but not in the CMT internal screen buffer.
+
+             With the ADDS VIEWPOINT 60 terminal, the cursor is allowed to move
+        into this area, but the  ADM 12 PLUS terminal doesn't.   Both terminals
+        will not allow data entered from the keyboard to destroy this area.
+
+             If the status  line has an unprotected  field in the  CMT internal
+        screen buffer, the only way to enter data in that area is to change the
+        status line display to another line.
+
+             No upper-right corner status display is allowed in the Half-Duplex
+        mode operation.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        12                                                 G.E.D OF HALF-DUPLEX
+        OPTIMAL TERMINALS                                     December 11, 1986
+
+
+
+
+
+
+                                5 -  OPTIMAL TERMINALS
+
+
+             For Half-Duplex support,  CMT will support the  optimal terminals.
+        An optimal  terminal has  protected and  unprotected fields  which wrap
+        lines and all local functions work properly.
+
+
+
+
+
+
+                                5.1  ADDS VIEWPOINT 60
+
+
+
+
+
+
+                    5.1.1  FUNCTIONS PERFORMED LOCALLY
+
+        1. Clear screen. (key 'CTRL-E ALL')
+
+        2. Cursor movement.
+
+           Cursor up    : moves the cursor vertically upward. 
+         
+           Cursor down  : moves the cursor verically down.
+
+           Cursor right : moves the cursor horizontally to the right.
+         
+           Cursor left  : moves the cursor horizontally to the left.
+             
+           Tab          : moves the cursor to the beginning of the next
+                          nunprotected field. When the cursor is at the 
+                          last unprotected field, the TAB key wraps around
+                          to the first position of the screen. Another TAB 
+                          key moves to the 1st unprotected field. (key 'TAB')
+            
+           Back tab     : works as normal. (key 'SHIFT-TAB')
+             
+
+        3. Delete character - It does wrap a line.(3270 does not wrap).
+                              (key 'DEL C')
+
+        4. Enter. (key 'RETURN')
+
+        5. Erase eof - including fields wrapping lines. (key 'CTRL EOF')
+
+
+        13                                                 G.E.D OF HALF-DUPLEX
+        OPTIMAL TERMINALS                                     December 11, 1986
+
+
+        6. Insert mode - It does wrap a line. (key 'INS C')
+
+        7. Keyboard lock. (CMT puts terminal in either lock or unlock)
+
+        8. 16 PF keys (8 PF keys, use shift for another 8 PF keys).
+
+        9. Erase input - erase all input characters. CMT does not have in
+                         Full-Duplex mode operation, this will be implemented 
+                         in the Half-Duplex project. (key 'CTRL-E ALL')
+
+        10. Typamatic -  all alphameric, the cursor movement keys, and the
+                         DEL key.
+
+        11. Reset - It unlocks the keyboard properly and turns off the 
+                    "KEYBOARD LOCK" status. It can not exit the insert mode.
+                    (key 'RESET')
+
+        12. Home - The function moves the cursor to the first position
+                   on the screen. The operator must then hit a TAB key to 
+                   moves the cursor to the beginning of the first unprotected
+                   field on the screen. (key 'HOME')
+
+        ** field attributes are embedded.(i.e. they occupy a character position
+           on the screen)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        14                                                 G.E.D OF HALF-DUPLEX
+        OPTIMAL TERMINALS                                     December 11, 1986
+
+
+                    5.1.2  FUNCTIONS SUPPORTED REMOTELY
+
+
+           Function      
+           --------      
+
+        1. Cursor select 
+
+        2. Kill          
+
+        3. 3 PA keys     
+
+        4. 24 PF keys    
+                                
+        5. Newline    
+           
+        6. Redispaly    
+
+        7. Sysreq       
+
+        8. Statln       
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        15                                                 G.E.D OF HALF-DUPLEX
+        OPTIMAL TERMINALS                                     December 11, 1986
+
+
+                    5.1.3  ADDS-VP-60 HALF-DUPLEX MODE SET-UP
+
+             Power on  the ADDS-VP-60 and  enter set-up mode  by simultaneously
+        pressing the keys SHIFT-HOME.   Use the following keys to  position the
+        cursor along the status line and to select the required configuration:
+
+                      right arrow     =      next selection
+                      left arrow      =      previous selection
+                      up arrow        =      1
+                      down arrow      =      0
+
+
+                 1= x x x x x x x x  2= x x x x x x x x 
+                    ---.--- ---.---                 -.-
+                     BAUD   RESERVED    D V H S L D  P
+                     RATE               U I I C I I  A
+                    110 = 0000          P D G R N S  R
+                    150 = 0001          L E H O E P  I
+                    300 = 0010          E O L L F L  T
+                   1200 = 0011          X   I L E A  Y
+                   1800 = 0100            P G   E Y
+                   2400 = 0101            R H   D
+                   4800 = 0110            S T
+                   9600 = 0111            T
+                  19200 = 1000
+
+                 3= x x x x x x x x  4= x x x x x x x x
+                      --.-- -.- -.-           ----.----
+                    P   C    C   R      R C K     R
+                    O   U    H   E      E U E     E
+                    W   R    A   S      S R Y     S
+                    E   S    R   E      E S C     E
+                    R   O        R      R O L     R
+                        R    C   V      V R I     V
+                             A   E      E   C     E
+                             S   D      D H K     D
+                             E            O
+                                          M
+                                          E
+
+              Set-up the following configuration (x is optional):
+
+              1=00110011  2=01100000  3=00xx0100  4=01x00100
+
+
+        After all selections have been made and to be stored, depress
+        the HOME key. If no changes are  to be made or to exit the  SETUP mode,
+        depress the ESC key.
+
+
+
+
+
+
+        16                                                 G.E.D OF HALF-DUPLEX
+        OPTIMAL TERMINALS                                     December 11, 1986
+
+
+                                   5.2  ADM 12 PLUS
+
+
+
+
+
+
+                    5.2.1  FUNCTIONS PERFORMED LOCALLY
+
+        1. Clear screen. (key 'SHIFT-CLEAR' with "PROT" mode reset)
+
+        2. Cursor movement :
+
+           Cursor up -    Moves the cursor up to the previous line in the same 
+                          column. If the intended location is protected, the 
+                          cursor will continue from right to left to the first 
+                          unprotected location stopping at the Home position if
+                          an unprotected location cannot be found.
+           
+           Cursor down -  Moves the cursor to the next line down in the same
+                          column. If the intended location is protected, the 
+                          cursor will move right to the first unprotected 
+                          location.
+
+           Cursor right - Moves the cursor to the right to the next unprotected
+                          location. If the cursor is at the right margin, it 
+                          moves down to the start of the next line until a
+                          nonprotected location is found.
+
+           Cursor left -  Moves the cursor to the left to the previous 
+                          unprotected location. If the cursor is at the left 
+                          margin, it moves up to the end of the previous line 
+                          until a unprotected location is found.
+           
+           Tab - Works as normal. (key 'TAB')
+
+           Backtab - Works as normal (key 'SHIFT-TAB')
+
+        3. Delete character - It does not wrap a line. (key 'DELETE CHAR')
+
+        4. Enter. (key 'RETURN')
+
+        5. Insert mode - key 'INSERT MODE'.
+
+        6. Keyboard lock. (CMT puts terminal in either lock or unlock)
+
+        7. 32 PF keys.
+
+        8. Erase input - erases all input characters, nothing changes in 
+                         protected fields. (In "PROT" mode, key 'SHIFT-CLEAR')
+
+        9. Typamatic - all alphameric, the cursor movement keys.
+
+
+        17                                                 G.E.D OF HALF-DUPLEX
+        OPTIMAL TERMINALS                                     December 11, 1986
+
+
+        10. New line. (key 'NEW LINE').
+
+        11. Erase line - No EEOF key on terminal keyboard. In order to simulate
+                         EEOF key, using erase line key to erase to end of 
+                         line. If this field is more than one line, then erase 
+                         line, move cursor to the next line, and do erase line 
+                         again. (key 'ERASE LINE')
+
+        12. Home - Moves the cursor to the first unprotected field.
+         
+        ** field attributes are not embedded (i.e. they do not occupy a
+           character position on the screen).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        18                                                 G.E.D OF HALF-DUPLEX
+        OPTIMAL TERMINALS                                     December 11, 1986
+
+
+                    5.2.2  FUNCTIONS SUPPORTED REMOTELY
+
+            Function     
+            --------     
+
+         1. cursor select
+
+         2. Kill         
+
+         3. 3 PA keys    
+
+         4. 24 PF keys   
+         
+         5. Redisplay 
+
+         6. Sysreq    
+
+         7. Reset     
+         
+         8. Statln    
+
+
+
+
+
+
+
+                    5.2.3  ADM 12 PLUS SET-UP
+
+             Power on the ADM 12 and simultaneously press   SHIFT,CONTROL, SET-
+        UP to access operator set-up mode on the ADM 12.   User selectable set-
+        up functions will be displayed on the status line at the bottom  of the
+        screen.
+
+             Use the following keys:
+
+                    up arrow   = display next     set-up function
+                    down arrow = display previous set-up function
+                    L/R arrows = position cursor over value to be selected
+
+             Select the following  set-up values 
+
+                    KEY CLICK = N
+                    STATUSLINE = REV
+                    FULL REVERSE = N
+                    CURSOR BLINK = N
+                    CURSOR = BLOCK
+                    SCREEN SAVER = N
+                    SMOOTH SCROLL = N
+                    SMOOTH SCROLL RATE = 6
+                    HORZ SCROLL = PAGE
+                    MODE = ADM 12+
+                    KBD LANG = US
+
+        19                                                 G.E.D OF HALF-DUPLEX
+        OPTIMAL TERMINALS                                     December 11, 1986
+
+
+                    REFRESH RATE = 60HZ
+                    EMB ATTR = N
+                    PAGE ATTR = N
+                    ONLINE
+                    PAGE CONFIG = NORM
+                    COLUMNS DISPLAYED 80
+                    WRAP = Y
+                    NEWLIN = N
+                    CONV
+                    HDX
+                    HANDSHAKE = XON/XOF
+                    BAUD = 1200
+                    BITS = 8
+                    PARITY? = N
+                    PARITY = EVEN
+                    STOPS = 2
+                    PRINTER HANDSHAKE = XON/XOFF
+                    PBAUD = 1200
+                    PRINTER BITS = 7
+                    PRINTER PARITY? = Y
+                    PRINTER PARITY = EVEN
+                    PRINTER STOPS = 1
+
+
+            Save the set-up function values by entering CONTROL S.
+
+            Exit the set-up mode by pressing the STATUS key.
+
+
+
+
+
+
+                         5.3  Terminal emulation specification
+
+
+             This section describes a complete ASCII terminal specification for
+        CMT  halfduplex  support.   This  specification  details  a   two  part
+        function.  The complete terminal is  an input device to CMT  with local
+        editing capabilities and  is an output  device for CMT.   This complete
+        terminal used  the VT100  as a starting  point.  Changes  and additions
+        from the VT100 are noted where described.
+
+
+
+
+
+
+
+
+
+
+
+
+        20                                                 G.E.D OF HALF-DUPLEX
+        OPTIMAL TERMINALS                                     December 11, 1986
+
+
+                    5.3.1  Remote sequences
+
+             The sequences  in this  section are  sent by  CMT to  the complete
+        terminal.
+
+
+
+        5.3.1.1  Data area qualifications
+        Define the area qualification where
+
+                    Decimal
+        Sequence  represenation   Effect
+        ESC[0o    27 91 30 111    Accept all input and start unprotected area
+        ESC[1o    27 91 31 111    Accept no input and start protected area
+        ESC[3o    27 91 33 111    Accept numerics (digits, comma, period
+                                  and plus and minus signs)
+
+             This sequence determines what data may be enterred on  the screen.
+        Defined area qualifications (DAQ)  do not occupy a  character position.
+        More than one DAQ can be included in an unprotectd field.  The sequence
+        affects the area between the current cursor position and the next DAQ.
+
+             Note: this sequence is NOT supported by a VT100 terminal.
+
+
+
+        5.3.1.2  Visual attributes
+        The visual (or character) attributes are defined by the
+
+        sequence:  ESC [ Ps;Ps;...;Ps m
+        decimal:   27 91 xx 59 xx    109
+
+        Where Ps refers to a selected parameter.  Multiple parameters
+        are separated by the semicolon character (59 decimal).  The
+        parameters are executed in order and have the following
+        meanings:
+
+                 Decimal
+        Character  form  Meaning
+           0        48   All attributes off (normal video)
+           1        49   Bold (increased intensity) on
+           4        52   Underscore on
+           5        53   Blink (flashing) on
+           7        55   Reverse video on
+           8        56   Nondisplay (blank) on **not supported by VT100**
+
+        Any other parameter values are ignored.
+
+
+
+
+
+
+
+        21                                                 G.E.D OF HALF-DUPLEX
+        OPTIMAL TERMINALS                                     December 11, 1986
+
+
+        5.3.1.3  Cursor Movement Commands
+
+             For  the  following commands,  Pn  refers to  a  decimal parameter
+        expressed  as  a  string  of  ASCII  digits.   Multiple  parameters are
+        separated by the semicolon  character (59 decimal).  If a  parameter is
+        omitted or specified to be 0 the default parameter of 1 is used.
+                    Decimal
+        Sequence  represenation   Effect
+        HT        09              Tab.  Move the cursor to the first
+                                  position of the next unprotected
+                                  field.  If the cursor is already in
+                                  last unprotected field then the cursor
+                                  moves to the first position of the
+                                  first unprotected field.
+        LF        10              Linefeed.  Move cursor down one line.
+                                  From the bottom line the cursor moves
+                                  to the first line.
+        CR        13              Carriage return.  Move cursor to left
+                                  margin of current line.
+        ESC[PnA   27 91 xx 65     Move cursor up Pn lines.  From the
+                                  top line the cursor moves to the last
+                                  line.
+        ESC[PnB   27 91 xx 66     Move cursor down Pn lines.  From the
+                                  bottom line the cursor moves to the
+                                  first line.
+        ESC[PnC   27 91 xx 67     Move cursor right Pn columns.  From
+                                  the right margin the cursor moves to
+                                  left margin of the next line.  From
+                                  the right margin on the bottom margin
+                                  the cursor moves to the left margin
+                                  on the top margin.
+        ESC[PnD   27 91 xx 68     Move cursor left Pn columns.  From
+                                  the left margin the cursor moves to
+                                  the right margin of the previous line.
+                                  From the left margin on the top margin
+                                  the cursors moves to the right column
+                                  on the bottom margin.
+        ESC[Pl;PcH  27 91 xx 59 xx 72  Move cursor to the position
+                                  specified by the parameters.  Pl is
+                                  the decimal line number and Pc is
+                                  the decimal column number.  A value
+                                  of zero or 1 or omission of a value
+                                  moves the cursor to the first line
+                                  or column.
+
+
+
+        5.3.1.4  Erase in Display
+
+             This  sequence  erases  some  or  all  of  the  characters, visual
+        attributes and defined area qualifications in the display  according to
+        the parameter.
+                    Decimal
+
+        22                                                 G.E.D OF HALF-DUPLEX
+        OPTIMAL TERMINALS                                     December 11, 1986
+
+
+        Sequence  represenation   Effect
+
+        ESC[0J    27 91 48 74     Erase from the active position to the
+                                  of the screen, inclusive (default).
+        ESC[1J    27 91 49 74     Erase from the start of the screen
+                                  to the active position, inclusive.
+        ESC[2J    27 81 50 74     Erase all of the display - all lines
+                                  are erased and the cursor does not move.
+
+
+
+        5.3.1.5  Erase in Line
+
+             This  sequence  erases  some  or  all  of  the  characters, visual
+        attributes and defined area qualifications on the active line according
+        to the parameter.
+                    Decimal
+        Sequence  represenation   Effect
+
+        ESC[0K    27 91 48 75     Erase from the active position to the
+                                  of the line, inclusive (default).
+        ESC[1K    27 91 49 75     Erase from the start of the line
+                                  to the active position, inclusive.
+        ESC[2K    27 91 50 75     Erase all of the line, and the cursor
+                                  does not move.
+
+
+
+        5.3.1.6  Keyboard Action
+
+             These sequences are not  available on the VT100.   These sequences
+        are used by the VT131.
+                                  Decimal
+        Key     Sequence        Represenation
+        ESC[2h  27 91 50 104    Set locks the keyboard and turns on the
+                                keyboard locked indicator.  Any data
+                                typed is ignored and the user is beeped.
+        ESC[2l  27 91 50 108    Reset unlocks the keyboard and turns
+                                off the keyboard locked indicator.
+
+
+
+
+
+                    5.3.2  Transmitted Codes
+
+             The following sequences are sent by the the terminal and have some
+        local effect.  The cursor does not move and the screen is not changed.
+
+
+
+
+
+
+        23                                                 G.E.D OF HALF-DUPLEX
+        OPTIMAL TERMINALS                                     December 11, 1986
+
+
+        5.3.2.1  PF Keys
+
+             The complete terminal has twenty more function keys than the VT100
+        making a total of twentyfour function keys.  The function  keys mapping
+        is based on the VT220  function key mapping.  These sequences  are sent
+        even if the cursor is in a protected field.  These sequences  also lock
+        the keyboard and turn on the keyboard locked indicator.
+                                  Decimal
+        Key     Sequence        Represenation
+        F1      ESC O P         27 79 80
+        F2      ESC O Q         27 79 81
+        F3      ESC O R         27 79 82
+        F4      ESC O S         27 79 83
+        F5      ESC16          27 31 36 126
+        F6      ESC17          27 31 37 126
+        F7      ESC18          27 31 38 126
+        F8      ESC19          27 31 39 126
+        F9      ESC20          27 32 30 126
+        F10     ESC21          27 32 31 126
+        F11     ESC22          27 32 32 126
+        F12     ESC23          27 32 33 126
+        F13     ESC24          27 32 34 126
+        F14     ESC25          27 32 35 126
+        F15     ESC26          27 32 36 126
+        F16     ESC27          27 32 37 126
+        F17     ESC28          27 32 38 126
+        F18     ESC29          27 32 39 126
+        F19     ESC30          27 33 30 126
+        F20     ESC31          27 33 31 126
+        F21     ESC32          27 33 32 126
+        F22     ESC33          27 33 33 126
+        F23     ESC34          27 33 34 126
+        F24     ESC35          27 33 35 126
+
+
+
+        5.3.2.2  PA Keys
+
+             The  program attention  (PA) keys  are not  present on  the VT100.
+        These sequences are  sent even if the  cursor is in a  protected field.
+        These sequences also lock the keyboard and turn on the  keyboard locked
+        indicator.
+                                  Decimal
+        Key     Sequence        Represenation
+        PA1     ESC40          27 34 30 126
+        PA2     ESC41          27 34 31 126
+        PA3     ESC42          27 34 32 126
+
+
+
+
+
+
+
+        24                                                 G.E.D OF HALF-DUPLEX
+        OPTIMAL TERMINALS                                     December 11, 1986
+
+
+        5.3.2.3  Enter Key
+        decimal : 13
+
+             The carriage return key code tells CMT that the screen is ready to
+        be sent to the host computer.  It also locks the keyboard and  turns on
+        the keyboard locked indicator.
+
+
+
+        5.3.2.4  Cursor Movement Commands
+
+             The following transmitted sequences move the cursor  as specified.
+        If the screen has no unprotected fields and the sequence is supposed to
+        move to part of an unprotected field then the cursor does not  move and
+        a bell (beep) is returned to the user.
+                    Decimal
+        Sequence  represenation   Effect
+        STX       02              Backtab.  Move the cursor the first
+                                  position of the current unprotected field.
+                                  If already at the first position of an
+                                  unprotected field or in a protected
+                                  field then move cursor to the first
+                                  position of the previous unprotected
+                                  field.  If already in the first position
+                                  of the first unprotected field then move
+                                  cursor to the first position of the last
+                                  unprotected field.
+        HT        09              Tab.  Move the cursor to the first
+                                  position of the next unprotected
+                                  field.  If the cursor is already in
+                                  last unprotected field then the cursor
+                                  moves to the first position of the
+                                  first unprotected field.
+        LF        10              Linefeed.  Move cursor down one line.
+                                  From the bottom line the cursor moves
+                                  to the top line.
+        ESC E     27 69           Newline.  Search from beginning of next
+                                  line for the next unprotected field.  If
+                                  such a field exists then move cursor to
+                                  first position of the field.
+                                  of the first unprotected field on the
+        ESC[A     27 91 65        Move cursor up one line.  From the
+                                  top line the cursor moves to the
+                                  bottom line.
+        ESC[B     27 91 66        Move cursor down one line.  From the
+                                  bottom line the cursor moves to the
+                                  top line.
+        ESC[C     27 91 67        Move cursor right one column.  From
+                                  the right margin the cursor moves to
+                                  left margin of the next line.  From
+                                  the right margin on the bottom margin
+                                  the cursor moves to the left margin
+                                  on the top margin.
+
+        25                                                 G.E.D OF HALF-DUPLEX
+        OPTIMAL TERMINALS                                     December 11, 1986
+
+
+        ESC[D     27 91 68        Move cursor left one column.  From
+                                  the left margin the cursor moves to
+                                  the right margin of the previous line.
+                                  From the left margin on the top margin
+                                  the cursors moves to the right column
+                                  on the bottom margin.
+        ESC[H      27 91 72       Home.  Move cursor to first column of
+                                  the top line.
+
+
+
+        5.3.2.5  Erasure Sequences
+
+             The following sequences erase  data in unprotected fields.   In no
+        case do any of these transmitted seqeunces erase any data  in protected
+        fields.   The cursor  does not  move unless  explicately stated  to the
+        contrary.
+                    Decimal
+        Sequence  represenation   Effect
+        ESC[1J    27 91 49 74     Clear.  Erase all unprotected fields.
+        ESC[0K    27 91 48 75     Erase to end of field.  Erase from the
+                                  current position in the unprotected
+                                  field to the end of the field.  If the
+                                  cursor is in a protected field then a
+                                  beep is sent to the user and the screen
+                                  remains unchanged.
+        ESC[P     27 91 80        Delete character.  Delete the character
+                                  at the current cursor position.  When a
+                                  character is deleted from the screen,
+                                  all characters to the right of the cursor
+                                  move to the left.  A space is created at
+                                  the last position of the unprotected
+                                  field or at the right margin.  The delete
+                                  sequence is ignored when the cursor is in
+                                  is in a protected field.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        26                                                 G.E.D OF HALF-DUPLEX
+        COMPARE OPTIMAL TERMINAL FUNCTIONS WITH 3270          December 11, 1986
+
+
+
+
+
+
+                   6 -  COMPARE OPTIMAL TERMINAL FUNCTIONS WITH 3270
+
+
+             Comparison of the ADDS VIEWPOINT  60 terminal and the ADM  12 PLUS
+        terminal to the 3270 terminal, only the functions that differ  from the
+        3270 terminal are noted.
+
+        FUNCTION   3270                    ADDS VIEWPOINT 60    ADM 12PLUS 
+        --------   ----                    -----------------    ---------- 
+
+
+        TAB        Moves the cursor to     Same as 3270.        Same as 3270.
+                   the beginning of the    Except when the 
+                   next unprotected field. cursor is at the 
+                   When the cursor is at   last unprotected
+                   the last unprotected    field, the TAB key
+                   field, the TAB key      wraps around to the 
+                   wraps around to the     first position of 
+                   first unprotected       the screen.
+                   field.
+
+
+        ARROW KEY  Moves the cursor        Same as 3270.        Quite different
+                   vertically upward,                           then 3270. see
+                   down, horizontally to                        5.2.1
+                   the right, and to the 
+                   left.
+
+
+        HOME       Moves the cursor to     Moves the cursor to  No 'HOME'key.
+                   the first unprotected   the first position
+                   field.                  of the screen.
+
+
+        INSERT     It wraps the line.      Same as 3270.        It does not 
+        MODE                               (in page mode)       wrap the line.
+
+
+        DELETE     It does not wrap the    It wraps the line.   Same as 3270.
+        CHAR       line.                   (in page mode)
+
+
+        ERASE      It wraps the line.       Same as 3270         No key 'EEOF'.
+        EOF
+
+
+
+
+
+
+        27                                                 G.E.D OF HALF-DUPLEX
+        COMPARE OPTIMAL TERMINAL FUNCTIONS WITH 3270          December 11, 1986
+
+
+
+
+        FUNCTION   3270                    ADDS VIEWPOINT 60   ADM 12PLUS
+        --------   ----                    -----------------   ----------
+
+
+        ERASE      Clears all unprotected  Same as 3270,        Same as 3270
+        INPUT      fields, and reposition  but reposition
+                   the cursor to the first the cursor to the
+                   unprotected field.      first position of
+                                           the screen.
+
+
+        RESET      Unlock keyboard,        Unlock keyboard,     No key 'RESET'.
+                   exit insert mode.       but do not exit 
+                                           insert mode.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        28                                                 G.E.D OF HALF-DUPLEX
+ \ Np
