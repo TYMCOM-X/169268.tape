@@ -1,0 +1,1381 @@
+.	<<	file	ISIS2.SVC	>>
+.SEC(|ISIS Kernel SVC's|)
+.TOPIC(|SVC|)
+.TOPIC(|ISIS SVC'S|)
+.TOPIC(|Supervisory Commands|)
+	Under ISIS, there may be three kinds of jobs running.  These are
+DDT, RUN, and QUASI jobs.  These have different usage, and so the SVC's
+are different.  In particular, many SVC's are illegal except under DDT.
+.SS(|Dismiss SVC's|)
+	The following SVC's are legal from all jobs.  The kernel may
+have different Interpretations of the usage, as described below.
+.SSS(|Dismiss--               SVC     DISMISS<0>,VALUE|)
+.TOPIC(|dismiss|)
+.TOPIC(|Watch-frog timer|)
+.TOPIC(|dismiss SVC|)
+.TOPIC(|SVC, dismiss|)
+	Gives up the remaining part of this time slice.  The user is
+rescheduled after VALUE seconds, if he is a RUN or DDT user.  If he
+is a QUASI user, VALUE is taken as the number of clock ticks to ADD
+to the job's timeout before resuming execution.
+
+	A dismiss-driven watch-frog timer is enabled by entering into the
+ISIS TYMfile:
+.SKIP ONCE CENTER
+SnnFRG	EQU	1
+where nn is the slot number.  Slots with dismiss-driven watch-frogs MUST
+issue a dismiss or fast-dismiss SVC at least once every 5 seconds.
+
+	For a description of the watch-frog timer, see SVC SYS,47d.
+
+.SSS(|Fast Dismiss--          SVC     FAST<1>,--|)
+	Fast dismiss causes no registers to be saved (nor restored next
+time), and no timeouts to be allowable.
+	For watch-frog timer information, see DISMISS SVC.
+
+.SS(|System SVC's|)
+	There are a number of system functions provided through SVC's.
+These are functions, common to many processes, which are provided by
+the ISIS system.
+.SSS(|Syscall--               SVC     SYS<2>,SYSOP|)
+	SYSCALL is equivalent to  SVC 2,SYSOP.
+It is used to perform all sorts of operations for the user.
+In all cases, SYSOP specifies the operation to perform.  If there is a
+parameter to be passed, it is passed in register 0, unless otherwise
+specified.
+	In the following descriptions, references to Trap-Blocks will
+be found.  These are all of common form, starting at ADDR:
+.BEGIN VERBATIM
+
+	ADDR    PSD
+	ADDR+8  R0,R1
+	ADDR+10 TRAP (transfer) address
+.END
+	In the event of a trap, the old PSD is saved at ADDR, R0 and R1
+are saved at ADDR+8 (and ADDR+0C), and control is transfered to
+ADDR+010.  In this event, special information may be placed in R0 or
+R1, depending upon the trap condition.
+
+.SSSS(|Restart Syscall--               SVC   SYS,0|)
+	The Restart SVC causes all hardware and system traps to be taken
+by the KERNEL and passed to the job, rather than crashing the job.
+R0 contains an address (ADDR) of a Trap-block.  If ADDR is not a valid
+address, a non-skip return is made, else a skip return occurs.  (It is
+recommended that ADDR be in a read-only area).  The user code should
+later execute another RESTART SVC (this later SVC may have ADDR = 0
+causing the old address to be used) to reenable restart.  If after
+a trap occurs, a second trap occurs before another Restart SVC has been
+executed, then the user program will be permanently removed from the run
+queue.  The trap will return (in R1) the trap reason (to user code at
+ADDR+10):
+.BEGIN VERBATIM
+
+	0	MANUAL RESTART
+	1	POWER FAILURE
+	2	PARITY ERROR
+	3	DISPATCHER CRASH (Error Detected BY Dispatcher)
+	4	ILLEGAL INSTRUCTION
+	5	ILLEGAL SVC
+	6	SYSTEM CRASH (PARITY ERROR)
+	7	PROTECTION VIOLATION
+	8	NON-RECOVERABLE DEVICE-CHECK
+.END
+
+.BEGIN BLOX
+	NOTE:###Manual Restart and Power Failure will crash ALL jobs.
+The others will crash only the offending job.  When a foreground job
+crashes, it is disconnected, and any associated BACKGROUND job is also
+crashed.  A crash in the background causes the foreground to be disconnected.
+	NOTE:###A crash in the foreground (e.g. illegal instruction) will
+cause the foreground-state (registers, PSW) to be copied onto the background
+state, and then the background is crashed.  Foreground crashes may be
+distinguished from background crashes by examining the PSD;  for foreground
+crashes, the first byte is set to x'FC' ("Foreground Crash") -- it is 0 for
+background crashes.
+	NOTE:###The execution of a restart SYSCALL will have the same
+effect on a running background job as if that job had taken a system-detected
+crash (except when the system detects that the call is in response to a system
+crash):  All dispatcher circuits will be disconnected, the foreground will be
+halted, host will be set down, and the slot will be dismissed for 4 seconds!
+If the slot is in debug mode, the restart SYSCALL will cause it to become
+frozen.
+.END
+
+.SSSS(|Connect-Foreground Syscall--    SVC   SYS,1|)
+	The Connect Quasi-Process SVC permits a background job to control
+a foreground process.  The contents of R0 is used as the address to start
+execution.  R0 = 0 says turn off foreground.  The foreground process is
+guaranteed frequent, short shots at the CPU, for real-time activities,
+while the backround job has longer, less frequent shots.
+
+.SSSS(|Turn-on-Debug-Mode Syscall--    SVC   SYS,2|)
+	This SYSCALL sets the slot to DEBUG mode, and may be executed
+from DDT, Foreground or Background.  In DEBUG mode, any crash (through the
+kernel) causes the slot to be FROZEN.
+
+.SSSS(|Turn-off-Debug-Mode Syscall--   SVC   SYS,3|)
+	Turns off DEBUG mode.  Any subsequent crashes are taken in normal fashion.
+
+.SSSS(|Test-Debug-Mode Syscall--       SVC   SYS,4|)
+	Returns R0 non-zero if DEBUG mode is in effect, else R0 is zero.
+
+.SSSS(|Freeze-Slot Syscall--           SVC   SYS,5|)
+	This SYSCALL causes the background and foreground to be FROZEN
+(infinite time dismiss), and may be executed
+from DDT, Foreground or Background.
+
+.SSSS(|Thaw-Slot Syscall--             SVC   SYS,6|)
+	Turns off FREEZE dismissal.  Background and foreground will continue with
+execution.
+
+.SSSS(|Test-Freeze Syscall--           SVC   SYS,7|)
+	Returns R0 non-zero if the slot is FROZEN, else R0 is zero.
+
+.SSSS(|Read-DDT-Register Syscall--     SVC   SYS,8|)
+	R0 (Modulo 16d) is used to address one of DDT's registers,
+and return it in R0.
+
+.SSSS(|Read-DDT-PSD Syscall--          SVC   SYS,9|)
+	R0 (modulo 2) is used to address one of DDT's PSD words,
+and return it in R0.
+
+.SSSS(|Read-Background-Register Syscall SVC  SYS,10d|)
+	R0 (Modulo 16d) is used to address one of the background's registers,
+and return it in R0.
+
+.SSSS(|Read-Background-PSD Syscall--   SVC   SYS,11d|)
+	R0 (modulo 2) is used to address one of the background's PSD words,
+and return it in R0.
+
+.SSSS(|Read-Foreground-Register Syscall SVC  SYS,12d|)
+	R0 (Modulo 16d) is used to address one of the foreground's registers,
+and return it in R0.
+
+.SSSS(|Read-Foreground-PSD Syscall     SVC   SYS,13d|)
+	R0 (modulo 2) is used to address one of the foreground's PSD words,
+and return it in R0.
+
+.SSSS(|Read-DDT-MAC-Register Syscall-- SVC   SYS,14d|)
+	R0 (modulo 16d) specifies a segment...it is returned with the DDT
+MAC-register for that segment.
+
+.SSSS(|Read-Background-MAC Syscall--   SVC   SYS,15d|)
+	R0 (modulo 16d) specifies a segment...it is returned with the Background
+MAC-register for that segment.
+
+.SSSS(|Read-Foreground-MAC Syscall--   SVC   SYS,16d|)
+	R0 (modulo 16d) specifies a segment...it is returned with the Foreground
+MAC-register for that segment.
+
+.SSSS(|Set-1-Protect Syscall--         SVC   SYS,17d|)
+	R0 is divided into left (L) and right (R) halves.  L is the MAC
+segment #;  R is the protection to apply to that segment, for this
+partition (ie, a call from background has no effect on DDT).  L > 13d
+is cause for invoking illegal-SVC trap.  R has the format described under
+"CTA".
+
+.SSSS(|Set-Protection Syscall--        SVC   SYS,18d|)
+	R0 contains the address of a string of consecutive protections to be
+set:  The first byte indicates the first segment, the second is the number
+of segments, and successive bytes are the protections.  If an attempt is
+made to set protection on a segment >13d, illegal SVC trap will occur.
+
+.SSSS(|Set-Back.-Execution-Addr. Syscall SVC SYS,19d|)
+	R0 contains the address at which the Background will resume execution.
+The condition codes will not, however, be changed.
+
+.SSSS(|Set-Fore.-Execution-Addr. Syscall SVC SYS,20d|)
+	R0 contains the address at which the Foreground will resume execution.
+The condition codes will not, however, be changed.
+
+.SSSS(|Setup-Dispatcher-MAC Syscall--  SVC   SYS,21d|)
+	Utility SVC, accessible ONLY to DDT (NOT to code running under the
+control of DDT).  Used to set up the MAC from the description contained
+in the job's "CTA".
+.SSSS(|Check-SUP-Freeze-State Syscall- SVC   SYS,22d|)
+	This SVC is illegal unless there is a SUP (on this machine).
+Then, normal return indicates the SUP is NOT frozen, and skip^1 (4) return
+indicates that it IS frozen!
+.SSSS(|Check-SUP-Run-Q-State Syscall-- SVC   SYS,23d|)
+	This SVC is illegal unless there is a sup (on this machine).  Then,
+if the SUP is on the run queue, the SVC skip^1 (4) returns, with the
+current SUP execution address in r0; else normal return.
+.SSSS(|Freeze the SUP Syscall--        SVC   SYS,24d|)
+	This SVC is invalid unless there is a SUP (on this machine),
+ and then ONLY to slot 0, or
+to users PROBE or RPROBE!
+.SSSS(|Thaw the SUP Syscall--          SVC   SYS,25d|)
+	This SVC is invalid unless there is a SUP (on this machine),
+ and then ONLY to slot 0, or
+to users PROBE or RPROBE!
+.SSSS(|Set/Clear ALARM--               SVC   SYS,26d|)
+	This SVC permits a process to insure that it will be
+trapped after a given amount of time, if it does not cancel the request.
+The process loads a value into R0:
+.BEGIN GROUP VERBATIM
+
+	--------.-------.-------.--------
+	| ticks	|     trap address	|
+	---------------------------------
+.END
+	where:
+.BEGIN OFFSET
+	If (R0) = 0, the request is canceled;
+	ticks:  The number of clock ticks (1/600 second each) before the
+trap is to be taken;
+	Trap address:  the address of a trap block to be used in the event
+that timeout occurs.
+.END
+	The time specified is in units of actual execution time;
+this insures that a process will be able to execute a given amount of effort
+independent of machine load.
+	Either dismiss-SVC executed--while the alarm-clock is active--is cause for
+the time to be canceled, and the trap to be taken.
+.SSSS(|Read Super-Clock--              SVC   SYS,27d|)
+	The system attempts to read the Super-clock.  If it is not successful
+(ie, non-existent or non-functional device),
+it exits via a normal return.  If successful, the clock value is placed in
+Register 0, and a skip return (^4) is performed.
+.SSSS(|Set Super-Clock--               SVC   SYS,28d|)
+	This is a privileged command;  on machines configured for Supervisor,
+the SVC is valid ONLY from the supervisor or from a privileged
+username;  On all other systems, it is valid only from DDT to someone with
+System-access License.
+.SSSS(|Set User Diagnostic--           SVC   SYS,29d|)
+	If R0 contains a valid address within this user space, the address will
+be saved as a user diagnostic:  it is assumed that it is the address of
+a "SC" text string in the user space.  This message, along with the time
+and slot number, are saved and will be output later to the console TTY.
+.SSSS(|Locate Storage Parameters--     SVC   SYS,30d|)
+	Valid ONLY from DDT, this SVC returns the physical start address of this
+slot in R0, and the size of the slot, in bytes, in R1.
+.SSSS(|Super-Freeze-Slot Syscall--     SVC   SYS,31d|)
+	This SYSCALL is legal ONLY in system-DEBUG mode.  Then R0 is
+expected to contain the number of a valid slot.  That slot will be
+found and FROZEN
+(Background and foreground have infinite-time dismissal)!!
+It may be executed
+from DDT, Foreground or Background.
+SVC is illegal if ISIS-DEBUG is not enabled.
+Normal return if specified slot is not on run list.
+Skip (^4) return if found and frozen.
+.SSSS(|Halt-Slot Syscall--             SVC   SYS,32d|)
+	This SYSCALL causes a halt, including complete disconnection of
+circuits and devices, for the calling slot.  Valid from DDT, Foreground, or
+Background.
+.SSSS(|Super-Halt-Slot Syscall--       SVC   SYS,33d|)
+	This SYSCALL is legal ONLY in system-DEBUG mode.  Then R0 is
+expected to contain the number of a valid slot.  That slot will be
+found and halted
+(as in SVC SYS,32d).
+SVC is illegal if ISIS-DEBUG is not enabled.
+Normal return if specified slot is not on run list.
+Skip (^4) return if found and halted.
+.SSSS(|SPY Syscall--                   SVC   SYS,34d|)
+	R0 contains a pointer to a SPY discriptor;  if R0 = 0, SPY will be
+will be disconnected from this slot:
+.SKIP
+.BEGIN VERBATIM
+DISCR	WC	ARYBIN		:pointer to start of bin array,
+	WC	ESTART		:pointer to beginning of SPY space,
+	WC	RANGE		:byte displacement from start,
+	HC	NBINS		:the number of bins,
+FLAG	HC	0		:flag cell, set negative when done.
+.END
+	Normal return if the SVC fails; then R0 is < 0 if one of the
+arguments is bad (start or end of either ARYBIN or execution-space
+is not accessible to that slot);  R0 > -1 means that SPY is currently
+assigned to the slot specified by R0.
+	Skip (^4) return if successful, and SPY has been connected.
+	It is the responsibility of the code issueing the SVC to initialize
+the FLAG and ARYBIN storage.
+.SSSS(|Disconnect L.U. Syscall --      SVC   SYS,35d|)
+	R0 contains the number of a Logical Unit (L.U.), that is to be
+disconnected from this slot.
+	Normal return if the SVC fails, because the specified L.U. is
+undefined.
+	Skip (^4) return if successful, and the L.U. has been disconnected.
+Any I/O in progress will be halted.
+.SSSS(|Connect Ring to Kernel Host--   SVC   SYS,36d|)
+	Connects a ring in the slot to the Kernel Host.  This allows
+the slot to log into DDT and issue commands.  R0 points to a parameter
+list.  Ring indexs are negative.  Skip return (+4) indicates success.
+May fail for lack of KIO ports or invalid parameters.
+.BEGIN VERBATIM
+
+	LA	R0,PARAM	:R0 POINTS TO PARAMATER LIST
+	SVC	2,$A36		:CONNECT KERNEL RING
+
+PARAM	WC	RINGS		:POINTER TO KIO RINGS
+	WC	KOF		:KOF BIT INDEX, 0 IF NOT USED
+	WC	KOFF		:KOFF BIT INDEX, 0 IF NOT USED
+
+RINGS	HS	20		:64 BYTES FRO KERNEL RING
+	HS	1		:KERNEL'S FROM KERNEL INDEX
+	HS	1		:USER'S FROM KERNEL INDEX
+	HS	20		:64 BYTES TO KERNEL RING
+	HS	1		:USER'S TO KERNEL INDEX
+	HS	1		:KERNEL' TO KERNEL INDEX
+.END
+.SSSS(|Zap Kernel Ring--               SVC   SYS,37d|)
+	This SVC forces a zapper into the Kernel ring.  R0 conatains
+address of ring to zap.  Skip return indicates success.
+May fail for an invalid argument.  
+.BEGIN VERBATIM
+
+	LA	R0,RINGS	:ADDRESS OF RING TO ZAP
+	SVC	2,$37		:ZAP KIO PORT
+.END
+.SSSS(|Variant Restart--               SVC   SYS,38d|)
+	This is a restart SVC that includes an argument that is the
+mask of the segments to be saved to disk during a ?save command to DDT.
+R0 contains the address of a trap block and R1 contains the segment mask.
+.BEGIN VERBATIM
+
+	LA	R0,TRAP		:TRAP BLOCK ADDRESS
+	LHI	R1,DMPMSK	:MASK OF SEGS TO SAVE
+	SVC	2,$A38
+.END
+.SSSS(|Stop watchdog timer--           SVC   SYS,39|)
+	This SVC causes ISIS to stop outputting to the watchdog timer.
+It is only valid from slot 0.
+.SSSS(|Reset MAC blocks--              SVC   SYS,41d|)
+	This SVC resets to the default MAC set and if Zitel,
+unthreads the list of MAC sets for slot.  Only valid from DDT.
+.SSSS(|Replace MAC Set--	       SVC   SYS,42d|)
+	The Replace MAC Set SVC dynamically builds or replaces an extended
+MAC set.  R0 contains the MAC set number, which must be less the MAXCNT
+(from the CTA table).  R1 contains the address of the extended MAC set.
+The MAC set consists of 16 fullword MAC registers followed by a fullword
+pointer and two fullwords of storage.  See Section 3.0, ISIS Control Table,
+for the MAC register format.  The pointer contains the address of the PSD
+used to resume execution after the Change MAC Set SVC has been issued.
+IF successful, a skip return (^4) is performed.  It will fail if the MAC
+set number is too large or if an address is out of range.
+
+.SSSS(|Report a Suspend Group          SVC   SYS,46d|)
+	This SVC enables a slot with suspend licence to declare a suspend
+group.  A suspend group is a list of slots that will be suspended if the
+licenced slot goes down.
+	When calling the SVC, R0 and R1 must contain a 64-bit bitmap, with set
+bits corresponding to the slots in the suspend group.  R0 contains the lower
+slot numbers (0-31) and R1 the higher slot numbers (32-63).
+
+.SSSS(|Increment the Watch-frog Timer  SVC   SYS,47d|)
+	The watch-frog timer is a mechanism that enables a slot to periodically
+inform ISIS that it is alive and hopefully not stuck in any loops.
+This attempts to eliminate situations where a slot appears to be working,
+but is really caught in some situation that prevents it from doing anything
+useful.  If the watch-frog goes fo 5 seconds without being updated, ISIS
+will crash the slot (Crash code 16).
+.DTOPIC(|Watch-frog Timer|)
+	There are two ways to drive the watch-frog.  The first is by issuing
+this SVC to start the timer, and then periodically re-issuing it to keep the
+watch-frog updated.  The other way is to declare the slot as having a
+dismiss-driven Watch-frog by means of an entry in the ISIS TYMfile, and then
+making sure that the Dismiss SVC is called periodically.
+	The Watch-frog timer is updated by issuing the SVC.  No registers or
+parameters have to be set up.
+
+.SS(|I/O Control--            SVC     IO<3>,OP:REG#|)
+.TOPIC(|I/O SVC|)
+.TOPIC(|I/O software connection|)
+.TOPIC(|software connection of I/O|)
+	"OP:REG" is the operand telling the operation to perform:  the low-
+order 4 bits specify the user register which starts the list of arguments
+required;  the high-order bits specify the numeric operation desired.
+	SVC 3 connects I/O to the job.  The argument has two fields.  The low
+4 bits specifies a register, which contains the start of
+an argument list.  Preceding this is the operation to perform, as specified
+below.
+.SSS(|I/O Status Query|)
+	Each different kind of device has certain attributes, which may be of
+interest to user programs for one reason or another.  A mechanism is
+provided to query the attributes connected with each logical unit.
+.SSSS(|I/O Attributes Query----OP=8000|)
+.TOPIC(|query logical unit attributes|)
+	The Quetributes SVC loads a specified buffer in the user area
+with the appropriate attributes for the specified logical unit.  The
+SVC may fail for invalid buffer address ONLY, resulting in a normal return.
+A skip return denotes success, and then status and attributes are returned
+in the specified buffer area.
+.BEGIN GROUP VERBATIM
+
+        REG# contains the logical unit number;
+        REG#+1 contains the start address of the buffer;
+        REG#+2 contains the number of attribute bytes requested.
+.END
+	A skip return will always cause at least one byte of information to be
+placed in the buffer...the device type:
+.BEGIN GROUP VERBATIM
+
+      value     device type
+        0       synchronous line
+        1       asynchronous group
+        2       printer
+        3       (not used)
+        4       mother-board device
+      ...
+      376       range check...L.U. queried exceeds number supported
+      377       no device assigned to L.U.
+.END
+	If the number of bytes requested is greater than 1, then the second byte
+delivered is the actual device number assigned to that device:  the string
+"00:02..." indicates sync line 2; "01:03..." indicates async group 3.
+	Each device has a maximum number of attributes; the number returned
+is the arithmetic minimum of the number requested and the number which
+exist.
+If excess bytes are requested, they will be left in an undefined state.
+.BEGIN BLOX
+	NOTE:###This SVC requires the use of RX3 instructions!
+.END
+
+.SSS(|Synchronous Input Control|)
+.TOPIC(|software synchronous input connection|)
+.TOPIC(|synchronous input|)
+	Input is via an input ring, allocated by the user.  This ring is always
+an even number of bytes (integral number of halfwords), and has a halfword
+header which is the interrupt routine's pointer for next halfword to fill.
+The format is:
+.BEGIN VERBATIM
+
+        --------.-------
+        | fill index   |
+        |-------.------|
+        |      the     |
+        |--   data   --|
+        |     area     |
+        |--(variable)--|
+.END
+.SSSS(|Connect Synchronous Input----OP=0|)
+	The Connect Input SVC connects the input process associated with
+a job's Logical Unit to the specified input buffer for that
+job.  The SVC may fail for unassigned Logical unit, or for the
+buffer being out of range, resulting in a normal return.  A skip
+return signifies success.
+.BEGIN VERBATIM
+
+	  REG# contains the logical unit number;
+	  REG#+1 contains the start address of the input buffer;
+	  REG#+2 contains the size of the input buffer.
+.END
+	This SVC overrides any input currently in progress, and, if
+successful, initializes the buffer header.
+.SSS(|Synchronous Output Control|)
+.TOPIC(|software synchronous output connection|)
+.TOPIC(|synchronous output|)
+	Output is via a control (rotor) list.  Each entry is 8-bytes long,
+and is subject to word addressing.  When an entry is completed,
+the command portion is set to zero, and the next successive rotor is processed.
+The format of a rotor entry is:
+.TOPIC(|command list|)
+.TOPIC(|rotor list|)
+.BEGIN VERBATIM
+
+        --------.-------.-------.-------
+        |   COMMAND     |     COUNT    |
+        |-------.-------.-------.------|
+        | ADDRESS of OUTPUT STRING     |
+        --------------------------------
+
+        where:
+
+COMMAND is one of the set of operations to perform:
+0       stop output (stop processing command list)...enter marking
+	state
+1       output COUNT bytes starting at ADDRESS
+2       TRANSFER control to ADDRESS
+3       Turn off Request-to-send
+4       Turn on Request-to-send
+5       Set Bit Flag...Bit COUNT relative to ADDRESS
+6	Connect "clear-to-send"...bit COUNT relative to ADDRESS will
+	henceforth reflect the state of this line's CS state
+7	Connect "data-set-ready"...bit COUNT relative to ADDRESS will
+	henceforth reflect the state of this line's DSR state
+8	Turn off Data-terminal-ready
+9	Turn on Data-terminal-ready.
+10d	Set Output Padding to COUNT.
+.END
+.TOPIC(|Synchronous line padding|)
+	Output padding is what the line does when it has nothing else to do.
+The default is all bits on ("marking state").
+The default is restored when a line is disconnected from a process.
+.TOPIC(|DSR|)
+.TOPIC(|DTR|)
+.TOPIC(|RS|)
+.TOPIC(|CS|)
+.SEE(|data-set-ready|,|DSR|)
+.SEE(|data-terminal-ready|,|DTR|)
+.SEE(|clear-to-send|,|CS|)
+.SEE(|request-to-send|,|RS|)
+.BEGIN BLOX
+	NOTE:###A restriction exists...The command list and all of it's
+operands MUST be within the same MAC segment.
+Also, since some physical lines do not have RS or CS, these commands
+are skipped over (the driver ignores them) for these lines.
+.END
+	The attribute list has maximum length of 3 bytes.  These are:
+.SKIP
+.ONCE CENTER
+00:sl:sa
+	where 00 is the device type, "sl" is the sync line, and "sa" is the
+sync attributes:  x'80' indicates that the line supports "RS"/"CS" usage.
+.SSSS(|Connect Synchronous Output----OP=1|)
+.TOPIC(|software synchronous output normal connection|)
+	The Connect Output SVC attempts to connect a list of output
+descriptors to a logical unit.  A normal return indicates failure,
+due to an invalid specification, or to a logical unit being active.
+	A skip return indicates the output operation has started.
+.BEGIN VERBATIM
+
+	  REG# contains the logical unit number;
+	  REG#+1 contains the address of the first output descriptor.
+.END
+.BEGIN BLOX
+	NOTE:###output descriptors and buffers MUST be in the same MAC
+segment.
+.END
+
+.SSSS(|Force Synchronous Output----OP=2|)
+.TOPIC(|software synchronous output forced connection|)
+	The Force Output SVC attempts to connect a list of output
+descriptors to a logical unit.  A normal return indicates failure,
+due to an invalid specification.  A skip return indicates the
+output operation has started.  Any output currently in progress is
+aborted, possibly without indication.
+.BEGIN VERBATIM
+
+	  REG# contains the logical unit number;
+	  REG#+1 contains the address of the first output descriptor.
+.END
+.BEGIN BLOX
+	NOTE:###Output descriptors and buffers MUST be in the same MAC
+segment.
+.END
+
+.SSSS(|T-II Sync-line Connect----OP=6|)
+	The TYMNET-II sync line connect causes the special, TYMNET-II
+sync-line driver to be connected for the specified logical unit.
+This driver is very specific to TYMNET-II, and is of no interest to
+any other application, except for the need to be aware of
+it's presence.
+.SSSS(|T-II Sync-line Idle Test----OP=7|)
+	This SVC permits the testing of a TYMNET-II sync-line for the presence
+of any transmit activity.  It is of no use to other
+applications.
+.SSSS(|T-II Query Parameters----OP=8|)
+	This SVC collects certain Tymnet-II sync parameters.  It is of no use
+to any application other than Tymnet-II.
+
+.SSS(|Asynchronous I/O|)
+.TOPIC(|asynchronous I/O|)
+.TOPIC(|software asynchronous I/O connection|)
+	The attribute list has maximum length of 3 bytes.  These are:
+.SKIP
+.ONCE CENTER
+01:ag:aa
+	where 01 is the device type, "ag" is the async group number, and "aa"
+is one byte of attributes:  x'80' indicates that the group can support
+1200-baud.
+	Async I/O is bi-directional.
+Commands are transfered between the driver and the
+job in the data stream.
+Character 00 is an escape--it is always of the form 00:XX;
+in particular, the character pair 00:00 is data 00.
+If the second character of an escaped pair (XX) is not 00,
+it is treated as a command.
+	the following commands apply, from the job to the driver:
+.BEGIN GROUP OFFSET
+
+	01--8F	generate XX 1/30-second delays;
+	90--AF	set output baud rate index to (XX-90);
+	B0--CF	set input baud rate index to (XX-B0);
+.BEGIN VERBATIM
+     Baud rate indicies are:
+           0    10 cps
+           1    15 cps
+           2    30 cps
+           3    40 cps
+           4    60 cps
+           5    120 cps
+           6    30 cps (3767)
+           7    14.7 cps (2741)
+           8    10 cps (at 300 baud)
+           9    10 cps (at 1200 baud)
+          0A    240 cps
+          0B    480 cps
+          0C    960 cps
+          0D    50 baud (BAUDOT)
+          0E    75 baud (BAUDOT)
+          0F    75 baud (ASCII)
+
+.END
+	D0--DF	enter connect mode (XX-D0);
+Place the driver into 'TID' mode.
+Current modes are:
+0 TYMNET TID mode
+
+	E0	enter data mode;
+	E1	disconnect;
+	E2	enable;
+.TOPIC(|RS|)
+	E3	RS up;
+	E4	RS down;
+	E5	generate 0.083 seconds of output break state.
+
+	All others are ignored.
+.END
+	the following commands apply from the driver to the job:
+.BEGIN GROUP OFFSET
+
+	80--8F	Connect mode has detected a character input,
+and thinks the input baud rate is (XX-80):
+this pair will always be followed by the data
+character observed, as seen at that speed;
+
+	90	Break detected;
+	91	End-of-break detected.
+.END
+	The SVC's use as arguments an 8 word discriptor;  some words are
+pointers.  If any of the pointers is = 0, that element is NOT connected.
+The discriptor, whether in memory or in registers, has the format:
+.SKIP
+.BEGIN GROUP VERBATIM
+	W	Logical Group number
+	W+1	pointer to start of Group ring array **
+.SEE(|Carrier Present|,|CP|)
+.TOPIC(|CP|)
+	W+2	pointer to Group CP halfword
+.TOPIC(|DSR|)
+	W+3	pointer to Group DSR halfword
+.TOPIC(|DTR|)
+	W+4	pointer to Group DTR halfword
+	W+5	pointer to Group TOPORT halfword **
+	W+6	pointer to Group FROMPORT halfword **
+	W+7	pointer to Group TAM halfword **
+
+	Where:
+.END
+.BEGIN OFFSET
+	Ring_array#-#An array of 16 data-blocks, one for each port
+in the group.  Each block consists of 2 data-rings;  the first of which
+is for input TO the slot (fron the port), the second for output FROM
+the slot (to the port).
+The ring format is dependent upon the specific SVC used.
+	CP#-####The halfword bit array for Carrier Present.
+	DSR#-###The halfword bit array for Data Set Ready.
+	DTR#-###The halfword bit array for Data Terminal Ready.
+	TOPORT#-#The halfword bit array for data present in port output ring.
+	FROMPORT#-#The halfword bit array for data present in port input ring.
+	TAM#-###The halfword bit array for output ring full.
+.END
+	**TOPORT, FROMPORT, and TAM are ignored if Ring array pointer is null.
+	The Connect Async SVC's attempt to connect a list of pointers
+(a discriptor)
+to an Async logical unit (~<ALU>).  An ALU covers a group of 16 ports.
+A normal return indicates failure, and leaves the unit disconnected.
+This may be due to the logical unit not being valid, not being of type
+Async, or because one of the pointers is outside of the requestor's
+address space.
+	A skip return indicates success, and the logical unit has been
+connected.
+
+.SSSS(|Connect Async----OP=3|)
+	The form of this SVC is:
+.SKIP
+.ONCE CENTER
+SVC     IO,030!R
+	Where R specifies the first register containing the ASYNC descriptor
+block.  Since the block is 8 words (registers) long, R must be one of
+R0-R8.  If R9-R15 are used, the SVC will fail.
+	Each ring consists of 1 byte of fill index, 1 byte of empty index, and
+14 bytes of ring storage.  The ring is empty when the fill index =
+the empty index.
+
+.SSSS(|Connect Async----OP=12d|)
+	The form of this SVC is:
+.SKIP
+.ONCE CENTER
+SVC     IO,0C0
+	R0 is to contain a pointer to the ASYNC descriptor (in memory).
+	The high-order halfword of W (the first word of the descriptor)
+contains the ring-size n;  this is restricted to the range 8 < n < 256
+and requires n be even (if n=0, the default size n=16d is used).
+	The input ring consists
+of 1 half-word of BCT counter, 1 unused half-word, 1 byte of fill-cursor,
+1 byte of empty-cursor, and n-6 bytes of ring storage.
+The ring is empty when BCT has the value -1.
+	The output ring consists
+of 1 half-word of BCT counter, 1 half-word of TAM counter, 1 byte of
+fill-cursor, 1 byte of empty-cursor, and n-6 bytes of
+ring storage.  The ring is empty when BCT has the value -1.
+The TAM counter tracks BCT, and it's transition through the value 0 causes
+the TAM (Transmitter Active Mask) bits to be changed;  it is thus the
+quantity which controls backpressure.  For example, if initialized to -3,
+then TAM goes true when ever there are 3 (or more) characters in the ring.
+
+.SSS(|Printer Output|)
+.TOPIC(|printer I/O|)
+	The printer is a pure output device.  the only quantity "input"
+is status information.
+	The attribute list has maximum length of 2 bytes.  These are:
+.SKIP
+.ONCE CENTER
+02:pp
+	where 02 is the device type, and "pp" is the printer number.
+	Output is via a control (rotor)
+list.  Each entry is 8-bytes long, and is of the same format as in
+SYNCHRONOUS OUTPUT CONTROL, above.  The only meaningful commands are:
+.BEGIN VERBATIM
+
+0	stop output
+1	output COUNT bytes starting at ADDRESS
+2	TRANSFER control to ADDRESS
+.END
+.BEGIN GROUP
+.TOPIC(|Print Stream Format|)
+	The string of data transmitted to the printer is of special format;
+special use is made of the individual characters:
+.SKIP
+.BEGIN OFFSET
+	#Code###Usage
+	(Hex)
+.SKIP
+	##00####End-of-line (Print command).
+	01-3F###Blank Compression (output this many blanks).
+	##40####Form-Feed (Cause printer to eject paper).
+	41-7F###Character compression -- repeat preceeding character CODE-40
+times.
+	80-FF###Data characters - print directly.
+.END
+.END
+.SSSS(|Connect Printer----OP=4|)
+.TOPIC(|software printer output connection|)
+.TOPIC(|connect printer SVC|)
+	The Connect Printer SVC attempts to connect the list to the printer
+driver logical unit.  A normal return indicates failure, due to
+an invalid specification, or to the logical unit being active.
+	A skip return indicates the output operation has started.
+.BEGIN VERBATIM
+
+	REG# contains the logical unit number;
+	REG#+1 contains the address of the first output descriptor;
+	REG#+2 is a pointer to the halfword that you want the printer
+	status saved in.  The status bits are:
+.SKIP
+	BIT
+	 9 -	A one indicates the printer is out of paper.
+	12 -	A one indicates the printer is busy, either printing
+		a line or reading a character into its line buffer.
+	13 -	A one indicates the printer is out of paper.
+	14 -	A one indicates the printer is not ready.
+.END
+.SSSS(|Force Printer Output----OP=5|)
+	The Force Printer is like Connect Printer,
+except that if output is in progress, it is terminated, and
+the new output is started.
+
+.SSS(|Mother-board Serial-I/O|)
+.TOPIC(|Mother-board|)
+.TOPIC(|Serial-I/O|)
+	This description of mother-board usage is minimal;  explicit users
+are urged to refer to the documents (ISISDOC)DEVICE.DOC, and Zilog's
+"Z-80 SIO Technical Manual" for details.
+	The M-board is a device consisting of a big (mother) board, and
+up to 8 little (daughter) boards.  The daughter boards each have a Zilog
+SIO chip and interface circuitry for two channels (ports).  The individual
+daughter-cards may be configured for specific applications, such as async,
+bisync, HDLC, etc.
+	EACH channel is a logical unit!
+Thus a daughter card (two channels) may be shared by
+two different users.
+	Since each different type of Daughter-channel must be addressed in it's
+own unique fashion, ISIS does not provide other than the bare interface
+necessary for a user to talk to the card.  Certain constraints apply:
+all addresses must follow the "quad-word" rules, and all addresses must
+be in a contiguous area of user as well as physical memory.
+	Once operation has been started, it runs independently of ISIS, unless
+the slot crashes or is halted.
+.BEGIN GROUP TURN OFF "#"
+	The attribute list has a maximum length of 3 bytes.  These are:
+.SKIP
+.ONCE CENTER
+04:c#:da
+	where "04" is the device type, "c#" is the device channel number on
+this card, and "da" is the card device address.
+.END
+	The SIO SVCs (SVC 3, op=9, 10d, or 11d) skip return (+4) if
+successful.  If they fail, the SVCs non-skip return and return an error
+code in the high order halfword of the calling register (REG#+0).
+The error codes follow:
+.BEGIN VERBATIM
+
+	0001	Bad register (REG+0 must be l2d or lower)
+	0002	Illegal unit (specification error)
+	0003	Motherboard busy
+	0004	Device unavailable
+	0005	Illegal address
+.END
+.SSSS(|Connect M-board channel----OP=9|)
+	This SVC is used to initialize the channel.  The registers used are:
+.SKIP
+.BEGIN GROUP OFFSET TURN OFF "#"
+	REG#	contains the logical unit number;
+	REG#+1	contains the low address that card may reference;
+	REG#+2	contains the high address that card may reference;
+	REG#+3	contains status address (optional; 0=null).
+.END
+	If "status address" is specified, the address is forced modulo
+16d, and the following information is placed starting at that address:
+.BEGIN GROUP VERBATIM
+
+	--------.-------.-------.-------.-------.-------.--------
+	|	 status		| unused| s/int	|    T/int	|
+	---------------------------------------------------------
+.END
+	Where:
+.BEGIN OFFSET
+	status:#6 bytes input by a "read status" command.  Performed
+periodically by ISIS.
+.BEGIN OFFFSET
+	##byte#0:##SIO (read) Register 0;
+	##byte#1:##SIO (read) Register 1;
+	##byte#2:##SIO Idle-line counter;
+	##byte#3:##SIO checksum-error counter;
+	##byte#4-5:##Abort counter and other special bits.
+	NOTE::##Bytes 0-1 will contain 0FFFF for nonexistant ports.
+.SKIP
+.END
+	unused:#2 bytes.
+	s/int:##status upon interrupt.  If the device interrupts, the status
+input by a Sense Status instruction is placed here at this time.
+	T/int:##Time of interrupt.  If the device interrupts, the fast
+clock (FASTC) is copied to these cells.
+.END
+.SSSS(|Force M-board input----OP=10d|)
+	Connects the input side of the specified device.
+.SSSS(|Force M-board output----OP=11d|)
+	Connects the output side of the specified device.
+	Both of these SVC's have the same register usage:
+.BEGIN GROUP OFFSET TURN OFF "#"
+	REG#	contains the logical unit number;
+	REG#+1	contains the address of the first command (null just causes
+reset).
+.END
+
+.SS(|Shared Device Control--         SVC     SHARE<4>,ADDR|)
+	For a variety of reasons (such as common drivers--required by
+constraints imposed by the selector channel, and common disc areas),
+the ~<DISC driver>s
+and the ~<TAPE driver> are treated in a similar manner.
+	In particular, requests to either type of device are queued, and
+are serviced in turn, by the driver.
+.BEGIN GROUP
+	ADDR is the address of a parameter block, of form:
+.BEGIN VERBATIM
+
+		--------.-------.----------------
+		|O| R/S |  LU   |    status     |
+		|-------------------------------|
+		|              VMA              |
+		|-------------------------------|
+		|             COUNT             |
+		|-------------------------------|
+		|               P               |
+		---------------------------------
+
+.END
+.END
+.BEGIN VERBATIM
+        where:
+
+O	high  bit  =  execution  overlap...if  off  (0),  dismiss until
+	operation complete.
+
+R/S	operation requested, status of complete operation.
+
+.END
+.BEGIN GROUP OFFSET
+	R:
+	0	read
+	1	write
+	2	attach unit - make unit available exclusively to this
+ISIS slot
+	3	detach unit - make unit available to other ISIS slots
+.END
+.SKIP
+.BEGIN GROUP OFFSET
+	S (decimal):
+	0	operation completed successfully
+	1	bad memory access
+	2	no access allowed to this unit
+	3	read/write/attach protection failure - access not allowed
+	7	error return from unit
+	8	error return from controller
+	9	operation aborted, by quit character, crash, or halt
+	10d	requested byte count 0 or odd
+	18d	device unavailable
+	19d	attempt to write on write-protected volume
+	20d	unit successfully attached, but volume is write protected
+	21d	unit attached to another slot, slot number in "status"
+	22d	operation ignored for this type of unit
+	23d	hardware (controller or ESELCH) timeout
+.END
+.BEGIN VERBATIM
+
+LU	the local I/O unit to access.
+
+status	device-dependent status bits returned  on  termination  of  the
+	operation.
+
+VMA	Virtual Memory Address...the address of the first byte  of  the
+	the buffer.
+
+COUNT	the number of bytes to transfer
+
+P	position (device dependent)
+
+.END
+	The last three arguments are ignored, except on read or write
+operations.
+	This SVC is illegal if there is no LU assigned with this number.
+	The SVC is also illegal if the parameter-block address presented is
+non-existant within the requestor's virtual address space.
+.BEGIN GROUP
+	There is a "get status" operation which returns information about
+a slot's unit.
+NOTE INCREASED PARAMETER BLOCK LENGTH, compared with other operations!
+This information is returned directly to the parameter block, and is
+of format:
+.BEGIN VERBATIM
+
+		--------.--------
+		|   0	|  LU	|
+		|---------------|
+		|     status	|
+		|---------------|
+		|  PM	|  GU	|
+		|---------------|
+		|      name	|
+		|---------------|
+		| TYPE	|  DA	|
+		|---------------|
+		|      DBS	|
+		|---------------|
+		|    BLK/TRK	|
+		|---------------|
+		|    TRK/CYL	|
+		|---------------|
+		|    St. CYL	|
+		|---------------|
+		|    no. CYL	|
+		-----------------
+.END
+.SKIP 1
+.END
+.BEGIN GROUP VERBATIM
+	where:
+
+PM	protection mask:
+	bit 0	read access permitted to unit
+	    1	write access permitted to unit
+	    2	slot can attach/detach unit
+	  3-7	reserved
+.END
+.BEGIN VERBATIM
+
+GU	Global Unit number - used to index system's unit table
+
+name	two char ASCII device mnemonic - eg, "DK", "MT", "MS"
+
+TYPE	device type:
+	0	disc
+	1	tape
+	2	msc-1400 disc
+
+DA	Device address on I/O bus - eg. 0C6
+
+DDB	default block size for device;  used when user-supplied "COUNT"
+	is zero.
+
+BLK/TRK	number of (default-sized) blocks/track (for discs).
+
+TRK/CYL	number of tracks/cylinder (for discs).
+
+St. CYL	absolute start cylinder (for discs).
+
+no. CYL	number of cylinders in this area (for discs).
+.END
+
+
+.SSS(|MSC-1400 Disk I/O|)
+	Additional details:
+.BEGIN GROUP
+	Block size = 256 bytes.
+.ONCE OFFSET
+	S:
+	The first 5 errors indicate no data transfer has occured
+.ONCE OFFSET
+	4	virtual block number (P) out of allowed area
+	The next 2 errors are due to bad Kernel tables and
+should never happen!!
+.BEGIN OFFSET
+	5	Bad cylinder address
+	6	same as 5 but some data tranfer has occured
+.END
+	The next error indicates an error return from
+the device.  The device status half-word is placed in the
+return status.  If there is a system fault, then that
+information is placed into the high-order byte of VMA.
+.BEGIN OFFSET
+	8	Error return from the controller - see status
+.END
+.BEGIN OFFSET
+	24d	operation successful, but error recovery performed.
+.END
+.END
+.BEGIN GROUP OFFSET
+	status	status bits returned on termination of the operation:
+.BEGIN VERBATIM
+
+	--------.-------.-------.--------
+	|F|E|A| |U|B|P|   |S| |R|D|B|N|N|
+	|A|C|D| |D|S|S|   |E| |D|R|S|R|S|
+	|U|C|D| |E|C|C|   |K| |O|F|Y|Y|E|
+	---------------------------------
+
+.END
+.END
+.BEGIN OFFSET TURN ON "#"
+	bit:
+	0###FAU###System Fault...see byte 0 of VMA for clarification;
+	1###ECC###ID ECC Error.  indicates that during a read or write
+the controller read an ID field that had an ECC error;
+	2###ADD###Address Error.  Indicates that during a read or write
+the controller read an ID field and the address it contained did not match the
+specified target address (should be corrected by system);
+	3###---###reserved;
+	4###UDE###Uncorrectable data error.  Indicates that during a read
+the controller read a data field that had an uncorrectable ECC error;
+	5###BSC###Bad Sector.  Indicates that during a read or write the
+controller read an ID field that had the bad-sector bit set;
+	6###PSC###Protected sector.  Indicates that during a write the
+controller read an ID field that had the Protected-Sector bit set;
+	7,8#---###reserved;
+	9###SEK###Seek Error.  Should be detected and corrected by system;
+	10##---###reserved;
+	11##RDO###Read Only.  Indicates that during a Write, the target
+drive had the read-only switch set;
+	12##DRF###Drive Fault.  Should be detected and corrected by system;
+	13##BSY###Busy.  Indicates that the target drive is busy (held by
+another controller) for more than one second.
+	14##NRD###Not Ready.  Indicates that the target drive is not ready.
+This condition can arise when the heads are not loaded, or there is a
+drive fault;
+	15##NSL###Not Selected.  Indicates that either no drives, or more
+than one drive, responded to the request.
+.END
+.BEGIN GROUP VERBATIM
+	SYSTEM FAULT (VMA byte 0)...Interpretation as per manual.
+.END
+
+.SSS(|Tape SVC|)
+	Additional details:
+.BEGIN GROUP VERBATIM
+
+	R	operation requested:
+	0	read a record - count actually read returned in "COUNT"
+	4	backspace one record
+	5	skip forward file
+	6	skip backward file
+	7	write end-of-file
+	8	rewind
+	9	unload - put tape offline
+	0A	get status
+	0B	erase gap
+	0C	set low density (dual density tapes only)
+.END
+	S	operation status:
+.BEGIN GROUP OFFSET
+	16d	end-of-file detected during write, read, backspace, or skip operation
+	17d	end-of-volume detected during write, read, or skip operation
+	19d	write-protected volume
+	20d	attach successful, but write-protected volume
+	21d	unit already attached
+	23d	hardware (ESELCH or Controller) timeout
+.END
+.BEGIN GROUP OFFSET
+	status	status bits returned on termination of the operation:
+.BEGIN VERBATIM
+
+	--------.-------.-------.--------
+	|E|E|E|       |D|P|T| |I|H|W|B| |
+	|R|O|N|       |U|E|E| |L|I|P|O| |
+	|R|F|D|       | |R| | |L| | |T| |
+	---------------------------------
+.END
+.SKIP
+	bit:
+	0	read or write data error, or read data overrun:
+.BEGIN OFFFSET
+	if EOF (end-of-file);
+	if PER (parity-error);
+	if TE (timing-error);
+	or if BTE (bad-tape error) detector detects 3 or more characters
+after EOR (end-of-record), or a 1-character record is detected which
+is not a tape-mark.
+.END
+	1	EOF detected during read, write, backspace, or skip
+	2	unit is at BOT or EOT
+	3-6	reserved
+	7	device unavailable
+	8	Parity-error detected (read OR write).
+	9	Timing error: CPU failed to perform read transfers with
+sufficient speed, or failed to complete read transfers before the end of the
+read operation, or resumed write transfers after the controller began the
+end-of-record sequence.
+	10	reserved
+	11	illegal operation attempted - eg, erase, write or write
+EOF on write-protected tape
+	12	high density selected (default) - this bit will always
+be selected for single-density drive
+	13	tape is write-protected
+	14	tape is at BOT
+	15	reserved
+.END
+.SKIP
+.BEGIN GROUP VERBATIM
+	P	always ignored! - need not be present except for
+"request status"
+.END
+	This SVC is illegal if there is no tape configured.
+.SSS(|Disk I/O|)
+	Additional details:
+.ONCE OFFSET
+	S:
+	The first 5 errors indicate no data tranfer has occured
+.ONCE OFFSET
+	4	virtual block number (P) out of allowed area
+	The next 2 errors are due to bad Kernel tables and
+should never happen!!
+.BEGIN OFFSET
+	5	Bad cylinder address
+	6	same as 5 but some data tranfer has occured
+.END
+	The next 2 errors indicate an error return from
+the device.  The device status byte is placed in the
+right byte of the return status
+.BEGIN OFFSET
+	7	Error return from the disk - eg, disc seek error
+	8	Error return from the controller - eg, parity error
+.END
+.BEGIN OFFSET
+	11d	invalid cylinder overflow indication;
+(this is the half word device problem)
+	12d	controller error - defective sector in alternate cylinder
+	13d	controller error - defective sector;
+(no alternate cylinders left)
+	14d	could not read disk map for this disk;
+(no transfers to this disk are permitted)
+	15d	controller error - defective sector;
+(alternate cylinder has been assigned.
+all future references to a block in this
+cylinder will be relocated - ALL data on this
+cylinder has been lost)
+	18d	device unavailable
+	21d	unit already attached
+	22d	request ignored for this type device
+	23d	ESELCH timeout
+.END
+.SKIP 2
+.BEGIN GROUP OFFSET
+P	position.  Sector number (256 bytes long), relative to beginning
+of area, at which to start I/O.
+.END
+.SSS(|Disk I/O (Block)        SVC     0E,ADDR|)
+	This is an obsolete SVC, included for backward SUP. capability.
+Each user may have up to 8 areas on the disk,
+numbered 0 to 7.  Each area is a fixed integral number of blocks long.
+The number of blocks per area is determined by the area's allocation.
+ADDR points to a 3 word parameter block, of format:
+.BEGIN VERBATIM
+
+		---------------------------------
+		|O     R/S      |     count     |
+		|---------------|---------------|
+		|               |A|     P       |
+		|-------------------------------|
+		|      core start address       |
+		---------------------------------
+
+
+R	operation to be performed.  Up to 5 such requests may be made.
+	low order bits designate operation:
+	0	read
+	1	write
+
+S	Status of operation.  The status is returned in the left-most
+	  byte, and in SOME cases there is additional information
+	  in the next byte, when appropriate:
+
+	0	no errors encountered...operation successful
+	  The first 5 errors indicate no data tranfer has occured
+	1	Bad memory access
+	2	Bad disk area number
+	3	Bad disk area access
+	4	Virtual disk address out of area
+	  The next 2 errors are due to bad Kernel tables and
+	  should never happen!!
+	5	Bad cylinder address
+	6	same as 5 but some data tranfer has occured
+	  The next 2 errors indicate an error return from
+	  a device.  The device status byte is placed in the
+	  right byte of the return status
+	7	Error return from the disk
+	8	Error return from the controller
+	9	Aborted by quit character
+	10d	User requested transfer of zero blocks
+	11d	invalid cylinder overflow indication
+		this is the half word device problem
+	12d	controller error - defective sector in
+		alternate cylinder
+	13d	controller error - defective sector
+		no alternate cylinders left
+	14d	could not read disk map for this disk
+		no transfers to this disk are permited
+	15d	controller error - defective sector
+		alternate cylinder has been assigned
+		all future references to a block in this
+		cylinder will be relocated - ALL data on this
+		cylinder has been lost
+
+A	area number.  There may be several areas on the disk available
+	  to a single user.
+
+P	position.  What sector (256 bytes long), relative to beginning
+	  of area, to start I/O at.
+
+number of bytes	number of bytes to transfer.
+
+core start address	address of the start of the core buffer.
+.END
+	A address is a 3 bit area number.
+	P is a 13 bit block offset into the area.
+block offset into the area.
+.SSS(|Disk I/O (Sector)       SVC     0F,ADDR|)
+	This is an obsolete SVC, included for backward  SUP. compatibility.
+The description of SVC 0E applies exactly to SVC 0F after substitution
+of "sector" for all occurances of "block".
+(A sector contains 256 bytes; a block contains 1024.)
+.SS(|Change MAC Set--	            SVC     5,MACSET|)
+.TOPIC(|Change MAC Set SVC|)
+	The Change MAC Set SVC selects the current MAC set.  The second
+operand specifies the MAC set.  The first fullword following the 16 MAC
+registers points to the PSD used to resume execution after the SVC is
+issued.  The MAC sets are assembled into the slot's CTA table or may
+be built dynamically using the Replace MAC Set SVC.
+.SS(|DDT SVC's|)
+.TOPIC(|KERNEL-I/O SVC's|)
+The following SVC's apply only to KIO users, such as DDT users.
+.SSS(|TTY Input--             SVC     0A,REG:TIME|)
+.TOPIC(|DDT tty input|)
+	REG:TIME are two fields of one byte each.  REG is the left byte, TIME
+is the right byte.  A single character is read and deposited in the
+user's register specified by REG (low order 4 bits) and a skip return (^4)
+is executed.  If the input buffer is empty the user is put to sleep
+until a character arrives or TIME seconds have elapsed.  If the sleep
+is terminated by a character arriving a skip return is executed,
+else a non-skip return is executed.  If the buffer is empty and TIME
+is zero a non-skip return is executed immediately.
+	(If the KIO:11 SVC is issued, this SVC may return with a skip (^2)
+return if a ZAPPER has been received.)
+.SSS(|TTY Output--            SVC     0B,ADDR|)
+.TOPIC(|DDT tty output|)
+	A string is sent to the terminal.  The byte at ADDR is a count of how
+many subsequent bytes are to be sent to the terminal.  The user
+program may be put to sleep by this SVC depending on the length of
+the output string and the condition of the user's Kernel output buffer.
+Characters in the string with hex values between 0 and 7, inclusive,
+are escaped with a zero for network purposes.
+.SSS(|KIO--                   SVC     0D,TYPE|)
+	TYPE determines the meaning of this SVC as follows:
+.SSSS(|SVC     KIO,0	detach circuit|)
+	ZAP circuit and log the user out.
+.SSSS(|SVC     KIO,1	transfer control|)
+	Transfers control to the command handler (DDT).
+.SSSS(|SVC     KIO,2	T.I.D.|)
+	Returns low 6 bits of TYMNET terminal i.d. (in R0).
+.SSSS(|SVC     KIO,3	echo on|)
+	Turns echo on.
+.SSSS(|SVC     KIO,4	echo off|)
+	Turns echo off.
+.SSSS(|SVC     KIO,5	flush outbound circuit|)
+	Emit GOBBLER.
+.SSSS(|SVC     KIO,6	change context|)
+	Change context (to slot with key specified by R0).
+.TOPIC(|Change Context SVC|)
+	Change context permits the transfer of a user from one slot's DDT
+to another, if various criteria are met.
+This SVC expects R0 to contain a slot key, used to search for the
+target slot.
+If successful, transfer is effected to the new slot, and the old is released.
+Else a diagnostic is issued to the terminal, and:
+	Normal return, if there are NO slots available for transfer destination;
+	Skip^1 (4) return if no slot is available with the specified key;
+	Skip^2 (8) return, if the requester does not have adequate licenses
+for the destination slot;
+	Skip^3 (12d) return, if the requestor username is tied to a specific
+slot, other than the one specified.
+.SSSS(|SVC     KIO,7	change context (default)|)
+	Change context (to default user-block for name).
+	Change context (default) locates the user-assigned slot (if any), and
+transfers control there.  If no slot is assigned, Skip^3 return.
+.SSSS(|SVC     KIO,8	check own background|)
+	Checks own background.
+.SSSS(|SVC     KIO,9	check any background|)
+	Check any background.
+.TOPIC(|Check Background SVC|)
+	Check any background expects a slot key in R0.
+	Check any/own background searches the run list for a back-ground job
+with the required key.  Normal return if not found.  Else Skip^1 return,
+then R0 contains the execution address of that back-ground slot.
+.SSSS(|SVC     KIO,10d	output number|)
+.TOPIC(|Output Number SVC|)
+	Output number expects register 0 to contain the binary number to output,
+and register 1 to contain output control information:
+.BEGIN GROUP VERBATIM
+
+  format:   - - -.- - f f.f f f f.s z b r.r r r r
+
+
+	where:
+	-	unused
+	f	output field width
+	s	signed output
+	z	zero field fill
+	b	blank field fill
+	r	Radix
+.END
+The number in r0 is converted via the radix in R1, according to the other R1
+control parameters, and is output to the controlling TTY.
+.SSSS(|SVC     KIO,11d	set zap handling|)
+	Set zap handling.
+.TOPIC(|ZAP handling SVC|)
+	Set-ZAP-handling will cause the input-SVC to take a skip (^2) return if
+a ZAPPER is input.
+.SSSS(|SVC     KIO,12d	send yellow ball|)
+	Send a "yellow ball".
+.SSSS(|SVC     KIO,13d  set trap handling|)
+	Works exactly like "SVC SYS,0" (Restart syscall), except that it applies
+ONLY to DDT or KERNEL I/O processes.  The ability to trap system faults,
+provided by this SVC, disappears when the user exits, or control returns
+to DDT.
+.SSSS(|SVC     KIO,14d  output single data char|)
+	Takes the single data char (right-justified in R0) and outputs it
+to the controlling terminal.  (This SVC outputs the character C as though
+the program had executed a " SVC 0B,ADDR" and "ADDR" was defined as:
+.ONCE CENTER
+ADDR    SC      'C'
+the purpose of the SVC is to allow the output of "computed" characters in
+an easy fashion.)
+  ZLÌ
