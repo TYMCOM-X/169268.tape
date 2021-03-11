@@ -1,0 +1,2504 @@
+
+
+
+
+
+
+
+
+
+              VIP Host and Terminal Interfaces
+
+
+
+                        Version 3.0
+
+
+
+                     System Generation
+
+
+
+
+
+
+                          10/12/87
+
+                         MDC-TYMNET
+
+
+
+               Network Technology Development
+
+
+
+                Tymnet  Interconnect  System
+
+
+
+
+MDC-TYMNET's  proprietary  rights are  included in  the information
+disclosed  herein.  The  recipient,  by  receiving  this  document,
+agrees  that  neither  this document nor the information  disclosed
+herein   nor any  part thereof  shall be  reproduced or transferred
+to other documents or used or disclosed to others for manufacturing
+or  any other  purpose except as specifically authorized in writing
+by MDC-TYMNET. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+                      1.  INTRODUCTION
+
+
+This manual describes the process of configuring the VIP
+host and terminal interfaces with switching and async
+access. These interfaces can support the following Honeywell
+devices :
+
+    - VIP 77XX synchronous terminal,
+    - VIP 78XX synchronous terminal,
+    - DPS6, file to file.
+
+The configuration is a file composed of macros that, when
+assembled determine the interface parameters.  The macros
+define such aspects as line protocol, line and circuit
+descriptions, terminal addressing, and menu and username
+specifications.
+
+Section 2       is an overview of the configuration,
+                highlighting key macros.
+
+Section 3       is a detailed description of the entire
+                configuration.
+
+Section 4,5,6   give instructions on how to create a new
+                interface, new tymfile, and new NIB file.
+
+
+Appendices      show sample interface configurations.
+
+
+The macros in this manual are always shown with the macro
+call in upper case and the variables in lower case, as in
+the example below.
+
+
+   SETLN(logical unit number,srv code,state,protocol name)
+
+
+The term MAG is used in sections of this manual.  It is an
+acronym for Multiple Access Gateway and refers to the
+interfaces.  A terminal interface is considered a primary
+MAG, and a host interface is considered a secondary MAG.
+
+
+
+
+
+
+
+
+
+
+
+                          Page 1
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+                        2.  OVERVIEW
+
+
+The VIP Extension Cord Service allows users of synchronous
+VIP terminals to access both sync and async host services.
+This is accomplished with Tymnet host and terminal
+interfaces.  Data is transported over Tymnet network lines
+via virtual circuits.
+
+For synchronous access, the terminal interface routes data
+from sync lines connected to TCUs, to circuits destined for
+VIP host interfaces. The Terminal Interface (TI) polls
+terminal controllers on its multidrop lines.
+
+The host interface accepts circuits built from the terminal
+interface, and sends the data over sync lines to VIP
+synchronous services.
+
+For async access, the terminal interface builds circuits
+from synchronous terminals to async host computers.  An
+example of this is the Ontyme host which normally serves
+only async terminals.
+
+The terminal interface gives the terminal users access to
+any set of the synchronous and asynchronous services
+available.  Configuration of the TI allows the customer to
+make a different set of services available to each terminal
+user.
+
+For a detailed description of the extension cord process see
+'VIP Host and Terminal Interfaces Version 3.0 External
+Reference Specification'.
+
+In order to correctly configure the interfaces, one must
+have an understanding of how the macros inter-relate.
+Following is a brief description of the terminal and host
+interface macros in the order of their appearance in the
+configuration.
+
+_D_E_F_T_T_Y
+The terminal type is defined for both host and terminal
+interface using the DEFTTY macro.
+
+_S_E_T_P_R_O
+The line protocol is defined for both host and terminal
+interface with the SETPRO macro.
+
+_S_E_T_C_I_R
+Virtual circuits are defined with SETCIR macros.  For the
+terminal interface one SETCIR must be defined for each TI
+circuit to be built, and for the host interface one SETCIR
+
+
+
+                          Page 2
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+must be defined for each virtual circuit to be accepted.
+
+_A_S_Y_C_I_R
+The terminal interface  requires an ASYCIR macro for each
+async circuit to be built.  When configuring an interface
+without async access you must define at least one dummy
+async macro in order for the interface to work.
+
+_L_O_G_S/_U_S_R_S
+In the terminal interface LOGS is used to define the login
+string for each username.  This string contains username,
+host number and password. It corresponds to the USRS string
+in the host interface which defines valid usernames from
+which to accept logins.
+
+_M_E_N_U_S
+Menus are defined for the terminal interface only.  The MENU
+macro follows  a sequence of macros which are used to define
+the options and parameters of a menu.
+
+The non-display option is newly added in V3.0, it is used
+merely for FTF devices. When this option is used no menu is
+displayed and the connection to the host is automatically
+done by the TIF.
+
+Two key macros within the menu definition are the
+SYNCSERVICE and ASYNCSERVICE macros.  These define which
+services can be accessed from a menu.  Although each user
+has only one menu, access to any or all of the services may
+be defined for a menu.
+
+_S_E_T_L_N
+The SETLN macro is used in both the TI and the HI to define
+the sync lines connected to the interfaces.  For the
+terminal interface, the service code parameter is not used.
+
+For the host interface, one service code must be defined for
+each host line.  More than one host line can be connected to
+one service.  (This is useful when there is a large volume
+of users who will be concurrently using the same service.)
+All lines connected to one service will have the same
+service code.
+
+_S_E_T_R_A
+SETRA Macros define the terminal addresses and terminal
+type, which are defined within a SETLN macro and an ENDLIN
+macro.  For the terminal interface, the SETRA defines actual
+terminal addresses of drop points on the multidrop lines and
+HIF associated address.  For the host interface, the SETRA
+macros define a pool of addresses for that line.
+
+
+
+
+                          Page 3
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+These are the key macros of the VIP Extension Cord.  The
+next chapter describes the configuration in its entirety.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 4
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+                   3.  MACRO DESCRIPTIONS
+
+3.1  CONFIGURING THE PROTOCOL
+
+
+
+3.1.1  SETPRO macro
+
+
+This macro defines a protocol to be used in communicating
+with external processors.
+
+The format of the SETPRO macro is:
+
+   SETPRO(protocol name,name of protocol handler)
+
+where:
+
+   _p_r_o_t_o_c_o_l _n_a_m_e is a symbol which refers to the protocol
+   being defined.  The symbols allowed include:
+
+         V7TI = VIP Terminal Interface
+         V7HI = VIP Host Interface
+
+   _n_a_m_e _o_f _p_r_o_t_o_c_o_l _h_a_n_d_l_e_r is the name of a subroutine
+   which does the protocol handling for that specific
+   protocol:
+
+         PHV7TI - VIP Terminal Interface
+         PHV7HI - VIP Host Interface
+
+
+3.1.2  OTHER_PROTOCOL_VARIABLES
+
+
+   SCHA|P.<protocol name>| EQ 0
+   S1AL|P.<protocol name>| EQ 0
+
+A GL SCHA|protocol name>|, S1AL|<protocol name>| must be
+included.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 5
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+3.2  CONFIGURING_THE_CIRCUITS
+
+
+This macro defines an ICAP virtual circuit in both host and
+terminal interfaces.  In this system terminal interfaces
+build circuits to host interfaces.  Each circuit in a MAG is
+assigned a unique number.
+
+The format of the SETCIR macro is:
+
+   SETCIR(circuit number,circuit name,type,state,gateway,circuit
+          acceptance type,other end,regen indicator,number of TAs)
+
+where:
+
+   _c_i_r_c_u_i_t _n_u_m_b_e_r is the hexadecimal circuit number as used
+   in the MAG.  The number starts at one and must be
+   incremented by one each SETCIR call.
+
+   _c_i_r_c_u_i_t _n_a_m_e is a unique symbolic name for the circuit
+   (must follow NAD symbol conventions).
+
+   _t_y_p_e is obsolete and should be left empty.  Two
+   successive commas should be used for this parameter.  The
+   symbol CRT will be accepted but anything else will cause
+   an error diagnostic to occur.
+
+   _s_t_a_t_e is the state of the circuit:
+
+         UP   = circuit is built by this MAG
+         DOWN = circuit is not built by this MAG
+
+   This parameter must be UP if the MAG is to build the
+   circuit and DOWN for all circuits with circuit acceptance
+   type = ACCEPT.
+
+   _g_a_t_e_w_a_y is an indicator which determines whether gateway
+   login strings will be used when building circuits:
+
+         GATEWAY = circuit is built through a gateway
+         NOGATE  = circuit is not built through a gateway
+
+      If NOGATE is specified, gateway login strings will not
+      be used even if defined.
+
+   _c_i_r_c_u_i_t _a_c_c_e_p_t_a_n_c_e _t_y_p_e specifies whether this circuit
+   should be accepted or rejected:
+
+         ACCEPT - accept logins for this circuit
+         REJECT - reject logins for this circuit
+
+
+
+
+                          Page 6
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+      If this parameter is set to REJECT, needles for this
+      circuit will be zapped.  It should be set to REJECT
+      for all circuits in a terminal.
+
+   _o_t_h_e_r _e_n_d specifies whether the other end of the circuit
+   is a MATS (or a MATS-like process), or a MAG.  This
+   parameter must be set to MAG for all circuits in the VIP
+   Extension Cord with switching and async access.
+
+   _r_e_g_e_n _i_n_d_i_c_a_t_o_r specifies whether that circuit will be
+   regenerated periodically:
+
+         REGEN   = circuit will be regenerated
+         NOREGEN = circuit won't be regenerated
+
+      If this parameter is set to REGEN, the MAG will
+      attempt to regenerate the circuit approximately every
+      hour (the time is defined in the TYM file).  If the
+      circuit destination is to a MATS or a consolidated
+      monitor, the default for this parameter is NOREGEN.
+      If the circuit destination is to a MAG, the default
+      for this parameter is REGEN.  This parameter is
+      applicable only if acceptance type = REJECT and state
+      = UP.
+
+   _n_u_m_b_e_r _o_f _t_e_r_m_i_n_a_l _a_d_d_r_e_s_s_e_s (Required for HI only) tells
+   how many terminals the host interface can serve at one
+   time through this circuit.
+
+3.2.1  ASYCIR macro
+
+
+This macro provides a definition for the async circuits
+which are to be built to one specific host service.
+
+
+The format of the ASYCIR macro is:
+
+
+     ASYCIR(circuit definition name)
+
+
+where:
+
+
+   _c_i_r_c_u_i_t _d_e_f_i_n_i_t_i_o_n _n_a_m_e is a unique name that is to be
+   built to one specific async host service
+
+
+
+
+
+
+
+                          Page 7
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+3.2.2  LOGIN STRING DEFINITIONS
+
+
+Associated with the circuit parameter of SETCIR is either
+one or more complete login strings for the terminal
+interface or a username for the Host Interface:
+
+   _L_O_G_S_c is an SC format login string required for each
+   circuit 'c' that has circuit acceptance type = REJECT.
+   Names LGn.c, with n being a value from 1 through F hex,
+   are optional, additional login strings which can be
+   defined.  The MAG will switch to the next login string in
+   the LOGS list when the circuit of the string currently
+   being used gets zapped.
+
+      The format of LOGS is USERNAME, COLON, HOST,
+      SEMICOLON, PASSWORD, SEMICOLON.
+
+   _U_S_R_S is an SC format username string required for each
+   circuit in a terminal interface.  All USRS strings in a
+   terminal interface must be unique within that MAG.
+
+   _P_U_S_R is an SC format priority login username required for
+   each circuit in a terminal interface.
+
+      For the circuit to be associated with the string, the
+      symbolic name for that circuit must be included in the
+      LOGS,  USRS  or PUSR definition, following them
+      enclosed in vertical bars, for example:
+
+      LOGS|MS0771|  SC  /"84TTMSPR00001:771"BBINTERNALPASS"BB/
+      LG1.|MS0771|  SC  /"84TTMSPR00002:771"BBINTERNALPASS"BB/
+      LG2.|MS0771|  SC  /"84TTMSPR00003:302"BBINTERNALPASS"BB/
+
+Associated with the gateway parameter is a list of gateway
+login strings:
+
+   _G_A_T_E_c is the second login string used for each circuit
+   'c' when logging in through a gateway (the login string
+   connects to the gateway and the gate string connects the
+   rest of the way).  GTn.c with n going from 1 though F
+   (hex), are optional additional login strings.  The GATE
+   string for a given circuit is associated with the LOG
+   string of the same circuit, e.g., LOGS|MS0771| is
+   associated with GATE|MS0771| and LOGS2|MS0771|  is
+   associated with GATE2|MS0771|.  The log string connects
+   to the gateway and the gate string connects the rest of
+   the way to the hot in the other network.  The password
+   may be scrambled.
+
+For the circuit to be associated with the string, the
+
+
+
+                          Page 8
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+gateway parameter must be equal to GATEWAY (if the parameter
+is NOGATE, the strings will not be used when logging in).
+The following is an example of gateway strings:
+
+   GATE|MS0771| SC /"84TTMSPR00001:771"BBINTERNALPASS"BB/
+   GT1.|MS0771| SC /"84TTMSPR00002:771"BBINTERNALPASS"BB/
+   GT2.|MS0771| SC /"84TTMSPR00003:302"BBINTERNALPASS"BB/
+
+In the sample login and gateway strings above:
+
+   _S_C is the NAD assembler op code.
+
+   / is the delimiter and must appear as shown.
+
+   "_8_4 the quotation mark (") is used as an escape character
+   to indicate that the next two characters (84) are to be
+   interpreted as a hex digit pair.  The "84 is a control-D
+   and causes circuit gouging, guaranteeing a higher class
+   of service from the network.
+
+   _T_T_M_S_P_R_0_0_0_0_1:_7_7_1 is the username and host number.
+
+   "_B_B is the hex value of a semicolon.
+
+   _I_N_T_E_R_N_A_L_P_A_S_S is the password.
+
+   Note: All LOGS, USRS, PUSR, and GATE names must be made
+   global before definition. ex:  GL GATE|MS0771|
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 9
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+3.3  CONFIGURING CIRCUITS WITHOUT ASYNC ACCESS
+
+
+The VIP interface may also be configured with no async
+access.  When this is the case, all three of the previous
+macros must still be used, but the ASYCIR and its
+corresponding LOGS macro must be dummy definitions.
+
+There needs to be only one dummy ASYCIR and LOGS definition
+to configure an interface without async service.   A sample
+of the dummy async circuit configuration is shown on this
+page.
+
+
+_T_E_R_M_I_N_A_L _I_N_T_E_R_F_A_C_E
+
+
+
+      SETPRO(V7TI,PHV7TI)
+
+      SETCIR(1,CIR1,,UP,NOGATE,REJECT,MAG)
+      SETCIR(2,CIR2,,UP,NOGATE,REJECT,MAG)
+
+      ASYCIR(DUMMY)
+
+      GL LOGS/CIR1/,LOGS/CIR2/,LOGS/DUMMY/
+
+LOGS|CIR1|   SC   /"84TTMMSPRO00001:2415;"BBPASSWORD"BB/
+LOGS|CIR2|   SC   /"84TTMSPR00002:2753;"BBPASSWORD;"BB/
+
+LOGS|DUMMY|  SC   /DUMMY/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 10
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+3.4  CONFIGURING TERMINAL TYPE
+
+
+Starting with VIP V3.0, three types of Honeywell terminal
+device (VIP77XX, VIP78XX, file transfer device DPS6) are
+supported. The user must let the system know which type of
+device out of these three he is going to use.  In addition,
+the order of the terminal type definitions is critical to
+the system; thus the user must specify them in the same
+order both in the TIF's tymfile and in the HIF's tymfile.
+
+The valid terminal type symbolic names are  : _V_I_P_7_7, _V_I_P_7_8
+and _V_I_P_F_T_F.
+
+
+3.4.1  BEGTTY macro
+
+
+The BEGTTY macro indicates the beginning of a sequence of
+terminal type definitions. This macro must appear before the
+DEFTTY macro, and it must be paired with an ENDTTY macro.
+
+The format of the BEGTTY macro is :
+
+         BEGTTY
+
+No argument is needed.
+
+
+3.4.2  DEFTTY macro
+
+
+This macro defines a terminal type used by the user.
+
+The format of the DEFTTY macro is :
+
+         DEFTTY(terminal type)
+
+where
+
+      _t_e_r_m_i_n_a_l _t_y_p_e is the symbolic name related to  the
+      terminal type, choose one of : VIP77, VIP78, VITFTF.
+
+
+3.4.3  ENDTTY macro
+
+
+This macro ends the terminal type definitions. Each BEGTTY
+must be paired with an ENDTTY.
+
+The format of ENDTTY macro is :
+
+
+
+                          Page 11
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+         ENDTTY
+
+No argument is needed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 12
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+3.5  CONFIGURING MENUS
+
+
+
+3.5.1  MENU macro
+
+
+This macro defines the menus which will be displayed to
+terminal users.  Several menus may be defined in thrminal interface and the SETRA for each terminal
+determines which menu name will be displayed for specific
+terminals.  This macro is used only in configuring terminal
+interfaces.
+
+The second parameter of this macro(display option) has been
+added in order to enable the user to configure a device with
+no menu. In other words if NONDSP is used, no menu will be
+displayed to the user and the connection to the host will be
+done automatically by the TIF. In this case one macro should
+be configured under MENU macro, which is the SYNCSERVICE
+macro, to define the destination service. This feature is
+implemented to be used by the FTF devices.
+
+The definition is ended by an ENDMENU macro
+
+The format of the MENU macro is:
+
+     MENU(menu name, display option)
+
+where:
+
+     _m_e_n_u _n_a_m_e is a unique name, which identifies a
+     particular menu.
+
+     _d_i_s_p_l_a_y _o_p_t_i_o_n has two option, for FTF use NONDSP; for
+     VIP77XX and VIP78XX use MNUDSP, default MNUDSP.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 13
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+3.5.2  SYNCSERVICE macro
+
+
+This macro defines a selection to appear on the menu, which
+is a service on a sync host.  It is used between the MENU
+and ENDMENU macros.
+
+The format for this macro is:
+
+     SYNCSERVICE(service name,type-in,description,srv code)
+
+where:
+
+     _s_e_r_v_i_c_e _n_a_m_e is a unique name which identifies the sync
+     service on the host side which can be accessed from
+     this menu.  The service name must then appear in a
+     SERVICIR macro after every SETLN to indicate which
+     circuit is to be used.  If a service appears in more
+     than one menu, it must still be given a unique name in
+     each menu.
+
+
+     _t_y_p_e-_i_n represents the exact command the user must
+     enter in order to select a particular service.
+
+     _d_e_s_c_r_i_p_t_i_o_n is displayable data which describes a
+     specific selection to the user.
+
+     _s_r_v _c_o_d_e is a previously undefined number to be used as
+     a code for a particular service.  Once defined in this
+     macro, it will correspond to the service name also
+     defined here.  The value defined for srv code for a
+     particular service is also used in the SETLN macro for
+     the host interface.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 14
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+3.5.3  ASYNCSERVICE macro
+
+
+This macro defines a selection which is to appear on the
+menu designating an asynchronous host.  It is used between
+the MENU and ENDMENU macros.
+
+The format of the ASYNCSERVICE macro is:
+
+     ASYNCSERVICE(circuit name,type-in,description)
+
+where:
+
+     _c_i_r_c_u_i_t _n_a_m_e is the name of a circuit definition which
+     has been defined by an ASYCIR macro.
+
+     _t_y_p_e-_i_n designates the exact command which the user
+     must enter in order to select a specific service.
+
+     _d_e_s_c_r_i_p_t_i_o_n is displayable data which describes a
+     specific selection to a user.
+
+
+
+3.5.4  UCMMENU macro
+
+
+This macro defines the actual command to be typed by a user
+in order to call the menu.
+
+The format of the UCMMENU macro is:
+
+     UCMMENU(string)
+
+where:
+
+
+     _s_t_r_i_n_g represents the exact command typed by the user
+     to call the menu for display on the screen.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 15
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+3.5.5  UCMFREEZE macro
+
+
+This macro defines the actual commands to be typed by a user
+to halt the display output when connected to an Async
+service.
+
+The format of the UCMFREEZE macro is:
+
+     UCMFREEZE(string)
+
+where:
+
+     _s_t_r_i_n_g represents the exact command  typed by the user
+     to freeze the display.
+
+
+3.5.6  UCMBREAKSIGNAL macro
+
+
+This macro defines the actual command typed by a user in
+order to abort the current command when using an
+asynchronous host.
+
+The format for the UCMBREAKSIGNAL macro is:
+
+     UCMBREAKSIGNAL(string)
+
+where:
+
+     _s_t_r_i_n_g defines the actual command that the user will
+     type.
+
+
+3.5.7  UCMSCROLL macro
+
+
+This macro defines the command given by the user to set the
+terminal interface for scrolling mode.  It is used for
+asynchronous host connections which will operate in
+scrolling mode.  The user must have a terminal which has the
+ability to scroll, and the terminal must be set to scroll
+for this command to be effective.  This command acts as a
+toggle switch to turn scrolling on and off in the TI.
+
+The format for the UCMSCROLL macro is:
+
+     UCMSCROLL($*$SCR)
+
+where:
+
+
+
+
+                          Page 16
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+     $*$_S_C_R defines the actual command given by the user to
+     set the scroll 'switch' on the terminal interface.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 17
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+3.5.8  MSCONNECTED macro
+
+
+This macro defines the diagnostic to be displayed when a
+connection is established between the user's terminal and
+the TI.  The format for the MSCONNECTED macro is:
+
+     MSCONNECTED(string)
+
+where:
+
+     _s_t_r_i_n_g represents the terminology used to indicate that
+     the host-user connection has been made.
+
+
+
+3.5.9  MSDISCONNECTED macro
+
+
+This macro defines that the host to terminal connection has
+been terminated.
+
+The format for the MSDICONNECTED macro is:
+
+     MSDICONNECTED(string)
+
+where:
+
+     _s_t_r_i_n_g represents the terminology used to indicate that
+     the host-user connection has been terminated.
+
+
+
+3.5.10  MSZAPPED macro
+
+
+This macro defines that the circuit from the terminal to the
+host has been zapped.  In the case of Ontyme or other
+asynchronous hosts this is a normal diagnostic for a user-
+terminted session, however in the case of synchronous hosts
+it generally represents a network or line anomaly which has
+caused the circuit to be zapped.
+
+The format for this macro is:
+
+
+     MSZAPPED(string)
+
+
+where:
+
+
+
+
+                          Page 18
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+     _s_t_r_i_n_g is displayable data used to indicate that the
+     circuit has been zapped and the host-user connection
+     has been lost.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 19
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+3.5.11  MSFAILED macro
+
+
+This macro defines that the network's attempt to establish a
+circuit to the host has failed.  In this case the user
+should attempt login again after approximate. 2-3 minutes.
+
+The format for this macro is:
+
+     MSFAILED(string)
+
+where:
+
+     _s_t_r_i_n_g is displayable data used to notify the user that
+     the network was unable to establish a circuit and that
+     the login should be attempted again after a few
+     minutes.
+
+
+
+3.5.12  MSNOCIRCUITS macro
+
+
+This macro defines that there are presently no circuits
+available and that the user should attempt login again after
+approx. 2-3 minutes.
+
+The format for the MSNOCIRCUITS macro is:
+
+     MSNOCIRCUITS(string)
+
+where:
+
+     _s_t_r_i_n_g represents displayable data used to notify the
+     user that there are no circuits available and that they
+     may attempt login again within a few minutes.
+
+
+3.5.13  MSERROR macro
+
+
+This macro defines that the selection that the user entered
+on the menu is invalid.
+
+The format for the MSERROR macro is:
+
+     MSERROR(string)
+
+where:
+
+     _s_t_r_i_n_g is displayable data used to indicate to the user
+
+
+
+                          Page 20
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+     that their selection is invalid.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 21
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+3.5.14  MENUHEADER macro
+
+
+This macro defines the display which will be used to welcome
+the user to the system and describe the menu.  It will
+appear at the top of the menu.
+
+The format for the MENUHEADER macro is:
+
+     MENUHEADER(string)
+
+where
+
+     _s_t_r_i_n_g is displayable data which is to appear at the
+     top of the menu.
+
+
+
+3.5.15  MENUTRAILER macro
+
+
+This macro defines the message that will appear at the
+bottom of the menu.
+
+The format of the MENUTRAILER macro is:
+
+     MENUTRAILER(string)
+
+where:
+
+     _s_t_r_i_n_g represents the message that will appear at the
+     bottom of the menu.
+
+
+3.5.16  MSLEADBLANKS  macro
+
+
+This macro defines the number of leading blanks that will
+appear before the characters which represent the menu
+selections.
+
+The format for the MSLEADBLANKS menu is:
+
+     MSLEADBLANKS(string)
+
+where:
+
+     _s_t_r_i_n_g represents the number of leading blanks that
+     will preceed the menu selections.
+
+
+
+
+
+                          Page 22
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+3.5.17  ENDMENU macro
+
+This macro defines that the end of the menu has been
+reached.  It must be placed after the preceeding menu
+macros.
+
+The format for the ENDMENU macro is:
+
+     ENDMENU
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 23
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+3.6  CONFIGURING LINES
+
+
+
+3.6.1  SETLN macro
+
+
+This macro initiates a definition for a line.  Each logical
+device between 0 and NLINES-1 requires a SETLN.  Each SETLN
+call must be in numerical order starting with line 0.
+
+The format of the SETLN macro is:
+
+   SETLN(logical unit number,srv code,state,protocol name)
+
+where:
+
+   _l_o_g_i_c_a_l _u_n_i_t _n_u_m_b_e_r is the unit number (between 0 and
+   NLINES-1) associated with the sync port.
+
+   _s_r_v _c_o_d_e (Used for HI only)  the srv code used in the
+   host interface is the same value that was defined for srv
+   code in the terminal interface SYNCSERVICE macro.  It is
+   normally one user symbol and is originally defined in the
+   RESNOD file.  (If two or more lines in an HI are
+   connected to the same service, they will have the same
+   srv code.)
+
+   _s_t_a_t_e specifies whether the MAG will process messages
+   coming across this line:
+
+         UP   = messages will be processed on this line
+         DOWN = messages will not be processed on this line
+
+      If this parameter is set to DOWN, the associated
+      tables will be created but the line will not be
+      serviced.
+
+   _p_r_o_t_o_c_o_l _n_a_m_e is the four character protocol name from
+   the SETPRO
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 24
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+3.6.2  SETRA macro
+
+
+This macro initiates the definition of a VIP terminal poll
+address.
+
+There must be one SETRA for each configured terminal.  It
+defines both a CRT and a printer.  It does not matter
+whether or not the terminal actually has a printer attached.
+
+The destination IA address parameter is used in the TIF's
+tymfile only. The user can designate a specific IA address
+on the HIF side to be assigned for sessions with this
+terminal.  In case the destination IA address is omitted,
+the system will dynamically allocate an address on the HIF
+side with the same terminal type.
+
+The format of the SETRA macro is:
+
+     SETRA(terminal address, menu name, terminal type,
+     destination IA address)
+
+where:
+
+   _t_e_r_m_i_n_a_l _a_d_d_r_e_s_s is the poll or select address without
+   the poll/select/parity bits; that is a number from 0
+   through 31.
+
+   _m_e_n_u _n_a_m_e is the name of the menu to be displayed on this
+   terminal.  It is used only for terminal interfaces and
+   should be omitted for host interfaces.
+
+   _t_e_r_m_i_n_a_l _t_y_p_e is one of the types defined in the DEFTTY
+   macro.
+
+   _d_e_s_t_i_n_a_t_i_o_n _I_A _a_d_d_r_e_s_s is a specific HIF's IA address to
+   be assigned to sessions with this terminal.  This number
+   corresponds to the terminal address on the HIF side under
+   the desired service.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 25
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+3.6.3  SERVICECIR macro
+
+
+This macro defines which circuit is to be used for each
+synchronous host service.  Before each ENDLN macro there
+must be one SERVICECIR macro for every service name used in
+a SYNCSEVICE.  This holds true for any menu displayed on a
+particular line.
+
+Two lines may not use the same circuit.
+
+(This macro is used for TI only)
+
+The format for the SERVICECIR macro is:
+
+     SERVICECIR(service,circuit)
+
+where:
+
+     _s_e_r_v_i_c_e is the name of a particular service to be
+     accessed.
+
+     _c_i_r_c_u_i_t is the circuit name that a particular service
+     can be accessed on.
+
+
+3.6.4  ENDLN macro
+
+This macro ends a line definition i.e., each SETLN must be
+paired with an ENDLN.
+
+The format of the ENDLN macro is:
+
+   ENDLN(protocol name)
+
+where:
+
+   _p_r_o_t_o_c_o_l _n_a_m_e is the four character protocol name for
+   this line
+
+For an LU that is not used, its SETLN/ENDLN with at least
+one IA must be defined in the configuration, for example:
+
+   SETLN(<LU#>,<srv>,DOWN)
+   SERVICECIR(service,circuit)
+   SETRA(0,<menu name>)
+   ENDLN(NPRO)
+
+
+
+
+
+
+
+                          Page 26
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+                   4.  CREATING A NEW MAG
+
+
+Creating a new MAG involves creating two files; the GEN file
+and the Tym file.  These files must be assembled to create a
+NIB file which is then downloaded into a slot.
+
+First, a new host number, not presently being used in the
+network but valid in the Supervisor must be obtained.
+
+
+4.1  CREATING THE GEN FILE
+
+1.   Find the most recent MAG GEN file (for the same type of
+     MAG as the one you're creating, e.g., Vip HI).
+
+
+2.   Read the most recent GEN file into your new file, for
+     example:
+
+      -_m_o_d _g_0_7_7_1_p._3_0_2
+
+      *_r_e_a_d _g_0_3_0_1_p._2_2_8
+
+
+3.   Modify your new GEN file and add new header comments.
+
+
+4.   Change the Tym filename.
+
+
+5.   Change the NIB filename.
+
+
+6.   If a different release/version of the code is needed,
+     substitute the correct names for all filenames.
+
+
+7.   Always makes sure that GENSTR contains the name of the
+     GEN file.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 27
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+4.2  CREATING THE TYM FILE
+
+
+
+1.   Find the most recent MAG Tym file or use the Tym file
+     that was listed in the GEN file (before you changed
+     it).
+
+
+2.   Create a new Tym file.  in section 4.1.
+
+
+3.   Read the old Tym file into your new file.
+
+
+4.   Modify your new Tym file and add new header comments.
+
+
+5.   The following are the most commonly changed variables
+     in the Tym file.
+
+
+     NLINES - The number of the highest logical unit plus 1,
+         e.g., if using LU 1 and 3,NLINES should be 4; the
+         number of SETLN calls.
+
+     HOSTNO - The host number of this MAG: Format:
+         $A<number>
+
+     ***Note:Each interface,including the TI needs a HOSTNO
+     designation
+
+
+     TUBLEN - The maximum character size of messages
+         received on lines.
+
+
+     MAXMSG - The maximum character size of messages
+         received on circuits.
+
+
+     SPOLT - The time between slow polls (this value has
+         meaning for TI MAGs only): Format:  $A600*<number
+         of seconds>
+
+
+     FPOLT - The time between fast polls (TI only).  This is
+         the time in ticks (1/600 sec) between fast folls on
+         each line, not polls for a specific terminal.
+
+
+
+
+
+                          Page 28
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+     PTMO - The time to wait for a poll response (this value
+         has meaning for Primary MAGs only): Format:
+         $A600*<number of seconds>
+
+     PRMAX - The number of times to poll a terminal control
+         unit (TCU) with no response before putting the
+         terminal into slow poll state (for the Primary MAG
+         only).
+
+     NCYCTO - The number of minutes between circuit
+         regeneration cycles.
+
+     MTRX - The maximum number of times a message can be
+         sent when either it is not acknowledged or the
+         negative acknowledgement is received.
+
+     MBYM - The minimum time to wait before sending a
+         message after a busy condition has been detected.
+         Format:  $A600 * <number of seconds>
+
+     SPOLT, FPOLT, PTMO, PRMAX, MTRX, MBYM are default
+     values defined for all the lines.  If, for example, we
+     want to define a retry counter different from MTRX for
+     line number 2 we should add to the host file the
+     following parameter:
+
+         MTRX2   a <retry count for LU 2>
+
+     All the same for the other parameters:
+
+     _D_e_f_a_u_l_t _V_a_l_u_e  _S_p_e_c_i_f_i_c__V_a_l_u_e
+     ----------     ----------------------
+     FPOLT          FPOL<line number>
+     SPOLT          SPOL<line number>
+     PTMO           PTMOL<line number>
+     PRMAX          PRMXL<line number>
+     MTRX           MTRX<line number>
+     MBYM           MBY<line number>
+     ----------     ----------------------
+
+_N_O_T_E :
+
+
+*  The code generator should not change other values.
+
+*  _N_e_v_e_r use a host file from a different when creating a
+   new MAG.
+
+
+
+
+
+
+
+                          Page 29
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+4.3  CREATING THE NIB FILE
+
+
+
+1.   When the GEN and Tym files have been created, create
+     the NIB file by assembling all the files in the GEN
+     file, for example:
+
+      -_r _n_a_d
+
+      ;_x <_g_e_n-_f_i_l_e-_n_a_m_e> (_c_r)
+
+   After the assembly, the NIB file is created.  Download
+   the NIB file into a slot using LOADII or NAD.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 30
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+                       5.  APPENDIX A
+
+
+    Sample Tymfile.
+
+
+5.1  Terminal Interface
+
+
+: Define terminal type, MUST be the same order as defined in HIF
+: Currently supported terminal types are:
+:          VIP77 - VIP 7700 terminal
+:          VIP78 - VIP 7800 terminal
+:          VIPFTF- VIP FTF device
+
+        BEGTTY
+          DEFTTY(VIP77)
+          DEFTTY(VIP78)
+          DEFTTY(VIPFTF)
+        ENDTTY
+
+        SETPRO(V7TI,PHV7TI)
+
+        GL     S1AL|$0 P.V7TI|
+        GL     SCHA|$0 P.V7TI|
+
+S1AL|$0 P.V7TI| EQ     0      ::S1 S2 NOT REQUIRED ON EVERY MESSAGE
+SCHA|$0 P.V7TI| EQ     0      :No special char after IA TA on pars lines
+
+        SEG    0
+
+        SETCIR(1,CIR1,CRT,UP,GATEWAY,REJECT,MAG,NOREGEN,9)
+        SETCIR(2,CIR2,CRT,UP,GATEWAY,REJECT,MAG,NOREGEN,9)
+        SETCIR(3,CIR3,CRT,UP,GATEWAY,REJECT,MAG,NOREGEN,9)
+        SETCIR(4,CIR4,CRT,UP,GATEWAY,REJECT,MAG,NOREGEN,9)
+        ASYCIR(OCIRDF)
+               ASYCIR(SYS54)
+               [ASYCIR(DUMMY)] *
+
+GL LOGS/CIR1/,LOGS/CIR2/,LOGS/SY554/,LOGS/OCIRDF/
+
+LOGS|CIR1|   SC    /"84TTMSPRO00001:2415;"BBPASSWORD"BB/
+LOGS|CIR1|   SC     /"84TTMSPRO00002:2753;"BBPASWORD"BB/
+LOGS|CIR2|   SC     /"84TTMSPR00002:2753;"BBPASSWORD;"BB/
+
+LOGS|SYS54|     SC     /"84SYNCMAG:54"BByour psw"BB)
+LOGS|OCIRDF|    SC     /"84EMSTNAD"BB/
+[LOGS|DUMMY|    SC      /DUMMY/] *
+
+        PKTOPT(ALLCIR,100,100)
+
+
+
+
+                          Page 31
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+:----------------------------------------------------------
+: Define menu - NONDSP  = non_displayable menu
+:               MNUDSP  = displayable menu
+:               default = MNUDSP
+:----------------------------------------------------------
+
+    MENU(MENU1)
+      UCMMENU($*$MN)
+      UCMFREEZE($*$BRK)
+      UCMBREAKSINGAL($*$DIS)
+      UCMSCROLL($*$SCR)
+      MSCONNECTED(Terminal connected - xmit to display menu)
+      MSDISCONNECT(Connection cleared)
+      MSZAPPED(Connection to service cleared)
+      MSFAILED(Unable to establish connection - pls try again in 2 min)
+      MSNOCIRCUITS(No circuits available - pls try again in 2 min     )
+      MSERROR(Selection entered is invalid                            )
+      MENUHEADER(Welcome.  Select from the following:)
+      MENUTRAILER(Enter selection MATCH followed by TRANSMIT.)
+      MSLEADBLANKS(     )
+      ASYNCSERVICE(OCIRDF,74,System 74)
+      SYNCSERVICE(VIPH1,1,VIP HOST NUMBER 1,SRVC1)
+      SYNCSERVICE(VIPH2,2,VIP HOST NUMBER 2,SRVC2)
+    ENDMENU
+
+    MENU(MENU2)
+      UCMMENU($*$MN)
+      UCMFREEZE($*$BRK)
+      UCMBREAKSINGAL($*$DIS)
+      UCMSCROLL($*$SCR)
+      MSCONNECTED(Terminal connected - xmit to display menu)
+      MSDISCONNECT(Connection cleared)
+      MSZAPPED(Connection to service cleared)
+      MSFAILED(Unable to establish connection - pls try again in 2 min)
+      MSNOCIRCUITS(No circuits available - pls try again in 2 min     )
+      MSERROR(Selection entered is invalid                            )
+      MENUHEADER(Welcome.  Select from the following:)
+      MENUTRAILER(Enter selection MATCH followed by TRANSMIT.)
+      MSLEADBLANKS(     )
+      ASYNCSERVICE(ONTYME,0,Ontyme System)
+      SYNCSERVICE(VIPH3,1,VIP HOST NUMBER 1,SRVC1)
+      SYNCSERVICE(VIPH4,2,VIP HOST NUMBER 2,SRVC2)
+      SYNCSERVICE(VIPH5,3,VIP HOST NUMBER 3,SRVC3)
+    ENDMENU
+
+    MENU(MENU3,NONDSP)
+      SYNCSERVICE(VIPH6,1,VIP HOST NUMBER 1,SRVC1)
+    ENDMENU
+
+    MENU(MENU4,NONDSP)
+      SYNCSERVICE(VIPH7,1,VIP HOST NUMBER 1,SRVC2)
+
+
+
+                          Page 32
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+    ENDMENU
+
+    MENU(MENU5,NONDSP)
+      SYNCSERVICE(VIPH8,1,VIP HOST NUMBER 1,SRVC3)
+    ENDMENU
+
+    MENU(MENU6,NONDSP)
+      SYNCSERVICE(VIPH9,1,VIP HOST NUMBER 1,SRVC3)
+    ENDMENU
+
+
+**   The definitions shown in brackets [] represent the
+     dummy async definitions that would need to appear if
+     this were an interface without async service.
+
+             SEG    5
+     LTAB    HC     0
+
+             SETLN(0,0,UP,V7TI)
+               SETRA(0,MENU1,VIP77)
+               SETRA(1,MENU2,VIP77)
+               SETRA(2,MENU1,VIP77)
+               SETRA(3,MENU2,VIP77,6)
+               SETRA(4,MENU3,VIPFTF,1)
+               SETRA(5,MENU3,VIPFTF,2)
+               SETRA(6,MENU3,VIPFTF,3)
+               SETRA(7,MENU3,VIPFTF,4)
+               SETRA(8,MENU4,VIPFTF,0)
+               SERVICECIR(VIPH1,CIR1)
+               SERVICECIR(VIPH2,CIR1)
+               SERVICECIR(VIPH3,CIR1)
+               SERVICECIR(VIPH4,CIR1)
+               SERVICECIR(VIPH5,CIR1)
+               SERVICECIR(VIPH6,CIR1)
+               SERVICECIR(VIPH7,CIR1)
+             ENDLN(V7TI)
+
+             SETLN(1,0,UP,V7TI)
+               SETRA(0A,MENU1,VIP77)
+               SETRA(0B,MENU1,VIP77)
+               SETRA(0C,MENU1,VIP77)
+               SETRA(0D,MENU1,VIP78)
+               SETRA(0E,MENU1,VIP78)
+               SETRA(0F,MENU1,VIP78,8)
+               SERVICECIR(VIPH1,CIR2)
+               SERVICECIR(VIPH2,CIR2)
+               SERVICECIR(VIPH3,CIR2)
+               SERVICECIR(VIPH4,CIR2)
+               SERVICECIR(VIPH5,CIR2)
+             ENDLN(V7TI)
+
+
+
+
+                          Page 33
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+             SETLN(2,0,UP,V7TI)
+               SETRA(0,MENU1,VIP77)
+               SETRA(1,MENU1,VIP77)
+               SETRA(2,MENU2,VIP78)
+               SETRA(3,MENU2,VIP78)
+               SETRA(4,MENU4,VIPFTF,1)
+               SETRA(5,MENU5,VIPFTF,1)
+               SETRA(6,MENU6,VIPFTF,2)
+               SERVICECIR(VIPH1,CIR3)
+               SERVICECIR(VIPH2,CIR3)
+               SERVICECIR(VIPH3,CIR3)
+               SERVICECIR(VIPH4,CIR3)
+               SERVICECIR(VIPH5,CIR3)
+               SERVICECIR(VIPH8,CIR3)
+               SERVICECIR(VIPH9,CIR4)
+             ENDLN(V7TI)
+     :
+             MAKPTB
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          Page 34
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+5.2  Host Interface
+
+
+
+:-----------------------------------------------------------------------
+: Define terminal types:
+:                       VIP77 = VIP 7700 terminal
+:                       VIP78 = VIP 7800 terminal
+:                       VIPFTF= VIP file transfer device (DPS6)
+: Note: terminal type defined MUST be the same as defined in TIF
+:----------------------------------------------------------------------
+
+        BEGTTY
+          DEFTTY(VIP77)
+          DEFTTY(VIP78)
+          DEFTTY(VIPFTF)
+        ENDTTY
+
+        SETPRO(V7HI,PHV7HI)
+
+        GL     S1AL|$0 P.V7HI|
+        GL     SCHA|$0 P.V7HI|
+
+S1AL|$0 P.V7HI| EQ     0      ::S1 S2 NOT REQUIRED ON EVERY MESSAGE
+SCHA|$0 P.V7HI| EQ     0      :No special char after IA TA on pars lines
+
+        SEG    0
+
+        SETCIR(1,CIR1,CRT,DOWN,NOGATE,ACCEPT,MAG,REGEN,16)
+        SETCIR(2,CIR2,CRT,DOWN,NOGATE,ACCEPT,MAG,REGEN,16)
+        SETCIR(3,CIR3,CRT,DOWN,NOGATE,ACCEPT,MAG,REGEN,16)
+        SETCIR(4,CIR4,CRT,DOWN,NOGATE,ACCEPT,MAG,REGEN,16)
+
+USRS|CIR1|    SC    /TTMSPR00001/
+PUSR|CIR1|    SC    /!TTMSPR00001/
+USRS|CIR2|    SC    /TTMSPR00002/
+PUSR|CIR2|    SC    /!TTMSPR00002/
+
+        SEG    5
+
+LTAB    HC     0
+
+        SETLN(0,SRVC1,UP,V7HI)
+          SETRA(0,0,VIPFTF)
+          SETRA(1,0,VIPFTF)
+          SETRA(2,0,VIPFTF)
+          SETRA(3,0,VIPFTF)
+          SETRA(4,0,VIPFTF)
+          SETRA(5,0,VIP77)
+          SETRA(6,0,VIP77)
+          SETRA(7,0,VIP78)
+
+
+
+                          Page 35
+
+
+
+
+
+
+
+VIP Host and Terminal Interfaces V3.0, SYSGEN       10/12/87
+
+
+
+          SETRA(8,0,VIP78)
+          SETRA(9,0,VIP78)
+        ENDLN(V7HI)
+
+        SETLN(1,SRVC2,UP,V7HI)
+          SETRA(0,0,VIPFTF)
+          SETRA(1,0,VIPFTF)
+          SETRA(2,0,VIPFTF)
+          SETRA(3,0,VIPFTF)
+          SETRA(4,0,VIP77)
+          SETRA(5,0,VIP77)
+          SETRA(6,0,VIP77)
+          SETRA(7,0,VIP78)
+          SETRA(8,0,VIP78)
+          SETRA(9,0,VIP78)
+        ENDLN(V7HI)
+
+        SETLN(2,SRVC3,UP,V7HI)
+          SETRA(0,0,VIP77)
+          SETRA(1,0,VIP77)
+          SETRA(2,0,VIP77)
+          SETRA(3,0,VIP77)
+          SETRA(4,0,VIP78)
+          SETRA(5,0,VIP78)
+          SETRA(6,0,VIP78)
+          SETRA(7,0,VIP78)
+          SETRA(8,0,VIP78)
+          SETRA(9,0,VIP78)
+        ENDLN(V7HI)
+
+        SETLN(3,SRVC3,UP,V7HI)
+          SETRA(0,0,VIPFTF)
+          SETRA(1,0,VIPFTF)
+          SETRA(2,0,VIPFTF)
+          SETRA(3,0,VIPFTF)
+          SETRA(4,0,VIP77)
+          SETRA(5,0,VIP77)
+          SETRA(6,0,VIP77)
+          SETRA(7,0,VIP77)
+          SETRA(8,0,VIP77)
+          SETRA(9,0,VIP77)
+        ENDLN(V7HI)
+
+        MAKPTB
+
+
+
+
+
+
+
+
+
+
+                          Page 36
+
+
+
+
+
+
+
+
+
+
+
+                      Table of Content
+
+
+
+1.  INTRODUCTION  ...................................................1
+
+2.  OVERVIEW  .......................................................2
+
+3.  MACRO DESCRIPTIONS  .............................................5
+    3.1  CONFIGURING THE PROTOCOL  ..................................5
+         3.1.1   SETPRO macro  ......................................5
+         3.1.2   OTHER_PROTOCOL_VARIABLES  ..........................5
+    3.2  CONFIGURING_THE_CIRCUITS  ..................................6
+         3.2.1   ASYCIR macro  ......................................7
+         3.2.2   LOGIN STRING DEFINITIONS  ..........................8
+    3.3  CONFIGURING CIRCUITS WITHOUT ASYNC ACCESS  ................10
+    3.4  CONFIGURING TERMINAL TYPE  ................................11
+         3.4.1   BEGTTY macro  .....................................11
+         3.4.2   DEFTTY macro  .....................................11
+         3.4.3   ENDTTY macro  .....................................11
+    3.5  CONFIGURING MENUS  ........................................13
+         3.5.1   MENU macro  .......................................13
+         3.5.2   SYNCSERVICE macro  ................................14
+         3.5.3   ASYNCSERVICE macro  ...............................15
+         3.5.4   UCMMENU macro  ....................................15
+         3.5.5   UCMFREEZE macro  ..................................16
+         3.5.6   UCMBREAKSIGNAL macro  .............................16
+         3.5.7   UCMSCROLL macro  ..................................16
+         3.5.8   MSCONNECTED macro  ................................18
+         3.5.9   MSDISCONNECTED macro  .............................18
+         3.5.10  MSZAPPED macro  ...................................18
+         3.5.11  MSFAILED macro  ...................................20
+         3.5.12  MSNOCIRCUITS macro  ...............................20
+         3.5.13  MSERROR macro  ....................................20
+         3.5.14  MENUHEADER macro  .................................22
+         3.5.15  MENUTRAILER macro  ................................22
+         3.5.16  MSLEADBLANKS macro  ...............................22
+         3.5.17  ENDMENU macro  ....................................23
+    3.6  CONFIGURING LINES  ........................................24
+         3.6.1   SETLN macro  ......................................24
+         3.6.2   SETRA macro  ......................................25
+         3.6.3   SERVICECIR macro  .................................26
+         3.6.4   ENDLN macro  ......................................26
+
+4.  CREATING A NEW MAG  ............................................27
+    4.1  CREATING THE GEN FILE  ....................................27
+    4.2  CREATING THE TYM FILE  ....................................28
+    4.3  CREATING THE NIB FILE  ....................................30
+
+5.  APPENDIX A  ....................................................31
+    5.1  Terminal Interface  .......................................31
+    5.2  Host Interface  ...........................................35
+
+
+                                 - i -
+
+a)BÈ
