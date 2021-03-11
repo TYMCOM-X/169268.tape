@@ -1,0 +1,131 @@
+
+************************************************************************
+*                                                                      *
+*                         SUBROUTINE:  QSORT                           *
+*                                                                      *
+*       THIS IS A VERY FAST SUBROUTINE FOR SORTING AN ARRAY (IN-       *
+*       TEGER OR REAL) IN ASCENDING ORDER. THIS PROGRAM IS A TRANS-    *
+*       LATION INTO FORTRAN OF ALGORITHM 271, QUICKERSORT BY R.S.      *
+*       SCOWEN IN CACM. CONSULT THIS FOR FURTHER DETAILS. TO SORT      *
+*       THE ARRAY IN DESCENDING ORDER, CHANGE 'LE' TO 'GE' IN STATE-   *
+*       MENTS 20+2 AND 90, AND 'LT' TO 'GT' IN STATEMENT 30. THE       *
+*       INITIAL ORDERING OF THE ELEMENTS IS KEPT IN THE POINTER IPTR.  *
+*                                                                      *
+*       THE CALLING SEQUENCE IS :                                      *
+*               CALL QSORT(IA,IPTR,N)                                  *
+*       WHERE THE REQUIRED INPUTS ARE :                                *
+*               IA   = ARRAY TO BE SORTED                              *
+*               IPTR = ARRAY FOR THE INITIAL ORDERING                  *
+*               N    = DIMENSION OF THE ARRAYS IA AND IPTR             *
+*       AND THE RETURNED OUTPUTS ARE :                                 *
+*               IA   = SORTED ARRAY                                    *
+*               IPTR = POINTER OF THE INITIAL ORDERING                 *
+*                                                                      *
+************************************************************************
+
+        SUBROUTINE QSORTD(IA,IPTR,N)
+
+        DIMENSION IA(1),IPTR(1)
+        INTEGER LT(17),UT(17),P,Q
+C
+C  THE DIMENSIONS FOR LT AND UT HAVE TO BE AT LEAST LOG N.
+C  17 WAS CHOSEN TO HANDLE N<131,073                   2
+C
+        J=N
+        M=1
+        I=1
+C
+C  IF THIS SEGMENT HAS MORE THAN TWO ELEMENTS, WE SPLIT IT
+C
+ 10     IF (J-I-1) 100,90,15
+C
+C  P IS THE POSITION OF AN ARBITRARY ELEMENT IN THE SEGMENT
+C  WE CHOOSE THE MIDDLE ELEMENT. UNDER CERTAIN CIRCUMSTANCES
+C  IT MAY BE ADVANTAGEOUS TO CHOOSE P AT RANDOM
+C
+ 15     P=(J+I)/2
+        IT=IA(P)
+        IA(P)=IA(I)
+        ITEMP=IPTR(P)
+        IPTR(P)=IPTR(I)
+C
+C  STARTING AT THE BEGINNING OF THE SEGMENT, SEARCH FOR K
+C  SUCH THAT IA(K)>IT
+C
+        Q=J
+        K=I
+ 20     K=K+1
+        IF (K.GT.Q) GO TO 60
+        IF (IA(K).GE.IT) GO TO 20
+C
+C  SUCH ELEMENT HAS NOW BEEN FOUND
+C  NOW SEARCH FOR A  Q  SUCH THAT IA(Q)<IT STARTING AT THE END
+C  OF THE SEGMENT
+C
+ 30     IF (IA(Q).GT.IT) GO TO 40
+        Q=Q-1
+        IF (Q.GT.K) GO TO 30
+        GO TO 50
+C
+C  IA(Q) HAS NOW BEEN FOUND, INTERCHANGE IA(Q) AND IA(K)
+C
+ 40     ITMP=IA(K)
+        IA(K)=IA(Q)
+        IA(Q)=ITMP
+        ITMP=IPTR(K)
+        IPTR(K)=IPTR(Q)
+        IPTR(Q)=ITMP
+C
+C  UPDATE Q AND SEARCH FOR ANOTHER PAIR TO INTERCHANGE
+C
+        Q=Q-1
+        GO TO 20
+ 50     Q=K-1
+ 60     CONTINUE
+C
+C  THE UPWARDS SEARCH HAS NOW MET THE DOWNWARDS SEARCH
+C
+        IA(I)=IA(Q)
+        IA(Q)=IT
+        IPTR(I)=IPTR(Q)
+        IPTR(Q)=ITEMP
+C
+C  THE SEGMENT IS NOW DIVIDED IN THREE PARTS: (I,Q-1),(Q),(Q+1,J)
+C  STORE THE POSITION OF THE LARGEST SEGMENT IN LT AND UT
+C
+        IF (2*Q.LE.I+J) GO TO 70
+        LT(M)=I
+        UT(M)=Q-1
+        I=Q+1
+        GO TO 80
+ 70     LT(M)=Q+1
+        UT(M)=J
+        J=Q-1
+C
+C  UPDATE M AND SPLIT THE NEW SMALLER SEGMENT
+C
+ 80     M=M+1
+        GO TO 10
+C
+C  WE ARRIVE HERE IF THE SEGMENT HAS TWO ELEMENTS
+C  TEST TO SEE IF THE SEGMENT IS PROPERLY ORDERED
+C  IF NOT, PERFORM AN INTERCHANGE
+C
+ 90     IF (IA(I).GE.IA(J)) GO TO 100
+        ITMP=IA(I)
+        IA(I)=IA(J)
+        IA(J)=ITMP
+        ITMP=IPTR(I)
+        IPTR(I)=IPTR(J)
+        IPTR(J)=ITMP
+C
+C  IF LT AND UT CONTAIN MORE SEGMENTS TO BE SORTED, REPEAT PROCESS
+C
+ 100    M=M-1
+        IF (M.LE.0) RETURN
+        I=LT(M)
+        J=UT(M)
+        GO TO 10
+
+        END
+
