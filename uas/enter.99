@@ -1,0 +1,479 @@
+%   ENTER.99                           ENTR99.PR1      02  %
+PROCEDURE ENTER.99 %    By Verne Van Vlear, Aug. 22, 1980
+*
+Used to enter bill methods and price codes for non-standard pricing request
+forms (the "99" forms) generated from enter new non-stnd. custs. in
+validations data base.
+%
+BEGIN
+
+FIELDS
+  BUSY.CTL              SAME AS AUTHOR, % If not OK then changing NSPMST.DAT %
+  OUT.CNT               AS "3Z", % Count of rcds. to this BATCH %
+  REM.CNT               AS "3Z", % Count of remaining 99 rcds. %
+  PRC.DESC              AS "60C",
+  PREV.BILL.METHOD      SAME AS BILL.METHOD,
+  MST.CUS.NUM           AS "3Z",  %Bpass verify on MASTER.CUS.NUM %
+  NUM.X                 AS "2N",
+  RELDATA               AS "10C",
+  OUT.NAM               AS "14C",
+  CKPT.NAM              AS "14C",
+  CTL                   AS "3C",
+  FIRST.LINE            AS "80C",
+  OLDORNEW              AS "C",
+  LETTER                AS "C",  % First letter of batch %
+  NUMBER                AS "2N", % 2 numbers of batch %
+  LNTH                  AS "2N", % Length of file name %
+  NUM                   AS "2N",
+  EFF.DATE              AS DATE "ZM/ZD/YY"
+
+% Current bill methods to master cus. num. %
+RELATION T.MCI IS
+  KEY   BILL.METHOD
+  DATA  MST.CUS.NUM
+
+% Valid price codes %
+RELATION VAL.PC IS
+  KEY   ACTG.SYS.TYP, PRIC.CODE
+
+% Master cus. num to valid price codes %
+RELATION PC IS
+  KEY   MST.CUS.NUM, ACTG.SYS.TYP
+  DATA  PRIC.CODE
+
+% Master data %
+RELATION MASTER IS
+  KEY   NSPC.CTRL.NO
+  DATA  CUS.NUM, ACTG.SYS.TYP, PRIC.CODE, DSTART, BILL.METHOD,
+        MST.CUS.NUM, DSTOP, CNTL.NO, CUS.NAM, CUS.DIST
+
+SOURCE PRCD FROM "(UAS)PRCDDS.DAT"
+  FREE FORM
+  INPUT PRIC.CODE, ACTG.SYS.TYP, CURRENCY, PRC.DESC
+
+% Next batch number %
+SOURCE BATCH.N FROM SRC.FNAM
+  FIXED FORM
+  INPUT LETTER, NUMBER
+
+REPORT BATCH.OUT TO RPT.FNAM
+  PAGE.SIZE 0
+
+SOURCE MCCON FROM "(UAS)MCCON.DAT"
+  FREE FORM
+  INPUT BILL.METHOD, MST.CUS.NUM, DSTART, CONTRACT.ID, DSTOP
+
+SOURCE MCPC FROM "(UAS)MCPC.DAT"
+  FREE FORM
+  INPUT MST.CUS.NUM, ACTG.SYS.TYP, PRIC.CODE
+
+SOURCE MST.DAT FROM "(UAS)NSPMST.DAT"
+  FREE FORM
+  INPUT NSPC.CTRL.NO, CNTL.NO, CUS.NUM, ACTG.SYS.TYP,
+        CUS.NAM, CUS.DIST, DSTART
+
+SOURCE MST.CK FROM "(UAS)NSPMST.DAT"
+  FREE FORM
+  INPUT NSPC.CTRL.NO, CNTL.NO, CUS.NUM, ACTG.SYS.TYP,
+        CUS.NAM, CUS.DIST, DSTART
+
+SOURCE IN.CK FROM "(UAS)NSPC.CTL"
+  FREE FORM
+  INPUT BUSY.CTL
+
+REPORT MST.BUSY TO "(UAS)NSPC.CTL-ANY"
+  PAGE.SIZE 0
+REPORT MST.OK TO "(UAS)NSPC.CTL-ANY"
+  PAGE.SIZE 0
+
+
+REPORT CKPT.DAT TO CKPT.NAM
+  PAGE.SIZE 0
+
+REPORT MST.OLD APPEND TO "(UAS)NSPMST.OLD-ANY"
+  PAGE.SIZE 0
+
+REPORT MST.CUR TO "(UAS)NSPMST.DAT-ANY"
+  PAGE.SIZE 0
+
+% Previous batch %
+SOURCE IN.DAT FROM RELDATA
+  FREE FORM
+  INPUT CTL,
+    CONDITIONAL ON CTL
+      BEGIN
+      "REL" OR "NSP" OR "99":    FIRST.LINE
+
+      "C":      NSPC.CTRL.NO, CUS.NUM, ACTG.SYS.TYP, PRIC.CODE,
+                DSTART, BILL.METHOD, MST.CUS.NUM, DSTOP
+
+      END
+
+REPORT OUT.DAT TO OUT.NAM
+  PAGE.SIZE 0
+
+FORMAT MST.DATA
+  NSPC.CTRL.NO, ",", CNTL.NO, ",", CUS.NUM, ",", ACTG.SYS.TYP, ',"',
+  TRIM(CUS.NAM), '",', CUS.DIST, ",", DSTART
+
+
+LET STRG = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+MOVE DEFAULT TO BILL.METHOD, PREV.BILL.METHOD, NSPC.CTRL.NO
+
+
+FOR EACH PRCD
+  IF ACTG.SYS.TYP = 1 OR 2 OR 3 THEN
+    IF PRIC.CODE NE 99 THEN
+      INSERT INTO VAL.PC
+FOR EACH MCCON
+  INSERT INTO T.MCI
+
+FOR EACH MCPC
+  INSERT INTO PC
+
+FOR EACH MST.DAT
+  INSERT INTO MASTER
+
+%Set up batch name and number %
+DO
+  BEGIN
+  TYPE "Enter your name: "
+  ACCEPT AUTHOR
+  END
+WHILE LENGTH(AUTHOR) LT 7
+
+MOVE LENGTH(AUTHOR) TO LNTH
+LET NUM.X = 9 - LNTH
+LET SRC.FNAM = SUBSTR(AUTHOR,1,6) + "." + SUBSTR(AUTHOR,7,LNTH-6)+NUM.X*"X"
+IF FILE(SRC.FNAM) EXISTS THEN
+  NOTHING
+ELSE
+  ABORT "*** YOU ARE NOT A VALIDATED USER ***", @CR
+
+DO
+  BEGIN
+  TYPE "Old or New batch [O/N]: "
+  ACCEPT OLDORNEW
+  END
+WHILE OLDORNEW NE "O" AND "N"
+
+% Old batch processing setup %
+IF OLDORNEW = "O" THEN
+  BEGIN
+  TYPE "Batch number: "
+  ACCEPT BATCH.NUM
+  LET RELDATA = SUBSTR(SRC.FNAM,1,6) + "." + BATCH.NUM
+  IF FILE(RELDATA) EXISTS THEN
+    NOTHING
+  ELSE
+    ABORT "*** NO SUCH BATCH NUMBER ***", @CR
+  FOR EACH IN.DAT
+    CONDITIONAL ON CTL
+      BEGIN
+      "REL":    ABORT "*** BATCH ALREADY RELEASED. ***", @CR
+
+      "NSP":    ABORT "*** ILLEGAL BATCH TYPE FOR THIS PROGRAM ***", @CR
+
+      "C":
+        SELECT MASTER VIA KEY THEN
+          BEGIN
+          LET PRIC.CODE = PRIC.CODE OF IN.DAT
+          LET BILL.METHOD = BILL.METHOD OF IN.DAT
+          LET MST.CUS.NUM = MST.CUS.NUM OF IN.DAT
+          ALTER MASTER
+          END
+        ELSE
+          INSERT INTO MASTER
+
+      END
+  END   % of Old batch setup %
+ELSE
+  FOR EACH BATCH.N
+    BEGIN
+    IF NUMBER LT 99 THEN
+      LET NUMBER = NUMBER + 1
+    ELSE
+      IF LETTER EQ "Z" THEN
+        BEGIN
+        MOVE 0 TO NUMBER
+        MOVE "A" TO LETTER
+        END
+      ELSE
+        BEGIN
+        LET NUM = POSITION(STRG, LETTER) + 1
+        LET LETTER = SUBSTR(STRG, NUM, 1)
+        MOVE 0 TO NUMBER
+        END
+    LET BATCH.NUM = LETTER + NUMBER AS "2C"
+    TYPE "New Batch number is: ", BATCH.NUM, @CR
+    LET RPT.FNAM = SRC.FNAM + "-ANY"
+    END  % of for each BATCH.N %
+
+% Make file names %
+LET CKPT.NAM = SUBSTR(SRC.FNAM,1,6) + ".CPT-ANY"
+LET OUT.NAM = SUBSTR(AUTHOR,1,6) + "." + BATCH.NUM + "-ANY"
+
+FOR EACH MASTER WRITE REPORT CKPT.DAT
+  IF CUS.NAM NE DEFAULT THEN
+    PRINT TO CKPT.DAT MST.DATA, @CR
+
+TYPE @CR
+
+% Now loop on LOG Number %
+DO
+  BEGIN
+  TYPE "LOG Number: "
+  ACCEPT CTL
+  IF CTL = DEFAULT THEN
+    BEGIN
+    LET CTL = (NSPC.CTRL.NO + 1) AS "3C"
+    TYPE "   is now: ", CTL, @CR
+    END
+  ELSE NOTHING
+  IF CTL IS "3Z" THEN
+    BEGIN
+    LET NSPC.CTRL.NO = CTL AS "3Z"
+    SELECT MASTER VIA KEY THEN
+      BEGIN
+      TYPE @CR,
+        ACTG.SYS.TYP, DSTART AS DATE " ZM/ZD/YY ", CUS.NUM
+      IF BILL.METHOD = DEFAULT THEN
+        TYPE @CR
+      ELSE
+        TYPE "  ", BILL.METHOD, " ", PRIC.CODE, @CR
+      TYPE "BILL METHOD: "
+      ACCEPT BILL.METHOD
+      IF BILL.METHOD = DEFAULT THEN
+        IF PREV.BILL.METHOD = DEFAULT THEN
+          NOTHING
+        ELSE
+          BEGIN
+          LET BILL.METHOD = PREV.BILL.METHOD
+          TYPE "Using: ", TRIM(BILL.METHOD), @CR
+          END
+      ELSE
+        MOVE BILL.METHOD TO PREV.BILL.METHOD
+      IF BILL.METHOD IS "3Z" THEN
+        LET PRIC.CODE = BILL.METHOD AS "3Z"
+      ELSE
+        IF BILL.METHOD = DEFAULT OR "IGNORE" OR "DELETE" THEN
+          NOTHING
+        ELSE
+        SELECT T.MCI VIA KEY THEN
+          SELECT PC VIA KEY THEN
+            BEGIN
+            MOVE MST.CUS.NUM TO MST.CUS.NUM OF MASTER
+            MOVE PRIC.CODE TO PRIC.CODE OF MASTER
+            END
+          ELSE
+            BEGIN
+            TYPE
+"*** THIS BILL METHOD IS INVALID FOR CURRENT ACTG. SYS. TYPE ***", @CR
+            MOVE DEFAULT TO BILL.METHOD OF MASTER
+            END
+        ELSE
+          MOVE DEFAULT TO BILL.METHOD
+      IF BILL.METHOD = DEFAULT THEN
+        BEGIN
+        TYPE
+@CR, "Valid billing methods are a Price code or:", @CR
+        FOR EACH T.MCI
+          TYPE " ", TRIM(BILL.METHOD), @CR
+        TYPE "also: DELETE or IGNORE", @CR, @CR
+        END
+      ELSE
+        BEGIN
+        IF BILL.METHOD = "IGNORE" OR "DELETE" THEN
+          LET CTL = "ZZZ"
+        ELSE
+          SELECT VAL.PC VIA KEY THEN
+            LET CTL = "ZZZ"
+          ELSE
+            TYPE
+"*** INVALID PRICE CODE: ", PRIC.CODE, " for AST: ", ACTG.SYS.TYP, @CR
+        IF CTL = "ZZZ" THEN
+          ALTER MASTER
+        ELSE NOTHING
+        END
+
+      END  % of Select from MASTER %
+
+    ELSE
+      BEGIN
+      MOVE DEFAULT TO CTL
+      TYPE "INVALID LOG Number", @CR
+      END
+    END
+  ELSE
+    IF CTL = "ZZZ" OR "END" OR "VER" OR "LIS" THEN
+      NOTHING
+    ELSE
+      MOVE DEFAULT TO CTL
+
+  IF CTL = DEFAULT THEN
+    TYPE
+"Valid responses are: ", @CR,
+"  LOG Number (3 digits)", @CR,
+"  END - write data and stop", @CR,
+"  VER - Type data and wait for verification",@CR,
+"  LIS - Lists unprocessed data", @CR, @CR
+  ELSE
+    NOTHING
+
+  IF CTL = "VER" THEN
+    BEGIN
+    TYPE @CR, "Recheck data entered", @CR, @CR,
+"LOG AST  Eff.Date  CID  BILL METHOD   P.C.", @CR, @CR
+    FOR EACH MASTER
+      IF BILL.METHOD = DEFAULT OR "IGNORE" OR "DELETE" THEN
+        NOTHING
+      ELSE
+        TYPE
+NSPC.CTRL.NO, " ", ACTG.SYS.TYP, DSTART AS DATE " ZM/ZD/YY ", CUS.NUM, "  ",
+BILL.METHOD, PRIC.CODE, @CR
+    TYPE @CR, "If OK, type Y: "
+    ACCEPT TYM
+    IF TYM = "Y" THEN
+      MOVE "END" TO CTL
+    ELSE
+      MOVE DEFAULT TO CTL
+    END
+
+  ELSE
+    NOTHING
+
+  IF CTL = "LIS" THEN
+    BEGIN
+    MOVE DEFAULT TO CTL
+    TYPE
+"LOG AST CID-DIST  CUS. NAME", @CR
+    FOR EACH MASTER
+      IF BILL.METHOD = DEFAULT THEN
+        TYPE
+NSPC.CTRL.NO, " ", ACTG.SYS.TYP, " ", CUS.NUM, "-", CUS.DIST, "  ",
+  TRIM(CUS.NAM), @CR
+      ELSE NOTHING
+    TYPE @CR
+    END
+  ELSE NOTHING
+
+
+  END   WHILE CTL NE "END"
+
+% Write reports %
+MOVE DEFAULT TO CTL
+RPT.TEST:
+FOR EACH MASTER
+  IF BILL.METHOD NE DEFAULT THEN
+    BEGIN
+    MOVE "A" TO CTL
+    FINISH RPT.TEST
+    END
+  ELSE NOTHING
+
+IF CTL = "A" THEN
+  BEGIN
+  LET DSTOP = DATE "991231"
+  MOVE DEFAULT TO CTL
+  DO
+    BEGIN       % while CTL = default - NSPMST.DAT busy %
+    BUSY.CK:
+    FOR EACH IN.CK
+      IF BUSY.CTL NE "OK" THEN
+        BEGIN
+        TYPE "*** Master file NSPMST.DAT busy. Wait? (Y/N): "
+        ACCEPT TYM
+        IF TYM = "N" THEN
+          ABORT
+        ELSE
+          NOTHING
+        FINISH BUSY.CK
+        END
+      ELSE
+        BEGIN
+        MOVE "A" TO CTL
+        WRITE REPORT MST.BUSY
+          PRINT TO MST.BUSY TRIM(AUTHOR), @CR
+        END
+
+    IF CTL = "A" THEN
+    FOR EACH MST.CK
+      SELECT MASTER VIA KEY THEN
+        BEGIN
+        LET DSTOP = DATE "991231"
+        ALTER MASTER
+        END
+      ELSE
+        INSERT INTO MASTER
+    ELSE NOTHING        % CTL = default %
+
+    END   WHILE CTL = DEFAULT
+
+  % Now check master for records processed by different batch %
+  FOR EACH MASTER
+    IF DSTOP = DEFAULT AND BILL.METHOD NE DEFAULT THEN
+      BEGIN
+      TYPE "*** LOG No. ", NSPC.CTRL.NO,
+        " is no longer available for validation. ***", @CR
+      DELETE FROM MASTER VIA KEY
+      END
+    ELSE
+      NOTHING
+
+  FOR EACH MASTER WRITE REPORT MST.CUR, MST.OLD, OUT.DAT
+    BEGIN
+    IF CTL = "A" THEN
+      BEGIN
+      MOVE "C" TO CTL
+      PRINT TO OUT.DAT
+        "99,", @TAB 5, TODAY AS DATE "MMM. ZD- YYYY", @TAB 5, TRIM(AUTHOR), @CR
+      END
+    ELSE
+      NOTHING
+    IF BILL.METHOD = DEFAULT OR "IGNORE" THEN
+      BEGIN
+      ADD 1 TO REM.CNT
+      PRINT TO MST.CUR MST.DATA, @CR
+      END
+    ELSE
+      BEGIN
+      IF CUS.NAM = DEFAULT THEN
+        NOTHING
+      ELSE
+        PRINT TO MST.OLD MST.DATA, ",", BATCH.NUM, @CR
+      IF BILL.METHOD = "DELETE" THEN
+        NOTHING
+      ELSE
+        BEGIN
+        ADD 1 TO OUT.CNT
+        PRINT TO OUT.DAT
+          "C,", NSPC.CTRL.NO, ",", CUS.NUM, ",", ACTG.SYS.TYP, ",",
+          PRIC.CODE, ",", DSTART, ",", TRIM(BILL.METHOD), ",",
+          MST.CUS.NUM, ",991231", @CR
+        END
+      END
+    END
+
+  WRITE REPORT MST.OK
+    PRINT TO MST.OK "OK", @CR
+
+  END           % of CTL = "A" %
+
+ELSE
+  NOTHING
+
+IF OLDORNEW = "N" AND CTL = "C" THEN
+  WRITE REPORT BATCH.OUT
+    PRINT TO BATCH.OUT BATCH.NUM, @CR
+ELSE
+  NOTHING
+
+IF OUT.CNT NE 0 THEN
+  TYPE @CR,
+"Items in batch: ", OUT.CNT, @CR,
+"Remaining rcds: ", REM.CNT, @CR
+ELSE
+  NOTHING
+
+END
+  
