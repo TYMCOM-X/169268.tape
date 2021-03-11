@@ -1,0 +1,499 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+! PROGRAM:	(MSNTRACK:28)BAND.DPL
+! PROJECT:	Trend Analysis - Link Bandwidth Table
+! AUTHOR:	Jason L. Ma
+! DATE:		August 12, 1986
+!
+! INPUT FILES:  1.  (PERSTATS)SUPMAP.LIN, containing info on speed
+!		    and bandwidth for all links according to PROBE.
+!		2.  (NETSTAT)CKTS.DMS, containing info on speed and
+!		    bandwidth for all links according to PROFILE.
+!		3.  (MSNTRACK)BAND.DMS, containing historical info on
+!		    number of links and their bandwidth.
+!		4.  (PERSTATS)SUPMAP.TYM, containing date and time of
+!		    when the network topological picture was recorded
+!		    by the Sup.
+!
+! OUTPUT FILES:	1.  BAND.RPT, Link Bandwidth Table Report.
+!		2.  BAND.DMI, DMI file of the report, set to be appended
+!		    to (MSNTRACK)BAND.DMS when this program finishes 
+!		    running.
+!		3.  BAND.DIF, Link Bandwidth "Difference" Table Report.
+!		4.  BAND.EXC, Link data discrepancy file.
+!
+! REFERENCE:	1.  BAND.DPL.
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+	O (PERSTATS)SUPMAP.LIN (NETSTAT)CKTS BAND (PERSTATS)SUPMAP.TYM.
+	INIT 1 BAND.RPT.
+	INIT 2 BAND.DMI.
+	INIT 3 BAND.DIF.
+	INIT 4 BAND.EXC.
+	DPL START.
+	DEFINE INTEGER N24 N48 N96 N144 N192 N288 N384 N56 NMS DAT tim.
+	DEFINE INTEGER N96SY N96HW N96UN N24SY N24HW N24UN N48SY N48HW N48UN.
+	DEFINE INTEGER N56DD N56T1 N56VI N56UN NOD NEI NTWK ODATE.
+	DEFINE INTEGER ON24 ON48 ON96 ON56 TEXT 20 NCCT.
+
+
+!!!!!!!!!!!!!
+!!!  PROBE date and time.
+!!!!!!!!!!!!!
+
+	DBS 4.
+	F ALL.
+	GETR DUMMY.
+	LET DAT EQ Wd.
+	let tim eq 0.
+
+
+!!!!!!!!!!!!!
+!!!  Get totals for 2.4s, 4.8s, 14.4s, 19.2s, 28.8s, 38.4s, and MSs.
+!!!!!!!!!!!!!
+
+DUMMY:	DBS 1.
+
+	F SPEED CT '14.4'.
+	LET N144 EQ SYSNREC/2.
+
+	F SPEED CT '19.2'.
+	LET N192 EQ SYSNREC/2.
+
+	F SPEED CT '28.8'.
+	LET N288 EQ SYSNREC/2.
+
+	F SPEED CT '38.4'.
+	LET N384 EQ SYSNREC/2.
+
+	F SPEED CT 'MS'.
+	LET NMS EQ SYSNREC/2.
+
+
+!!!!!!!!!!!!!
+!!!  Print headings on exceptions report.
+!!!!!!!!!!!!!
+
+P ON 4 DAT FORMAT // 22X 'INTER-NODAL LINK DATA EXCEPTIONS' / &
+	31X 'DATE:  ' I6 /// END.
+
+
+!!!!!!!!!!!!!
+!!!  2.4s and exceptions (missing data in PROFILE)....
+!!!!!!!!!!!!!
+
+	DBS 1.
+	F SPEED CT '2.4'.
+	LET N24 EQ SYSNREC/2.
+	IF N24 EQ 0 THEN N48.
+	LET NOD EQ 99999 NEI EQ 99999.
+ 
+N24GET:	DBS 1.
+	GETR N48.
+		IF NOD EQ NEIGH THEN AGAIN3.
+RESUME3:	LET NOD EQ NODE NEI EQ NEIGH.
+		MAP 2 NODE PT1 AND NEIGH PT2.
+		F LAST AND STATUS NCT 'D'.
+		SEA PTY1 NCT 'HOST' AND PTY2 NCT 'HOST'.
+		IF SYSNREC EQ 0 THEN N24UN.
+		SOR KEY STATUS.
+		GETR N24GET.
+		IF CCT CT 'LL' THEN N24UN2.
+RESUME3B:	IF CCT CT 'HW' THEN N24HW.
+		GOTO N24SY.
+
+AGAIN3:		IF NEI EQ NODE THEN N24GET.
+		GOTO RESUME3.
+
+N24SY:		LET N24SY EQ N24SY + 1.
+	GOTO N24GET.
+
+N24HW:		LET N24HW EQ N24HW + 1.
+	GOTO N24GET.
+
+N24UN:		LET N24UN EQ N24UN + 1.
+		P ON 4 NOD NEI FORMAT / &
+			'Active 2.4KB not reported in CKTS: ' &
+			1X I5 '-' I5 END.
+	GOTO N24GET.
+
+N24UN2:		IF CCT CT '*' THEN RESUME3B.
+		LET NCCT EQ CCT.
+		LET N24UN EQ N24UN + 1.
+		P ON 4 NOD NEI NCCT FORMAT / &
+			'Active 2.4KB shown pending in CKTS:' &
+			1X I5 '-' I5 2X 'CCT = ' A20 END.
+	GOTO N24GET.
+
+
+!!!!!!!!!!!!!
+!!!  4.8s and exceptions (missing data in PROFILE)....
+!!!!!!!!!!!!!
+
+N48:	DBS 1.
+	F SPEED CT '4.8'.
+	LET N48 EQ SYSNREC/2.
+	IF N48 EQ 0 THEN N96.
+	LET NOD EQ 99999 NEI EQ 99999.
+ 
+N48GET:	DBS 1.
+	GETR N96.
+		IF NOD EQ NEIGH THEN AGAIN4.
+RESUME4:	LET NOD EQ NODE NEI EQ NEIGH.
+		MAP 2 NODE PT1 AND NEIGH PT2.
+		F LAST AND STATUS NCT 'D'.
+		SEA PTY1 NCT 'HOST' AND PTY2 NCT 'HOST'.
+		IF SYSNREC EQ 0 THEN N48UN.
+		SOR KEY STATUS.
+		GETR N48GET.
+		IF CCT CT 'LL' THEN N48UN2.
+RESUME4B:	IF CCT CT 'HW' THEN N48HW.
+		GOTO N48SY.
+
+AGAIN4:		IF NEI EQ NODE THEN N48GET.
+		GOTO RESUME4.
+
+N48SY:		LET N48SY EQ N48SY + 1.
+	GOTO N48GET.
+
+N48HW:		LET N48HW EQ N48HW + 1.
+	GOTO N48GET.
+
+N48UN:		LET N48UN EQ N48UN + 1.
+		P ON 4 NOD NEI FORMAT / &
+			'Active 4.8KB not reported in CKTS: ' &
+			1X I5 '-' I5 END.
+	GOTO N48GET.
+
+N48UN2:		IF CCT CT '*' THEN RESUME4B.
+		LET NCCT EQ CCT.
+		LET N48UN EQ N48UN + 1.
+		P ON 4 NOD NEI NCCT FORMAT / &
+			'Active 4.8KB shown pending in CKTS:' &
+			1X I5 '-' I5 2X 'CCT = ' A20 END.
+	GOTO N48GET.
+
+
+!!!!!!!!!!!!!
+!!!  9.6s and exceptions (missing data in PROFILE)....
+!!!!!!!!!!!!!
+
+N96:	DBS 1.
+	F SPEED CT '9.6'.
+	LET N96 EQ SYSNREC/2.
+	IF N96 EQ 0 THEN N56.
+	LET NOD EQ 99999 NEI EQ 99999.
+ 
+N96GET:	DBS 1.
+	GETR N56.
+		IF NOD EQ NEIGH THEN AGAIN.
+RESUME:		LET NOD EQ NODE NEI EQ NEIGH.
+		MAP 2 NODE PT1 AND NEIGH PT2.
+		F LAST AND STATUS NCT 'D'.
+		SEA PTY1 NCT 'HOST' AND PTY2 NCT 'HOST'.
+		IF SYSNREC EQ 0 THEN N96UN.
+		SOR KEY STATUS.
+		GETR N96GET.
+		IF CCT CT 'LL' THEN N96UN2.
+RESUMEB:	IF CCT CT 'HW' THEN N96HW.
+		GOTO N96SY.
+
+AGAIN:		IF NEI EQ NODE THEN N96GET.
+		GOTO RESUME.
+
+N96SY:		LET N96SY EQ N96SY + 1.
+	GOTO N96GET.
+
+N96HW:		LET N96HW EQ N96HW + 1.
+	GOTO N96GET.
+
+N96UN:		LET N96UN EQ N96UN + 1.
+		P ON 4 NOD NEI FORMAT / &
+			'Active 9.6KB not reported in CKTS: ' &
+			1X I5 '-' I5 END.
+	GOTO N96GET.
+
+N96UN2:		IF CCT CT '*' THEN RESUMEB.
+		LET NCCT EQ CCT.
+		LET N96UN EQ N96UN + 1.
+		P ON 4 NOD NEI NCCT FORMAT / &
+			'Active 9.6KB shown pending in CKTS:' &
+			1X I5 '-' I5 2X 'CCT = ' A20 END.
+	GOTO N96GET.
+
+
+!!!!!!!!!!!!!
+!!!  56s and exceptions (missing data in PROFILE)....
+!!!!!!!!!!!!!
+
+N56:	DBS 1.
+	F SPEED CT '56'.
+	LET N56 EQ SYSNREC/2.
+	IF N56 EQ 0 THEN END.
+	LET NOD EQ 99999 NEI EQ 99999.
+ 
+N56GET:	DBS 1.
+	GETR END.
+		IF NOD EQ NEIGH THEN AGAIN2.
+RESUME2:	LET NOD EQ NODE NEI EQ NEIGH.
+		MAP 2 NODE PT1 AND NEIGH PT2.
+		F LAST AND STATUS NCT 'D'.
+		SEA PTY1 NCT 'HOST' AND PTY2 NCT 'HOST'.
+		IF SYSNREC EQ 0 THEN N56UN.
+		SOR KEY STATUS.
+		GETR N56GET.
+		IF CCT CT 'LL' THEN N56UN3.
+RESUME2B:	IF CCT CT 'VITA' THEN N56VI.
+		IF CCT CT 'DHEA' THEN N56T1.
+		IF CCT CT 'NTG' THEN N56UN2.
+		IF CCT CT 'D' THEN N56DD.
+		GOTO N56T1.
+		
+AGAIN2:		IF NEI EQ NODE THEN N56GET.
+		GOTO RESUME2.
+
+N56DD:		LET N56DD EQ N56DD + 1.
+	GOTO N56GET.
+
+N56T1:		LET N56T1 EQ N56T1 + 1.
+	GOTO N56GET.
+
+N56VI:		LET N56VI EQ N56VI + 1.
+	GOTO N56GET.
+
+N56UN:		LET N56UN EQ N56UN + 1.
+		P ON 4 NOD NEI FORMAT / &
+			'Active 56KB not reported in CKTS:  ' &
+			1X I5 '-' I5 END.
+	GOTO N56GET.
+
+N56UN2:		LET NCCT EQ CCT.
+		LET N56UN EQ N56UN + 1.
+		P ON 4 NOD NEI NCCT FORMAT / &
+			'Active 56KB with weird ID in CKTS: ' &
+			1X I5 '-' I5 2X 'CCT = ' A20 END.
+	GOTO N56GET.
+
+N56UN3:		IF CCT CT '*' THEN RESUME2B.
+		LET NCCT EQ CCT.
+		LET N56UN EQ N56UN + 1.
+		P ON 4 NOD NEI NCCT FORMAT / &
+			'Active 56KB shown pending in CKTS: ' &
+			1X I5 '-' I5 2X 'CCT = ' A20 END.
+	GOTO N56GET.
+
+END:	RELEASE 4.
+
+
+!!!!!!!!!!!!!
+!!!  Total no of network links.
+!!!!!!!!!!!!!
+
+	LET NTWK EQ N24 + N48 + N96 + N144 + N192 + N288 + N384 &
+		+ N56 + NMS.
+
+
+!!!!!!!!!!!!!
+!!!  Print the report.
+!!!!!!!!!!!!!
+
+P ON 1 DAT FORMAT // 30X 'BANDWIDTH MATRIX' / 23X &
+'DATA SOURCES:  PROBE & PROFILE' // 31X 'DATE:  ' I6 //// END.
+
+P ON 1 FORMAT 20X 'BANDWIDTH      ' 10X 'TOTAL LINKS' END.
+
+P ON 1 N24SY N24HW N24UN N24 N48SY N48HW N48UN N48 N96SY N96HW N96UN &
+N96 FORMAT &
+ / 20X '   2.4         ' &
+ / 20X '     SYNC      ' I5 &
+ / 20X '     HW        ' I5 &
+ / 20X '     UNKNOWN   ' I5 8X I5 &
+// 20X '   4.8         ' &
+ / 20X '     SYNC      ' I5 &
+ / 20X '     HW        ' I5 &
+ / 20X '     UNKNOWN   ' I5 8X I5 &
+// 20X '   9.6         ' &
+ / 20X '     SYNC      ' I5 &
+ / 20X '     HW        ' I5 &
+ / 20X '     UNKNOWN   ' I5 8X I5 END.
+
+P ON 1 N144 N192 N288 N384 FORMAT &
+ / 20X '  14.4         ' 13X I5 &
+// 20X '  19.2         ' 13X I5 &
+// 20X '  28.8         ' 13X I5 &
+// 20X '  38.4         ' 13X I5 END.
+
+P ON 1 N56DD N56T1 N56VI N56UN N56 NMS FORMAT &
+ / 20X '  56           ' &
+ / 20X '     DDS       ' I5 &
+ / 20X '     T1        ' I5 &
+ / 20X '     VITALINK  ' I5 &
+ / 20X '     UNKNOWN   ' I5 8X I5 &
+// 20X '  MS           ' 13X I5 END.
+
+P ON 1 NTWK FORMAT 48X '_____' // 22X 'TOTAL' 21X I5 END.
+
+P ON 1 FORMAT // 22X 'Note: Above counts exclude down links.' END.
+
+RELEASE 1.
+
+
+!!!!!!!!!!!!!
+!!!  Print DMI file.
+!!!!!!!!!!!!!
+
+P ON 2 DAT tim N24SY FORMAT I6 1X I4 1X '2.4 ' 1X 'SYNC    ' 1X I5 END.
+P ON 2 DAT tim N24HW FORMAT I6 1X I4 1X '2.4 ' 1X 'HW      ' 1X I5 END.
+P ON 2 DAT tim N24UN FORMAT I6 1X I4 1X '2.4 ' 1X 'UNKNOWN ' 1X I5 END.
+P ON 2 DAT tim N48SY FORMAT I6 1X I4 1X '4.8 ' 1X 'SYNC    ' 1X I5 END.
+P ON 2 DAT tim N48HW FORMAT I6 1X I4 1X '4.8 ' 1X 'HW      ' 1X I5 END.
+P ON 2 DAT tim N48UN FORMAT I6 1X I4 1X '4.8 ' 1X 'UNKNOWN ' 1X I5 END.
+P ON 2 DAT tim N96SY FORMAT I6 1X I4 1X '9.6 ' 1X 'SYNC    ' 1X I5 END.
+P ON 2 DAT tim N96HW FORMAT I6 1X I4 1X '9.6 ' 1X 'HW      ' 1X I5 END.
+P ON 2 DAT tim N96UN FORMAT I6 1X I4 1X '9.6 ' 1X 'UNKNOWN ' 1X I5 END.
+P ON 2 DAT tim N144 FORMAT I6 1X I4 1X '14.4' 1X 'SYNC    ' 1X I5 END.
+P ON 2 DAT tim N192 FORMAT I6 1X I4 1X '19.2' 1X 'SYNC    ' 1X I5 END.
+P ON 2 DAT tim N288 FORMAT I6 1X I4 1X '28.8' 1X 'SYNC    ' 1X I5 END.
+P ON 2 DAT tim N384 FORMAT I6 1X I4 1X '38.4' 1X 'SYNC    ' 1X I5 END.
+P ON 2 DAT tim N56DD FORMAT I6 1X I4 1X '56  ' 1X 'DDS     ' 1X I5 END.
+P ON 2 DAT tim N56T1 FORMAT I6 1X I4 1X '56  ' 1X 'T1      ' 1X I5 END.
+P ON 2 DAT tim N56VI FORMAT I6 1X I4 1X '56  ' 1X 'VITALINK' 1X I5 END.
+P ON 2 DAT tim N56UN FORMAT I6 1X I4 1X '56  ' 1X 'UNKNOWN ' 1X I5 END.
+P ON 2 DAT tim NMS FORMAT I6 1X I4 1X 'MS  ' 1X 'MS      ' 1X I5 END.
+P ON 2 DAT tim NTWK FORMAT I6 1X I4 1X 'NET ' 1X 'NET     ' 1X I5 END.
+
+RELEASE 2.
+
+
+!!!!!!!!!!!!!
+!!!  Produce the "difference" report.
+!!!!!!!!!!!!!
+
+	DBS 3.
+	F ALL.
+	EV ODATE EQ MAX CDATE.
+
+	F CDATE EQ ODATE AND BW CT 'NET'.
+	LET NTWK EQ NTWK - LINKS.
+
+	F CDATE EQ ODATE AND BW CT '2.4'.
+	EV ON24 EQ TOT LINKS.
+	LET N24 EQ N24 - ON24.
+
+	F CDATE EQ ODATE AND BW CT '4.8'.
+	EV ON48 EQ TOT LINKS.
+	LET N48 EQ N48 - ON48.
+
+	F CDATE EQ ODATE AND BW CT '9.6'.
+	EV ON96 EQ TOT LINKS.
+	LET N96 EQ N96 - ON96.
+
+	F CDATE EQ ODATE AND BW CT '56'.
+	EV ON56 EQ TOT LINKS.
+	LET N56 EQ N56 - ON56.
+
+	F CDATE EQ ODATE AND BW CT '2.4' AND TYPE CT 'SYNC'.
+	LET N24SY EQ N24SY - LINKS.
+ 
+	F CDATE EQ ODATE AND BW CT '4.8' AND TYPE CT 'SYNC'.
+	LET N48SY EQ N48SY - LINKS.
+
+	F CDATE EQ ODATE AND BW CT '9.6' AND TYPE CT 'SYNC'.
+	LET N96SY EQ N96SY - LINKS.
+
+	F CDATE EQ ODATE AND BW CT '2.4' AND TYPE CT 'HW  '.
+	LET N24HW EQ N24HW - LINKS.
+
+	F CDATE EQ ODATE AND BW CT '4.8' AND TYPE CT 'HW  '.
+	LET N48HW EQ N48HW - LINKS.
+
+	F CDATE EQ ODATE AND BW CT '9.6' AND TYPE CT 'HW  '.
+	LET N96HW EQ N96HW - LINKS.
+
+	F CDATE EQ ODATE AND BW CT '2.4' AND TYPE CT 'UNKN'.
+	LET N24UN EQ N24UN - LINKS.
+
+	F CDATE EQ ODATE AND BW CT '4.8' AND TYPE CT 'UNKN'.
+	LET N48UN EQ N48UN - LINKS.
+
+	F CDATE EQ ODATE AND BW CT '9.6' AND TYPE CT 'UNKN'.
+	LET N96UN EQ N96UN - LINKS.
+
+	F CDATE EQ ODATE AND BW CT '14.4'.
+	LET N144 EQ N144 - LINKS.
+
+	F CDATE EQ ODATE AND BW CT '19.2'.
+	LET N192 EQ N192 - LINKS.
+
+	F CDATE EQ ODATE AND BW CT '28.8'.
+	LET N288 EQ N288 - LINKS.
+
+	F CDATE EQ ODATE AND BW CT '38.4'.
+	LET N384 EQ N384 - LINKS.
+
+	F CDATE EQ ODATE AND BW CT '56 ' AND TYPE CT 'DDS '.
+	LET N56DD EQ N56DD - LINKS.
+
+	F CDATE EQ ODATE AND BW CT '56 ' AND TYPE CT 'T1  '.
+	LET N56T1 EQ N56T1 - LINKS.
+
+	F CDATE EQ ODATE AND BW CT '56 ' AND TYPE CT 'VITA'.
+	LET N56VI EQ N56VI - LINKS.
+
+	F CDATE EQ ODATE AND BW CT '56 ' AND TYPE CT 'UNKN'.
+	LET N56UN EQ N56UN - LINKS.
+
+	F CDATE EQ ODATE AND BW CT 'MS  '.
+	LET NMS EQ NMS - LINKS.
+
+P ON 3 DAT ODATE FORMAT // 24X 'BANDWIDTH DIFFERENCE MATRIX' / 23X &
+'DATA SOURCES:  PROBE & PROFILE' // 31X '  TO:  ' I6 / &
+31X 'FROM:  ' I6 /// END.
+
+P ON 3 FORMAT 20X 'BANDWIDTH      ' 10X 'TOTAL LINKS' END.
+
+P ON 3 N24SY N24HW N24UN N24 N48SY N48HW N48UN N48 N96SY N96HW N96UN &
+N96 FORMAT &
+ / 20X '   2.4         ' &
+ / 20X '     SYNC      ' IS4 &
+ / 20X '     HW        ' IS4 &
+ / 20X '     UNKNOWN   ' IS4 8X IS4 &
+// 20X '   4.8         ' &
+ / 20X '     SYNC      ' IS4 &
+ / 20X '     HW        ' IS4 &
+ / 20X '     UNKNOWN   ' IS4 8X IS4 &
+// 20X '   9.6         ' &
+ / 20X '     SYNC      ' IS4 &
+ / 20X '     HW        ' IS4 &
+ / 20X '     UNKNOWN   ' IS4 8X IS4 END.
+
+P ON 3 N144 N192 N288 N384 FORMAT &
+ / 20X '  14.4         ' 13X IS4 &
+// 20X '  19.2         ' 13X IS4 &
+// 20X '  28.8         ' 13X IS4 &
+// 20X '  38.4         ' 13X IS4 END.
+
+P ON 3 N56DD N56T1 N56VI N56UN N56 NMS FORMAT &
+ / 20X '  56           ' &
+ / 20X '     DDS       ' IS4 &
+ / 20X '     T1        ' IS4 &
+ / 20X '     VITALINK  ' IS4 &
+ / 20X '     UNKNOWN   ' IS4 8X IS4 &
+// 20X '  MS           ' 13X IS4 END.
+
+P ON 3 NTWK FORMAT 48X '_____' // 22X 'TOTAL' 21X IS4 END.
+
+P ON 3 FORMAT // 22X 'Note: Above counts exclude down links.' END.
+
+
+RELEASE 3.
+
+
+DPL STOP.
+DPL END.
+ 
