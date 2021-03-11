@@ -1,0 +1,330 @@
+ **************************************************************************
+ **************************************************************************
+ **************************************************************************
+ TTTTTTTT   EEEEE    CCCCCC    HH   HH   TTTTTTTT   II    PPPPPPP    SSSSSS
+    TT      E        CC        HH   HH      TT      II    PP   PP    S
+    TT      EEEEE    CC        HHHHHHH      TT      II    PPPPPPP    SSSSSS
+    TT      E        CC        HH   HH      TT      II    PP              S
+    TT      EEEEE    CCCCCC    HH   HH      TT      II    PP         SSSSSS
+ **************************************************************************
+ **************************************************************************
+ **************************************************************************
+
+
+                                    March 1988
+
+
+
+ Section                     Table of Contents                       Page
+
+ 1.   Prime Software Version 21.0.1 & its relationship to X.25 Host
+      Interface                                                        1
+
+ 2.   Class/Group Reconfiguration from 20 to 40 class and 40 to 20
+      group sizes                                                      2
+
+ 3.   Perceived problem with new patch file                            3
+
+ 4.   Log In Spec        
+
+
+    **************************************************************************
+    *                            T     I     P                               *
+    **************************************************************************
+
+ SUBJECT:
+
+ Prime Software Version 21.0.1 and its relationship to X.25 Host
+ Interface
+
+ DISCUSSION:
+
+ There are some problems you may encounter with a Prime host that upgrades
+ version 20.2.4 to version 21.01.1 dealing with Tymnet's X.25 host interface.
+ Customers upgrading to this version should be aware of the following:
+
+ 1.  This version only supports 8 bits 0 parity.  If users are set to
+     anything else they will be able to log in but will get hung after
+     they start putting in their user ID and password after the host banner.
+
+ 2.  On the first 128 characters (standard characters), the high order bit is
+     set low.  With the second 128 characters (graphics), the bit is set high
+     However, Prime does not honor graphic characters.
+
+ 3.  If you run into the first problem (8 bits 0 parity) and users cannot
+     set their terminals, there is a special revision available through Prime
+     Customer Service.  The revisions is version 21.0.1.x13.3 and will allow
+     users to log in with the host accepting any parity (as with versions
+     20.2.4 or below).
+
+
+
+
+
+
+
+
+
+
+
+
+    **************************************************************************
+    *                            T     I     P                               *
+    **************************************************************************
+
+ SUBJECT:
+
+ Class/Group Reconfiguration from 20 to 40 class and 40 to 20 group sizes
+
+ DISCUSSION:
+
+ To change class size from 20 to 40 and group size from 40 to 20, the
+ supervisor class and group area on disk (SGU.DEF in dsc file) for each
+ supervisor (including sup with Netval) must be cleared.  This can be
+ done using the utility slot zero command for that logical unit.
+
+ For a supervisor with Netval, after performing the above, run NVDM and 'init
+ config', 'initnodelist' and 'check', then load Netval.  Keep in mind that the
+ present class and group, nodelists and hostlists will have to be manually
+ reentered; print a hard copy of each prior to reconfiguration.  To play it
+ safe, I would recommend performing a CUD backup to tape before implementing
+ any changes to Netval.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    **************************************************************************
+    *                            T     I     P                               *
+    **************************************************************************
+
+ SUBJECT:
+
+ Perceived problem with new patch file
+
+ DISCUSSION:
+
+ When patchfiles are updated in the (SOURCE) and (BETATEST) directories, the
+ replaced file is renamed from PRODID.P## TO PRODID.H##.
+
+ This procedure ensures that the last patchfile used is archived in the same
+ directory in case there are problems with the new patchfile.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    **************************************************************************
+    *                            T     I     P                               *
+    **************************************************************************
+
+ SUBJECT:
+
+ Tymnet Log In Specs
+
+ DISCUSSION:
+
+ In most cases when dialing into TYMNET the communications device should be
+ set for 8 data bits, 1 stop bit, and no parity.  When the connection is first
+ made, the network will send out the TID message.  The exact text of this
+ message is:
+
+      <CR><LF>please type your terminal identifier
+
+ The TID message is generally sent at 300 baud but only 10 cps.  If the user
+ is running at 1200 baud this will appear as a line of garbage, while at higher
+ baud rates the results could be garbage or show nothing.  In addition to the
+ data appearing to be garbage the user should expect it to contain framing
+ errors.
+
+
+
+ Once the users identifier is entered, the network will set itself to the proper
+ baud rate and send the PLI message.  This message has one of the following
+ formats:
+
+      <CR><LF>-NNNN-PPP-                      <CR><LF>-NNNN:SS-PPP-
+      <CR><LF>please log in:<SP?              <CR><LF>please log in:<SP>
+
+ Where NNNN is the node number
+       SS is the slot number
+       PPP is the port number
+
+ Network login is done by sending a username, an optional host number, and a
+ password.  Following are 3 examples:
+
+ 1.  please log in:USERNAME<CR>
+     password:  NETPASS<CR>
+
+                AND
+
+ 2.  please log in:USERNAME;NETPASS<CR>
+
+                AND
+
+ 3.  please log in:USERNAME:33;NETPASS <CR>
+
+ In the third example, the user is requesting host number 33.
+
+ After the login is complete, the users host takes control and the network
+ attempts to be transparent.
+
+ Below is a sample BASIC program for an IBM PC that will act as a simple
+ terminal emulator to TYMNET.
+
+           100  ON ERROR GOTO 210
+           110 INPUT "ENTER BAUD RATE:  ";BAUDRATE$
+           120 OPEN "COM1:"BAUDRATE$+",M,7,1,CSO,DSO,CDO     AS #2
+           130 IKB$ = INKEY$
+           140 ON LEN(IKB$)+1  GOTO 160,150,200
+           150 PRINT 2#,IKB$;
+           160 IF LOC(2) = 0 GOTO 130
+           170 ITTY$ = INPUT$(LOC(2),#2)
+           180 PRINT ITTY$;
+           190 GOTO 160
+           200 END
+           210 IF ERR = 57 THEN RESUME
+           220 ON ERROR GOTO 0
+           230 STOP
+
+           AUTOMATIC LOGIN's
+
+ There are only a couple of things that a user needs to keep in mind when
+ doing automatic login's to TYMNET.  First, remember that at baud rates other
+ than 300 the "please type your terminal identifier" message will not be
+ received clearly.  You can get around this by allowing any five (5) characters
+ to trigger the response.  A maximum timeout for this message should be thirty
+ (30) seconds.  Second, the program should wait for the "please log in:"
+ message before sending the LOGIN string.  While this is not always needed,
+ waiting here will make a more reliable program.
+
+ If there are limits involving string comparisons, some advisable subsets are
+ "g in:" or "in:".  A maximum timeout here should be sixty (60) seconds.  After
+ the LOGIN string is sent, a network timeout of sixty (60) seconds plus any
+ possible host delays should be used while waiting for the first host prompt.
+
+ Sample Automatic Log In for TYMNET
+
+           100 ON ERROR GOTO 440
+           110 INPUT "ENTER BAUD RATE: ";BAUDRATE$
+           120 INPUT "ENTER LOGON STRING; ";LOGON$
+           130 OPEN "COM1;"BAUDRATE$+",M,7,1,CSO,DSO,CDO"  AS #2
+           140 J=0
+           150 FOR i = 1 TO 10000
+           160 IF LOC (2) = 0 GOTO 210170 ITTY$ = INPUT$(LOC(2),#2)
+           180 PRINT ITTY$;
+           190 J = J + LEN(ITTY$)
+           200 IF j >=5 THEN i = 10000
+           210 NEXT I
+           220 PRINT #2,"A";
+           230 ALLDATA$=""
+           240 FOR I = 1 TO 30000
+           250 IF LOC (2) = 0 GOTO 300
+           260 IN$ = INPUT$(LOC(2),#2)
+           270 PRINT IN$;
+           280 ALLDATA$ = ALLDATA$ = IN$
+           290 IF INSTR(ALLDATA$,"PLEASE LOG IN:") > 0 GOTO 340
+           300 NEXT i
+           310 PRINT "FAILURE! NO 'PLEASE LOG IN:'."
+           320 CLOSE330 STOP
+           340 PRINT #2,LOGON$
+
+           350 IKB$ = INKEY$
+           360 ON LEN(IKB$)=1 GOTO 380,370,420
+           370 PRINT #2,IBK$;
+           380 IF LOC(2) = 0 GOTO 350
+           390 ITTY$ = INPUT$ (LOC(2),#2)
+           400 PRINT ITTY$;
+           410 GOTO 380
+           420 CLOSE
+           430 END
+           440 IF ERR = 57 THEN RESUME
+           450 ON ERROR GOTO 0
+           460 STOP
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
