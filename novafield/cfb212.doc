@@ -1,0 +1,3943 @@
+ 
+ 
+ 
+CFB NO.:  212                                        DATE:  OCTOBER 12, 1992
+ 
+REV LEVEL:  7                                DATE CHANGED:  OCTOBER 12, 1992
+ 
+TYPE: HARDWARE
+HARDWARE: ENGINE AND PXL
+SUBJECT: ENGINE SMART CARD (PCCM)
+ 
+ 
+THE  PURPOSE OF THIS CFB  IS TO PROVIDE  A MEANS FOR FIELD SERVICE PERSONNEL
+TO INSTALL THE ENGINE SMART CARD (PCCM) ON EITHER THE ENGINE OR PXL HARDWARE
+PLATFORMS.   THIS DOCUMENT  IS  BROKEN  INTO  SEVERAL  SECTIONS:   OVERVIEW,
+ENGINE AND PXL PCCM  HARDWARE  DESCRIPTIONS,  ENGINE AND  PXL PCCM  HARDWARE
+INSTALLATION   PROCEDURES,     PCCM   SOFTWARE  INITIALIZATION   PROCEDURES,
+TROUBLESHOOTING HINTS AND FINALLY A BRIEF OUTLINE OF THE NEW ISIS MACROS AND
+SAMPLE FILES.
+ 
+ 
+THE PCCM  CARD IS INTENDED TO PROVIDE MEMORY RETENTION CAPABILITY FOR ENGINE
+HARDWARE  DURING  POWER  TRANSIENTS OR OUTAGES.  FOLLOWING INITIALIZATION OF
+THE  PCCM  CARD (VIA ISIS  DDT  COMMANDS), THE CORE IMAGE  OF THE MACHINE IS
+WRITTEN TO  THE  PCCM SRAM CARD  AND RETAINED FOR UP TO  5 YEARS.  FOLLOWING
+A POWER  TRANSIENT OR OUTAGE,  THE BOOT PROGRAM  WILL SENSE THE PRESENCE  OF
+THE PCCM HARDWARE AND INITIATE AN IMMEDIATE  LOAD OF THE STORED MEMORY IMAGE
+BRINGING THE NODE UP AND RUNNING WITHIN SECONDS.
+ 
+USER  CONTROL OF  THE PCCM  HARDWARE AND  SOFTWARE  IS VIA NEW  ISIS TYMFILE
+MACROS  AND  EXTENDED DDT  COMMANDS.   THE  LAST  TWO  SECTIONS OF  THIS CFB
+OUTLINE THE  NEW ISIS MACRO AND  CONTAIN SAMPLE  TYMFILES FOR  UTILIZING THE
+PCCM OPTION.   IT IS ALSO  POSSIBLE  TO RETROFIT THE PCCM CODE INTO EXISTING
+ISIS TYMFILES (BE THEY OLD STYLE  OR TYMHLP STYLE) VIA INCLUSION OF FOUR (4)
+ISIS  EQUATES.  USE OF  THE  NEW  STYLE  ISIS  MACROS IS RECOMMENDED BUT NOT
+REQUIRED AND THE SECTION OUTLINING  THE NEW  ISIS MACROS DESCRIBES THE MACRO
+ITSELF AND IT'S RESPECTIVE OLD STYLE EQUATES.
+ 
+A  PCCM EQUIPPED  ENGINE CAN BE SOFTWARE CONTROLLED TO AUTOMATICALLY BACK UP
+THE CODE IMAGE UPON  COMPLETION  OF  A  DOWNLINE LOAD, AND  TO AUTOMATICALLY
+RESTORE THE  IMAGE  FOLLOWING  A  POWER  UP  SEQUENCE.   WITH  BITS  VERSION
+6.00  OR  GREATER  THERE  IS  A  USER PROMPT  TO  AUTOMATICALLY BACKUP SLOTS
+FOLLOWING  A SLOT LOAD, BUT EARLIER  VERSIONS OF BITS DO  NOT  AUTOMATICALLY
+PROMPT THE USER OR BACK UP THE SLOT TO THE MEMORY CARD AND THIS MUST BE DONE
+MANUALLY TO INSURE THE CODE IS PRESERVED.
+ 
+A  VERY GENERAL OVERVIEW OF THE PCCM OPERATIONAL COMPONENTS INVOLVES SEVERAL
+MAIN PARTS:  DEVICE 5 BOOT, DEVICE 8 BOOT, PCCM ADAPTER CARD AND ISIS.
+ 
+THE  DEVICE 5 BOOT  IS THE  NORMAL ENGINE  BOOT  CODE  STORED IN PROM ON THE
+ENGINE  MULTIFUNCTION CARD.  THE ENGINE MICROCODE LOADS THE FIRST PORTION OF
+THE DEVICE 5 BOOT INTO LOW MEMORY AND BEGINS EXECUTION OF THIS CODE WHICH IS
+RESPONSIBLE  FOR  LOADING  AND  RELOCATION OF  THE REMAINING BOOT  CODE INTO
+ENGINE HIGH MEMORY.  WHEN THE PCCM ADAPTER IS INSTALLED A SPECIAL VERSION OF
+THE  DEVICE 5 BOOT IS ALSO INSTALLED, WHICH WILL LOAD THE DEVICE 8 BOOT INTO
+LOW MEMORY  (AFTER THE DEVICE  5 BOOT  RELOCATION  IS  COMPLETE)  AND BEGINS
+EXECUTION  OF THE  DEVICE 8 BOOT RELOCATION CODE IN LOW MEMORY.   THE DEVICE
+5 BOOT  IS  RELOCATED INTO THE LAST 4KB OF ENGINE MEMORY.  THE DEVICE 5 BOOT
+CONTAINS THE TTY,  BIT- AND BYTE- SYNCHRONOUS,  OCL,  DISK BOOT LOADERS,  AS
+WELL AS THE ABILITY TO SENSE THE PRESENCE OF THE DEVICE 8 BOOT DEVICE.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE    2
+ 
+ 
+THE  DEVICE 8  BOOT  (OR SMART  BOOT  AS  IT IS COMMONLY  REFERRED  TO)   IS
+LOCATED ON  THE ENGINE  PCCM, OR THE  PXL PCCM  ADAPTER CARD.  THE DEVICE  8
+BOOT  CONTAINS  CODE  TO  DETERMINE  THE  TYPE  OF  MACHINE  THE  TARGET  IS
+(20-BIT ENGINE, OR 24-BIT MAC 5), DETERMINES THE SIZE OF MEMORY,  CHECKS FOR
+THE EXISTENCE OF THE HIGH AND LOW BANK  PCCM SRAM CARDS, CHECKS SRAM BATTERY
+VOLTAGES, THEN LOADS THE IMAGE ON THE PCCM MEMORY  CARD WHILE INSURING THERE
+ARE  NO  CHECKSUM  ERRORS  ON  THE  MEMORY  CARD IMAGE.  THE  DEVICE 8  BOOT
+RELOCATION  CODE  LOADED  INTO LOW  MEMORY  LOADS  AND  THEN  RELOCATES  THE
+DEVICE  8  BOOT CODE  INTO THE  4KB  OF  MEMORY  IMMEDIATELY  PRECEDING  THE
+DEVICE 5 BOOT (4KB OF MEMORY PRECEDING THE LAST 4K OF PHYSICAL MEMORY).
+ 
+  NOTE:  THE INCLUSION OF PCCM IN A NODE MEANS THAT THERE IS 8KB OF MEMORY
+         REQUIRED FOR THE BOOT LOADERS (DEVICE 5 AND DEVICE 8) SO ANY NODE
+         WITH THIS OPTION ENABLED HAS ONLY THE MAXIMUM  MEMORY SIZE  (1024
+         OR  2048) MINUS 8KB AVAILABLE OF CONFIGURABLE MEMORY.
+ 
+THE  PCCM ADAPTER  CARD IS ON THE HARDWARE WHICH  THE DEVICE 8 BOOT, RELATED
+MICROCODE AND PCCM MEMORY CARD RESIDE.
+ 
+THE  PCCM MODULE FOR THE  ENGINE DIFFERS SIGNIFICANTLY FROM THE PCCM FOR THE
+PXL,  BUT PROVIDES  THE SAME  FUNCTIONALITY.   ON A STANDARD ENGINE THE PCCM
+MODULE IS  CONTAINED  ON  A  NEWLY  DESIGNED  MULTIFUNCTION  HALFCARD.  THIS
+NEW  MULTIFUNCTION HALFCARD  COMPLETELY  REPLACES THE EXISTING MULTIFUNCTION
+CARD OR THE MULTIFUNCTION LOGIC  ON  THE SIO-III BOARD.  FOR THE PXL PRODUCT
+LINE THE  PCCM MODULE IS  A  COMPLETELY  INDEPENDANT  HALFCARD  WHICH CAN BE
+INSTALLED IN ANY OF THE PXL BUS SLOTS.
+ 
+ISIS IS WHERE THE PCCM PRODUCT MANAGEMENT IS MAINTAINED.  ISIS VERSION 14.00
+CONTAINS  A SPECIAL  PCCM  DDT  INTERFACE  WHERE  PCCM MEMORY  MANAGEMENT IS
+HANDLED, COUPLED WITH NEW ISIS  TYMFILE MACROS FOR  DETERMINING THE  ACTIONS
+OF  THE PCCM  PRODUCT  DURING  SYSTEM  LEVEL (ISIS AND NODE CODE) LOADING OR
+POWER UP SEQUENCE.
+ 
+THE  PCCM HARDWARE REQUIRES THE NEW VERSION OF THE ENGINE MULTIFUNCTION CARD
+AND REQUIRES  A FULL  CHASSIS  SLOT BE AVAILABLE.  FOR CXL/DCXL ENGINES THAT
+USE THE SIOX  BOARD  WITH THE  MULTIFUNCTION OPTION ENABLED ON IT,  ALL SIOX
+BOARDS  WILL  HAVE  TO  HAVE  THE   MULTIFUNCTION  DISABLED  AND  THE   PCCM
+MULTIFUNCTION CARD INSTALLED BELOW THE MAC BOARD.
+ 
+REQUIRED SOFTWARE COMPONENTS:
+ 
+  O  LBOOT      VERSION 13.00 (AD) OR GREATER
+  O  SMART BOOT VERSION  1.01 OR GREATER
+  O  ISIS       VERSION 14.00 OR GREATER
+  O  NODE CODE  VERSION  6.05 OR GREATER
+  O  BITS       VERSION  6.00 OR GREATER
+ 
+REQUIRED HARDWARE COMPONENTS:
+ 
+  O  PCCM SMART CARD HARDWARE:
+ 
+     O  PXL     - PART NUMBER  470411-001
+     O  ENGINE  - PART NUMBER  470412-001 (ENGINE HALFCARD ONLY)
+                               640361-001 (FULL ENGINE SMART CARD ASSEMBLY)
+ 
+     O  SRAM - PART NUMBER     600347-TAB (MINIMUM OF 1MB IS REQUIRED)
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE    3
+ 
+ 
+ADDITIONAL DOCUMENTATION AVAILABLE:
+ 
+  O  PCCM  ENGINE ADAPTER  HARDWARE  FUNCTIONAL  SPECIFICATION  [540037-001]
+     DATED 02 JANUARY 1991.
+ 
+  O  PCCM SOFTWARE GENERAL INTERNAL DESIGN VERSION 1.1, DATED 01 MARCH 1991.
+ 
+  O  ISIS  VERSION  14.00  GENERAL  EXTERNAL  DESIGN SPECIFICATION,  RELEASE
+     DATE 1992.
+ 
+  O  NODE CODE VERSION 6.00 XRAY OPERATIONS MONITOR, DATED 19 SEPTEMBER 1991
+ 
+  O  NODE  CODE  VERSION  6.00  PROGRAMMER'S  REFERENCE  MANUAL,   DATED  19
+     SEPTEMBER 1991.
+ 
+  O  BITS VERSION 6.0 REFERENCE MANUAL (NPD DMRM0242.01A).
+ 
+  O  CXL/ENGINE PCCM BOARD SUPPLEMENT (DEMM0231.01A)
+ 
+  O  CXL INSTALLATION CFB, CFB 173.
+ 
+  O  CXL MAINTENANCE MANUAL (NPD DE000615.59A).
+ 
+  O  PXL INSTALLATION CFB, CFB 193.
+ 
+  O  PXL FIELD SERVICE DOCUMENT (NPD DEMA0066.01A).
+ 
+  O  PXL FIELD SERVICE DOCUMENT (PXL.DOC - ON-LINE)
+ 
+ 
+STAKE JUMPER PIN ORIENTATION.
+ 
+THE  ORIENTATION  OF PIN 1 ON ALL  STAKE JUMPERS  CAN  BE CONFUSING,  BUT  A
+QUICK CHECK ON THE  SOLDERED SIDE OF  THE PCB WILL  REVEAL  THE  LOCATION OF
+PIN 1 BY THE SQUARE SOLDER CONNECTION.
+ 
+ 
+ 
+TERMINOLOGY
+ 
+FOR  THE FOLLOWING  SECTIONS THE  ENABLING OR DISABLING OF  OPTIONS  CAN  BE
+REFERENCED AS FOLLOWS:
+ 
+ 
+     DISABLED  =  OPEN    =  OFF  =  0
+     ENABLED   =  CLOSED  =  ON   =  1
+ 
+ 
+ +-----------------------------------------------------------------------+
+ |                                                                       |
+ |  AN IMPORTANT POINT TO NOTE IS THAT THE NEW ISIS TYMFILE MACROS NEED  |
+ |  NOT  BE USED, ALTHOUGH THIS DOCUMENT  IS  GEARED PRIMARILY  FOR USE  |
+ |  WITH THE NEW MACROS.  MOST SECTIONS WILL SHOW THE EQUIVALENT EQUATE  |
+ |  SETTINGS  FOR THOSE  INSTANCES WHERE  THE NEW ISIS  MACROS ARE  NOT  |
+ |  INCORPORATED.                                                        |
+ |                                                                       |
+ +-----------------------------------------------------------------------+
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE    4
+ 
+ 
+ENGINE PCCM CARD DESCRIPTION  [640361-001]
+ 
+THE PCCM CARD FOR THE ENGINE IS ON A  REDESIGNED  ENGINE  MULTIFUNCTION CARD
+CONTAINING  THE  STANDARD  ENGINE MULTIFUNCTION LOGIC IN ADDITION TO SEVERAL
+SWITCHES AND  JUMPERS TO  CONFIGURE   THE  PCCM  MEMORY  CARD  SIZE AND  THE
+ACTUAL  SRAM MEMORY CARD(S).   THE PCCM CARD FOR THE ENGINE  IS  CAPABLE  OF
+BEING CONFIGURED WITH TWO (2) 512KB SRAM  CARDS, ONE OR TWO  1MB SRAM CARDS,
+ONE OR TWO 2MB SRAM CARDS.
+ 
+A SIMPLIFIED DIAGRAM OF THE ENGINE PCCM CARD IS AS FOLLOWS:
+ 
+ 
+                          BACKPLANE   CONNECTOR   EDGE
+            ============================ + ===========================
+           |                             |                            |
+           |                             |                            |
+           |                             |    E   E                   |
+           |                             |    5   6                   |
+           |                             |                            |
+           |                             |                            |
+           |                             |    E                       |
+           |                             |    4                       |
+           |                             |                            |
+           |                             |                            |
+           |                             |   E                    SW6 |
+           |                             |   3                        |
+           |                             |                           S|
+           |                             |                           W|
+           |                             |                           5|
+           |                             |                            |
+           |                             |============================|
+           |                             |                            |
+           |                             |                            |
+           |                             |                            |
+           |                             |         S         E7   SW4 |
+           |                             |         W                  |
+           |                             |         2               E  |
+           |                             |      E            E     8  |
+           |                             |      1            2       S|
+           |                             |                           W|
+           |                             |                           3|
+           |                             |                            |
+           |                             |                            |
+           |                             |    +------+  +------+  C C |
+           |                             |    | CD1  |  | CD2  |  R R |
+           |                             |    |      |  |      |  1 2 |
+           |                             |    |      |  |      |      |
+           |                             |    +------+  +------+      |
+           |                             | SW1        J1              |
+            ---------------------------- + ---------------------------
+ 
+                              F R O N T      E D G E
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE    5
+ 
+ 
+            WHERE
+ 
+              SW1  =  SNAP ACTION BOOT/WATCHDOG TIMER ENABLED SWITCH
+              J1   =  TTY PORT RJ45 CONNECTOR
+ 
+              CD1  =  PCCM SRAM CARD NUMBER 1
+              CD2  =  PCCM SRAM CARD NUMBER 2
+ 
+              CR1  =  SYSTEM RESET LED (RED)
+              CR2  =  POWER FAIL DETECT LED (RED)
+ 
+              SW3  =  A  SLIDE  SWITCH USED TO INFORM THE MUX I/O BUS OF
+                      THE HIGH AND LOW  MEMORY  RANGES  FOR  PCCM MEMORY
+                      CARD NUMBER 1.  [SEE BELOW CONFIGURATION]
+ 
+              SW5  =  A  SLIDE  SWITCH USED TO INFORM THE MUX I/O BUS OF
+                      THE HIGH AND LOW  MEMORY  RANGES  FOR  PCCM MEMORY
+                      CARD NUMBER 2.  [SEE BELOW CONFIGURATION]
+ 
+                      THE HIGH/LOW CONFIGURATION IS BASED ON THE WHETHER
+                      THE PCCM MEMORY CARD IS THE LOW BANK (FIRST 512KB)
+                      OR HIGH BANK (SECOND 512KB) OF MEMORY AS FOLLOWS:
+ 
+                                          SW3         SW5
+                                          ---         ---
+ 
+                         CARD 1 LOW       LOW         HIGH
+                         CARD 2 HIGH
+ 
+                         CARD 1 HIGH      HIGH        LOW
+                         CARD 2 LOW
+ 
+              SW2  =  MULTIFUNCTION CONFIGURATION 8 POSITION DIP SWITCH:
+ 
+                      SWITCH 1:  BRG INTERRUPTER ENABLED
+                                 OPEN   =  DISABLED
+                                 CLOSED =  ENABLED  [DEFAULT]
+                      SWITCH 2:  TERMINAL BREAK KEY STATUS ENABLED
+                                 OPEN   =  DISABLED  [DEFAULT]
+                                 CLOSED =  ENABLED
+                      SWITCH 3:  MULTIFUNCTION LOGIC ENABLED
+                                 OPEN   =  DISABLED
+                                 CLOSED =  ENABLED  [DEFAULT]
+                      SWITCH 4:  WATCHDOG TIMER
+                                 OPEN   =  DISABLED [DEFAULT]
+                                 CLOSED =  ENABLED
+                      SWITCH 5:  BRG INTERRUPTER PRIORITY LEVEL [3600/14400]
+                                 OPEN   =  ATN00  [DEFAULT]
+                                 CLOSED =  ATN20
+                      SWITCH 6:  BRG INTERRUPTER FREQUENCY (HZ) [N/T JUMPER]
+                                 OPEN   =   3600  [BAUDR = 0]
+                                 CLOSED =  14400  [BAUDR = 2]
+                      SWITCH 7:  BOOT DEVICE 5 AND 8 ENABLE
+                                 OPEN   =  ENABLED  [DEFAULT]
+                                 CLOSED =  DISABLED
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE    6
+ 
+ 
+                      SWITCH 8:  RESERVED FOR FUTURE USE
+                                 OPEN   =  [DEFAULT]
+                                 CLOSED =
+ 
+              E1   =  MEMORY CONFIGURATION  (FOR CARD1) JUMPER  USED  IN
+                      CONJUNCTION WITH JUMPER E7.  [SEE BELOW DIAGRAM]
+ 
+              E7   =  MEMORY CONFIGURATION  (FOR CARD1) JUMPER  USED  IN
+                      CONJUNCTION WITH JUMPER E1.  [SEE BELOW DIAGRAM]
+ 
+                      THE E1  AND  E7 JUMPERS ARE  ALSO  USED TO SET THE
+                      PCCM CARD MEMORY SIZE AS FOLLOWS:
+ 
+                         PCCM   CARD
+                         MEMORY SIZE    E1  JUMPER      E7  JUMPER
+                         -----------    ----------      ----------
+ 
+                         512K BYTES       CLOSED          CLOSED
+                         1M   BYTES       OPEN            CLOSED
+                         2M   BYTES       CLOSED          OPEN
+                         4M   BYTES       OPEN            OPEN
+ 
+                         WHERE
+                           CLOSED = JUMPER INSTALLED
+                           OPEN   = JUMPER REMOVED
+ 
+              E2   =  MEMORY CONFIGURATION  (FOR CARD2) JUMPER  USED  IN
+                      CONJUNCTION WITH JUMPER E8. [SEE ABOVE DIAGRAM FOR
+                      E1 JUMPER]
+ 
+              E8   =  MEMORY CONFIGURATION  (FOR CARD2) JUMPER  USED  IN
+                      CONJUNCTION WITH JUMPER E2. [SEE ABOVE DIAGRAM FOR
+                      E7 JUMPER].
+ 
+              SW4  =  A ROTARY SWITCH USED TO SET THE MEMORY SIZE OF THE
+                      CARD2 PCCM SRAM CARD AS FOLLOWS:
+ 
+                          SW1 ROTARY   PCCM CARD
+                           SETTING     MEMORY SIZE
+                          ----------   -----------
+ 
+                              2         512K BYTES
+                              3         1M   BYTES
+                              6         2M   BYTES
+                              7         4M   BYTES
+ 
+              SW6  =  A ROTARY SWITCH USED TO SET THE MEMORY SIZE OF THE
+                      CARD1 PCCM SRAM CARD.  [SEE ABOVE DIAGRAM FOR  SW4
+                      SWITCH].
+ 
+              E4   =  ISOLATE GROUND JUMPER [DEFAULT INSTALLED]
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE    7
+ 
+ 
+              E5   =  INDICATES IF  THE  MULTIFUNCTION  BOARD  IS  BEING
+                      INSTALLED  IN  A  NEW-TYPE   ENGINE  PRODUCT  THAT
+                      PROVIDES +/- 12V INSTEAD  OF +/= 16V.  SINCE THERE
+                      IS  NO CURRENT  ENGINE   PRODUCTS   WHICH  PROVIDE
+                      +/- 12V  THIS JUMPER IS LEFT OPEN.
+ 
+ 
+ 
+              E6   =  INDICATES IF  THE  MULTIFUNCTION  BOARD  IS  BEING
+                      INSTALLED  IN  A  NEW-TYPE   ENGINE  PRODUCT  THAT
+                      PROVIDES +/- 12V INSTEAD  OF +/= 16V.  SINCE THERE
+                      IS  NO CURRENT  ENGINE   PRODUCTS   WHICH  PROVIDE
+                      +/- 12V  THIS JUMPER IS LEFT OPEN.
+ 
+ 
+                      NOTE:  IF A JUMPER IS INSTALLED ON E5 OR E6 IT CAN
+                             CAUSE THE PCCM TO BE UNABLE TO BOOT.  THESE
+                             JUMPERS SHOULD BE REMOVED (OR OPEN).
+ 
+ 
+ 
+              E3   =  TTY PORT BAUD RATE SETTING JUMPER, SET AS FOLLOWS:
+ 
+                   BAUD RATE   1-2    3-4    5-6    7-8
+                        ---------   ---    ---    ---    ---
+ 
+                           9600     OPEN   OPEN   OPEN   OPEN
+                           4800     CLOSED OPEN   OPEN   OPEN
+                           2400     OPEN   CLOSED OPEN   OPEN
+                           1200     OPEN   OPEN   CLOSED OPEN
+                            300     OPEN   OPEN   OPEN   CLOSED
+ 
+                       NOTE:  THE TTY PORT  BAUD RATE JUMPER SETTING MUST
+                              BE DONE PRIOR TO INSTALLING THE CARD IN THE
+                              ENGINE AS IT  CAN NOT  BE  CHANGED  WITHOUT
+                              REMOVING THE BOARD.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE    8
+ 
+PXL PCCM CARD DESCRIPTION  [470411-001]
+ 
+THE  PCCM CARD  FOR THE  PXL IS  A HALF-CARD CONTAINING THE SEVERAL SWITCHES
+AND  JUMPERS TO  CONFIGURE  THE  PCCM  MEMORY  CARD SIZE, IN ADDITION TO THE
+ACTUAL SRAM MEMORY CARD.
+ 
+IT  IS  VERY  IMPORTANT  TO  INSURE  THAT  THE  PROPER DEVICE 5 BOOT PROM IS
+INSTALLED  ON THE  PXL  SCSC MULTIFUNCTION CARD.  ADDITIONALLY SW1-7 MUST BE
+SET  TO THE OPEN (OR ON) POSITION  TO  ENABLE BOTH THE DEVICE 5 AND DEVICE 8
+BOOTS.
+ 
+A SIMPLIFIED DIAGRAM OF THE PXL PCCM CARD IS AS FOLLOWS:
+ 
+ 
+                   PCCM  [470411-001]
+ 
+               +---------------------------+
+              |                             |
+              |   SW1 SW2      E1 E2  +------+
+              |                       |  PB  |
+              |        +----------------------
+              |        |                      |
+              |        |                      |
+              |        |                      |
+              |        |     SRAM CARD        |
+              |        |                      |
+              |        |                      |
+              |        |                      |
+              |        +----------------------
+               ---                   ----    |
+                  +_________________|    |___+
+ 
+ 
+    WHERE:
+ 
+        SW1       =  A ROTARY SWITCH USED TO SET THE MEMORY SIZE OF THE
+                     PCCM SRAM CARD AS FOLLOWS:
+ 
+                          SW1 ROTARY   PCCM CARD
+                           SETTING     MEMORY SIZE
+                          ----------   -----------
+ 
+                              2         512K BYTES
+                              3         1M   BYTES
+                              6         2M   BYTES
+                              7         4M   BYTES
+ 
+        SW2       =  A  SLIDE  SWITCH USED TO INFORM THE MUX I/O BUS IF
+                     MORE THAN ONE (1) PCCM ADAPTER IS  INSTALLED.  THE
+                     SWITCH SETTING IS DETERMINED AS FOLLOWS:
+ 
+                         LOW  BANK = INDICATES 2 PCCM ADAPTERS ARE
+                                     INSTALLED.  ONE PCCM  ADAPTER
+                                     WILL BE SET TO LOW BANK,  THE
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE    9
+ 
+                                     ONLY ONE ADAPTER IS INSTALLED
+                                     THEN LOW BANK IS SELECTED.
+ 
+                         HIGH BANK = INDICATES THE  SECOND HALF OF
+                                     A CONFIGURATION  WHERE 2 PCCM
+                                     ADAPTERS  ARE  INSTALLED.
+ 
+        E1        =  MEMORY CONFIGURATION JUMPER  USED  IN  CONJUNCTION
+                     WITH JUMPER E2.  [SEE BELOW DIAGRAM]
+        E2        =  MEMORY CONFIGURATION JUMPER  USED  IN  CONJUNCTION
+                     WITH JUMPER E1.  [SEE BELOW DIAGRAM]
+ 
+                     THE E1 (CONF1)  AND  E2 (CONF2)  JUMPERS ARE  ALSO
+                     USED TO SET THE PCCM CARD MEMORY SIZE AS FOLLOWS:
+ 
+                         PCCM   CARD
+                         MEMORY SIZE    E1 (CONF1)      E2 (CONF2)
+                         -----------    ----------      ----------
+ 
+                         512K BYTES       CLOSED          CLOSED
+                         1M   BYTES       CLOSED          OPEN
+                         2M   BYTES       OPEN            CLOSED
+                         4M   BYTES       OPEN            OPEN
+ 
+                         WHERE
+                           CLOSED = JUMPER INSTALLED
+                           OPEN   = JUMPER REMOVED
+ 
+        PB        =  A PUSH BUTTON RELEASE FOR THE PCCM SRAM CARD.
+ 
+        SRAM CARD =  THE ACTUAL MEMORY CARD FOR THE PCCM HARDWARE.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   10
+ 
+ENGINE PCCM HARDWARE INSTALLATION PROCEDURES.
+ 
+THE ENGINE PCCM  HARDWARE  [470412-001] IS RELATIVELY EASY TO INSTALL  AS IT
+BASICALLY  INVOLVES REPLACING  THE EXISTING  ENGINE  MULTIFUNCTION HALFCARD.
+THE  FOLLOWING STEPS SHOULD BE FOLLOWED TO INSTALL AND TEST THE PCCM CARD IN
+THE ENGINE:
+ 
+   1. POWER OFF THE ENGINE.
+ 
+   2. REMOVE  THE   EXISTING  ENGINE   MULTIFUNCTION  CARD   (PART  NUMBER
+      470143-TAB).
+ 
+   3. REMOVE  THE   6  MOUNTING SCREWS  AND EXTRACT THE   EXISTING  ENGINE
+      MULTIFUNCTION HALFCARD.
+ 
+   4. INSTALL  THE  NEW  PCCM   MULTIFUNCTION CARD (470412-001)  USING THE
+      6 SCREWS REMOVED IN STEP 3 ABOVE.
+ 
+   5. SET  THE APPROPRIATE  MULTIFUNCTION AND  PCCM  SWITCHES AND  JUMPERS
+      THAT   WERE   OUTLINED  IN   THE   PREVIOUS   SECTION.    A  GENERIC
+      CONFIGURATION  COULD CONSIST  OF  THE  MULTIFUNCTION  BEING  SET  AS
+      FOLLOWS:
+ 
+        SW3 = LOW   (FIRST  512KB OF PCCM MEMORY)
+        SW5 = HIGH  (SECOND 512KB OF PCCM MEMORY)
+ 
+        SW2 = MULTIFUNCTION SWITCH SETTINGS AS FOLLOWS:
+ 
+              SWITCH 1 (BRG ENABLED)  = CLOSED (ENABLED)
+              SWITCH 2 (BREAK KEY)    = OPEN   (DISABLED)
+              SWITCH 3 (MF LOGIC)     = CLOSED (ENABLED)
+              SWITCH 4 (WD TIMER)     = OPEN   (ENABLED)
+              SWITCH 5 (BRG PRIORITY) = OPEN   (ATN00)
+              SWITCH 6 (BRG FREQ)     = OPEN   (N/T JUMPER = N)
+              SWITCH 7 DEVICE 5,8     = OPEN
+              SWITCH 8 (UNUSED)       = OPEN
+ 
+        E1  = CLOSED           [ E1 AND E7 DETERMINE CARD1 MEMORY SIZE  ]
+        E7  = CLOSED           [ SET IN THIS CONFIGURATION TO 512KB     ]
+ 
+        E2  = CLOSED           [ E1 AND E7 DETERMINE CARD2 MEMORY SIZE  ]
+        E8  = CLOSED           [ SET IN THIS CONFIGURATION TO 512KB     ]
+ 
+        SW4 = 2                [ SETS PCCM MEMORY CARD2 SIZE TO 512KB   ]
+        SW6 = 2                [ SETS PCCM MEMORY CARD1 SIZE TO 512KB   ]
+ 
+        E4  = CLOSED (ISOLATE GROUND)
+ 
+        E5  = OPEN             [ E5/E6 ARE USED IF THE BOARD  IS  BEING ]
+        E6  = OPEN             [ INSTALLED IN A NEW-TYPE ENGINE PRODUCT ]
+                               [ THAT  PROVIDES   +/- 12V   INSTEAD  OF ]
+                               [ +/- 16.5V.   THIS   NEW  TYPE  PRODUCT ]
+                               [ DOES NOT EXIST AT THIS TIME.           ]
+ 
+ 
+        E3  = OPEN (ALL PINS)  [ SETS TTY PORT TO 9600 BAUD ]
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   11
+ 
+   6. INSTALL THE NEW ENGINE PCCM CARD.  DISABLE ONE OF  THE SRAM CARDS BY
+      PUSHING THE EJECT BUTTON TO DISLODGE THE SRAM.
+ 
+   7. POWER ON  THE ENGINE INSURING THE ENGINE   GOES INTO THE NORMAL BOOT
+      CYCLE, AND IS WAITING FOR A DOWNLINE LOAD.   REINSERT THE SRAM  CARD
+      TO INSURE THE CODE WILL BE WRITTEN TO SRAM AFTER THE DOWNLINE LOAD.
+ 
+   8. HAVE NETCON OR NSSC LOAD THE TARGET CODE INTO THE ENGINE.
+ 
+   9. HAVE  NETCON OR NSSC  PERFORM  THE  ISIS  EXTENDED  DDT  COMMANDS TO
+      INITIALIZE THE PCCM (IF NECESSARY), THEN  BACKUP  THE  CODE  TO  THE
+      PCCM  MEMORY  (IF  NECESSARY).   SEE THE  FOLLOWING SECTION  ON PCCM
+      SOFTWARE INITIALIZATION AND USAGE.  IF THE PCCM  CARD HAS PREVIOUSLY
+      BEEN INITIALIZED AND THE CODE  IS  CONFIGURED  FOR  AUTO BACKUP THIS
+      STEP WILL NOT BE NECESSARY.
+ 
+  10. AFTER ISIS EXTENDED DDT  VERIFICATION OF  THE CODE ON THE PCCM CARD,
+      POWER  OFF THE ENGINE,  LEAVE IT  OFF FOR  60  SECONDS,  THEN  POWER
+      ON  THE ENGINE.   IF THE PCCM IS OPERATIONAL THE CODE WILL BE LOADED
+      FROM  THE PCCM MEMORY  AND  THE NODE WILL COME UP AND RUNNING WITHIN
+      30 SECONDS.    IF PCCM  FAILS TO  RESTORE  THE CODE AND  THE  ENGINE
+      GOES  INTO  THE  NORMAL  BOOT CYCLE,   SEE THE  PCCM TROUBLESHOOTING
+      HINTS SECTION FOR PROBLEM ISOLATION.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   12
+ 
+PXL PCCM HARDWARE INSTALLATION PROCEDURES.
+ 
+THE  PXL  PCCM HARDWARE  [470411-001] CAN  BE  INSTALLED  IN ANY MUX I/O BUS
+AND  REQUIRES NO  SPECIAL HANDLING OTHER THAN THE JUMPER AND SWITCH SETTINGS
+OUTLINED IN THE BOARD DESCRIPTION THAT FOLLOWS.
+ 
+THE BUS SLOTS ON THE PXL LOOK LIKE THIS:
+ 
+      +---+---+---+---+---+---+---+---+---+---+
+      | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+      +---+---+---+---+---+---+---+---+---+---+
+ 
+        |   |  |______________||______________|
+        |   |         |                |
+        |   |         |                |
+        |   |         |                 ----------  NON-DMA EXPANSION
+        |   |          ---------------------------  DMA EXPANSION
+        |    -------------------------------------  RESERVED FOR TTY/V.24
+         -----------------------------------------  RESERVED FOR SIO MB
+ 
+ 
+ 
+THE MUX I/O COVERS ALL  BUS SLOTS,  SO  THE PCCM  CARD  CAN  BE  INSTALLED
+IN  ANY  SLOT ON  THE PXL.  THE RECOMMENDED SLOT  ASSIGNMENT DEPENDS  UPON
+WHETHER  ANY STANDARD  ASYNC OR  SYNC CARDS ARE INSTALLED IN THE PXL.  THE
+SLOTS ASSIGNMENTS SHOULD BE BASED ON THE FOLLOWING RULES:
+ 
+ 
+   O  WITHOUT STANDARD SYNC OR STANDARD ASYNC OPTIONS CARDS:
+ 
+      THE PCCM CARD SHOULD BE INSTALLED IN ONE OF THE NON-DMA SLOTS TO
+      INSURE THAT THE FULL SIO MOTHERBOARD CONFIGURATION IS CAPABLE.
+ 
+ 
+   O  WITH STANDARD SYNC OR STANDARD ASYNC OPTION CARDS:
+ 
+      THE PCCM  CARD SHOULD  BE INSTALLED  IN ONE OF THE DMA BUS SLOTS
+      WHENEVER  POSSIBLE TO  INSURE  THAT  THE NON-DMA BUS SLOT  PAIRS
+      ARE NOT TIED UP UNNECESSARILY.
+ 
+ 
+ 
+BUS ALLOCATIONS ARE  CONFIGURED IN PAIRS (FOR THE PRIMARY AND   SECONDARY
+OPTION CARDS - AP/AE AND SP/SE).  THE PAIR GROUPS ARE DEFINED AS FOLLOWS:
+ 
+      0 AND 1  RESERVED
+      2 AND 3
+      4 AND 5
+      6 AND 7
+      8 AND 9
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   13
+ 
+WHEN A PRIMARY  CARD (AP/SP) IS INSTALLED IN EITHER BUS SLOT OF A PAIR, IT
+WILL CONTROL  THE EXPANSION CARD IN THE  OTHER BUS  SLOT OF THE SAME PAIR.
+AN EXAMPLE OF THIS WOULD BE A CONFIGURATION WERE PRIMARY AND EXTENDER CARD
+OPTIONS LOOK AS FOLLOWS:
+ 
+                    OCL AP  AE  AP  AP  AE  AP  AE
+           +---+---+---+---+---+---+---+---+---+---+
+           | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+           +---+---+---+---+---+---+---+---+---+---+
+                    ------- ------- ------- -------
+                       |       |       |       |
+                       |       |       |        ---  FOURTH PAIR
+                       |       |        -----------  THIRD  PAIR
+                       |        -------------------  SECOND PAIR
+                        ---------------------------  FIRST  PAIR
+ 
+            WHERE
+ 
+              OCL IN SLOT 2
+              AP  IN SLOT 3     CONTROLS ITSELF ONLY (NO AE CARD)
+ 
+              AE  IN SLOT 4     CONTROLLED BY AP IN SLOT 5
+              AP  IN SLOT 5
+ 
+              AP  IN SLOT 6
+              AE  IN SLOT 7     CONTROLLED BY AP IN SLOT 6
+ 
+ 
+THERE ARE NO BOARD ADDRESS SWITCHES AND A BASIC JUMPER AND SWITCH SETTING ON
+THE PCCM CARD WOULD BE AS FOLLOWS FOR A 1MB PXL-I:
+ 
+   O  SW1 =  SET ROTARY DIAL SO THAT ARROW POINTS TO 3.
+   O  SW2 =  SET THE SLIDE SWITCH TO POINT TO HIGH BANK.
+   O  E1  =  INSTALL A JUMPER BETWEEN THE TWO STAKE PINS.
+   O  E2  =  REMOVE THE JUMPER BETWEEN THE TWO STAKE PINS.
+ 
+ 
+THE  FOLLOWING STEPS SHOULD BE FOLLOWED TO INSTALL AND TEST THE PCCM CARD IN
+THE PXL:
+ 
+   1. POWER OFF THE PXL.
+ 
+   2. ONCE  THE JUMPER/SWITCH SETTINGS ARE COMPLETE, INSTALL THE PCCM CARD
+      IN  ONE  OF  THE  BUS  SLOTS  (SEE  PREVIOUS  SECTION  ON  BUS  SLOT
+      ASSIGNMENTS).  DISABLE THE SRAM CARD BY PUSHING  THE EJECT BUTTON TO
+      DISLODGE THE SRAM.
+ 
+   3. POWER ON  THE PXL INSURING THE PXL  GOES INTO THE NORMAL BOOT CYCLE,
+      AND  IS  WAITING  FOR  A  DOWNLINE  LOAD.   REINSERT  THE SRAM  CARD
+      TO INSURE THE CODE WILL BE WRITTEN TO SRAM AFTER THE DOWNLINE LOAD.
+ 
+   4. HAVE NETCON OR NSSC LOAD THE TARGET CODE INTO THE PXL.
+ 
+   5. HAVE  NETCON OR NSSC  PERFORM  THE  ISIS  EXTENDED  DDT  COMMANDS TO
+      INITALIZE  THEN  BACKUP  THE  CODE  TO  THE  PCCM  MEMORY.   SEE THE
+      FOLLOWING SECTION ON PCCM SOFTWARE INITIALIZATION AND USAGE.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   14
+ 
+ 
+ 
+   6. AFTER ISIS EXTENDED DDT  VERIFICATION OF  THE CODE ON THE PCCM CARD,
+      POWER OFF THE PXL,  LEAVE THE POWER  OFF FOR 60 SECONDS,  THEN POWER
+      ON  THE PXL.   IF THE PCCM  IS OPERATIONAL  THE CODE WILL  BE LOADED
+      FROM  THE PCCM MEMORY  AND  THE  NODE WILL  COME UP AND RUNNING WITH
+      30 SECONDS.    IF PCCM  FAILS TO  RESTORE  THE CODE AND THE PXL GOES
+      INTO  THE  NORMAL  BOOT CYCLE,   SEE THE  PCCM TROUBLESHOOTING HINTS
+      SECTION FOR PROBLEM ISOLATION.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   15
+ 
+PCCM SOFTWARE INITIALIZATION AND USAGE.
+ 
+ 
+INITIALIZING  THE PCCM  PRODUCT IS  DONE VIA LOADING ISIS CODE WITH THE PCCM
+OPTION ENABLED, LOGGING INTO THE KERNEL  (SLOT FF), ENTERING THE PCCM MODULE
+AND  INITIALIZING THE PCCM MEMORY CARD IF REQUIRED.  IF THE PCCM MEMORY CARD
+HAS NOT  PREVIOUSLY BEEN  INITIALIZED THE  PCCM  OPTION 0 COMMAND IS USED TO
+COMPLETE  THIS  PREREQUISITE STEP.   ONCE THE  PCCM CARD IS INITIALIZED, THE
+CONTENT OF  THE PCCM  MEMORY CARD  DEPENDS UPON  THE OPTIONS SET IN THE ISIS
+TYMFILE.  IF THE AUTOBACKUP OPTION IS ENABLED,  THE PCCM STATUS COMMAND WILL
+DISPLAY INFORMATION ON THE CODE JUST LOADED INTO THE TARGET MACHINE.
+ 
+ 
+SUBSEQUENT  LOADS OF THE SYSTEM SOFTWARE (ISIS AND NODE CODE) WILL CAUSE THE
+PCCM MEMORY IMAGE TO BE UPDATED IF THE AUTOBACKUP OPTION IS ENABLED.  IF THE
+AUTOBACKUP OPTION IS NOT ENABLED, SUBSEQUENT LOADS WILL NOT BE STORED TO THE
+PCCM MEMORY CARD UNLESS  MANUALLY DIRECTED  BY MEANS OF THE PCCM DDT COMMAND
+4 (ISIS, NODE CODE AND SLOTS BACKUP), AND COMMAND 2 (SLOT BACKUP).
+ 
+IF ISIS AND NODE  CODE ARE  LOADED SEPARATELY AND SLOTS LOADED ONCE THE NODE
+IS UP IN THE NETWORK ONLY ISIS  AND NODE  CODE WILL  HAVE AUTOMATICALLY BEEN
+BACKED UP TO THE PCCM CARD.  EACH SLOT  WILL HAVE  TO BE INDIVIDUALLY BACKED
+UP FOLLOWING  THE  SLOT  LOADS TO  INSURE  THE  MEMORY IMAGE  IS  STORED  TO
+THE  PCCM CARD.  THERE IS NO AUTOMATIC SLOT BACKUP PROCESS AT THIS TIME, BUT
+BITS  VERSION  6.00  WILL  HAVE  AN OPTION  TO  AUTOMATICALLY  BACKUP  SLOTS
+FOLLOWING A SLOT LOAD.
+ 
+UNDER  THE CURRENT  IMPLEMENTATION  OF  ISIS  AND  BITS, SLOTS  WILL  NOT BE
+AUTOMATICALLY BACKED UP  TO THE  PCCM  MEMORY CARD UNLESS LOADED AT THE SAME
+TIME AS  THE  SYSTEM  SOFTWARE (ISIS AND NODE  CODE).  SLOTS THAT ARE LOADED
+FOLLOWING THE SYSTEM SOFTWARE (AFTER NODE IS OPERATIONAL IN THE NETWORK) ARE
+NOT BACKED UP TO THE PCCM MEMORY CARD  UNLESS THE  PCCM DDT  COMMAND 2 (SLOT
+BACK-UP) IS EXECUTED.
+ 
+BITS  VERSION 6.00  (CURRENTLY IN  ALPHATEST)  WILL  HAVE  A  USER PROMPT TO
+BACK UP A SLOT TO THE PCCM CARD FOLLOWING A SLOT LOAD.
+ 
+THE  SYSTEM  SOFTWARE  (ISIS,  NODE  CODE AND  ALL  SLOTS  BACKED UP) CAN BE
+RESTORED  AT ANY  TIME VIA THE PCCM DDT COMMAND 5 (ISIS, NODE CODE AND SLOTS
+RESTORE)  ALTHOUGH IT  WILL  KNOCK  THE  NODE  OUT  OF THE NETWORK WHILE THE
+SOFTWARE  IS RECOVERED AND RESTARTED.  THE AUTOMATIC BACKUP OPTION CAN  ALSO
+BE  ENABLED VIA THE PCCM DDT COMMAND 6 (ISIS SYSTEM RESTORE DURING POWER UP)
+AT ANY TIME.
+ 
+ 
+SLOT  BACKUPS AND  RESTORES CAN BE DONE  AT ANY TIME,  BUT THE SLOT WILL  BE
+HALTED  AND RESTARTED DURING THE ACTIVITY.  THE SLOT BACKUP IS  DONE VIA THE
+PCCM  DDT COMMAND 2 (SLOT BACK-UP) AND  THE SLOT  RESTORAL IS  DONE VIA  THE
+PCCM DDT  COMMAND 4   (SLOT RESTORE).   DURING  EITHER  THE  SLOT  BACKUP OR
+RESTORE THE TARGET SLOT WILL BE HALTED, RESTORED/BACKED UP, THEN RESTARTED.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   16
+ 
+THE ISIS DDT COMMAND STRUCTURE LOOKS AS FOLLOWS:
+ 
+ 
+   SLOT FF
+   *?PCCM
+ 
+ 
+   <<< P C C M INTERFACE MENU SELECTION >>>
+ 
+   0. PCCM INIT.
+   1. PCCM STATUS
+   2. SLOT BACKUP
+   3. SLOT RESTORE
+   4. ISIS AND NODE CODE BACKUP
+   5. ISIS, NODE CODE AND SLOTS RESTORE
+   6. ISIS SYSTEM RESTORE DURING POWER UP (ON/OFF)
+   7. PCCM CARD MEMORY DIAGNOSTIC
+   8. EXIT
+ 
+ 
+ 
+   PLEASE ENTER SELECTION (0/1/2/3/4/5/6/7/8):
+ 
+ 
+ 
+THE MENU SELECTIONS CAN BE DEFINED AS FOLLOWS:
+ 
+  0.  PCCM INIT.
+ 
+      THIS  IS  THE  COMMAND USED  TO INITIALIZE THE PCCM  CARD FOLLOWING
+      INITIAL INSTALLATION OR REPLACEMENT.  THIS COMMAND MUST  BE DONE IN
+      ORDER TO STORE CODE ON THE CARD.
+ 
+ 
+ 
+   1. PCCM STATUS.
+ 
+      THIS COMMAND DISPLAYS SELECTED  INFORMATION  ON  THE CONFIGURATION
+      AND CODE STORED ON THE PCCM MEMORY CARD.  OUTPUT FROM THIS COMMAND
+      LOOKS AS FOLLOWS:
+ 
+ 
+         PLEASE ENTER SELECTION (0/1/2/3/4/5/6/7/8):1
+ 
+         PCCM MEMORY CARD STATE: PRESENT/READY
+         CARD BATTERY CONDITION: GOOD
+         TOTAL MEMORY CARD SIZE: 1024DK BYTES
+         CARD MEMORY PROTECTION: (READ/WRITE)
+         AUTO. CODE RESTORE OPT: ON
+ 
+ 
+         PRESS ANY KEY TO CONTINUE ...
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   17
+ 
+ 
+ 
+             <<< PCCM CODE BACKUP INFO >>>
+ 
+         SLOT    PID      VERSION         DATE & TIME
+         ----    ---      -------    ----------------------
+          FF     I2IS       14.00    03/05/92 21:00:00 GMT *
+           0     TII         6.05    03/03/92 21:00:00 GMT *
+           1     EXPE        0.00    03/06/92 15:30:56 GMT @
+           2     ISCS       11.02    SAME AS I2IS LOAD TIME @
+           3     CMTI       12.05    03/06/92 15:31:44 GMT @
+           4     EXPE        0.00    03/06/92 15:31:56 GMT @
+ 
+              * CODE GENERATION TIME
+              @ CODE BACKUP TIME
+ 
+ 
+ 
+         PRESS ANY KEY TO CONTINUE ...
+ 
+ 
+ 
+   2. SLOT BACK-UP
+ 
+      THIS COMMAND ALLOWS STORING A SLOT MEMORY IMAGE TO THE PCCM CARD.
+      THIS  COMMAND IS REQUIRED  EACH TIME A SLOT IS MODIFIED TO INSURE
+      THAT THE PCCM MEMORY CARD IMAGE IS THE MOST CURRENT ONE.
+ 
+      THE SLOT BACK-UP COMMAND LOOKS AS FOLLOWS:
+ 
+ 
+         PLEASE ENTER SELECTION (0/1/2/3/4/5/6/7/8):2
+ 
+         TO BACK-UP A SLOT, PLEASE ENTER A SLOT NUMBER?2
+ 
+ 
+         WARNING ... BACKING UP A RUNNING SLOT HALTS
+         AND RESTARTS THE SLOT. CONTINUE? (Y/N)? Y
+ 
+ 
+         HALTED SLOT 02
+ 
+         BACKING UP SLOT 02 ... PLEASE WAIT!
+ 
+         RESTARTED SLOT 02
+ 
+ 
+ 
+ 
+   3. SLOT RESTORE
+ 
+      THIS COMMAND IS USED TO RESTORE A SLOT MEMORY IMAGE FROM THE PCCM
+      MEMORY CARD.   THE SLOT  WILL  BE  EXECUTED  FOLLOWING  THE IMAGE
+      RESTORE.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   18
+ 
+      THE SLOT RESTORE COMMAND LOOKS AS FOLLOWS:
+ 
+ 
+ 
+         PLEASE ENTER SELECTION (0/1/2/3/4/5/6/7/8):3
+ 
+ 
+         TO RESTORE A SLOT, PLEASE ENTER A SLOT NUMBER?2
+ 
+ 
+         WARNING ... RESTORING A RUNNING SLOT HALTS
+         AND RESTARTS THE SLOT. CONTINUE? (Y/N)? Y
+ 
+ 
+         HALTED SLOT 02
+ 
+         RESTORING SLOT 02 ... PLEASE WAIT!
+ 
+ 
+ 
+   4. ISIS AND NODE CODE BACKUP
+ 
+      THIS COMMAND IS USED TO STORE ISIS AND NODE CODE MEMORY IMAGES TO
+      THE PCCM CARD.
+ 
+      THE ISIS AND NODE CODE BACKUP COMMAND LOOKS AS FOLLOWS:
+ 
+ 
+ 
+         PLEASE ENTER SELECTION (0/1/2/3/4/5/6/7/8):4
+ 
+ 
+         BACKING UP THE SYSTEM ...PLEASE WAIT!
+ 
+ 
+ 
+ 
+   5. ISIS, NODE CODE AND SLOTS RESTORE.
+ 
+      THIS  COMMAND IS USED  TO RESTORE ISIS AND NODE CODE AND ANY SLOT
+      MEMORY IMAGES FROM  THE PCCM MEMORY CARD BACK INTO ENGINE MEMORY.
+      ONCE ISSUED THE NODE WILL DROP OUT OF THE NETWORK AND RESTART.
+ 
+      THE ISIS, NODE CODE AND SLOTS RESTORE COMMAND LOOKS AS FOLLOWS:
+ 
+ 
+         PLEASE ENTER SELECTION (0/1/2/3/4/5/6/7/8):5
+ 
+ 
+         RESTORING THE SYSTEM ...PLEASE WAIT!
+ 
+ 
+ 
+      AT THIS POINT THE USERS CIRCUIT WILL BE ZAPPED AS ISIS BEGINS THE
+      INITIALIZATION PROCESS.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   19
+ 
+   6. ISIS SYSTEM RESTORE DURING POWER UP (ON/OFF)
+ 
+      THIS  COMMAND ALLOWS  THE USER  TO SET  THE ACTION  THE PCCM WILL
+      UNDERTAKE FOLLOWING A POWER RECYCLE OR MANUAL BOOT SWITCH ACTION.
+      THE  ON  OPTION  WILL  CAUSE  THE  PCCM  MEMORY  CARD IMAGE TO BE
+      RESTORED  FOLLOWING  ANY  POWER UP SEQUENCE OR MANUAL BOOT SWITCH
+      ACTION.   THE  OFF OPTION WILL  CAUSE THE  NODE TO  GO  INTO  THE
+      NORMAL BOOT SEQUENCE.
+ 
+      THE ISIS SYSTEM RESTORE DURING POWER UP COMMAND LOOKS AS FOLLOWS:
+ 
+ 
+         PLEASE ENTER SELECTION (0/1/2/3/4/5/6/7/8):6
+ 
+         SYSTEM RESTORE DURING POWER UP ENABLE OR DISABLE (1/0):0
+ 
+ 
+      A  RESPONSE OF 0 WILL DISABLE THE AUTOMATIC RESTORE FROM PCCM ON
+      A POWER UP, A RESPONSE OF 1 WILL ENABLE THE AUTOMATIC RESTORE.
+ 
+ 
+ 
+   7. PCCM CARD MEMORY DIAGNOSTIC
+ 
+      THIS  COMMAND RUNS  A DESTRUCTIVE  MEMORY DIAGNOSTIC  TEST  ON  THE
+      PCCM MEMORY CARD AND LEAVES THE CARD IN AN INITIALIZED STATE.
+ 
+      THE PCCM MEMORY DIAGNOSTIC COMMAND LOOKS AS FOLLOWS:
+ 
+ 
+          PLEASE ENTER SELECTION (0/1/2/3/4/5/6/7/8):7
+ 
+          WARNING: DIAGNOSTIC WOULD OVERRIDE ENTIRE CARD MEMORY IMAGE!
+          ARE YOU SURE (Y/N)? Y
+ 
+          PERFORMING SEQUENTIAL WRITE ... PASSED
+          PERFORMING SEQUENTIAL READ ... PASSED
+          PCCM DIAGNOSTIC COMPLETED!
+          PCCM PASSED SEQUENTIAL WRITE/READ TEST ...
+          INITIALIZING PCCM ...  DONE!
+ 
+ 
+ 
+   8. EXIT.
+ 
+      EXITS THE PCCM SOFTWARE AND RETURNS TO ISIS DDT "*" COMMAND PROMPT.
+ 
+         PLEASE ENTER SELECTION (0/1/2/3/4/5/6/7/8):8
+ 
+         *
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   20
+ 
+ 
+ALL  OF THE  PCCM  COMMANDS (EXCEPT STATUS AND EXIT) WILL RESULT IN AN EVENT
+BEING WRITTEN TO THE ISIS DDT HISTORY LOG.  AN EXAMPLE OF THE ENTRIES IN THE
+ISIS HISTORY LOG IS AS FOLLOWS:
+ 
+  *?HIST
+  CURRENT SYSTEM TIME IS:    1:23:11:22
+    00:15:23 AGO, SLOT 255: PCCM POWER UP OPTION CHANGED BY BRUCES
+    00:04:07 AGO, SLOT 255: PCCM CARD DIAGNOSED BY BRUCES
+    00:03:56 AGO, SLOT 255: PCCM CARDS INITIALIZED BY BRUCES
+    00:03:30 AGO, SLOT 255: PCCM CARDS INITIALIZED BY BRUCES
+    00:02:03 AGO, SLOT 255: BACKED UP TO THE PCCM CARD BY BRUCES
+    00:02:03 AGO, SLOT   0: BACKED UP TO THE PCCM CARD BY BRUCES
+    00:01:56 AGO, SLOT   1: HALTED
+    00:01:56 AGO, SLOT   1: HALTED BY BRUCES
+    00:01:55 AGO, SLOT   1: STARTED
+    00:00:20 AGO, SLOT   1: RESTORED FROM THE PCCM CARD BY BRUCES
+    00:00:04 AGO, SLOT 255: PCCM POWER UP OPTION CHANGED BY BRUCES
+  *
+ 
+BITS 6.00 SLOT LOADS WILL LOOK SOMETHING LIKE THE FOLLOWING:
+ 
+  GEMINI% BITS
+  BITS-6.00 (C/N 57) (SUNOS 4.1.1) (HARDWARE: SUN4)
+  WED JUL 22 09:16:01 1992
+ 
+  BITS COMMAND:  NC GATEWAY:4331
+ 
+    ENTER PASSWORD  FOR TARGET:
+  CONNECTING TO NETWORK...
+  CIRCUIT BUILT FROM GEMINI TO THE NETWORK
+  LINK NUMBER IS 0
+  LOGICAL CHANNEL NUMBER IS 62
+ 
+  NODE: 4331
+  HOST: 4331
+ 
+  BITS COMMAND: SL
+    ENTER TWO DIGIT HEXIDECIMAL SLOT NUMBER [NONE = RETURN] : 06
+    ENTER SLOT 06'S OBJECT FILE NAME : N06
+    ENTER FILE TYPE. [(?),P,C,S=RETURN] :
+    LOAD ANOTHER SLOT? [Y,N=RETURN] :
+    START SLOT(S) AFTER LOADING? [N,Y=RETURN] :
+    BACKUP TO PCCM CARD(FOR ENGINE ONLY)? [Y,N=RETURN] :Y
+  INITIALIZING MAC
+  TRANSMITTING SEGMENT 14
+  SENDING DATA TO ADDRESS E00000  BYTES =    256
+  SENDING DATA TO ADDRESS      0  BYTES =  19802
+  SENDING DATA TO ADDRESS 100000  BYTES =  29965
+  SENDING DATA TO ADDRESS 10750D  BYTES =  29464
+  SENDING DATA TO ADDRESS 10E825  BYTES =   9679
+  SENDING DATA TO ADDRESS 200000  BYTES =    128
+  SENDING DATA TO ADDRESS 500000  BYTES =   6002
+  SLOT HAS BEEN BACK UP TO PCCM
+  SLOT 06 LOADED AND STARTED.
+ 
+  BITS COMMAND:  Q
+  GEMINI%
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   21
+ 
+PCCM TROUBLESHOOTING HINTS.
+ 
+THE  FOLLOWING IS  A LIST  OF  TROUBLESHOOTING  HINTS  THAT MAY BE USEFUL IN
+DETERMINING IF A PCCM PRODUCT COMPONENT IS DEFECTIVE.
+ 
+PCCM LOGIC TABLE.
+ 
+THE   FOLLOWING TABLE  OUTLINES  THE ACTIONS THAT  AN ENGINE EQUIPPED WITH A
+PCCM CARD WILL PERFORM UNDER SELECTED CIRCUMSTANCES:
+ 
+     +-------------------------+------+-------------+
+     | EVENT                   | BOOT | PCCM RELOAD |
+     +-------------------------+------+-------------+
+     | MACHINE HALT  (ISIS     |      |             |
+     |  CRASH OR PSW) WITH     |      |      X      |
+     |  AUTORESTORE   FLAG     |      |             |
+     |  ENABLED  IN   ISIS     |      |             |
+     |  AND WATCHDOG TIMER     |      |             |
+     |  ENABLED.               |      |             |
+     +-------------------------+------+-------------+
+     | MACHINE HALT  (ISIS     |      |             |
+     |  CRASH OR PSW) WITH     |  X   |             |
+     |  AUTORESTORE   FLAG     |      |             |
+     |  DISABLED  IN  ISIS     |      |             |
+     |  AND WATCHDOG TIMER     |      |             |
+     |  ENABLED.               |      |             |
+     +-------------------------+------+-------------+
+     | POWER FAILURE           |      |      X      |
+     +-------------------------+------+-------------+
+     | WATCHDOG TIMER TRIP     |  X   |             |
+     |  (IF AUTORESTORE OPTION |      |             |
+     |  IS DISABLED IN ISIS)   |      |             |
+     +-------------------------+------+-------------+
+     | TOGGLING OF BOOT SWITCH |      |      X      |
+     |  (IF AUTORESTORE OPTION |      |             |
+     |  IS DISABLED IN ISIS)   |      |             |
+     +-------------------------+------+-------------+
+     | DDT G5A COMMAND         |  X   |             |
+     +-------------------------+------+-------------+
+ 
+ 
+     THE EVENTS ARE DEFINED AS FOLLOWS:
+ 
+        MACHINE HALT:
+           ENCOMPASSES A HARD ISIS CRASH,  OR HITTING THE FRONT CONSOLE
+           PSW SWITCH WITH THE WATCHDOG TIMER ENABLED.
+ 
+        POWER FAILURE:
+           ANY POWER TRANSIENT OR POWER LOSS.
+ 
+        WATCHDOG TIMER TRIP:
+           ANY ACTION WHERE THE WATCHDOG  TIMER  IS  NO LONGER TOGGLED.
+ 
+        TOGGLING BOOT SWITCH:
+           MANUAL TOGGLING OF HARDWARE BOOT SWITCH.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   22
+ 
+        DDT G5A COMMAND:
+           ENTERING DDT COMMAND TO FORCE MACHINE INTO BOOT.
+ 
+ 
+ 
+ 
+ 
+SOME OF THE MOST COMMON FAILURE POINTS ARE AS FOLLOWS:
+ 
+1.  NODE WILL NOT BOOT ONCE INSTALLED.
+ 
+THIS  MAY  BE  CAUSED  BY A JUMPER BEING INSTALLED ON THE PCCM MULTIFUNCTION
+CARD  AT  LOCATIONS  E5  AND/OR E6.    IF  A JUMPER  IS  INSTALLED  AT THESE
+LOCATIONS  IT SETS THE BOARD UP TO LOOK  FOR A +/- 12V POWER  SOURCE INSTEAD
+OF  THE   STANDARD  +/-  16V POWER SOURCE.   REMOVE  THE  JUMPERS  ARE  BOTH
+LOCATIONS.
+ 
+THE  ENGINE FRONT  CONSOLE  DISPLAY  WILL  BE  DIFFERENT FOR  PCCM  EQUIPPED
+MACHINES DURING THE BOOT SEQUENCE, THE FOLLOWING IS WHAT IT LOOKS LIKE:
+ 
+    +---+---+---+---+---+---+---+---+---+
+    | 0 | B | A | 5 | E | 0 | 1 | 0 | 1 |
+    +---+---+---+---+---+---+---+---+---+
+ 
+WHEN THE DISPLAY LOOKS LIKE THE ABOVE IT INDICATES THE BOOT HAS BEGUN AND IS
+LOOKING FOR THE PRESENCE OF THE SMARTBOOT TO LOAD FROM THE PCCM CARD.
+ 
+THE  DISPLAY WILL  QUICKLY CHANGE AS  THE  SMARTBOOT BEGIN  TO LOAD FROM THE
+PCCM CARD AND THE DISPLAY SHOULD LOOK AS FOLLOWS:
+ 
+    +---+---+---+---+---+---+---+---+---+
+    | 0 | 0 | 0 | 0 | X | 0 | 1 | 0 | 1 |
+    +---+---+---+---+---+---+---+---+---+
+ 
+    WHERE
+      X = WILL CYCLE FROM 1 TO 2, THEN REPEATEDLY CYCLE FROM 2 TO 3, THEN
+          FINALLY MOMENTARILY TO 6  FOLLOWED A FEW  SECONDS  LATER TO THE
+          NORMAL NODE CODE DISPLAY.
+ 
+ 
+ 
+ 
+IF AN UN-INITIALIZED SRAM CARD IS INSTALLED IN THE  PCCM HARDWARE THE ENGINE
+MAY FAIL TO BOOT AND APPEAR TO BE CYCLING THROUGH THE  BOOT, PCCM LOAD, BOOT
+CYCLE AS THE SMART BOOT ATTEMPTS TO READ THE SRAM CARD,  THE  WATCHDOG TIMER
+TRIPS, THE ENGINE BEGINS THE BOOT SYCLE AGAIN ENDLESSLY.   SHOULD THIS OCCUR
+INSURE THAT ONE OF THE SRAM CARDS IS DISABLED BY PUSHING THE EJECT BUTTON TO
+ALLOW THE ENGINE TO COMPLETE THE NOMAL BOOT CYCLE, THEN  RE-INSERT THE  SRAM
+CARD BEFORE THE DOWNLINE LOAD BEGINS.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   23
+ 
+ 
+2.  ENGINE GOES BACK INTO BOOT FOLLOWING THE DOWNLINE LOAD.
+ 
+THIS  IS  AN INDICATION THAT ISIS  HAS  CRASHED  DURING  INITIALIZATION  AND
+THE CRASH TABLE INFORMATION SHOULD BE REVIEWED EITHER BY  DUMPING THE  FIRST
+3000X BYTES OF  MEMORY  VIA BITS, OR FROM THE ENGINE FRONT  CONSOLE.  IF THE
+ISIS TYMFILE PARAMETER PCCRLD  IS SET TO 0 (DEFAULT) ISIS  WILL GO INTO BOOT
+FOLLOWING A HARD CRASH, IF THIS  VALUE IS SET TO 1 IN THE  TYMFILE ISIS WILL
+ATTEMPT TO RELOAD FROM  THE PCCM  CARD (WHICH COULD RESULT  IN THE CRASH AND
+RESTART  SEQUENCE  BEING REPEATED 5 TIMES OR MORE BEFORE  THE ENGINE FINALLY
+ENTERS THE NORMAL BOOT).
+ 
+THE MOST COMMON CAUSES FOR THESE START UP CRASHES ARE AS FOLLOWS:
+ 
+    O  BAD04 8753 (453) - MEMORY RANGE ERROR
+    O  BAD00 8730 (030) - UNEXPECTED I/O INTERRUPT
+    O  BAD00 8779 (079) - BAUDR MISMATCH
+ 
+THE MEMORY RANGE  ERROR (TYPE 453) AND UNEXPECTED  I/O  INTERRUPT (TYPE 030)
+MAY BE CAUSED BY  INTERRUPTS  BEING  GENERATED  ON A  SYNC  PORT THAT IS NOT
+DEFINED IN THE ISIS TYMFILE.  IF ONE OR MORE SYNC PORTS ARE  CONFIGURED ON A
+NODE, THE NSYNC  PARAMETER IN  THE ISIS TYMFILE SHOULD BE SET TO  16 DECIMAL
+(NSYNC EQ $A 16), OR  THE  FULL COMPLIMENT OF A STANDARD SYNC  BOARD.  IF NO
+SYNC PORTS ARE IN USE OR DEFINED  ON A  NODE BUT A SYNC BOARD  IS INSTALLED,
+THE RIBBON CABLES  CONNECTING  TO THE  SYNC BOARD EDGE AS WELL  AS ALL CLOCK
+JUMPERS ON THE SYNC BOARD MUST BE REMOVED.
+ 
+THE  BAUDR  MISMATCH CRASH (079) IS  DESIGNED  TO SIGNIFY THAT  ISIS FOUND A
+MISMATCH BETWEEN  THE  HARDWARE  N/T  JUMPER  SETTING AND THE  BAUDR  EQUATE
+IN  THE  ISIS   TYMFILE.    CHECK THE  ISIS  TYMFILE  AND  INSURE  THAT  THE
+HARDWARE N/T JUMPER IS SET ACCORDINGLY.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   24
+ 
+3.  CODE IMAGE IS NOT BACKED UP TO THE PCCM CARD FOLLOWING DOWNLINE LOAD.
+ 
+VERIFY  THAT THE  PCCM  AND  AUTOBACKUP  OPTIONS  ARE  ENABLED  IN  THE ISIS
+TYMFILE (SEE PCCMOP MACRO EXPLANATION AT THE END  OF  THIS  DOCUMENT FOR THE
+MACRO SETTINGS  OR  THE EQUATE STATEMENTS NECESSARY FOR OLD STYLE TYMFILES).
+IF  EITHER IS  NOT  ENABLED THE CORE IMAGE WILL NOT BE WRITTEN AUTOMATICALLY
+TO THE PCCM MEMORY CARD FOLLOWING A DOWNLINE LOAD.   A SIMPLE  WAY TO VERIFY
+IF THE PCCM OPTION IS ENABLED IN ISIS IS  TO LOG  INTO SLOT FF AND ISSUE THE
+?PCCM  COMMAND.   IF THE  PCCM MENU  POPS UP  THE  OPTION IS ENABLED, IF THE
+MESSAGE  "ILLEGAL COMMAND TYPE '\'"  PRINTS THE  ENTIRE PCCM OPTION  IS  NOT
+ENABLED AND CAN NOT BE ACCESSED.  IF THE PCCM OPTION WAS ENABLED, THEN THERE
+SHOULD  ALSO BE AN EVENT  RECORDED IN  THE ISIS  DDT HISTORY  INDICATING THE
+FAILURE.  USE THE PCCM STATUS COMMAND (COMMAND 1) TO VERIFY THAT THE CARD IS
+OPERATIONAL, IF NOT REPLACE THE SRAM CARD.
+ 
+ 
+ 
+4.  CODE IMAGE IS NOT RESTORED FOLLOWING A POWER UP SEQUENCE.
+ 
+VERIFY  THAT THE  PCCM  AND  AUTORESTORE  OPTIONS  ARE  ENABLED IN THE  ISIS
+TYMFILE (SEE  PCCMOP MACRO EXPLANATION AT THE END  OF THIS  DOCUMENT FOR THE
+MACRO SETTINGS  OR  THE EQUATE STATEMENTS NECESSARY FOR OLD STYLE TYMFILES).
+IF   EITHER  IS   NOT   ENABLED  THE  MEMORY  IMAGE  WILL  NOT  BE  RESTORED
+AUTOMATICALLY FROM THE PCCM MEMORY CARD FOLLOWING A POWER UP SEQUENCE.
+ 
+THE  FIRST STEP  IS  TO  HAVE  NETCON  OR NSSC RELOAD THE CODE, THEN USE THE
+STATUS  COMMAND (COMMAND 1) TO CHECK THE STATUS  OF THE SRAM CARD AND VERIFY
+IF  ISIS AND  NODE  CODE   HAVE BEEN  BACKED  UP TO THE MEMORY CARD.  IF THE
+STATUS COMMAND  SHOWS THE PCCM HARDWARE IS OPERATIONAL AND  THE  CODE BACKED
+UP PROPERLY, USE THE AUTORESTORE  FLAG  COMMAND (COMMAND 6) TO TURN THE AUTO
+RESTORE FLAG ON.   AT THIS  POINT VERIFICATION  OF  THE  AUTORESTORE IS DONE
+BY  SIMULATING A POWER FAIL (POWER ON/OFF ENGINE)  AND  CHECK THAT  THE CODE
+IS PROPERLY RESTORED.
+ 
+ 
+ 
+ 
+5.  SLOTS ARE NOT LOADED FOLLOWING A POWER FAILURE.
+ 
+VERIFY  THAT THE  SLOT  CODE HAS BEEN BACKED UP TO THE PCCM CARD BY ISSUING
+THE STATUS COMMAND (COMMAND  1).  FOLLOWING  ANY  SLOT LOAD THE CODE IS NOT
+BACKED UP  AUTOMATICALLY UNLESS  THE  SLOT  IS LOADED  AT  THE SAME TIME AS
+THE  SYSTEM SOFTWARE (ISIS AND NODE CODE).  IF THE CODE IS NOT DISPLAYED BY
+THE STATUS  COMMAND OUTPUT, HAVE NETCON OR NSSC RELOAD ALL OF THE SLOT CODE
+THAT WAS MISSING, AND ISSUE  THE  SLOT  BACKUP COMMAND (COMMAND 2) TO WRITE
+EACH SLOT TO THE PCCM MEMORY CARD.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   25
+ 
+6.  TARGET MACHINE WILL NOT COME UP IN THE NETWORK.
+ 
+SOME  OF THE MOST COMMON  CAUSES OF  THIS FAILURE ARE:
+ 
+  O  NODE NUMBER OR KERNEL HOST ALREADY UP IN THE NETWORK.
+ 
+  O  MISMATCH  BETWEEN PORT  LU  ASSIGNMENTS  IN NODE  CODE  AND  THE
+     PHYSICAL  CONNECTIONS.  VERIFY  THIS  BY CHECKING THE CODE  OR A
+     ?LU COMMAND FROM  DDT  IN SLOT 0,  MATCHING THEM TO THE PHYSICAL
+     PORT CONNECTIONS.
+ 
+  O  NO TII  LINK  OR XLINK AVAILABLE IN NODE CODE ON EITHER MACHINE.
+     IF EACH SIDE IS  SUPPOSED TO  BE  A  TIILNK THEN THERE MUST BE A
+     TIILNK STATEMENT IN THE TYMFILE  FOR EACH NODE, OR THERE MUST BE
+     AT LEAST 1 XLINK AVAILABLE ON THE NODES.
+ 
+  O  NETID MISMATCH.
+ 
+ 
+ 
+7.  BITS SLOT LOADS FAIL.
+ 
+THIS  MAY BE CAUSED  BY ONE OF TWO REASONS  RELATING THE  DDT  USERNAMES AND
+LICENSES OR THE VERSION OF BITS.  ISIS 14.00 HAS RESTRICTED USAGE OF THE DDT
+"H"  COMMAND (HALT) TO SELECTED USERNAMES (SUCH AS GATEWAY), BUT ADDED A NEW
+LICENSE THAT ALLOWS USERS TO ISSUE THE "?HALT" TO HALT  A SLOT  IF THE  USER
+HAS  THIS LICENSE .  THE NEW EXPANDED GOODGUY LISTS BEING DEPLOYED SHOULD BE
+REVIEW (CONTACT NETWORK  SECURITY FOR  YOUR  USERNAME AND IT'S LICENSE) IF A
+PROBLEM ARISES  IN  HALTING  A SLOT  (THE FIRST SETP DONE VIA BITS IN A SLOT
+LOAD  IS TO  HALT THE SLOT).   SEE THE  SECTION FOLLOWING THE EXPANDED MACRO
+DEFINITIONS FOR THE LICENSE DEFINITIONS AND SAMPLE GOODGUY FORMATS.
+ 
+THE SECOND POSSIBLE PROBLEM ARE IS THE VERSION OF BITS BEING USED.  WITH THE
+ADVENT OF THE "H" AND "?HALT" COMMANDS BITS  MUST  BE CAPABLE OF TRYING BOTH
+FORMS  IN ORDER  TO HALT A SLOT.  THE FIRST VERSION CAPABLE OF DOING THIS IS
+BITS 5.05 CONTROL NUMBER 54,  WHICH CURRENTLY  RESIDES ON THE GNS SERVERS AS
+"NEWBITS".   EARLIER VERSIONS OF BITS MAY FAIL WHEN SLOT LOADS ARE ATTEMPTED
+WITH MESSAGES INDICATING  INSUFFICIENT LICENSE,  OR SIMPLY A FAILURE WITH NO
+BITS  EXPLANATORY MESSAGE.   SHOULD THE  SLOT  LOADS FAIL (WHEN DOING A NODE
+LOAD WITH ISIS, SLOT 00 AND ADDITIONAL INTERFACE SLOTS THE LOAD WILL BE ABLE
+TO COMPLETE SUCCESSFULLY),  CHECK  THE VERSION  OF BITS TO INSURE IT IS 5.05
+CONTROL NUMBER 54 OR GREATER AS WELL AS VERIFYING THE USERNAME THAT WAS USED
+HAD SUFFICIENT LICENSE IN THE GOODGUY LIST TO HALT A SLOT.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   26
+ 
+ 
+8.  CONSAT SLOT CONTINUOUSLY RESTARTS AFTER LOADING.
+ 
+THIS IS MOST COMMONLY CAUSED BY A MISMATCH IN THE ASYNC MODULES USED BY ISIS
+AND  THE CONSAT.  THERE ARE TWO COMPONENTS THAT MUST BE LOOKED AT SHOULD THE
+CONSAT CRASH WITH A TYPE 80 CODE (CONNECT SVC FAILURE):
+ 
+   O  ISIS   TYMFILE EQUATE NEWARN
+   O  CONSAT TYMFILE EQUATE ISIS13
+ 
+THERE  IS A  PROBLEM  WITH  CONSAT 6.40  THAT WILL  REQUIRE  A  SLOT TYMFILE
+CHANGE AND REGEN IN ORDER  TO USE  CONSAT 6.40 AND  ANY  ISIS  VERSION ABOVE
+13.02.  WHEN THE LAST  RELEASE  OF CONSAT 6.40 WAS  DONE THERE WAS A  CHANGE
+TO THE CONNECT LOGIC FOR  PXL'S, BUT  THIS CHANGE  WAS  SOMEHOW  NOT  IN THE
+CODE  THAT  EVENTUALLY   BECAME THE  RELEASED CODE.  TO  CORRECT  THIS THERE
+IS A PATCH IN THE  CONSAT 6.40  PATCH  FILE THAT  MUST BE ASSEMBLED IN NAMED
+"MVCSVC.TST" THAT WILL SHOW UP IN THE GEN LOG AS FOLLOWS:
+ 
+       PATCH ADDED ON 910116 AT 1423 BY SDW.MCVSVC.
+            STARTS AT IZASN5+2A AND IS 2X BYTES LONG
+       <<< FIX CONNECT SVC WHEN USED WITH ISIS V13.01 OR LATER >>>
+ 
+THIS  PATCH IS  REQUIRED  FOR ASSEMBLY  IN THE  CONSAT 6.40 FOR ALL VERSIONS
+OF ISIS ABOVE 13.02.  IN ORDER  TO  HAVE IT ASSEMBLED  INTO THE  CONSAT 6.40
+CODE THE FOLLOWING ADDITION MUST BE MADE TO THE CONSAT SLOT TYMFILE:
+ 
+    ISIS13  EQ      1               : ISIS VERSION 13 OR GREATER
+ 
+THIS EQUATE (ISIS13) APPLIES ONLY TO THOSE CONSAT SLOTS THAT ARE NOT ON MAC5
+MACHINES  (PXL'S OR  OTHER  MAC5 NODES) AND ONLY IF THE CONSAT IS CONFIGURED
+FOR STANDARD ASYNC (NOT SIO ASYNC).  SIO ASYNC DOES NOT USE THE SAME CONNECT
+LOGIC OR RING STRUCTURE AS  STANDARD ASYNC  AND THEREFORE  DOES NOT NEED THE
+ISIS13 EQUATE OR THE  PATCH SHOWN IN THE ABOVE GEN.  MAC5 NODES (SUC AS PXL)
+WILL  ALREADY HAVE  THE ISIS13 EQUIVALENT FLAG SET DUR TO THE HARDWARE BEING
+A MAC5 MACHINE,  THIS  IS DONE  INTERNALLY IN THE CONSAT CODE  AND THEREFORE
+THE ISIS13 EQUATE IS NOT  NEEDED  FOR  MAC5  MACHINE.  ALL  STANDARD ENGINES
+MUST HAVE THE ISIS13 SET  IN THE CONSAT TO CORRESPOND WITH THE NEWARN EQUATE
+SET IN ISIS AS DESCRIBED INT HE FOLLOWING.
+ 
+IF THE ISIS13  EQUATE IS LEFT OUT  (THE  DEFAULT IS 0)  THE ABOVE PATCH WILL
+NOT  BE INCLUDED AND THE CONSAT  SLOT  WILL CRASH  AT STARTUP WITH A CONNECT
+SVC FAILURE AS  THE CONSAT WILL ISSUE A CONNECT  SVC FOR THE OLD STYLE ASYNC
+BUT ISIS  ONLY HAS THE NEW STYLE ASYNC.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   27
+ 
+THE  NEWARN EQUATE  IN  ISIS  TELLS  ISIS  WHICH  OF THE  ASYNC  MODULES  TO
+INCLUDE IN ISIS:  NEWARN SET TO 0 INCLUDES ONLY THE  OLD ASYNC MODULE, WHILE
+NEWARN SET TO 1 INCLUDES ONLY THE NEW ASYNC MODULE.
+ 
+THE  NEW  CONNECT  AND  ASYNC RING STRUCTURES IN ISIS 11.33 AND ABOVE CAN BE
+DESCRIBED AS THE FOLLOWING:
+ 
+   O  USES ISIS CONNECT SVC CONNECT NUMBER 14
+   O  USES NEGATIVE RING STRUCTURE AND INDEXING
+ 
+THE  OLD  CONNECT AND  ASYNC RING STRUCTURES IN ALL VERSIONS OF ISIS  EXCEPT
+11.33 CAN BE DESCRIBED AS THE FOLLOWING:
+ 
+   O  USES ISIS CONNECT SVC CONNECT NUMBER 3
+   O  USES POSITIVE RING STRUCTURE AND INDEXING
+ 
+THE  NEWARN  VALUE  DEFAULTS  TO 0 (MEANING USING THE OLD  ASYNC MODULE) FOR
+BOTH ISIS 13.02 AND 14.00.
+ 
+THERE  CAN ONLY  BE ONE  ASYNC MODULE IN ISIS, EITHER THE NEW OR THE OLD BUT
+NOT BOTH.
+ 
+THE  RING  STRUCTURES  ARE  CRITICAL TO THE CONSAT AS THE SLOT WILL CRASH IF
+THE  WRONG ASYNC MODULES IS IN  ISIS.   A  QUICK TABLE OF  THE ASYNC MODULES
+AND NETWORK INTERFACES LOOKS AS FOLLOWS:
+ 
+ 
+    +-----------------------------+---------------+----------------+
+    |                             |     NEW       |       OLD      |
+    |  INTERFACE TYPE             | ASYNC MODULE  |  ASYNC MODULE  |
+    |                             |  (NEWARN=1)   |   (NEWARN=0)   |
+    +-----------------------------+---------------+----------------+
+    |  CONSAT  6.03               |               |      XX        |
+    +-----------------------------+---------------+----------------+
+    |  CONSAT  6.05               |               |      XX        |
+    +-----------------------------+---------------+----------------+
+    |  CONSAT  6.40               |     XX        |                |
+    +-----------------------------+---------------+----------------+
+    |  CONSAT 11.0X               |     XX        |      XX        |
+    +-----------------------------+---------------+----------------+
+    |  TYMCOM  3.01               |               |      XX        |
+    +-----------------------------+---------------+----------------+
+    |  TYMCOM  4.05               |               |      XX        |
+    +-----------------------------+---------------+----------------+
+    |  TYMCOM  4.06               |               |      XX        |
+    +-----------------------------+---------------+----------------+
+    |  TINET (PAYMENT SYSTEMS)    |               |      XX        |
+    +-----------------------------+---------------+----------------+
+ 
+NOTE  THAT CONSAT  6.40 REQUIRES THE NEW ASYNC MODULE  IN ISIS AND ALL OTHER
+VERSIONS   OF ASYNC INTERFACES  (CONSAT'S  OTHER  THAN  6.40, TYMCOM AND ALL
+TINET - PAYMENT SYSTEMS SLOTS) REQUIRE THE OLD ASYNC MODULE IN ISIS.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   28
+ 
+ 
+ 
+GENERIC TROUBLESHOOTING
+ 
+ 
+THE  PCCM ENGINE  SMART CARD TROUBLESHOOTING PROCEDURES ARE STRAIGHTFORWARD.
+FIRST, REFER BELOW  TO THE  LIST OF  OPERATING  CONDITIONS THAT SHOW HOW THE
+CARD IS SUPPOSED TO FUNCTION.
+ 
+WITH THE CARD OPTION JUMPERS AND STRAPS SET ACCORDING TO THE RECOMMENDATIONS
+OF THIS  CFB THE  CARD SHOULD OPERATE ACCORDING TO THE FOLLOWING CONDITIONS/
+EVENTS.  AS YOU READ  THE TABLE BELOW ASSUME THAT ISIS, NODE CODE, AND SLOTS
+ARE PROPERLY BACKED UP ON THE SRAM CARDS OF THE PCCM.  KEEP IN MIND THAT THE
+AUTORESTORE FLAG IS A SOFTWARE BIT THAT IS STORED ON THE SRAM CARD(S).  THIS
+FLAG GOVERNS WHETHER THE CODE  STORED ON THE SRAM CARD(S) WILL AUTOMATICALLY
+BE LOADED INTO ENGINE MEMORY UNDER CERTAIN CONDITIONS LISTED BELOW.
+ 
+ 
+1.  POWER FAILURE/RECOVERY.
+ 
+    WATCHDOG TIMER ENABLED  + AUTORESTORE FLAG SET:     PCCM RELOADS ENGINE
+    WATCHDOG TIMER DISABLED + AUTORESTORE FLAG SET:     ENGINE STAYS HALTED
+    WATCHDOG TIMER ENABLED  + AUTORESTORE FLAG NOT SET: ENGINE RUNS BOOT
+    WATCHDOG TIMER DISABLED + AUTORESTORE FLAG NOT SET: ENGINE STAYS HALTED
+ 
+ 
+2.  ISIS HALT.
+ 
+    WATCHDOG TIMER ENABLED  + AUTORESTORE FLAG SET:     PCCM RELOADS ENGINE
+    WATCHDOG TIMER DISABLED + AUTORESTORE FLAG SET:     ENGINE STAYS HALTED
+    WATCHDOG TIMER ENABLED  + AUTORESTORE FLAG NOT SET: ENGINE RUNS BOOT
+    WATCHDOG TIMER DISABLED + AUTORESTORE FLAG NOT SET: ENGINE STAYS HALTED
+ 
+   (NOTE: AFTER THE THIRD ISIS CRASH IN A ROW A SPECIAL COUNTER  LOCATION
+          IS CHECKED AND THE PCCM WILL NOT RELOAD THE CODE AGAIN, INSTEAD
+          THE BOOTSTRAP IS LOADED AND STARTS TO RUN.  THIS APPLIES TO THE
+          FIRST SET OF CONDITIONS WHERE THE  WATCHDOG TIMER IS  ENABLED +
+          AUTORESTORE FLAG IS SET).
+ 
+ 
+3.  ENGINE MICROCODE INITIATED HALT (SUCH AS 1E9DEAD).
+ 
+    WATCHDOG TIMER ENABLED  + AUTORESTORE FLAG SET:     PCCM RELOADS ENGINE
+    WATCHDOG TIMER DISABLED + AUTORESTORE FLAG SET:     ENGINE STAYS HALTED
+    WATCHDOG TIMER ENABLED  + AUTORESTORE FLAG NOT SET: ENGINE RUNS BOOT
+    WATCHDOG TIMER DISABLED + AUTORESTORE FLAG NOT SET: ENGINE STAYS HALTED
+ 
+ 
+4.  BOOT SWITCH IS MANUALLY ACTIVATED.
+ 
+    AUTORESTORE FLAG IS SET: PCCM RELOADS ENGINE
+    AUTORESTORE FLAG IS NOT SET: ENGINE RUNS BOOT
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   29
+ 
+ 
+5.  MANUAL "INI" VIA FRONT CONSOLE.
+ 
+    WATCHDOG TIMER ENABLED  + AUTORESTORE FLAG SET:     ISIS RESTARTS
+    WATCHDOG TIMER DISABLED + AUTORESTORE FLAG SET:     ISIS RESTARTS
+    WATCHDOG TIMER ENABLED  + AUTORESTORE FLAG NOT SET: ISIS RESTARTS
+    WATCHDOG TIMER DISABLED + AUTORESTORE FLAG NOT SET: ISIS RESTARTS
+ 
+ 
+6.  G5A COMMAND ENTERED FROM ISIS KERNEL.
+ 
+    WATCHDOG TIMER ENABLED  + AUTORESTORE FLAG SET:     ENGINE RUNS BOOT
+    WATCHDOG TIMER DISABLED + AUTORESTORE FLAG SET:     ENGINE RUNS BOOT
+    WATCHDOG TIMER ENABLED  + AUTORESTORE FLAG NOT SET: ENGINE RUNS BOOT
+    WATCHDOG TIMER DISABLED + AUTORESTORE FLAG NOT SET: ENGINE RUNS BOOT
+ 
+ 
+ 
+ 
+THE  FIRST STEP  IN TROUBLESHOOTING IS TO LOG INTO THE ISIS  KERNEL (SLOT FF)
+AND  TYPE IN  "?PCCM"  CARRIAGE  RETURN.  IT  SHOULD  COME  BACK  WITH:
+ 
+                    <<< PCCM INTERFACE MENU SELECTION >>>
+ 
+                        (LIST OF NINE CHOICES)....
+ 
+ 
+IF THAT BANNER DOES NOT APPEAR AND YOU GET:
+ 
+    "ILLEGAL COMMAND TYPE '\' "
+ 
+IT  MEANS THAT THE ISIS CODE WAS  GENNED  WITH TYMFILE PARAMETERS THAT DO NOT
+EXPECT PCCM HARDWARE IN THIS ENGINE.
+ 
+ONCE  YOU HAVE  MADE SURE  THAT ISIS  WAS GENNED TO EXPECT PCCM, LOG INTO THE
+ISIS KERNEL  AND  GET  TO  THE PCCM  MENU OF CHOICES  BY  TYPING "?PCCM"  AND
+SELECT  OPTION  1  WHICH  WILL GIVE  YOU A COMPREHENSIVE STATUS OF  THE  PCCM
+HARDWARE  AND CODE STORAGE.  THE  FIRST  SECTION OF  THIS STATUS  SHOULD LOOK
+LIKE THIS:
+ 
+   PCCM MEMORY CARD STATE: PRESENT/READY
+   CARD BATTERY CONDITION: GOOD
+   TOTAL MEMORY CARD SIZE: 1024DK BYTES (OR 2048DK BYTES)
+   CARD MEMORY PROTECTION: (READ/WRITE)
+   AUTO. CODE RESTORE OPT: ON
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   30
+ 
+(THEN PRESS ANY KEY TO CONTINUE AND IT WILL DISPLAY INFORMATION SHOWING WHAT
+CODE, IF ANY, IS BACKED UP ONTO THE SRAM CARDS).
+ 
+               <<< PCCM CODE BACKUP INFO >>>
+  SLOT   PID   VERSION           DATE & TIME
+  ----   ---   -------      ----------------------
+   FF    I2IS    14.01      10/11/91 22:00:00 GMT *
+    0    TII      6.00      10/11/91 22:00:00 GMT *
+    1    PBH     17.02      10/11/91 16:09:02 GMT @
+    2    CMTI   107.04      10/12/91 01:16:57 GMT @
+ 
+      * CODE GENERATION TIME
+      @ CODE BACKUP TIME
+ 
+(THEN PRESS ANY KEY TO CONTINUE AND IT WILL DISPLAY THE NINE ITEM MENU).
+ 
+THE  ABOVE DISPLAY SHOWS PROPER PCCM SRAM CARD HEALTH AND IT SHOWS THAT ISIS,
+NODE CODE,  AND SLOTS 1 & 2 HAVE BEEN BACKED UP ONTO THE SRAM CARD(S).  SOME
+PROBLEM INDICATIONS WOULD BE AS FOLLOWS:
+ 
+ O  IF THE "CARD MEMORY PROTECTION" SAYS "READ ONLY" IT MEANS THE SRAM
+    CARD WRITE PROTECT SWITCH WAS SET IN THE READ ONLY POSITION.  MOVE
+    THIS SWITCH TO THE RIGHT WITH A SMALL POINTED OBJECT.
+ 
+ O  IF  THE "AUTO. CODE RESTORE OPT" (THIS  IS  THE  AUTORESTORE FLAG)
+    SAYS "OFF"   THEN THE CODE  WILL  NOT BE  LOADED BACK  INTO ENGINE
+    MEMORY FROM THE PCCM  SMART CARD  ON  POWER RECOVERY OR BOOT.  LOG
+    INTO  THE PCCM  MENU AND SELECT ITEM 6 AND SET IT TO A "1" TO TURN
+    ON  THE  AUTOMATIC  CODE  RESTORE FEATURE.    ALSO CHECK THE  ISIS
+    TYMFILE AND MAKE SURE THE AUTORESTORE FLAG IS SET TO  "AUTOON"  IN
+    THE PCCMOP  MACRO. (SEE BELOW FOR EXPLANATION OF PCCMOP MACRO FOR
+    MACRO DETAILS OR EQUATE SETTINGS FOR OLD STYLE TYMFILES).
+ 
+ O  IF  THE "PCCM CARD STATE" DOES  NOT  SAY "PRESENT/READY"  THEN THE
+    PCCM CARD CIRCUITRY IS NOT ABLE TO COMMUNICATE WITH ONE OR BOTH OF
+    THE SRAM CARDS.  TRY REPLACING THE SRAM  CARDS ONE  AT  A TIME (IF
+    THERE ARE TWO).  IF THE   PROBLEM STILL DOES NOT CLEAR REPLACE THE
+    PCCM CARD.  THE STATUS SELECTION   IN THE  MENU  ITEMS  WILL STATE
+    "PCCM CARD DETECTION ERROR" IF THE PCCM    CANNOT COMMUNICATE WITH
+    ONE OR BOTH SRAM CARDS.
+ 
+ O  IF THE "CARD BATTERY CONDITION" DOES  NOT  SAY "GOOD"  REPLACE THE
+    SRAM  CARD  LITHIUM BATTERY AND RETEST.   IF  THE  PROBLEM  IS NOT
+    CLEARED REPLACE THE SRAM  CARD.  THE MITSUBISHI SRAM CARDS REQUIRE
+    YOU TO REMOVE A SMALL SCREW BEFORE  PULLING OUT THE BATTERY HOLDER
+    PIECE ON THE END OF THE CARD.  THE EPSON SEIKO  SRAM CARDS REQUIRE
+    YOU TO  PUSH IN  A SMALL  CATCH-LEVER  ON THE CORNER OF THE   CARD
+    BEFORE PULLING OUT THE BATTERY HOLDER PIECE.
+ 
+ 
+IF  YOU ARE  IN  DOUBT ON THE INTEGRITY OF ONE OR BOTH OF THE SRAM CARDS RUN
+THE  MEMORY TEST BY  CHOOSING  ITEM 7.  SEE IF BOTH READ AND WRITE TESTS SAY
+"PASSED", AND THE INITIALIZATION  COMPLETES SUCCESSFULLY.    THIS  PROCEDURE
+WIPES OUT ALL ENGINE CODE STORED ON  THE  SRAM CARD(S).   NOW  CHOOSE ITEM 4
+TO RESTORE ISIS AND  NODE  CODE ONTO  THE SRAM CARD(S).   NEXT, RESTORE  THE
+SLOTS  ONE AT  A TIME BY CHOOSING ITEM 2.  THEN YOU MUST  RESTART EACH  SLOT
+AGAIN.   ONCE YOU HAVE  FINISHED  BACKING UP THE ISIS, NODE CODE, AND SLOTS,
+CHOOSE ITEM 1 TO CHECK STATUS AND MAKE SURE THE CODE IS REALLY BACKED UP.
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   31
+ 
+BELOW ARE SOME ADDITIONAL INFORMATION ITEMS THAT ARE IMPORTANT:
+ 
+1.  REMEMBER  THAT IN  ISIS VERSION  14.00 THERE  IS  A TYMFILE MACRO CALLED
+    PCCMOP  WHICH HAS THREE IMPORTANT  PCCM  PARAMETERS.   THE MACRO IS  SET
+    UP AS FOLLOWS:
+ 
+        PCCMOP(P1,P2,P3,P4)
+ 
+        WHERE P1,P2, ETC. ARE THE DIFFERENT ISIS PARAMETER SETTINGS:
+ 
+    P1 WILL BE EITHER "PCCMON" OR "PCCMOFF".  THEY ENABLE OR DISABLE  THE
+       PCCM CAPABILITY IN THE ISIS CODE.
+ 
+    P2 WILL BE EITHER "AUTOON" OR "AUTOOFF".  IF AUTOON IS SET,  CODE WILL
+       AUTOMATICALLY BE BACKED UP ONTO THE SRAM CARD(S) WHEN ISIS AND NODE
+       CODE (AND SLOTS) ARE FIRST LOADED WHEN THE ENGINE IS IN  BOOT.  (IF
+       SLOTS ARE INDIVIDUALLY LOADED LATER AFTER  ISIS AND  NODE CODE  ARE
+       RUNNING THEY ARE NOT  AUTOMATICALLY BACKED  UP AND MUST BE MANUALLY
+       BACKED UP).
+ 
+    P3 WILL ALSO BE EITHER "AUTOON" OR "AUTOOFF".  THIS IS THE AUTORESTORE
+       FLAG.  IF AUTOON  IS  SET  CODE WILL AUTOMATICALLY BE RELOADED INTO
+       ENGINE MEMORY FOLLOWING A  POWER RECOVERY OR ACTIVATION OF THE BOOT
+       SWITCH  (IF CODE  IS  PROPERLY  STORED  ON  THE  SRAM  CARD).  THIS
+       PARAMETER  CAN BE  CHANGED ONCE  ISIS IS UP AND RUNNING BY ENTERING
+       THE PCCM  MENU SELECTIONS  AND CHOOSING  ITEM 6.  THEN SET A "1" TO
+       TURN ON THE AUTORESTORE FLAG.
+ 
+    P4 WILL BE EITHER "ON" OR "OFF".  THIS IS THE  ACTION  PCCM WILL  TAKE
+       UPON ENCOUNTERING A FATAL ISIS  CRASH.  IF  ON IS SET THEN THE PCCM
+       WILL RESTORE THE CODE  ON  AN ISIS CRASH, IF OFF IS SET THE  ENGINE
+       WILL GO INTO THE NORMAL DEVICE 5 BOOT.  THE DEFAULT IS OFF.
+ 
+ 
+    FOR  AN ENGINE WITH PCCM INSTALLED THE PCCMOP  MACRO WILL USUALLY BE SET
+    UP AS FOLLOWS:
+ 
+       PCCMOP(PCCMON,AUTOON,AUTOON,OFF)
+ 
+    OR FOR OLD STYLE TYMFILES THE EQUATE SETTINGS SHOULD LOOK AS FOLLOWS:
+ 
+       SMART    EQ      1       :  ENABLE PCCM FACILITY
+       PC.BKUP  EQ      1       :  ENABLE PPCM AUTO BACKUP  FEATURE
+       PC.RSTR  EQ      1       :  ENABLE PPCM AUTO RESTORE FEATURE
+       PCCRLD   EQ      0       :  FORCE ENGINE TO BOOT ON ISIS CRASH
+ 
+ 
+ 
+2.  WHEN  YOU MANUALLY  ACTIVATE THE BOOT SWITCH  ON AN  ENGINE WITH A  PCCM
+    CARD INSTALLED  THE  FOLLOWING  CONDITIONS  MUST BE TRUE FOR THE PCCM TO
+    LOAD CODE SUCCESSFULLY INTO ENGINE MEMORY:
+ 
+      A.  CODE STORED PROPERLY ON SRAM CARD(S).
+      B.  AUTORESTORE FLAG IS SET TO ON.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   32
+ 
+3.  THERE  ARE A  NUMBER   OF ERROR   CONDITIONS  DETECTED   BY  THE SPECIAL
+    "BOOT 8" PCCM FIRMWARE  AND  THEY  ARE  SHOWN ON  THE  LEFT SIDE  OF THE
+    ENGINE FRONT CONSOLE WHEN THE BOOTSTRAP IS ACTIVATED:
+ 
+      BAD00 - NO SRAM CARD(S) PLUGGED INTO THE PCCM CARD
+      BAD01 - LOW BANK SRAM CARD BATTERY IS BAD
+      BAD02 - HIGH BANK SRAM CARD BATTERY IS BAD
+      BAD03 - SRAM CARD SIZE IS INCORRECT
+      BAD10 - SRAM CARD(S) NOT INITIALIZED
+      BAD11 - AUTORESTORE FLAG NOT SET
+      BAD12 - NO ISIS CODE LOADED INTO SRAM CARD(S)
+      BAD13 - MISMATCH BETWEEN GMT AND BYTE COUNT ON SRAM CARD
+      BAD14 - ISIS BLOCK COUNT < 0
+      BAD15 - ISIS BLOCK END ADDRESS < 0
+      BAD16 - ISIS BLOCK END ADDRESS INVALID ( > TOP 8K)
+      BAD30 - ISIS CRASH RETRY COUNT > 3
+ 
+      BAD40-FF  - BLOCK ADDRESS CHECKSUM ERROR
+ 
+    IF  ANY OF THE ABOVE ERROR CONDITIONS ARE FOUND THE ERROR DISPLAY WILL
+    STAY  ON THE  FRONT  CONSOLE  FOR ABOUT  10 SECONDS  THEN THE  REGULAR
+    ENGINE BOOTSTRAP WILL LOAD AND RUN.
+ 
+    AN  ENTRY IS  WRITTEN  TO  THE ISIS CRASH TABLE WITH THE BADXX CODE IN
+    ORDER TO PRESERVE THE CRASH CAUSE FOR ANALYSIS.  THE ERROR CODE CAN BE
+    FOUND AT THE 8TH AND 9TH HALFWORDS IN THE CRASH TABLE:
+ 
+        *^FF
+ 
+        SLOT FF
+        *R 6C 4
+        00006C  0000  1560
+        *R 1460 11
+        001460  06BF  0007  0002  0578  8000  0000  0006  AD41 0000
+                                                          ---- ----
+                                                              |
+                                                              |
+                                LOCATION OF SMART BOOT -------
+                                CRASH CODE
+ 
+    THE  ABOVE SEQUENCE CAN BE VIEWED AFTER THE  NODE IS UP AND RUNNING BY
+    LOGGING INTO  DDT  SLOT FF (KERNEL), OR VIA  THE  ENGINE FRONT CONSOLE
+    (MAKING SURE  THE  WATCHDOG  TIMER IS  DISABLED).  THE SECOND HALFWORD
+    DISPLAYED  FROM  ADDRESS 6CX WILL POINT  TO THE  CRASH  TABLE STARTING
+    ADDRESS.
+ 
+ 
+4.  IF  A FIELD  ENGINEER WANTS  TO BOOT  AN ENGINE  WITH PCCM INSTALLED, TO
+    RUN  DIAGNOSTICS FOR  EXAMPLE,  AND  CODE  IS STORED ON THE SRAM CARD(S)
+    AND THE  AUTORESTORE FLAG  IS SET,   IT  WILL  BE NECESSARY TO  MANUALLY
+    EJECT  THE SRAM  CARD(S)  AND   THEN  ACTIVATE  THE  BOOT  SWITCH.   THE
+    BOOTSTRAP  WILL THEN  RUN  AND THE  FE CAN RE-INSERT  THE SRAM CARD WITH
+    POWER ON.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   33
+ 
+ 
+TO  TEST THE  PROPER FUNCTIONING OF A PCCM IN AN ENGINE ENSURE THAT ALL PCCM
+HARDWARE  STRAPS, JUMPERS, AND  ROTARY SWITCHES ARE SET CORRECTLY.  POWER UP
+THE ENGINE, THEN MANUALLY PUT THE BOOT  SWITCH DOWN (WATCHDOG TIMER ENABLED)
+AND WAIT  FOR  THE  ENGINE  BOOT TO  ACTIVATE (2 SECONDS).  WATCH THE ENGINE
+FRONT CONSOLE  AND SEE  IF THE PCCM LOADS CODE INTO THE ENGINE AFTER A COUNT
+SEQUENCE SHOWN ON THE FRONT CONSOLE.  IF ISIS CODE LOADS PROPERLY AND BEGINS
+TO RUN THIS INDICATES A  GOOD PCCM  CARD SYSTEM.    IF ONE OF THE PCCM ERROR
+CODES LISTED ABOVE APPEARS ON THE  FRONT CONSOLE  TAKE APPROPRIATE ACTION TO
+REPAIR.
+ 
+FOR EXAMPLE, IF THE  ENGINE CONSOLE  SHOWS A "BAD12", IT MEANS THAT  NO ISIS
+CODE  HAD BEEN STORED ONTO  THE SRAM  CARD(S)  AND YOU  WOULD THEN  LOAD THE
+ISIS CODE, LOG INTO THE ISIS KERNEL VIA DDT, ENTER "?PCCM" AND USE ITEM 1 IN
+THE MENU TO CHECK STATUS TO SEE  IF  THE  CODE WAS  THEN PROPERLY  BACKED UP
+ONTO THE SRAM CARD(S).  IF IT WAS NOT, THEN YOU WOULD CHECK THE ISIS TYMFILE
+TO MAKE SURE THE P2 PARAMETER WAS SET TO "AUTOON" IN THE PCCMOP MACRO.  THIS
+MAKES SURE THE CODE IS  AUTOMATICALLY BACKED UP TO THE SRAM CARD(S) WHEN THE
+ISIS AND NODE CODE ARE FIRST LOADED.
+ 
+AS ANOTHER EXAMPLE, IF THE  ENGINE CONSOLE  SHOWS  A  "BAD11"  IT  MEANS THE
+AUTORESTORE FLAG WAS NOT SET.  THEREFORE  YOU SHOULD NOW  LOAD THE  ISIS AND
+NODE CODE, LOG INTO THE ISIS  KERNEL VIA  DDT, ENTER "?PCCM", AND USE ITEM 1
+FROM THE  PCCM  MENU  TO CHECK  THE STATUS OF THE AUTORESTORE FLAG.   IF THE
+FLAG WAS NOT SET, CHECK THE TYMFILE TO MAKE SURE THE P3 PARAMETER IS  SET TO
+"AUTOON"  IN THE PCCMOP MACRO OR OLD STYLE TYMFILE EQUATE PC.RSTR IS NOT SET
+TO 1.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   34
+ 
+ISIS MACROS AND SAMPLE TYMFILE.
+ 
+THE NEW ISIS MACROS NEED NOT NECESSARILY BE USED TO INSTALL THE PCCM MODULE,
+BUT  DUE TO  THE NATURE  OF  THIS CFB BEING PRIMARILY TARGETED TOWARDS FIELD
+SERVICE PERSONNEL, THE NEW MACROS  WILL BE  OUTLINED  IN  ADDITION  TO THEIR
+EQUIVALENT USAGE WHEN THE MACROS  ARE  NOT INCLUDED.   IN ADDITION A  SAMPLE
+TYMFILE DENOTING THE INCLUSION  OF THE  PCCM  MODULE  WITHOUT  USING THE NEW
+MACRO STRUCTURE IS ALSO INCLUDED.
+ 
+THE  FOLLOWING SECTION  WILL OUTLINE  BRIEFLY THE NEW  ISIS MACRO'S THAT ARE
+INCORPORATED  INTO VERSION 14.01.  FOR ADDITIONAL INFORMATION ON EACH OF THE
+MACRO'S PLEASE  SEE THE  ISIS  RELEASE  FILES.   THERE ARE  MANY NEW MACRO'S
+INCORPORATED  INTO  ISIS  14.00,  BROKEN  INTO  TWO  GROUPING  (HARDWARE AND
+SLOT LEVEL) BUT ONLY THOSE THAT PERTAIN TO THE  PCCM PRODUCT OR GENERAL NODE
+CONFIGURATIONS ARE DEFINED HERE.  THE MACRO'S GENERALLY FOLLOW THE FORMAT:
+ 
+       MACRO(PARAM1,PARAM2,PARAM3,...,PARAMN)
+ 
+ 
+THE MACRO'S ARE DESCRIBED AS FOLLOWS:
+ 
+1.  ASYNCBOARD - DEFINES THE BAUD RATE AND DRIVERS DEFINITIONS FOR THE
+    STANDARD ASYNC BOARD.  THE MACRO CONSTRUCT IS AS FOLLOWS:
+ 
+ 
+        ASYNCBOARD(HIRATE,LORATE,ADDR,DRIVER,IORING)
+ 
+        WHERE
+          HIRATE = HIGHEST ASYNC BAUD RATE SUPPORTED
+                   (DEFAULT IS 1200)
+          LORATE = LOWEST  ASYNC BAUD RATE SUPPORTED
+                   (DEFAULT IS 300)
+          ADDR   = ASYNC BOARD DEVICE ADDRESS (NORMAL OR EXTENDED)
+                   [NORMAL IS 091X, EXTENDED IS 0C1]
+                   (DEFAULT IS EXTENDED)
+          DRIVER = ASYNC DRIVER TO USE: OLD, NEW OR BOTH.
+                   (DEFAULT IS BOTH)
+          IORING = ASYNC RING STRUCTURE TO USE: OLD OR NEW
+                   (DEFAULT IS NEW)
+ 
+    THE  EQUIVALENT  PARAMETERS  SET OR  REPLACED  BY  THE  ASYNCBOARD
+    MACRO ARE AS FOLLOWS:
+ 
+ 
+        N.ADA   EQ      1       : USE EXTENDED ASYNC DEV. ADDRESSING
+        ASYNEW  EQ      1       : USE NEW ASYNC DEVICE DRIVER
+        NEWARN  EQ      1       : USE NEW ASYNC RING STRUCTURE
+        BAUDR   EQ      2       : USE HIGH SPEED INTERRUPT (300-4800)
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   35
+ 
+ 
+2.  BOOTSTRAP - DEFINES  WHETHER  4KB OF  MEMORY IS  RESERVED FOR  THE
+    BOOTSTRAP.   FOR  PCCM THIS MUST  BE  SET  TO YES,  FOR  ALL OTHER
+    HARDWARE  UNLESS  DISK OR  TAPE IS INSTALLED (SUP, TMCS, NEM, ETC)
+    THIS  OPTION SHOULD  BE  SET  TO NO.   THE  MACRO  CONSTRUCT IS AS
+    FOLLOWS:
+ 
+        BOOTSTRAP(SWITCH)
+ 
+        WHERE
+          SWITCH = OPTION DESIRED: YES OR NO.
+                   YES = RESERVES 4KB OF MEMORY
+                   NO  = DOES NOT RESERVE 4KB OF MEMORY
+                   (DEFAULT IS YES)
+ 
+    THE  EQUIVALENT  PARAMETERS  SET  OR  REPLACED  BY  THE  BOOTSTRAP
+    MACRO ARE AS FOLLOWS:
+ 
+        LBOOT   EQ      1       : RESERVE 4KB OF MEMORY FOR BOOTSTRAP
+ 
+3.  GG - DEFINES THE GOODGUY  LIST VALUES  FOR DDT LOGIN.   THE  MACRO
+    CONSTRUCT IS AS FOLLOWS:
+ 
+        GG(LICENSE,ACCESS,USERNAME,MACHINE)
+ 
+        WHERE
+          LICENSE  = DDT PRIVILEGE LICENSE
+          ACCESS   = SLOT ACCESS PRIVILEGE
+          USERNAME = LOGIN USERNAME (FIRST 8 BYTES)
+          MACHINE  = MACHINE OF CIRCUIT TERMINATION
+                     (-1 SPECIFIES WILDCARD)
+ 
+    THE  EQUIVALENT PARAMETERS SET OR  REPLACED  BY  THE  GG MACRO ARE
+    AS FOLLOWS:
+ 
+        GG(L.L!L.H!L.A!L.P!L.E,-1,GATEWAY)    :FOR LOADII SLOT LOADING
+ 
+ 
+    THE LICENSES AND THEIR GENERIC MEANINGS ARE AS FOLLOWS:
+ 
+        LICENSE
+        MNEMONIC   LICENSE MEANING
+        --------   ------- -------
+ 
+         L.DISC    LICENSE TO ALLOW USER TO FORMAT A DISK
+         L.SYA     LICENSE TO ALLOW USER TO ACCESS SYSTEM (DDT)
+         L.SOA     LICENSE TO ALLOW USER TO ACCESS SLOT 0
+         L.SUA     LICENSE TO ALLOW USER TO ACCESS SUP SLOTS
+         L.HALT    LICENSE THAT REQUIRES SLOT BE HALTED
+         L.A       LICENSE TO ALLOW USER TO ACCESS SLOTS
+         L.W       LICENSE TO ALLOW USER TO WRITE SLOTS MEMORY
+         L.R       LICENSE TO ALLOW USER TO READ  SLOTS MEMORY
+         L.L       LICENSE TO ALLOW USER TO LOAD A SLOT
+         L.E       LICENSE TO ALLOW USER TO CONTROL EXECUTE OF SLOT
+         L.H       LICENSE TO ALLOW USER TO HALT A SLOT
+         L.P       LICENSE TO ALLOW USER TO PATCH A SLOT
+         L.SOR     LICENSE TO ALLOW USER TO READ  MEMORY IN SLOT 0
+         L.SOP     LICENSE TO ALLOW USER TO PATCH MEMORY IN SLOT 0
+         L.SYR     LICENSE TO ALLOW USER TO READ  SYSTEM MEMORY (KERNEL)
+         L.SYP     LICENSE TO ALLOW USER TO PATCH SYSTEM MEMORY (KERNEL)
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   36
+ 
+ 
+4.  HARDWARE - DEFINES THE ENGINE  HARDWARE  CONFIGURATION.  THE MACRO
+    CONSTRUCT IS AS FOLLOWS:
+ 
+        HARDWARE(TYPE,CPU,MAC,MEMSIZE)
+ 
+        WHERE
+          TYPE    = ENGINE HARDWARE  PLATFORM (ENGINE, MINI, MICRO,
+                    HDLC,   PICO,    TSI,  OR PXL,  PXL1, OR PXL2).
+                    DEFAULT IS ENGINE.
+          CPU     = THE CPU  TYPE  (CPU2, CPU3, CPU4 OR CPU5).  THE
+                    DEFAULT IS CPU3.
+          MAC     = THE MAC TYPE (MAC2, MAC3 OR MAC5).  THE DEFAULT
+                    IS MAC3.
+          MEMSIZE = THE TOTAL ENGINE MEMORY SIZE IN BYTES.
+ 
+ 
+    WHEN THE HARDWARE MACRO IS USED FOR A PXL-I,  ALL OTHER PARAMETERS
+    EXCEPT  PXL   ARE  IGNORED.     THE  DEFAULTS  FOR  THE  REMAINING
+    PARAMETERS ARE AS FOLLOWS:
+ 
+        CPU     = CPU3
+        MAC     = MAC5
+        MEMSIZE = 1024
+ 
+ 
+    WHEN THE HARDWARE MACRO IS USED FOR A PXL-II, ALL OTHER PARAMETERS
+    EXCEPT  PXL2  ARE  IGNORED.     THE  DEFAULTS  FOR  THE  REMAINING
+    PARAMETERS ARE AS FOLLOWS:
+ 
+        CPU     = CPU4
+        MAC     = MAC5
+        MEMSIZE = 2048
+ 
+    THE  EQUIVALENT  PARAMETERS  SET  OR  REPLACED  BY  THE  HARDWARE
+    MACRO ARE AS FOLLOWS:
+ 
+        ENGINE  EQ      1       : USE STANDARD TYMNET ENGINE
+        CPUVER  EQ      3       : CPU-III TYPE ENGINE
+        MACVER  EQ      3       : MAC-III TYPE ENGINE
+        MACV    EQ      0       : NON MAC-V TYPE ENGINE
+ 
+ 
+5.  MBOARD - DEFINES  THE  SIO MOTHERBOARD CONFIGURATION.   THE  MACRO
+    CONSTRUCT IS AS FOLLOWS:
+ 
+        MBOARD(BDNMBR,ADDR,NPORT)
+ 
+        WHERE
+          BDNMBER = THE SIO BOARD NUMBER (0, 1, 2, ETC).
+          ADDR    = THE DEVICE ADDRESS (DEFAULT IS 80X).
+          NPORT   = THE NUMBER OF PORTS ON THE SIO MOTHERBOARD.
+ 
+    THE  EQUIVALENT  PARAMETERS  SET OR REPLACED  BY  THE MBOARD MACRO
+    ARE AS FOLLOWS:
+ 
+        M.NCARD EQ      1       : NUMBER OF SIO MOTHERBOARDS
+        M.DA0   EQ      $0 80   : SIO MB0 IS DEVICE ADDRESS 80X
+        M.NP0   EQ      $A 10   : SIO MB80 HAS 10D PORTS
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   37
+ 
+ 
+6.  NODE - DEFINES THE NODE  PARAMETERS.   THE  MACRO  CONSTRUCT IS AS
+    FOLLOWS:
+ 
+        NODE(NODEN,KHOST,NETID,SUBNET)
+ 
+        WHERE
+          NODEN  = THE NODE NUMBER PRECEDED BY A $8 ($82500)
+          KNOST  = THE KERNEL HOST NUMBER PRECEDED BY A $A ($A1200)
+          NETID  = NETWORK ID NUMBER PRECEDED BY A $A ($A56)
+          SUBNET = SUB-NETWORK ID OR NAME RESERVED BY NODE CODE
+ 
+ 
+    THE  EQUIVALENT  PARAMETERS  SET  OR  REPLACED  BY  THE NODE MACRO
+    ARE AS FOLLOWS:
+ 
+        MACHNM  EQ      $8 4331 : NODE NUMBER (OCTAL)
+        HST0    EQ      $A 1441 : KERNEL HOST NUMBER (DECIMAL)
+        NETID   EQ      1       : NETWORK IDENTIFIER (TYMNET)
+        SUBNID  EQ      0       : NO SUBNET NETWORK IDENTIFIER
+ 
+ 
+ 
+ 
+7.  PASIZE - DEFINES THE  SIZE  OF THE  SIZE OF  THE ISIS  SYSTEM  AND
+    KERNEL PATCH  AREA  (IN HEX HALFWORDS).  THE MACRO CONSTRUCT IS AS
+    FOLLOWS:
+ 
+        PASIZE(SPSIZE,KPSIZE)
+ 
+        WHERE
+          SPSIZE = SYSTEM PATCH AREA (DEFAULT IS 100X HALFWORDS)
+          KPSIZE = KERNEL PATCH AREA (DEFAULT IS  63X HALFWORDS)
+ 
+ 
+    THE EQUIVALENT  PARAMETERS  SET OR REPLACED  BY  THE  PASIZE MACRO
+    ARE AS FOLLOWS:
+ 
+        SPASIZ  EQ      100     : DEFINE ISIS SYSTEM PATCH SIZE AREA
+                                :   (NUMBER OF HALFWORDS)
+        KPASIZ  EQ      63      : DEFINE KERNEL PATCH SIZE AREA
+                                :   (NUMBER OF FULLWORDS)
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   38
+ 
+8.  SPAMOPT - DEFINES  THE SYSTEM  PERFORMANCE AND MONITORING OPTIONS.
+    THE MACRO CONSTRUCT IS AS FOLLOWS:
+ 
+        SPAMOPT(OPTION,TRACE)
+ 
+        WHERE
+          OPTION = ENABLES OR DISABLES THE SPAM FACILITY:
+                     YES = ENABLES  THE SPAM FACILITY
+                     NO  = DISABLES THE SPAM FACILITY  (DEFAULT)
+ 
+          TRACE  = ENABLES OR DISABLES THE SPAM TRACE FACILITY:
+                     ON  = ENABLES  THE SPAM TRACE FACILITY
+                     OFF = DISABLES THE SPAM TRACE FACILITY
+ 
+    THE EQUIVALENT  PARAMETERS SET  OR REPLACED BY  THE  SPAMOPT MACRO
+    ARE AS FOLLOWS:
+ 
+        SPAM    EQ      0       : DISABLE SPAM FACILITY
+        SPMTRC  EQ      0       : DISABLE SPAM TRACE FEATURE
+ 
+ 
+9.  SYNCLINE - DEFINES  THE  NUMBER  OF  SYNC  LINES  ENABLED  IN  THE
+    HARDWARE.    THE MACRO CONSTRUCT IS AS FOLLOWS:
+ 
+        SYNCLINE(NUMBER)
+ 
+        WHERE
+          NUMBER = IS THE NUMBER OF SYNC LINES ENABLED, DEFAULT IS 0
+ 
+ 
+    THE  EQUIVALENT  PARAMETERS  SET  OR  REPLACED  BY  THE  SYNCLINE
+    MACRO ARE AS FOLLOWS:
+ 
+        NSYNC   EQ      $A 16   : NUMBER OF SYNC PORTS
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   39
+ 
+ 
+10. SYSJOB - DEFINES   SELECTED   ISIS   SYSTEM   LEVEL  JOB   RELATED
+    CONFIGURATION PARAMETERS.    THE MACRO CONSTRUCT IS AS FOLLOWS:
+ 
+        SYSCONF(FGEXEC,FTMSEC,FGN,BGN,BTMSC)
+ 
+        WHERE
+          FGEXEC  = ENABLES OR DISABLES THE ISIS FOREGROUND PROCESS
+          FTMSEC  = SETS THE ISIS FOREGROUND FREQUENCY IN MILLISECONDS
+                    IF THE ISIS FOREGROUND HAS BEEN ENABLED.    (RANGE
+                    IS 1-255D, DEFAULT IS 5)
+          FGN     = DEFINES  THE  ACCEPTABLE  ISIS  FOREGROUND PROCESS
+                    OVERLOAD COUNT. (DEFAULT IS 01D)
+          BGN     = DEFINES  THE  ACCEPTABLE  ISIS  BACKGROUND PROCESS
+                    OVERLOAD COUNT. (DEFAULT IS 10D)
+          BTMSC   = DEFINES THE  BACKGROUND  CYCLE TIME CONSIDERED FOR
+                    AN OVERLOAD CONDITION. (DEFAULT IS 40)
+ 
+    THE EQUIVALENT  PARAMETERS SET  OR REPLACED  BY THE  SYSJOB  MACRO
+    ARE AS FOLLOWS:
+ 
+        FOREGND EQ      1       : ENABLE ISIS FOREGROUND
+        FGFREQ  EQ      $A 15   : DEFINE FG FREQUENCY
+        FGACPT  EQ      1       : DEFINE ACCEPTABLE FG OVERLOAD COUNT
+        BGACPT  EQ      1       : DEFINE ACCEPTABLE BG OVERLOAD COUNT
+        BGMIN   EQ      40      : DEFINE BG CYCLE TIME FOR OVERLOAD
+ 
+ 
+11. SYSMIS - DEFINES   SELECTED   ISIS   SYSTEM   LEVEL  MISCELLANEOUS
+    CONFIGURATION PARAMETERS.    THE MACRO CONSTRUCT IS AS FOLLOWS:
+ 
+        SYSMIS(FROG,FTSEC,NCHNLS,TRC,HISTSZ)
+ 
+        WHERE
+          FROG    = ENABLES OR DISABLES THE  WATCHFROG TIMER FUNCTION:
+                      FROGON  = ENABLES  THE WATCHFROG TIMER
+                      FROGOFF = DISABLES THE WATCHFROG TIMER (DEFAULT)
+          FTSEC   = SETS  THE  WATCHFROG  TIMER  INTERVAL  IN  DECIMAL
+                    NUMBER OF SECONDS. (RANGE IS 1-255D, DEFAULT IS 5)
+          NMCHNLS = SPECIFIES THE NUMBER  OF ISIS DISPATCHER CHANNELS.
+                    (RANGE IS 1-8191D, DEFAULT IS 256D)
+          TRC     = ENABLES OR DISABLES THE MAC TRACE FACILITY.
+                      TRCON  = ENABLES  THE MAC TRACE
+                      TRCOFF = DISABLES THE MAC TRACE (DEFAULT)
+          HISTSZ  = DEFINES THE MINIMUM NUMBER OF ENTRIES  POSSIBLE IN
+                    THE ISIS HISTORY TABLE.
+ 
+    THE EQUIVALENT  PARAMETERS SET  OR REPLACED  BY THE  SYSMIS  MACRO
+    ARE AS FOLLOWS:
+ 
+        WFROG   EQ      1       : ENABLE WATCHFROG TIMER FUNCTION
+        WFTIME  EQ      5       : DEFINE WATCHFROG TIMER TIMEOUT VALUE
+        DI.CHN  EQ      $A 128  : DEFINE  NUMBER  OF  ISIS  DISPATCHER
+                                :   CHANNELS
+        MACTRC  EQ      1       : ENABLE MAC TRACE FACILITY
+        TDIAGN  EQ      32      : DEFINE  NUMBER  OF  ENTRIES IN  ISIS
+                                :   SYSTEM HISTORY TABLE
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   40
+ 
+12. PCCMOP -  DEFINES  THE  PCCM CONFIGURATION  OPTIONS.     THE MACRO
+    CONSTRUCT IS AS FOLLOWS:
+ 
+        PCCMOP(PCCM,AUTOBK,AUTORT,RELOAD)
+ 
+        WHERE
+          PCCM   = ENABLES OR DISABLES THE PCCM INTERFACE:
+                     PCCMON  = ENABLES  THE PCCM OPTION
+                     PCCMOFF = DISABLES THE PCCM OPTION (DEFAULT)
+          AUTOBK = ENABLES OR DISABLES THE  PCCM  INTERFACE  AUTOMATIC
+                   BACKUP OPTION FOLLOWING A SYSTEM LOAD:
+                     AUTOON  = ENABLES  THE BACKUP OPTION
+                     AUTOOFF = DISABLES THE BACKUP OPTION (DEFAULT)
+          AUTORT = ENABLES  OR  DISABLES  THE  PCCM  AUTOMATIC RESTORE
+                   OPTION DURING THE MACHINE POWER UP SEQUENCE:
+                     AUTOON  = ENABLES  THE RESTORE OPTION (DEFAULT)
+                     AUTOOFF = DISABLES THE RESTORE OPTION
+          RELOAD = DEFINES  THE ACTION TAKEN  ON A FATAL  ISIS FAILURE
+                   AS FOLLOWS:
+                     ON  = NODE WILL RELOAD FROM PCCM
+                     OFF = NODE WILL GO INTO BOOT (DEFAULT)
+ 
+ 
+    THE   EQUIVALENT   PARAMETERS  SET   OR  REPLACED  BY  THE  PCCMOP
+    MACRO ARE AS FOLLOWS:
+ 
+        SMART   EQ      1       : ENABLE PCCM FACILITY
+        PC.BKUP EQ      1       : ENABLE AUTO BACKUP FEATURE
+        PC.RSTR EQ      1       : ENABLE AUTO RESTORE FEATURE
+        PCCRLD  EQ      0       : FORCE ISIS TO BOOT ON CRASH
+ 
+ 
+ 
+13. SYSOPT - DEFINES  THE  SECONDARY ISIS  SYSTEM LEVEL CONFIGURATION
+    OPTIONS.    THE MACRO CONSTRUCT IS AS FOLLOWS:
+ 
+        SYSOPT(CPUCK,SYSDDT,BYTES)
+ 
+        WHERE
+          CPUCK  = ENABLES  OR  DISABLES  THE  CPU  OVERLOAD CONDITION
+                   CHECK FACILITY:
+                     CHKON   = ENABLES  THE OPTION
+                     CHKOFF  = DISABLES THE OPTION (DEFAULT)
+          SYSDDT = ENABLES OR DISABLES THE ISIS DDT "?SYS" COMMAND:
+                     SYSON   = ENABLES  THE COMMAND
+                     SYSOFF  = DISABLES THE COMMAND (DEFAULT)
+          BYTES  = DEFINES THE NUMBER OF BYTES THAT ISIS SENDS TO THE
+                   SUPERVISOR IN 2 MINUTE  INTERVALS  FOR  MONITORING
+                   THE NETWORK.  DEFAULT IS 0.
+ 
+ 
+    THE  EQUIVALENT PARAMETERS  SET OR  REPLACED  BY  THE SYSOPT MACRO
+    ARE AS FOLLOWS:
+ 
+        CPUOVL  EQ      0       : DISABLE CPU OVERLOAD CHECKING
+        SYSMON  EQ      1       : DISABLE ISIS DDT ?SYS FUNCTION
+        NETMON  EQ      0       : DISABLE NETWORK MONITOR MESSAGE TO
+                                :   SUPERVISOR
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   41
+ 
+ 
+14. LICENS - DEFINES  THE  SLOT  LICENSING  INFORMATION.    THE  MACRO
+    CONSTRUCT IS AS FOLLOWS:
+ 
+        LICENS(LIC1,LIC2)
+ 
+        WHERE
+          LIC1 = PRIMARY   LICENSE SPECIFIER (AUXCIR OR SUSPEND)
+          LIC2 = SECONDARY LICENSE SPECIFIER (AUXCIR OR SUSPEND)
+ 
+ 
+    THE EQUIVALENT PARAMETERS SET  OR  REPLACED  BY  THE  LICENS MACRO
+    ARE AS FOLLOWS:
+ 
+        S2LIC   EQ      TL.AUX  : SET AUX CIRCUIT LICENSE FOR SLOT
+ 
+ 
+15. LUDEF - DEFINES THE  LOGICAL  UNIT ASSIGNMENTS  FOR A SLOT.    THE
+    MACRO CONSTRUCT IS AS FOLLOWS:
+ 
+        LUDEF(PUTYPE,ARG1,ARG2)
+ 
+        WHERE
+          PUTYPE = LOGICAL UNIT TYPE:SYNC,ASYNC,SIO,PRINTER,IPI,TBUS,
+                   NULL).
+          ARG1   = DEFINES THE LOGICAL UNIT NUMBER DEPENDING UPON THE
+                   PUTYPE DEFINED AS FOLLOWS:
+                     IF PUTYPE IS:
+                       SYNC    = ARG1 IS THE SYNC PORT NUMBER OR RANGE
+                       ASYNC   = ARG1 IS THE ASYNG GROUP NUMBER OR RANGE
+                       SIO     = ARG1 IS THE SIO MOTHERBOARD ADDRESS
+                       PRINTER = ARG1 IS THE PRINTER ADDRESS
+                       IPI     = ARG1 IS THE IBI BOARD ADDRESS
+          ARG2   = DEFINES THE SIO PORT NUMBER OR RANGE
+ 
+ 
+    THE EQUIVALENT  PARAMETERS  SET OR  REPLACED  BY  THE  LUDEF MACRO
+    ARE AS FOLLOWS:
+ 
+        S1L0    A.REF(0)        : ASYNC GROUP 0 ASSIGNED TO SLOT 1
+        S2L0    M.REF(0,0)      : SIO PORT 0 ASSIGNED TO SLOT 2
+        S3L0    S.REF(0)        : SYNC PORT 0 ASSIGNED TO SLOT 3
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   42
+ 
+ 
+16. SLOT - DEFINES THE SLOT LEVEL CONFIGURATION PARAMETERS.  THE MACRO
+    CONSTRUCT IS AS FOLLOWS:
+ 
+        SLOT(NMBR,MEMSIZ,DMASIZ,FROG,FGMSEC,BGMSEC,PRODID)
+ 
+        WHERE
+          NMBR   = DEFINES THE  SLOT  NUMBER,  EXCEPT  FOR  SUPERVISOR
+                   SLAVE OPTIONS.  THE SUP SLAVES ARE  DEFINED IN  THE
+                   SLOT MACRO AS SSLT, PRB,  ACCT, ERLOG, SYSM, UN2 OR
+                   UTL)
+          MEMSIZ = DEFINES  THE  TOTAL  MEMORY SIZE FOR THE SLOT IN DK
+                   BYTES. (DEFAULT IS 1D KBYTE)
+          DMASIZ = DEFINES THE DMA MEMORY ASSIGNED TO THE SLOT.
+                   (DEFAULT IS 0D KBYTES)
+          FROG   = ENABLES  OR  DISABLES  THE  SLOT   WATCHFROG  TIMER
+                   OPTION:
+                      FROGON  = ENABLES  THE WATCHFROG TIMER
+                      FROGOFF = DISABLES THE WATCHFROG TIMER (DEFAULT)
+          FGMSEC = DEFINES THE CURRENT  SLOT  FOREGROUND  PROCESS TIME
+                   SLICE IN MILLISECONDS (DEFAULT IS NLUS/3+5 MSEC).
+          BGMSEC = DEFINES  THE  CURRENT SLOT  BACKGROUND PROCESS TIME
+                   SLICE IN MILLISECONDS (DEFAULT IS 50 MILLISECONDS)
+          PRODID = DEFINES THE SLOT PRODUCT IDENTIFIER NUMBER.
+                   (OPTIONAL)
+ 
+    THE  EQUIVALENT  PARAMETERS  SET  OR  REPLACED  BY  THE SLOT MACRO
+    ARE AS FOLLOWS:
+ 
+        S1CORE  EQ      $A 600  : CORE SIZE FOR SLOT 1
+        DMSZ1   EQ      $A 30   : SLOT 1 DMA MAP
+        S1FRG   EQ      0       : DISABLE SLOT WATCHDOG TIMER
+        Q.BG1   EQ      50      : SET SLOT BG FREQUENCY
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   43
+ 
+ 
+THE  FOLLOWING ARE SAMPLES OF THE NEW ISIS TYMFILE FORMAT AND COMMANDS FILES
+FOR ISIS AND NODE CODE.
+ 
+ 
+THE NEW ISIS TYMFILE LOOKS AS FOLLOWS:
+ 
+ 
+:*************************************************************************
+:          FILE:  NODE TYMFILE
+:   NODE NUMBER:  4334
+:   KERNEL HOST:  4334
+:       VERSION:  14.00 REL 0008 (KERNEL CODE)
+:              :   6.05 REL   47 (  NODE CODE)
+:      INITIALS:  BSS
+:**************************************************************************
+ 
+:
+:       ISIS DEFINITIONS
+:
+ 
+        HARDWARE(PXL2)                  : PXL-II, CPU IV, MAC V, 2048KB
+ 
+        MBOARD(0,80,6)                  : 1 SIO MB, ADDRESS 80, 6 PORTS
+ 
+        ASYNCBOARD(4800,300,EXTENDED,NEW,NEW)
+ 
+        BOOTSTRAP(YES)                  :  RESERVE 4KB OF MEMORY FOR BOOT
+ 
+        PCCMOP(PCCMON,AUTOON,AUTOON,OFF)
+ 
+:
+:       NODE CODE DEFINITIONS
+:
+ 
+        NODE($84334,$A4334,1)           : NODE 4334 KHOST 4334 NETID 1 (TYMNET)
+ 
+NTDDBG  EQ      1                       : ALLOW HALTING OF SLOT 0 FROM DDT
+ 
+:       NODE CODE OPTIONS:
+:
+:       REBLD  -  ENABLE REBUILD
+ 
+        OPTION(REBLD)
+ 
+:
+:       NETWORK CONFIGURATION - NEIGHBOR, GROUPS, WINDOW SIZE
+:
+        TIILNK(2500,,12,,MS)
+        TIILNK(4733,,12,,MS)
+ 
+XLINKS  EQ      2                       : NUMBER OF WILD CARD NEIGHBORS
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   44
+ 
+ 
+:       MISCELLANEOUS
+ 
+MEMRMK  EQ      1                       : DISPLAY MEMORY USAGES DURING ASSY
+.HELP.  EQ      1                       : ENABLE XRAY HELP INFORMATION
+ 
+:
+:       SLOT 0 --- NODE CODE
+:
+        SLOT(0,400,22)                  : SLOT 0, 400KB MEMORY, 22KB DMA MAP
+        LUDEF(SIO,0,4-5)                : OCL PORTS A AND B
+:
+:       SLOT 1 --- XCOM
+:
+        SLOT(1,230,20)                  : SLOT 1, 230KB MEMORY, 20KB DMA MAP
+        LICENS(AUXCIR)                  : AUX CIRCUIT LICENSE FOR SLOT
+        LUDEF(SIO,0,0)                  : V35 PORT A
+:
+:       SLOT 2 --- CONSAT
+:
+        SLOT(2,75)                      : SLOT 2, 75KB MEMORY
+        LICENS(AUXCIR)                  : AUX CIRCUIT LICENSE FOR SLOT
+        LUDEF(ASYNC,0)                  : AL8 PORTS (0-15)
+:
+:       SLOT 3 --- CMTI
+:
+        SLOT(3,250)                     : SLOT 3, 250KB MEMORY
+        LICENS(AUXCIR)                  : AUX CIRCUIT LICENSE FOR SLOT
+:
+:       SLOT 4 --- XCOM
+:
+        SLOT(4,200,36)                  : SLOT 4, 200KB MEMORY, 36KB DMA MAP
+        LICENS(AUXCIR)                  : AUX CIRCUIT LICENSE FOR SLOT
+        LUDEF(SIO,0,2)                  : V24 PORT A
+:
+:       SLOT 5 --- SPARE  ---  SIO
+:
+        SLOT(5,200,36)                  : SLOT 5, 200KB MEMORY, 36KB DMA MAP
+        LICENS(AUXCIR)                  : AUX CIRCUIT LICENSE FOR SLOT
+        LUDEF(SIO,0,1)                  : V35 PORT B
+:
+:       SLOT 6 --- SPARE  ---  CMTI
+:
+        SLOT(6,250)                     : SLOT 6, 250KB MEMORY
+        LICENS(AUXCIR)                  : AUX CIRCUIT LICENSE FOR SLOT
+:
+:       SLOT 7 --- SPARE  ---  SIO
+:
+        SLOT(7,225,25)                  : SLOT 7, 225KB MEMORY, 25KB DMA MAP
+        LICENS(AUXCIR)                  : AUX CIRCUIT LICENSE FOR SLOT
+        LUDEF(SIO,0,3)                  : V24 PORT B
+ 
+ 
+        END
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   45
+ 
+ 
+THE  FOLLOWING  IS A  SAMPLE  OF  AN  ISIS  TYMFILE  FORMAT USING THE TYMHLP
+FORMAT WITH THE ADDITION OF THE PCCM EQUATES:
+ 
+ 
+:       VERSION: 6.05                   30-MAR-92  BSS
+:       MEMORY: 1024K SEMI              LOCATION: SAN JOSE, CA
+:       ORDER #: TKT# 413325 - REMOVE LINK
+:       LOAD DATE:  19-MAR-92           CPU III
+ 
+ 
+MACHNM  EQ      $8 5114
+HST0    EQ      $A 9340
+NPTHR   EQ      $A 3584
+NDP     EQ      0
+NETID   EQ      1
+CPUOVL  EQ      0
+MULTLN  EQ      0
+ 
+ 
+SMART   EQ      1       :  ENABLE PCCM FACILITY
+PC.BKUP EQ      1       :  ENABLE PPCM AUTO BACKUP  FEATURE
+PC.RSTR EQ      1       :  ENABLE PPCM AUTO RESTORE FEATURE
+PCCRLD  EQ      0       :  FORCE ENGINE TO BOOT ON ISIS CRASH
+ 
+ 
+SLOT(0,840)
+  LU(SYNC,0-6)
+  LU(SIO,0,0-3)
+  LU(SIO,1,0-5)
+  LU(SIO,2,0-5)
+  LU(SIO,3,0-7)
+ 
+        TIILNK(2021,64,12,,56)
+        TIILNK(7351,64,12,,56)
+        TIILNK(10364,,8,,MS)
+        TIILNK(10365,,8,,MS)
+        TIILNK(10644,,8,,MS)
+        TIILNK(10645,,8,,MS)
+        TIILNK(10646,,8,,MS)
+        TIILNK(10647,,8,,MS)
+        TIILNK(10650,,8,,MS)
+        TIILNK(7363,,8,,MS)
+        TIILNK(2116,,8,,MS)
+        TIILNK(7702,,8,,MS)
+        TIILNK(5570,,8,,MS)
+        TIILNK(10366,,8,,MS)
+        TIILNK(2307,,8,,MS)
+        TIILNK(5706,,8,,MS)
+        TIILNK(10454,,8,,MS)
+        TIILNK(7537,,8,,MS)
+        TIILNK(10656,,8,,MS)
+        TIILNK(10657,,8,,MS)
+        TIILNK(2312,,12,,)
+        TIILNK(2512,,12,,)
+        TIILNK(7347,,8,,)
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   46
+ 
+ 
+        TIILNK(4251,,8,,)
+        TIILNK(3563,,8,,)
+        TIILNK(3170,,8,,)
+        TIILNK(3345,,8,,)
+        TIILNK(5666,,8,,)
+        TIILNK(7645,,8,,)
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   47
+ 
+ 
+THE  FOLLOWING  IS  A SAMPLE OF  THE  OLD  ISIS  TYMFILE  FORMAT   WITH  THE
+ADDITION OF THE PCCM EQUATES:
+ 
+:***********************************************************************
+:                 BT - TYMNET
+:      LOCATION:  (ENGINE) BT-HK
+:     TELEPHONE:  852-5254481
+:          FILE:  NODE TYMFILE
+:   NODE NUMBER:  11061
+:   KERNEL HOST:  6645
+:       VERSION:  14.00 (KERNEL CODE)
+:              :   6.05 (  NODE CODE)
+:          CORE:  260  K
+:          DATE:  30 MARCH 1992
+:      INITIALS:  BSS
+:**********************************************************************
+:       PARAMETERS WITH ':*' ARE DEFAULTED TO ZERO (0) IF NOT PRESENT.
+:
+:               HARDWARE CONFIGURATION
+ENGINE  EQ      1       :  PROCESSOR TYPE (0 IF INTERDATA)
+MICRO   EQ      2       :* 1= ASYNC ENHANCED, 2= SYNC ENHANCED
+ZITEL   EQ      1       :* 1 IF USING ZITEL SEMICONDUCTOR MAC
+SIOINC  EQ      1       :  INCREASE SIO POLLING
+LBOOT   EQ      1       :  RESERVE MEMORY FOR BOOTSTRAP LOADER
+N.ADA   EQ      1       :* 1 IF USING NEW STYLE ASYNC ADDRESSING
+NASYNG  EQ      4       :* NUMBER OF ASYNC GROUPS (2 GROUPS/CARD)
+ASYNEW  EQ      2       :* ASYNC DRIVER (0:OLD / 2:NEW / 1:BOTH)
+BAUDR   EQ      2       :* LIMIT ASYNC SPEED TO 4800 BPS MAXIMUM
+M.NCARD EQ      2       :* NUMBER OF SIO MOTHER-BOARDS
+M.DA0   EQ      80      :  DEVICE ADDRESS FOR THE MOTHER BOARD 0
+M.NP0   EQ      4       :  NUMBER OF PORT IN MOTHER BOARD 0
+M.DA1   EQ      81      :  DEVICE ADDRESS FOR THE MOTHER BOARD1
+M.NP1   EQ      4       :  NUMBER OF PORT IN MOTHER BOARD 1
+:
+:               ISIS CONFIGURATION CONSTRAINTS
+NSLOT   EQ      5       :  NUMBER OF SLOTS TO CONNECT
+NLU     EQ      $A 05   :  MAX NUMBER OF LOGICAL UNITS PER SLOT
+NDP     EQ      $A 256  :  NO. OF DISPATCHER CHANNELS TO NODE CODE
+DI.CHN  EQ      $A 256  :  NO. OF DISPATCHER CHANNELS TO ALL SLOTS
+CONSAT  EQ      1       :  1 IF USING CONSAT SOFTWARE IN THIS NODE
+IKNRNG  EQ      1       :* 1 IF USING SIO STYLE RINGS (V6.00+ ISIS)
+ 
+SMART   EQ      1       :  ENABLE PCCM FACILITY
+PC.BKUP EQ      1       :  ENABLE PPCM AUTO BACKUP  FEATURE
+PC.RSTR EQ      1       :  ENABLE PPCM AUTO RESTORE FEATURE
+PCCRLD  EQ      0       :  FORCE ENGINE TO BOOT ON ISIS CRASH
+ 
+:
+:               NODE CONFIGURATION
+MACHNM  EQ      $8 11061:  NODE NUMBER
+HST0    EQ      $A 6645 :  ISIS KERNEL HOST NUMBER
+TII     EQ      1       :  1 IF TYMNET-II ON NODE
+PTHRU   EQ      0       :* 1 IF PASSTHROUGHS INHIBITTED
+NPTHR   EQ      $A 128  :  NUMBER OF PASSTHROUGHS (DEFAULT 256)
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   48
+ 
+ 
+XLINKS  EQ      2       :* NUMBER OF "WILD CARD" NEIGHBORS (USE WS8)
+OLDSUP  EQ      $A 1    :  TALK TO VERSION 41.01 SUP
+NETID   EQ      1
+ 
+REBTST  EQ      1
+ 
+        OPTION(REBLD)
+ 
+:       NETWORK CONFIGURATION - NEIGHR, GROUPS, WINDOW SIZE
+ 
+       TIILNK(6761,12,12,,56)
+       TIILNK(12571,12,28,SAT,56)
+ 
+:       SLOT 0
+S0CORE  EQ      $A 260          :SLOT 0 CORE SIZE IN KB
+NLUS0   EQ      4               :NUMBER OF LOGICAL UNITS FOR SLOT 0
+S0L0    M.REF(0,0)              : T-II  TO NODE 6761 TURBO 64K
+S0L1    M.REF(0,1)              : T-II  TO UK NODE 12571 64K
+S0L2    M.REF(1,0)              : SPARE T-II 19.2K
+S0L3    M.REF(1,1)              : SPARE T-II 19.2K
+:
+:       SLOT 1
+:CUST 1 CONSAT - HOST 4629
+S1CORE  EQ      $A 60
+NLUS1   EQ      $A 2
+S1L0    A.REF(0)
+S1L1    A.REF(1)
+:
+:       SLOT 2
+:CUST 2 MUX - HOST 1261
+S2CORE  EQ       $A 42
+:
+:       SLOT 3
+:CUST 3 HSA
+S3CORE   EQ       $A 128
+NLUS3    EQ       $A 0
+:
+:       SLOT 4
+:CUST 4 BBXS
+S4CORE   EQ       $A 130
+NLUS4    EQ       $A 4
+S4L0     S.REF(10)
+S4L1     S.REF(11)
+S4L2     S.REF(14)
+S4L3     S.REF(15)
+:
+:       SLOT 5
+:CUST 5 X25
+:
+S5CORE   EQ       $A 250
+S5LIC    EQ       TL.AUX
+NLUS5    EQ       $A 3
+S5L0     M.REF(0,2)     : 64K EICON HOST 4754
+S5L1     M.REF(1,2)     : 19.2K CMF HOST 7977
+S5L2     M.REF(1,3)     : 19.2K CDM/CMS HOST
+ 
+        END
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   49
+ 
+ 
+ 
+THE NEW ISIS COMMANDS FILE LOOKS AS FOLLOWS:
+ 
+;;
+;;  PXL PCCM TEST    NODE 4334   KERNEL 4334
+;;  ISIS - VERSION 14.00
+;;
+;A (BETATEST)I2IS14.I00
+;A TYM
+;A (TYMNET)GOODGUY.ISIS
+;A (BETATEST)I2IS14.R00
+;A (BETATEST)I2IS14.P00
+1;F NIB
+70;T0,SUMTBL;PINTLEN,IEND-INTLEN;P%PSEGF,SFSIZE;P%Q
+ 
+ 
+ 
+ 
+ 
+ 
+THE NEW NODE CODE COMMANDS FILE LOOKS AS FOLLOWS:
+ 
+;;
+;;  PXL PCCM TEST    NODE 4334   KERNEL 4334
+;;  T-II NODE CODE - VERSION 06.05
+;;
+;A (BETATEST)TII06.I05
+;A TYM
+;A (TYMNET)GOODGUY.XRAY
+;A (BETATEST)TII06.R05
+;A (BETATEST)TII06.P05
+1;F N00
+SEG0,RSEG0;PSEG1,S1SIZE;PSEGD,SDSIZE;PSEGF,SFSIZE;PCTA,CTASIZ;P%P%Q
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   50
+ 
+ 
+THE  GOODGUY LIST  REQUIRED FOR  ISIS VERSION 14 IS VERY DIFFERENT THAN THAT
+USED FOR ISIS 11.XX  OR  EARLIER  AND IT DOES  REQUIRE A  CHANGE TO THE ISIS
+VERSION  13.02  GOODGUY LIST.    THE VERSION  OR  STYLE OF THE GOODGUY  LIST
+DEPENDS ON THE CONTROLLING  GROUP FOR  THE  NODE, AND THE FOLLOWING EXAMPLED
+ARE BASED ON THE  ISIS GOODGUY  LISTS CURRENTLY AVAILABLE OR  WHICH  WILL BE
+INCORPORATED INTO THE PUBLIC NET.   CARE MUST TAKEN TO  INSURE THAT THE  NEW
+LICENSE STRUCTURES FOR  ISIS 14.00 ARE INCORPORATED INTO THE  OLDER  GOODGUY
+LISTS.
+ 
+ 
+THE FOLLOWING IS A SAMPLE EXCERPT OF THE NEW ISIS GOODGUY LIST:
+ 
+ 
+:**********************************************************************
+:       STANDARD GOOD-GUY LIST
+:       USE FOR ISIS-II VERSION 5.05 AND GREATER
+:       DATE: 07-03-91 RON VIVIER -- NTS
+:**********************************************************************
+ 
+XGG     MACRO[
+ 
+        GL      L.A,L.W                         :KLUDGE FOR LICENSE DIFFS
+        IF      (1-\L.A)!(1-\L.W)               :  IN MULTI-VERSIONS ###SLN
+L.A     EQ      0020
+L.W     EQ      0040
+        EI
+ 
+SY.U    EQ      L.A!L.R
+SY.L    EQ      L.SYA!L.S0A!L.DISC!L.SYP!L.S0R!L.H!L.L!L.A!L.P!L.W!L.E!L.HALT
+SY.LM   EQ      L.SYA!L.S0A!L.SYR!L.H!L.A!L.P!L.W!L.E
+ 
+ 
+        GG(L.L!L.H!L.A!L.P!L.E,-1,GATEWAY)      :FOR LOADII SLOT LOADING
+ 
+        GG(SY.U,-1,DDT023)
+        GG(SY.U,-1,DDT024)
+        GG(SY.LM,-1,DDT100)
+        GG(SY.LM,-1,DDT101)
+        GG(SY.LM,-1,DDT102)
+ 
+        GG(SY.L,-1,DDT220)
+        GG(SY.L,-1,DDT221)
+        GG(SY.L,-1,DDT222)
+        GG(SY.L,-1,DDT223)
+        GG(SY.L,-1,DDT224)
+ 
+        GG(SY.L,-1,DDT320)
+        GG(SY.L,-1,DDT321)
+        GG(SY.L,-1,DDT322)
+        GG(SY.L,-1,DDT322)
+        GG(SY.L,-1,DDT323)
+        GG(SY.L,-1,DDT324)
+ 
+        GG(SY.L,-1,DDT223)
+ 
+        END
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   51
+ 
+ 
+THE FOLLOWING IS A SAMPLE EXCERPT OF THE ISIS 13.02 GOODGUY LIST:
+ 
+ 
+:**********************************************************************
+:       STANDARD GOOD-GUY LIST
+:       USE FOR ISIS-II VERSION 13.02
+:       DATE: 07-03-91
+:**********************************************************************
+ 
+:
+XGG     MACRO[
+:
+:       DEFINE DDT USERS
+:
+ 
+GG(L.S0A!L.S0R!L.H!L.L!L.P,-1,GATEWAY)  :REQUIRED FOR LOADING
+GG(0,0,DLOAD,0,T.DLOAD)                 :REQUIRED FOR DLOAD
+GG(1,0,SLOAD,1F,T.SCLP)                 :REQUIRED FOR LOADING
+ 
+GG(L.S0A!L.SYA!L.SUA!L.S0P!L.SYP!L.E!L.A!L.W!L.P!L.H!L.L!L.DISC,-1,NSSC)
+GG(L.S0A!L.SYA!L.SUA!L.S0P!L.SYP!L.E!L.A!L.W!L.P!L.H!L.L!L.DISC,-1,INTLTECH)
+GG(L.S0A!L.SYA!L.SUA!L.S0P!L.SYP!L.E!L.A!L.W!L.P!L.H!L.L!L.DISC,-1,TECHSERV)
+GG(L.S0A!L.SYA!L.SUA!L.S0P!L.SYP!L.E!L.A!L.W!L.P!L.H!L.L!L.DISC,-1,NETALPS)
+GG(L.S0A!L.SYA!L.SUA!L.S0P!L.SYP!L.E!L.A!L.W!L.P!L.H!L.L!L.DISC,-1,DNSONLY)
+GG(L.S0A!L.SYA!L.SUA!L.S0P!L.SYP!L.E!L.A!L.W!L.P!L.H!L.L!L.DISC,-1,MAINTDIAG)
+GG(L.S0A!L.SYA!L.SUA!L.S0P!L.SYP!L.E!L.A!L.W!L.P!L.H!L.L!L.DISC,-1,ISISTECH)
+ 
+   :       CHECK FOR SPECIAL (EXTRA) GOOD GUY ENTRIES
+ 
+   IF      \SGGUSE
+   SGG
+   EI
+ 
+:
+:       DEFINE XRAY USERS
+:
+ 
+   GG(2,0,TIIDEV,0EF)
+   GG(2,0,ODDJOB,60)
+   GG(2,0,TS.INTLXRAY,50)
+   GG(2,0,INTLXRAY,40)
+   GG(1,0,XRTECH,20)
+   GG(0,0,XRAY,0)
+ 
+     ]
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   52
+ 
+ 
+THE FOLLOWING IS A SAMPLE EXCERPT OF THE ISIS 11.01 GOODGUY LIST:
+ 
+ 
+:       STANDARD GOOD-GUY LIST
+:       USE FOR ISIS-II VERSION 5.05 AND GREATER
+:       DATE: 20-APR-84 ED MOORING -- NTS
+:       THE 'IF  \SGGUSE' ALLOWS "SPECIAL" GOOD GUYS TO BE SPECIFIED
+:       IN THE TYM FILE USING A STANDARD 'SGG' MACRO DECLARATION.
+:       THE TYM FILE SHOULD CONTAIN THE FOLLOWING SPEC FOR ADDL GOODGYS
+:
+:       SGGUSE  EQ      1
+:       SGG     MACRO[
+:               GG( .....LICENSE SPECIFICATION .....,USERNAME)
+:               ]
+:
+:**********************************************************************
+ 
+       IF      \SGGUSE
+ 
+       GL      SGGUSE
+ 
+       EI
+ 
+XGG     MACRO[
+ 
+GG(L.S0A!L.SYA!L.SUA!L.S0P!L.SYP!L.E!L.A!L.W!L.P!L.H!L.L!L.DISC,-1,NSSC)
+GG(L.S0A!L.SYA!L.SUA!L.S0P!L.SYP!L.E!L.A!L.W!L.P!L.H!L.L!L.DISC,-1,NETCON)
+GG(L.S0A!L.SYA!L.SUA!L.S0P!L.SYP!L.E!L.A!L.W!L.P!L.H!L.L!L.DISC,-1,ISISTECH)
+GG(L.S0A!L.SYA!L.SUA!L.S0P!L.SYP!L.E!L.A!L.W!L.P!L.H!L.L!L.DISC,-1,DNSONLY)
+GG(L.S0A!L.SYA!L.SUA!L.S0P!L.SYP!L.E!L.A!L.W!L.P!L.H!L.L!L.DISC,-1,TCSUP)
+GG(L.S0A!L.SYA!L.SUA!L.S0P!L.SYP!L.E!L.A!L.W!L.P!L.H!L.L!L.DISC,-1,NSSC)
+ 
+GG(L.S0A!L.SYA!L.SUA!L.S0R!L.SYR!L.R,-1,MAINTDIA)
+GG(L.R!L.L!L.E!L.H!L.P,-1,TSDCONTROL)
+GG(L.S0A!L.S0R!L.H!L.P,-1,GATEWAY)
+ 
+       IF      SUP
+GG(L.DISC!L.S0A!L.SYA!L.SUA!L.S0P!L.SYP!L.P,-1,NETOPS)
+GG(L.DISC!L.S0A!L.SYA!L.SUA!L.S0P!L.SYP!L.P,NSLOT+2,RPROBE)
+       EI
+ 
+       IF      \SGGUSE
+SGG
+       EI
+     ]
+   END
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   53
+ 
+ 
+THE FOLLOWING IS A SAMPLE EXCERPT OF THE NEW NODE CODE GOODGUY LIST:
+ 
+ 
+:***********************************
+:  I    T Y M N E T  --  X R A Y
+:  S    STANDARD XRAY GOOD GUY LIST
+:  I    NETWORK TECHNICAL SERVICES
+:  S    REVISED 5/15/91 RLV
+:
+:***********************************
+ 
+XGG     MACRO[
+ 
+X.SEC1  EQ      1
+ 
+        GG(2,0,XRAY249,0FD)
+        GG(0,0,DLOAD,0,T.DLOAD)
+        GG(1,0,SLOAD,1,T.SCLP)
+ 
+        GG(0,0,XRAY000,0)
+        GG(0,0,XRAY001,0)
+        GG(0,0,XRAY002,0)
+        GG(0,0,XRAY003,0)
+ 
+        GG(2,0,XRAY220,20)
+        GG(2,0,XRAY221,20)
+        GG(2,0,XRAY222,20)
+        GG(2,0,XRAY223,20)
+        GG(2,0,XRAY224,20)
+        GG(2,0,XRAY225,20)
+ 
+        GG(0,0,XRAY,0FE)
+        GG(2,0,ODDJOB,0FE)
+ 
+        GG(2,0,TIIDEV,0FE)
+        GG(2,0,TIIEMRG,0FE)
+]
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   54
+ 
+ 
+THE FOLLOWING IS A SAMPLE OF THE NEW ISIS/NODE CODE CODE GENERATION:
+ 
+ 
+NAD-3.01 (S/N 44)  (SUNOS 4.X)
+MON MAR  9 10:56:35 1992
+ 
+;;
+;;  PXL PCCM TEST    NODE 4334   KERNEL 4334
+;;  ISIS - VERSION 14.00
+;;
+;;
+ 
+;A (BETATEST)I2IS14.I00
+ 
+END OF ASSEMBLY
+ 
+;A TYM
+ 
+END OF ASSEMBLY
+ 
+ 
+;A (TYMNET)GOODGUY.ISIS
+ 
+END OF ASSEMBLY
+ 
+;A (BETATEST)I2IS14.R00
+ 
+DISPAT 0 0
+ 
+ 
+CLOCKS 2246 2BF0
+ 
+ 
+MBOARD 2BF0 2EB8
+ 
+ 
+FLASH 2EB8 3C0A
+ 
+ 
+KCAREA 3C0A 40E0
+ 
+ 
+TTY 40E0 4400
+ 
+ 
+KERNEL 4400 CB38
+ 
+ 
+CONVRT CB38 CBA4
+ 
+ 
+DATIME CBA4 CE14
+ 
+ 
+DDT CE14 14C00
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   55
+ 
+ 
+   1640D (16D-BYTE) BUFFERLETS ALLOCATED TO DISPATCHER
+DISPAT 14C00 24400
+ 
+ 
+.............................................
+ 
+ 
+ 
+    ***  ISIS-II SYSTEM CONFIGURATION  ***
+                VERSION 14.00D
+ 
+ 
+ 
+       >>> ISIS MEMORY CONFIGURATION <<<
+ 
+        ISIS  MEMORY: 156D K-BYTE(S)
+        DMA   MEMORY: 139 D K-BYTE(S)
+        TOTAL MEMORY: 295D K-BYTE(S)
+ 
+ 
+TYMNET-II NODE 4334, KERNEL HOST 4334
+ 
+MAXIMUM SLOT NUMBER IS 7
+ 
+ 
+       >>> HARDWARE CONFIGURATION <<<
+ 
+EXPECTS ENHANCED ASYNC MICROCODE
+EXPECTS CPU-4
+EXPECTS MAC-5
+EXPECTS MAXIMUM BAUD RATE OF 4800
+EXPECTS 1 ASYNC BOARD(S), DEVICE ADDRESS IS 0C1
+SUPPORTS NEW ASYNC DRIVER ONLY
+SUPPORTS NEW ASYNC I/O RING STRUCTURE
+EXPECTS 1 SIO MOTHER-BOARD PROCESSOR(S)
+   BOARD 0 HAS 6 CHANNEL(S), DEVICE ADDRESS 80
+ 
+ 
+EXPECTS PCCM ADAPTER INSTALLED
+ 
+******************************
+*     P C C M OPTIONS SET    *
+******************************
+ 
+ISIS PCCM AUTOMATIC CODE BACK-UP OPTION ENABLED
+ 
+ISIS PCCM AUTOMATIC CODE RESTORE OPTION ENABLED
+ 
+ 
+ISIS KERNEL CRASH PCCM RELOAD OPTION DISABLED
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   56
+ 
+ 
+ 
+THERE ARE 4K SYSTEM MEMORY RESERVED FOR DEVICE 8 BOOTSTRAP
+ 
+ 
+THERE ARE 4K SYSTEM MEMORY RESERVED FOR DEVICE 5 BOOTSTRAP
+ 
+ 
+ 
+       >>> SLOT CONFIGURATIONS <<<
+ 
+SLOT 0, NODE CODE:
+ 
+   BASE MEMORY  378D K-BYTES (FROM 49C00 TO 0A83FF)
+   DMA   MEMORY 22 D K-BYTES (FROM 24400 TO 29C00)
+   TOTAL MEMORY 400D K-BYTES
+ 
+   2 LOGICAL UNIT(S)
+   L.U. 0 IS MBOARD 80 CHANNEL 4
+   L.U. 1 IS MBOARD 80 CHANNEL 5
+ 
+SLOT 1:
+ 
+   BASE MEMORY  210D K-BYTES (FROM 0A8400 TO 0DCBFF)
+   DMA   MEMORY 20 D K-BYTES (FROM 29C00 TO 2EC00)
+   TOTAL MEMORY 230D K-BYTES
+ 
+   1 LOGICAL UNIT(S)
+   L.U. 0 IS MBOARD 80 CHANNEL 0
+ 
+SLOT 2:
+ 
+   BASE MEMORY  75D K-BYTES (FROM 0DCC00 TO 0EF7FF)
+   DMA   MEMORY IS NOT ALLOCATED
+   TOTAL MEMORY 75D K-BYTES
+ 
+   1 LOGICAL UNIT(S)
+   L.U. 0 IS ASYNC GROUP 0
+ 
+SLOT 3:
+ 
+   BASE MEMORY  250D K-BYTES (FROM 0EF800 TO 12DFFF)
+   DMA   MEMORY IS NOT ALLOCATED
+   TOTAL MEMORY 250D K-BYTES
+ 
+   NO LOGICAL UNITS
+ 
+SLOT 4:
+ 
+   BASE MEMORY  164D K-BYTES (FROM 12E000 TO 156FFF)
+   DMA   MEMORY 36 D K-BYTES (FROM 2EC00 TO 37C00)
+   TOTAL MEMORY 200D K-BYTES
+ 
+   1 LOGICAL UNIT(S)
+   L.U. 0 IS MBOARD 80 CHANNEL 2
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   57
+ 
+ 
+SLOT 5:
+ 
+   BASE MEMORY  164D K-BYTES (FROM 157000 TO 17FFFF)
+   DMA   MEMORY 36 D K-BYTES (FROM 37C00 TO 40C00)
+   TOTAL MEMORY 200D K-BYTES
+ 
+   1 LOGICAL UNIT(S)
+   L.U. 0 IS MBOARD 80 CHANNEL 1
+ 
+SLOT 6:
+ 
+   BASE MEMORY  250D K-BYTES (FROM 180000 TO 1BE7FF)
+   DMA   MEMORY IS NOT ALLOCATED
+   TOTAL MEMORY 250D K-BYTES
+ 
+   NO LOGICAL UNITS
+ 
+SLOT 7:
+ 
+   BASE MEMORY  200D K-BYTES (FROM 1BE800 TO 1F07FF)
+   DMA   MEMORY 25 D K-BYTES (FROM 40C00 TO 47000)
+   TOTAL MEMORY 225D K-BYTES
+ 
+   1 LOGICAL UNIT(S)
+   L.U. 0 IS MBOARD 80 CHANNEL 3
+ 
+***HIGHEST LOCATION USED IN THIS CONFIGURATION IS 1F0800
+ 
+REQUIRES 1994D K-BYTES OF MEMORY
+ 
+ 
+.............................................
+ 
+ 
+CODE GENERATED:  03/09/92  18:56:39 GMT
+ 
+.............................................
+ 
+ 
+END OF ASSEMBLY
+ 
+;A (BETATEST)I2IS14.P00
+ 
+ 
+ ISIS 14.01 PATCH FILE
+ THERE ARE NO PATCHES CURRENTLY RELEASED FOR ISIS 14.00
+ 
+END OF ASSEMBLY
+ 
+1;F NIB
+70;T0,SUMTBL;PINTLEN,IEND-INTLEN;P%PSEGF,SFSIZE;P%Q
+EXIT
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   58
+ 
+ 
+NAD-3.01 (S/N 44)  (SUNOS 4.X)
+MON MAR  9 10:57:36 1992
+ 
+;;
+;;  PXL PCCM TEST    NODE 4334   KERNEL 4334
+;;  T-II NODE CODE - VERSION 06.05
+;;
+;@ (BETATEST)TII06.I05
+ 
+***************************************************************
+* WARNING!!  FOR TYMNET ENGINE SERIES, THIS CODE IS RELEASED  *
+*            FOR BETA-TESTING ONLY!!                          *
+***************************************************************
+ 
+END OF ASSEMBLY
+ 
+;@ TYM
+ 
+END OF ASSEMBLY
+ 
+;@ (TYMNET)GOODGUY.XRAY
+ 
+END OF ASSEMBLY
+ 
+;@ (BETATEST)TII06.R05
+ 
+ 
+ 
+ 
+TYMNET-II NODE CODE, VERSION 6.05, ISIS NODE
+ 
+NODE: 4334  KERNEL HOST: 4334
+ 
+PORTS:          LINES:          LINKS:
+   256D PTHRU        0D SYNC         3D TIILNK, ONE FOR SCLP
+     3D XRAY         2D SIO          2D XLNK
+                     2D TOTAL        5D TOTAL
+   256D DISP
+     9D KRNL
+ 
+MAXIMUM NUMBER OF CIRCUITS =  571D
+ 
+ 
+BUFFERLET STORAGE SPACE:
+ 
+  8A4AX BYTES ( 35D KB) FOR 571D CIRCUIT BUFFERS ( 62D BYTES PER CIRCUIT)
+ 24448X BYTES (146D KB) FOR 283D HISTORY BUFFERS (524D BYTES PER TERMINATION)
+ 2CE92X BYTES (180D KB) FOR 571D TOTAL CIRCUITS  (322D BYTES PER CIRCUIT)
+ 
+ 
+MEMORY USED BY THIS CONFIGURATION = 64000X, 400D KB.
+ 
+OPTIMAL AMOUNT OF MEMORY REQUIRED FOR THIS CONFIGURATION =   321D  KB.
+ 
+OPTIMAL AMOUNT OF DMA MEMORY REQUIRED FOR THIS CONFIGURATION =   19D KB.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   59
+ 
+ 
+END OF ASSEMBLY
+ 
+;@ (BETATEST)TII06.P05
+ 
+************************************************************
+ 
+NO PATCHES HAVE BEEN WRITTEN AGAINST NODE CODE VERSION 06.05
+ 
+************************************************************
+ 
+END OF ASSEMBLY
+ 
+1;F N00
+SEG0,RSEG0;PSEG1,S1SIZE;PSEGD,SDSIZE;PSEGF,SFSIZE;PCTA,CTASIZ;P%P%Q
+EXIT
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+08-OCT-1992               PCCM INSTALLATION CFB                    PAGE   60
+ 
+ 
+PART NUMBERS.
+ 
+THE FOLLOWING IS A LIST OF CURRENT PCCM PART NUMBERS:
+ 
+        PART NUMBER     DESCRIPTION
+        ---- ------     -----------
+ 
+        470411-001      PXL PCCM OPTION CARD
+        470412-001      ENGINE PCCM/MULTIFUNCTION BOARD (HALFCARD ONLY)
+ 
+        640361-001      ENGINE PCCM/MULTIFUNCTION ASSEMBLY
+                          CONTAINS FOLLOWING COMPONENTS:
+                             470412-001  PCCM/MF HALFCARD
+                             170094-001  BLANK HALFCARD
+                             PLUS RELATED STIFFENERS/BRACKETS
+ 
+ 
+        600347-TAB      MITSUBISHI PCCM SRAM MEMORY CARD
+ 
+                        -001  2MB   CARD (MB P/N MF32M1-L2DAT01)
+                        -002  1MB   CARD (MB P/N MF31M1-L2DAT01)
+                        -003  512KB CARD (MB P/N MF3513-L2DAT01)
+ 
+                        IF THE -003 SRAM OPTION IS ORDERED  THEN 2 SRAM
+                        CARDS MUST BE INCLUDED IN THE ORDER.
+ 
+ 
+        600364-TAB      SEIKO EPSON PCCM SRAM MEMORY CARD
+ 
+                        -001  1MB   CARD (SE P/N AWB101SD2Y)
+                        -002  2MB   CARD (SE P/N AWB201SD2Y)
+ 
+        390063-001      LITHIUM BATTERY
+                        (FOR USE WITH SRAM PART NUMBER 600347-TAB)
+ 
+        390365-001      PANASONIC LITHIUM BATTERY (PA P/N 6025-101-501)
+                        (FOR USE WITH SRAM PART NUMBER 600364-TAB)
+ 
+        440411-001      PXL    SMART CARD SCHEMATIC
+        440412-001      ENGINE SMART CARD SCHEMATIC
+ 
+ 
+q A=
