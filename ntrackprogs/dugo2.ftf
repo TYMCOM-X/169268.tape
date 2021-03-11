@@ -1,0 +1,149 @@
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C
+*   Program: (NTRACKDATA)DUGO2.FTF (formerly NTRGO2.FTF)
+*   Author: Jo Ann Joels                                               
+*   Created: June, 1983
+*   Version 1.2
+*   Last updated:  31 Jul 84
+*   Updated by:  Dennis Coffey
+*
+*   Note: the idea for this program and some of the code was
+*   borrowed from Ron Vivier and his program: START.FTF                
+*
+*   This program starts up the network tracking background             
+*   program: DUBAK.  It then goes into a monitor mode where it        
+*   checks to see if the aux. ckt. that connects this job to the one 
+*   that is running DUBAK is till up, and the program is still running.
+*   If the circuit is gone this program builds another and restarts
+*   DUBAK. If the circuit is up but DUBAK is not running, this
+*   restarts DUBAK.  This program logs off every hour, within 3 min.
+*   before the hour.
+*   This program is re-started every hour by NTRGO,  which is run by   
+*   PERP.
+*
+*   Variables:
+*  PORT - variable containing the aux. circuit port number.
+*  ERR  - Error flag used to return error conditions from the aux.
+*         circuit building routine.
+*  MSG1 - 10 word array containing the command: 'GO DUBAK<CR><LF>'.
+*  ERRRUN - error flag returned by PROMPT if program is not running.
+*  TOTSEC - total seconds since midnight.
+*  ISCCH - array holding TOTSEC, converted to ASCII.
+*  NTSEC - value of TOTSEC, in integer format.
+*
+C Revised by:		Jason Ma
+C Revision date:	2-6-86
+C Revision purpose:	To rename the I/O files to DU####.* (for "Delay/
+C			Utilization."  The old and new I/O filenames
+C			are as follows:
+C
+C				OLD		NEW
+C				---		---
+C				NTRGO2		DUGO2
+C				NTRBAK		DUBAK
+C
+C			The octal numbers in the DATA statemthents are
+C			replaced accordingly.
+C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+*  Declare all variables:
+
+      INTEGER PORT, ERR, MSG1(10), STIME, ITIME, TTIME
+      DATA MSG1/"107,"117,"40,"104,"125,"102,"101,"113,"15,"12/
+
+*  Build aux. ckt. back to (NTRACKDATA:38).  If successful, ERR = 0. 
+*  Log off if there are 10 unsuccessful tries.
+
+	OPEN (24, '(NTRACKDATA)DUBAK.CTL', INPUT)
+	READ (24, 5020) STIME
+5020	FORMAT (I4)
+	CLOSE (24)
+
+   50 DO 100 I=1,10
+      ERR = 0
+      CALL FBCIR ('NTRACKDATA:38;', PORT, ERR)
+      IF (ERR .EQ. 0) GOTO 200
+      CALL WAIT (5.)
+  100 CONTINUE
+
+      CALL BYE
+
+*  Aux. circuit has been build to 38. Output a couple of CR's to get past any
+*  detached jobs, to log into a new job slot.  Wait for EXEC
+*  prompt char. from the aux. ckt.  Then send command 'GO DUBAK'.
+
+  200 CALL OUTCHR (PORT,13)
+      CALL OUTCHR (PORT,13)
+      CALL PROMPT (PORT)
+
+  250 DO 300 I=1,10
+      CALL OUTCHR (PORT, MSG1(I))
+  300 CONTINUE
+
+*  Go into monitor mode. Every 3 minutes:
+C  1.)  LOG OUT IF STIME (FROM DUBAK.CTL) IS PASSED.  THIS REPLACES:
+*       "Check the time:  log out if less than 3 min. before the hour."
+*  2.)  Check if the aux. cir is still there:  if circuit is not there
+*       build another and restart DUBAK.
+*  3.)  Check if the program DUBAK is still running:  if circuit is 
+*       there but DUBAK is not running, restart DUBAK.
+
+  400 CONTINUE
+
+      CALL WAIT (180.)
+      
+C      TOTSEC = SEC(DUMMY)
+C      ENCODE (6, 5000, ISCCH) TOTSEC
+C 5000 FORMAT (F6.0)
+C      DECODE (5, 5010, ISCCH) NTSEC
+C 5010 FORMAT (I5)
+C      IF (MOD(NTSEC,3600) .GT. 3420) CALL BYE
+
+	CALL TIME (ITIME)
+	CALL TIMCON (ITIME, TTIME, ERRT)
+	IF (TTIME .GE. STIME) CALL BYE
+
+      NUMCIR = 0
+      CALL AUXCHK (NUMCIR)
+      IF (NUMCIR .EQ. 0) GOTO 50
+
+      CALL OUTCHR (PORT,13)
+      CALL PROMPT (PORT, ERRRUN)
+      IF (ERRRUN .EQ. 0) GOTO 250
+
+      GOTO 400
+
+      CALL BYE
+      END
+
+ 
+      SUBROUTINE PROMPT (PORT, IERR)
+**********************************************************************
+*  This subroutine puts the program into wait until the hyphen prompt
+*  is received over the aux. ckt. from the XEXEC of system 38 in the  
+*  new log-in.  If no prompt is received, error code of '1' is returned.
+***********************************************************************
+
+      INTEGER PORT, FLAG, CHAR, IERR
+      FLAG = 0
+      IERR = 0
+
+*  Examine each character returned on the aux. ckt.  Wait for a line- 
+*  feed followed by a hyphen (XEXEC prompt) from the aux. ckt., then
+*  return program control to caller, with error code of 0.  If prompt
+*  not received return error code of 1.
+
+
+      DO 1000 J = 1,1000
+      CHAR = -1
+      CALL GTCHAR (PORT, CHAR)
+      IF (CHAR .EQ. 10) FLAG = 1
+      IF ((FLAG .EQ. 1) .AND. (CHAR .EQ. 45)) RETURN
+      IF (CHAR .NE. 10) FLAG = 0
+      IF (CHAR .LT. 0) CALL DELAY (PORT)
+ 1000 CONTINUE
+
+      IERR = 1
+      RETURN
+      END
