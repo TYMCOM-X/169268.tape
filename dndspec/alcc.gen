@@ -1,0 +1,2770 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                    ALC-CMT
+
+
+
+                            System Generation Manual
+
+
+
+                               Filename: ALCC.GEN
+
+
+
+
+                     Integrated Communications Applications
+
+
+
+
+                          McDonnell Douglas Inc. - ISG
+
+
+
+                             Revised by M.M. Lewis
+
+
+
+
+
+
+
+                                 April 22, 1987
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          +------------------------------------------------------------+
+          |  TYMNET's proprietary rights are included in the infor-    |
+          |  mation disclosed herein.  The recipient, by receiving     |
+          |  this document, agrees that neither this document nor the  |
+          |  information disclosed herein nor any part thereof shall   |
+          |  be reproduced or transferred to other documents or used   |
+          |  or disclosed to others for manufacturing or for any other |
+          |  purpose except as specifically authorized in writing by   |
+          |  TYMNET.                                                   |
+          +------------------------------------------------------------+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            SECTION 1. INTRODUCTION
+
+
+
+          This document describes the procedures and parameters
+          required for configuring the ALC-CMT (Character Mode
+          Translator) interface.
+
+          The ALC-CMT is a terminal interface which works in
+          conjunction with an ALC-HIF (Host Interface) to enable data
+          communications between asynchronous terminals and
+          synchronous hosts via the Tymnet network.
+
+
+          Its primary functions are:
+
+               o  Async/ALC protocol conversion
+
+               o  Address assignment for async sessions
+
+               o  Session switching
+
+               o  Emulation of an async host for async terminals
+
+               o  Emulation of a group of synchronous TCUs for a sync
+                  host
+
+          The basic ALC-CMT configuration is described in the
+          Overview, Section 2 of this manual.  Sections 3 and 4
+          contain descriptions of each of the macros used, along with
+          the parameters necessary to produce a complete
+          configuration.  The Appendix is a sample tymfile taken from
+          an actual configuration.  It may be used as a model in
+          configuring an ALC-CMT interface.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          April 22, 1987             - 2 -                    ALCC.GEN
+
+
+
+
+
+
+
+
+
+                   SECTION 2. ALC-CMT CONFIGURATION OVERVIEW
+
+
+
+          The ALC-CMT configuration file generates tables that, when
+          assembled, are used to validate users and allocate
+          resources.  This file consists of two distinct types of
+          macros; those which are related to the LUD (Local User
+          Directory) and those which are not.
+
+          LUD Macros
+          __________
+
+          The LUD Macros may be looked at in terms of three discreet
+          units.  These are USER, ADDRESS, and OPTIONAL.
+
+          Together the USER macros define all information pertinent to
+          the users who are valid on the ALC-CMT being configured.
+          Within the USER MACRO section there is one macro
+          specifically labled the User Macro.  It defines the user
+          parameters for circuits to be built from the terminals to
+          the ALC-CMT.  Also contained within the USER MACRO section
+          is the SETMAG macro.  The SETMAG defines those circuits
+          which will be built from the ALC-HIF to the ALC-CMT.
+
+          ADDRESS Macros define all session host-addressing
+          information.  Addressing can be set up for each host so that
+          a specific user has a dedicated address, or so that users
+          are assigned addresses on a first come, first served basis
+          from a configured pool of addresses.
+
+          Additional features can be included in the ALC-CMT through
+          configuration of the various OPTIONAL macros.  These include
+          such macros as Auto Sign-In and Sign-Off, Statistics
+          Gathering, Security Code, LOKCHK, and Project Code.  The
+          method for configuring each of these macros is detailed in
+          the OPTIONAL Macros section of this manual.
+
+
+          GENERAL Macros
+          ______________
+
+          The GENERAL macros are used to define the host number,
+          banner message, number of bufferlets used, the 'shut/answer'
+          status of the interface, and the logoff string.
+
+          These macros must be grouped together and may be placed
+          either before or after the LUD macros within the tymfile.
+
+
+
+
+
+
+
+
+
+
+          April 22, 1987             - 3 -                    ALCC.GEN
+
+
+
+
+
+
+
+
+
+                             SECTION 3. LUD MACROS
+
+
+
+
+          3.1.  USER MACROS
+          _________________
+
+
+
+          3.1.1.  The SETTRM Macro
+          ________________________
+
+          This macro defines the allowable terminal types.  It must be
+          called before the USER calls and it can have between one and
+          eight parameters.
+
+          The format for the SETTRM macro is:
+
+               SETTRM(terminal type<s>)
+
+          where:
+
+               terminal type<s> can be one or any number of the
+               ________________
+                         following:
+
+                    TTY52  = DEC VT52 Terminal
+                    TTY78  = Protocol PCI 78
+                    TTY440 = Tymshare 440 CRT (ADM-2) in block mode
+                    TTY430 = Tymshare 430
+                    TTY315 = Hard Copy
+                    TTY470 = Tymshare 470 CRT (Super Owl 1250) in
+                             block mode
+                    TTY415 = Scanset
+                    TTY102 = Tymshare 102 (UT102)
+                    TTY431 = Tymshare 431 (ADM-11)
+
+               When more than one terminal type is being defined with
+               this macro they must be separated by commas as
+               individual parameters.  For example;
+               (TTY52,TTY78,TTY102)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          April 22, 1987             - 4 -                    ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+          3.1.2.  The USER Macro
+          ______________________
+
+          This macro defines the username parameters for the circuits
+          to be built from the terminals to the ALC-CMT.  User names
+          can be defined either as global or standard.  Global
+          usernames are capable of multiple simultaneous logins while
+          standard usernames may have multiple simultaneous logins
+          only when they are defined with multiple AGENT IDs.
+
+          The only difference in defining a global username from a
+          standard username is that for the global username, the
+          'pointer to agent chain' parameter points to the GLUSER
+          macro rather than pointing to the AGENT macro which it does
+          for standard usernames.
+
+          One user macro must be defined for each circuit to be built.
+
+          The format of the USER macro is:
+
+             USER(username,industry code,printer type,terminal
+                  type,user type,license,pointer to agent
+                  chain,pointer to agcres chain,entry address of ipt)
+
+          where:
+
+             username (maximum 12 alphanumeric characters) defines the
+             ________
+                  username associated with the terminal when it's
+                  logged in.  If preceded by a '!', this username is
+                  allowed to log in when MATS is shut.
+
+             industry code (maximum 7 numeric characters) is used for
+             _____________
+                  PNR identification and in printer messages.
+
+             printer type identifies the printer type for printers
+             ____________
+                  attached to CRTs:
+
+                    PTYNOP = no printer
+                    PTY736 = Tymshare 736 printer
+                    PTYTGR = Flying Tigers printer
+
+             terminal type identifies the terminal type.  Possible
+             _____________
+                  terminal types for the normal user:
+
+                   LUD52  = DEC VT52 Terminal
+                   LUD78  = Protocol PCI 78
+                   LUD440 = Tymshare 440 CRT (ADM-2) in block mode
+                   LUD430 = Tymshare 430
+                   LUD315 = Hard Copy
+                   LUD470 = Tymshare 470 CRT (Super Owl 1250) in block
+                            mode
+                   LUD415 = Scanset
+                   LUD102 = Tymshare 102 (UT102)
+                   LUD431 = Tymshare 431 (ADM-11)
+
+
+
+          April 22, 1987             - 5 -                    ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+             More than one terminal type can be specified by adding
+             them together.  For instance:
+
+               LUD315+LUD470+LUD440
+
+             allows three terminal types.
+
+             user type identifies the type of user.  Possible user
+             _________
+             types include:
+
+                    LUDNUR = normal user
+                    LUDMUR = monitor user
+                    LUDRUR = res user
+                    LUDPUR = programmer user (debugging, testing)
+
+          license specifies whether the user will be allowed to enter
+          _______
+          (and leave) a mode where every command bypasses the common
+          language translation:
+
+               LUDCRL      = user selectable bypass mode is allowed
+               CARLOF or 0 = user selectable bypass mode is not
+                             allowed
+
+          pointer to agent chain is the label for the agent chain when
+          ______________________
+                        defining standard usernames, and the label for
+                        the GLUSER macro when defining global
+                        usernames (see section 3.1.7.)   This
+                        parameter is a maximum of six alphanumeric
+                        characters - the first being alpha.
+
+          pointer to agcres chain is the label of the AGCRES macro
+          _______________________
+                        which describes this user's agency.  If there
+                        is no entry (=0) then there is no AGCRES
+                        chain.  This parameter is a maximum of six
+                        alphanumeric characters - the first being
+                        alpha.
+
+          entry addr at ipt is the label of the industry pool table
+          _________________
+                        defined by BEGICP, INCODE, and ENDICP (see
+                        section 3.3.3.).  The pool is used for PNR
+                        security and is optional.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          April 22, 1987             - 6 -                    ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+          3.1.3.  The SETRES Macro
+          ________________________
+
+          This macro defines the symbol for a res number used in a
+          circuit from an ALC-HIF.  It must be called once for each
+          res number.  It must be called before the MAGPROMPT, SETMAG,
+          AGCRES, AIDRES, and POOL calls.  There is one call per res
+          symbol defintion.
+
+          The format for this macro is:
+
+               SETRES(res symbol,res number)
+
+          where:
+
+               res symbol is the res symbol res.xx
+               __________
+
+               res number is the res number in decimal used in a
+               __________
+                          circuit from an ALC-HIF.  RES number can be
+                          any digit from 0-127 but should be defined
+                          in numerical order beginning with 0.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          April 22, 1987             - 7 -                    ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+          3.1.4.  The SETMAG Macro
+          ________________________
+
+          This macro defines the circuits to be built from the ALC-HIF
+          to the ALC-CMT.  One SETMAG must be defined for each circuit
+          to be built.
+
+          The format of the SETMAG macro is:
+
+               SETMAG(res number,res code,line width,reset time,screen
+                         type,translation table,supplier line,support
+                         printer,industry code delimiter,industry code
+                         size,pointer to form specification table,size
+                         of industry code field,bypass character,PNR
+                         security,service type)
+
+          where:
+
+              res number is a decimal number expressed by a constant
+              __________
+                        of the form res.xy where xy is the airline res
+                        code (e.g., res.tw, res.ea, etc.).
+
+              res code is a two character code identifying the airline
+              ________
+                        xy in the res number defined above.)
+
+              line width is a number specifying the maximum size of
+              __________
+                        one display line in the host.
+
+              reset time is the minimum number of seconds before a
+              __________
+                        user can escape from a command (unlock the
+                        keyboard).
+
+              screen typ is always set to SCNPAR (an obsolete
+              __________
+                        parameter).
+
+              translation table is the label of a table used to
+              _________________
+                        translate ALC character set (i.e.;SABRE) into
+                        ASCII characters.
+
+              supplier line is the supplier's communications line
+              _____________
+                        number.
+
+              support printer specifies whether this res supports
+              _______________
+                        printers or not:
+                    0 = doesn't support printers
+                    1 = supports printers
+
+              industry code delimiter is a delimiter character (in hex
+              _______________________
+                        SABRE code) optionally used in printer
+                        messages to indicate the industry code field.
+
+              industry code size is the number of characters in the
+              __________________
+                        industry code.
+
+
+
+
+          April 22, 1987             - 8 -                    ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+              pointer to form specification table is always set to
+              ___________________________________
+                        zero (an obsolete parameter).
+
+              size of industry code field is the number of characters
+              ___________________________
+                        in the industry code field, including
+                        delimiters.
+
+              bypass character is the common language bypass character
+              ________________
+                        code (in ASCII hex) for this res.  This
+                        parameter is always set to 0.  It is now
+                        obsolete.
+
+              pnr security specifies whether PNR security is desired.
+              ____________
+
+              service type specifies the service type:
+              ____________
+
+                    MG2946 or 0 = 2946
+
+
+
+
+          3.1.5.  The MAGPROMPT Macro
+          ___________________________
+
+          This macro defines which prompt the user will see when
+          connected to a host through the ALC-CMT.
+
+          The format for this macro is:
+
+               MAGPROMPT(res symbol,string)
+
+          where:
+
+               res symbol is the res symbol for the host.
+               __________
+
+               string is the ASCII string to be used as the prompt.
+               ______
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          April 22, 1987             - 9 -                    ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+          3.1.6.  The AGCRES Macro
+          ________________________
+
+          This macro supplies data necessary to define agency access
+          for an agency (username) to one host (res).
+
+          The format of the AGCRES macro is:
+
+               AGCRES(res number,pseudo-city code,send interface
+                         code,send priority code,pnr pricing
+                         queue,command timeout,pointer to next agcres
+                         block,pointer to ia-ta pool for this res,res
+                         timeout)
+
+          where:
+
+               res number is a decimal number expressd by a constant
+               __________
+                         of the form res.xy where xy is the airline
+                         res code (e.g., res.tw, res.ea, etc.)
+
+               pseudo city code is an alphanmeric string which
+               ________________
+                         (currently) cannot exceed three characters.
+
+               send interface code is currently a single character
+               ___________________
+                         always set to zero.
+
+               send priority code is currently a single character
+               __________________
+                         always set to zero.
+
+               pnr pricing queeld is currently a single character
+               _______________________
+                         always set to zero.
+
+               command timeout is the decimal number of seconds to
+               _______________
+                         timeout and disconnect the user from this
+                         host if no command is entered.
+
+               pointer to next agcres block is the label of the next
+               ____________________________
+                         AGCRES.  A zero indicates the end of chain.
+
+               pointer to ia-ta pool for this res is the name
+               __________________________________
+                         (assembly label) of a POOL macro call which
+                         specifies all the IA-TAs that users pointing
+                         to this chain have access to on this res.
+
+               res timeout is the decimal number of seconds for the
+               ___________
+                         res timeout.  A user is disconnected from
+                         this res system if s/he switches away for
+                         this many seconds without switching back.
+
+
+
+
+
+
+
+
+
+          April 22, 1987             - 10 -                   ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+          3.1.7.  The AGENT/GLUSER Macro
+          ______________________________
+
+          The AGENT macro supplies data necessary to define one agent
+          identifier.  There may be multiple agencies defined for a
+          single username in order to allow multiple simultaneous
+          logins.  The first  agent definition for an agency is
+          pointed to by the USER macro.  The AGENT macro has a chain
+          pointer to another AGENT macro; this chain defines all the
+          agents within an agency.  Agent chains may be shared by
+          agencies (usernames) which have the same agent ids and
+          AIDRES values.
+
+          The GLUSER macro has one parameter which supplies a single
+          agent identifier.  It is used in place of the AGENT macro
+          for defining global usernames.  The GLUSER macro defines
+          global usernames which are capable of multiple simultaneous
+          logins without having configured AGENT IDs.
+
+
+          The format of the AGENT macro is:
+
+               AGENT(agent initials,pointer to next agent in chain,
+                         pointer to aidres chain)
+
+          where:
+
+               agent initials are a two character field identifying
+               ______________
+                         the agent.  For a given user, the agent
+                         identifier has to be entered after log-on.
+
+               pointer to next agent in chain is the (assembly label)
+               ______________________________
+                         name pointing to the next agent in the chain;
+                         zero indicates end of chain.
+
+               pointer to aidres chain is the label of the AIDRES
+               _______________________
+                         chain which contains res information for that
+                         agent.
+
+
+
+          The format of the GLUSER macro is:
+
+               GLUSER(pointer to aidres chain)
+
+          where:
+
+               pointer to aidres chain is the label of the AIDRES
+               _______________________
+                         chain which contains res information for that
+                         agent.
+
+
+
+
+
+
+
+          April 22, 1987             - 11 -                   ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+          3.1.8.  The AIDRES Macro
+          ________________________
+
+          This macro supplies data necessary to define res access for
+          an agent.  AIDRES Chains may be shared by more than one
+          user.
+
+          The format of the AIDRES macro is:
+
+               AIDRES(res code,res number,language license,res sign-in
+                         code,pointer to next aidres in block,res
+                         agent valid for printing)
+
+          where:
+
+               res code is a two character code identifying the
+               ________
+                         airline (xy in res number res.xy).
+
+               res number is the res symbol for the host, of the form
+               __________
+                         res.xy where xy is the airline res code
+                         (e.g., res.tw, etc.).
+
+               language license is an obsolete parameter which was
+               ________________
+                         used to specify whether the common language
+                         should be called for this res:
+
+                         CARLOF = common language should not be called
+
+               res sign-in code is an obsolete, language-related
+               ________________
+                         character string assigned by the host.  When
+                         the user gives the common-language sign-in,
+                         ALC-CMT appends the string automatically.
+
+               pointer to next aidres in block is the name (assembly
+               _______________________________
+                         label) of the next AIDRES in the chain; zero
+                         indicates the end of the chain.
+
+               res agent valid for printing specifies whether this res
+               ____________________________
+                         agent is valid for printing or not:
+
+                    0 = not valid for printing
+
+                    1 = valid for printing
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          April 22, 1987             - 12 -                   ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+          3.1.9.  The DEFPRT Macro
+          ________________________
+
+          This macro defines the number of simultaneous users possible
+          and the number of monitors.
+
+          The format for this macro is:
+
+               DEFPRT(# simultaneous users,# monitors)
+
+          where:
+
+               # simultaneous users is the decimal number of sim-
+               ____________________
+                         ultaneous users this ALC-CMT can handle.  It
+                         is important to note that both monitors and
+                         users will compete for the ports defined.
+
+               # monitors is the decimal number of monitors defined,
+               __________
+                         that is the number of USER calls with monitor
+                         license.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          April 22, 1987             - 13 -                   ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+          3.2.  ADDRESS MACROS
+          ____________________
+
+          The ADDRESS macros may be used to define either address
+          pools or individual dedicated addresses.  An address pool is
+          a set of addresses which are assigned to users on a first
+          come, first served basis, while a dedicated address is
+          assigned to one user and not used for login from any other
+          username.
+
+
+
+          3.2.1.  The POOL Macro
+          ______________________
+
+          The POOL macro starts an IA-TA pool definition and must be
+          executed at the beginning of each pool.  There may be more
+          than one pool for a particular res.
+
+          The format of the POOL macro is:
+
+               POOL(res number)
+
+          where:
+
+               res number is a decimal number expressed by a constant
+               __________
+                         of the form res.xy where xy is the res code
+                         (e.g., res.tw,etc.)
+
+
+
+          3.2.2.  The PIATAS Macro
+          ________________________
+
+          The PIATAS macro defines one CRT and printer IA-TA pair.
+          This macro can appear only after a POOL macro, another
+          PIATAS macro or a CIATAS macro.
+
+          The format of the PIATAS macro is:
+
+               PIATAS(crt ia-ta number,printer ia-ta number)
+
+          where:
+
+               crt ia-ta number defines the CRT IA-TA number
+               ________________
+                must be in hex.
+
+               printer ia-ta number defines the printer IA-TA number
+               ____________________
+                must be in hex.
+
+          The two parameters are logically related by ALC-CMT for
+          printing operations.
+
+
+
+
+
+
+
+          April 22, 1987             - 14 -                   ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+          3.2.3.  The CIATAS Macro
+          ________________________
+
+          The CIATAS macro makes a pool entry for a range of CRT IA-
+          TAs with no corresponding printer IA-TAs.  This macro can
+          appear only after a POOL macro, another CIATAS macro or a
+          PIATAS macro.
+
+          The format of the CIATAS macro is:
+
+               CIATAS(ia,start ta,end ta)
+
+          where:
+
+               ia defines the IA number
+               __
+                must be in hex.
+
+               start ta is the start TA number
+               ________
+                must be in hex.
+
+               end ta is the end TA number
+               ______
+                must be in hex.  If start TA equals end TA, only one
+                         TA is specified.
+
+
+
+
+          3.2.4.  The ENPOOL Macro
+          ________________________
+
+          The ENPOOL macro is used to end a IA-TA pool.  It must
+          appear either after a CIATAS or PIATAS macro.  ENPOOL has no
+          parameters.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          April 22, 1987             - 15 -                   ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+          3.3.  OPTIONAL MACROS
+          _____________________
+
+
+
+          3.3.1.  AUTO SIGN-IN,SIGN-OFF MACROS
+          ____________________________________
+
+
+          The Auto Sign-In and Auto Sign-Off features are flexible and
+          fully configurable.  They share a common set of
+          command/response macros which define the SC strings to be
+          exchanged between the ALC-CMT and the host.  Command and
+          Response strings may consist of up to 255 ASCII characters
+          and may include the use of wild characters.
+
+          Each RES has one 'Sign Command Group' which may consist of
+          one or more 'Command Sets'.  A Sign Command Group defines
+          the entire set of command/response macros for a RES, where a
+          Command Set defines individual command/response macro
+          sequences.  Both a Sign Command Group and a Command Set
+          begin with a SGNBEG macro and end with a SGNEND macro.  The
+          difference between them is that a Sign Command Group must be
+          ended with the SGNEND macro followed by the ENDGRP
+          parameter; SGNEND(ENDGRP), and a Commamd Set is ended with
+          the SGNEND macro followed by the ENDSET parameter;
+          SGNEND(ENDSET).
+
+          Diagram 1.A illustrates the relationship between a Command
+          Set and a Sign Command Group.
+
+
+
+                               SIGN COMMAND GROUP
+                               __________________
+
+
+               SGNBEG
+                   SGNCMD(CMD1)
+                   SGNRSP(RSP1,RSPDNE)
+                   SGNRSP(RSP2)
+                                          ---------->COMMAND SET
+                   SGNCMD(CMD2)
+                   SGNRSP(RSP1)
+                   SGNRSP(RSP2)
+                   SGNRSP(RSP3)
+               SGNEND(ENDSET)
+
+               SGNBEG
+                   SGNCMD(CMD1)           ---------->COMMAND SET
+                   SGNRSP(RSP1)
+               SGNEND(ENDGRP)
+
+
+
+
+
+
+
+          April 22, 1987             - 16 -                   ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+          A command group may contain any number of commands.  Each
+          command in turn, may be configured to accept one or several
+          responses. Optionally any command or response may be defined
+          with an action to be taken when the command is sent or the
+          response is received.  Currently, there is only one ACTION
+          being used.  This is the 'RSPDNE' option that can be
+          configured for a response macro.  Responses that are
+          configured with the RSPDNE parameter indicate to the ALC-CMT
+          that when this response is received the interface should
+          exit the current command/response sequence and go on to the
+          next sequence defined.  This can be seen by looking at
+          Diagram 1.A.  If the first response configured for command 1
+          is received, command 2 is not executed, but instead the ALC-
+          CMT jumps down to the next Sign Command Set and executes the
+          command configured in that sequence.
+
+          Sign-In and Sign-Off macro structures are labeled either as
+          SIGNIx or SIGNOx, where x may be any ASCII character or wild
+          character used to identify the command group - for example,
+          SIGNI1.
+
+
+          SGNRES macros are used to designate whether the Auto Sign-In
+          and/or Auto Sign-Off feature is supported for a specific
+          service (RES), and which Sign Command Group should be used
+          for that RES.
+
+
+          3.3.1.1.  The SGNBEG Macro
+          __________________________
+
+          The SGNBEG macro indicates the beginning of the command/re-
+          sponse sequence for the message exchange between the ALC-CMT
+          and the host.  This macro must appear before the SGNCMD and
+          SGNRSP macros, and it must be paired with a SGNEND macro.
+
+          The format for the SGNBEG macro is:
+
+               SGNBEG
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          April 22, 1987             - 17 -                   ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+          3.3.1.2.  The SGNCMD Macro
+          __________________________
+
+          The SGNCMD macro is used to generate the SC format command
+          string(s) that ALC-CMT will send to the host.  Multiple
+          command strings may be configured per RES or per Sign
+          Command Group.  Each command must be coupled with at least
+          one response, although several responses may be configured
+          per command.
+
+          The format of the SGNCMD macro is:
+
+               SGNCMD(cmd,action)
+
+          where:
+
+               cmd       is the SC string which will be sent by the
+               ___
+                         ALC-CMT to the host.  This field may consist
+                         of up to 255 ASCII characters.
+
+               action    represents an action which is to be taken
+               ______
+                         before the command sequence is sent to the
+                         host.  It is an optional parameter and when
+                         it is not used, there is no action to be
+                         performed for the command being defined.
+
+
+
+
+          3.3.1.3.  The SGNRSP Macro
+          __________________________
+
+          This macro represents the configured response which the ALC-
+          CMT expects to receive from the host.  At least one response
+          per host command must be configured but multiple responses
+          may be configured for any one command.  Therefore this macro
+          may repeat itself after a SGNCMD macro.
+
+          The format of the SGNRSP macro is:
+
+               SGNRSP(rsp,action)
+
+          where:
+
+               rsp       is the response expected for the command
+               ___
+                         configured in the SGNCMD macro.  There may be
+                         several responses to one command.  This field
+                         may consist of up to 255 ASCII characters
+                         including wild characters.  (Wild characters
+                         are represented with the pound sign '#'.)
+
+               action    represents an action to be taken when this
+               ______
+                         response is received.  Currently the only
+                         type of action being used is RSPDNE.  When a
+                         response is received for which the RSPDNE
+
+
+
+          April 22, 1987             - 18 -                   ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+                         option is defined, the ALC-CMT will jump to
+                         the next Command Set, without issuing any
+                         other commands in the current Command Set.
+                         When no action parameter is defined, the next
+                         command in the current Command Set is
+                         performed.
+
+
+
+
+          3.3.1.4.  The SGNEND Macro
+          __________________________
+
+          This macro is always paired with the SGNBEG macro.  It is
+          used to end a Command Set or a Sign Command Group.  When
+          this macro is used to end a Command Set, it is defined with
+          the parameter ENDSET.  When it is used to end a Sign Command
+          Group, the parameter ENDGRP must be defined.
+
+          The format for this macro is:
+
+               SGNEND(ENDSET) or SGNEND (ENDGRP)
+
+          where:
+
+               ENDGRP    indicates that the end of a Sign Command
+               ______
+                         Group has been reached.
+
+               ENDSET    indicates that the end of a Command Set has
+               ______
+                         been reached.
+
+
+
+
+          3.3.1.5.  The SGNRES Macro
+          __________________________
+
+          This macro designates whether Auto Sign-In and/or Auto Sign-
+          Off are supported for a particular RES, and indicates which
+          Auto Sign-In or Sign-Off Sign Command Group to use for that
+          RES.  This macro is used only for interfaces that support
+          the Auto Sign-In or Off features.
+
+          The format for this macro is:
+
+               SGNRES(RES_NUM,Auto Sign-In ptr,Auto Sign-Off ptr)
+
+          where:
+
+               RES NUM    is the RES number
+               _______
+
+               Auto Sign-In ptr is the label SIGNIx, with x
+               ________________
+                         identifying which Auto Sign-In Command Group
+                         to use for this RES.  This parameter should
+                         be omitted to configure a RES without Auto
+                         Sign-In capability.
+
+
+          April 22, 1987             - 19 -                   ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+               Auto Sign-off ptr  is the label SIGNOx, with x
+               _________________
+                         identifying which Auto Sign-Off Command Group
+                         to use for this RES.  This parameter should
+                         be omitted to configure a RES without Auto
+                         Sign-Off capability.
+
+
+
+
+          3.3.1.6.  Configurable Retry Parameters
+          _______________________________________
+
+          The retry attempts that the ALC-CMT makes in signing in or
+          off a host are set up with predefined default values which
+          may be changed when necessary.  This section defines each of
+          these parameters and includes a description of how to change
+          them.
+
+          The following parameters may be defined anywhere within the
+          tymfile but for the sake of clarity and easy reference it is
+          best to place them immediately following the Sign-In and
+          Sign-Off macros.   Each of the parameters shown is listed
+          with its current default value.  The parameters are defined
+          acccording to the following formulas:
+
+                         DEFDEF(VARIABLE NAME,$A VALUE)
+
+                      DEFDEF(VARIABLE NAME,$A RATE*VALUE)
+
+          where:
+
+               DEFDEF assignes a numeric value to the variable
+               ______
+
+               VARIABLE NAME is a six letter name for the variable
+               _____________
+
+               $A means that the variable value shall be represented
+               __
+                  in decimal
+
+               RATE is equivilent to 600 FASTC ticks or 1 second
+               ____
+
+               VALUE is the numeric value of the variable
+               _____
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          April 22, 1987             - 20 -                   ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+                                 AUTO SIGN-OFF
+
+
+          DEFDEF(SGOTIM,$A RATE * 15)
+
+          Default response timeout value.   If no response is received
+          to a sign-off in SGOTIM amount of time, it will be
+          considered a 'NO RESPONSE' from the host.
+
+
+          DEFDEF(SGOLMT,$A 3)
+
+          Maximum number of retries for the first sign-off attempt.
+          This is the number of times that the ALC-CMT will attempt to
+          sign-off a host before freezing the address.
+
+
+          DEFDEF(HKPTIM,$A RATE*600)
+
+          Time interval in which the ALC-CMT will wait between each
+          successive set of retry attempts after freezing an address.
+
+
+          DEFDEF(HKPRTR,$A 3)
+
+          Number of sign-off retry attempts that are contained in each
+          set of retry attempts after an address has been frozen.
+
+
+          DEFDEF(SGORNO,$A 3)
+
+          Maximum number of retry sets that will be executed after an
+          address has been frozen.  Each retry set has the value of
+          HKPRTR number of retries.
+
+
+                                  AUTO SIGN-IN
+
+          DEFDEF(SGITIM, $A RATE*15)
+
+          Sign-in response timeout value.  If no response is received
+          to a sign-in attempt within the value of SGITIM, then this
+          will be considered a 'NO RESPONSE' from the host.
+
+
+          DEFDEF(SGILMT, $A RATE*3)
+
+          Maximum number of retries for a sign-in to the host before
+          ALC-CMT stops trying to sign-in.  (If the username is
+          configured for access to one host, the ALC-CMT will zap the
+          circuit between itself and the user, but if the username is
+          configured for access to more than one host, the circuit
+          between the user and the ALC-CMT will be maintained.)
+
+
+
+          April 22, 1987             - 21 -                   ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+          3.3.2.  The STAHST Macro
+          ________________________
+
+          The STAHST macro defines circuits to be built from the ALC-
+          CMT to an ASCII host running an optional statistics
+          gathering program.  One STAHST macro must be defined for
+          each circuit to be built.
+
+          The format of the STAHST macro is:
+
+               STAHST(username,host number,status,ordinal,password)
+
+          where:
+
+               username is the username used when the circuit is built
+               ________
+                         to the host.
+
+               host number identifies the host to which this circuit
+               ___________
+                         is being built.
+
+               status indicates the status of the host.  The two
+               ______
+                         options allowed are:
+
+                    HSON - circuits may be built to this host
+                    HSOFF - circuits may not be built to this host
+
+               ordinal is the order in which the circuit building
+               _______
+                       attempt should be made by the ALC-CMT.  Must be
+                       >=1.  The host with the ordinal equal to 1 will
+                       have the highest circuit building priority.
+
+               password is the password in the login string used to
+               ________
+                         get into the host for statistics gathering
+                         and reporting.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          April 22, 1987             - 22 -                   ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+          3.3.3.  SECURITY CODE MACROS
+          ____________________________
+
+          SECURITY CODE macros are used by ALC-CMT as an added sec-
+          curity measure for message transmission.  This feature was
+          originally designed for the Airline Reservation systems
+          which required high security for PNRs, but it can be used
+          for any type of message.
+
+          When this feature is in effect, the ALC-CMT checks all
+          messages for industry code number.  This number is then
+          compared with the numbers in the configured Security pool.
+          If there is a match, the message is transmitted to the user.
+          If there is not a match, then it is discarded.
+
+          More than one pool can be defined, and these pools can be
+          shared by several users.
+
+
+          3.3.3.1.  The BEGICP Macro
+          __________________________
+
+          This macro starts the beginning of a particular pool of in-
+          dustry code numbers.  BEGICP Has no parameters.
+
+
+          3.3.3.2.  The INCODE Macro
+          __________________________
+
+          This macro  specifies one industry code number for a par-
+          ticular pool.  There can be more than one INCODE call pool.
+
+          The format of the INCODE macro is:
+
+               INCODE(industry code number)
+
+          where:
+
+               industry code number is the industry code number in the
+               ____________________
+                         form of a string.
+
+
+          3.3.3.3.  The ENCICP Macro
+          __________________________
+
+          This macro ends a particular pool of industry code numbers.
+          ENDICP Has no parameters.
+
+
+
+
+
+
+
+
+
+
+
+
+
+          April 22, 1987             - 23 -                   ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+          3.3.4.  The LOKCHK Macro
+          ________________________
+
+          The LOKCHK  macro enables  or disables  data flow  in either
+          direction.
+          If this macro is not used within a configuration then the
+          default value for it will be 'OFF' in each direction,
+          meaning that no restrictions will be placed on data flow.
+
+          The format of the LOKCHK macro is:
+
+               LOKCHK(USR,HST)
+
+          where:
+
+               usr is the option (ON or OFF) defined for the user
+               ___
+                      keyboard.
+
+               ON  means the keyboard will be locked for the user,
+               that is the user cannot type more than one command.
+
+               OFF  means the keyboard will not be locked for the
+               user, that is the user can type a command followed by
+               carriage return, then type subsequent commands.
+
+
+               hst is the option (ON or OFF) defined for the host.
+               ___
+
+               ON  means the host cannot send data to the user when
+               the user is in input mode, that is it can only send one
+               response per user command.
+
+               OFF  means the host can send data to the user when the
+               user is in input mode, that is it can send more than
+               one response per user command.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          April 22, 1987             - 24 -                   ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+          3.3.5.  The PJCODE Macro
+          ________________________
+
+          The PJCODE macro is used to enable or disable the Project
+          Code feature for an ALC-CMT user.  When this feature is
+          enabled the user will type in project code as a part of
+          his/her login.  For example - username; password;project
+          code <cr>.  The project code information is then sent to the
+          network supervisor and included in the customer's accounting
+          data.
+
+          The Project Code field may consist of up to 25 characters
+          minus the number of characters in the login username.  When
+          ALC-CMT is configured with the Project Code option, the ALCC
+          has a default 'wait' time of 3 seconds.  This indicates the
+          amount of time the ALC-CMT will wait for a project code to
+          be entered by the user after the username login sequence.
+          If project code is not entered within the specified 'wait'
+          time, project code data entered after that time will still
+          be sent to the supervisor but will not be retained by the
+          ALC-CMT.
+
+          The format of the PJCODE macro is:
+
+               PJCODE(ENABLE/DISABLE)
+
+          where:
+
+               enable enables the Project Code feature.
+               ______
+
+               disable disables the Project Code feature.
+               _______
+
+
+
+          In order to configure a 'wait' time other than 3 seconds
+          place the following variable equation after the PJCODE
+          macro.
+
+               DEFDEF(WATPJC,$A rate * value)
+
+          where:
+
+               $A indicates that the following value will be in hex.
+               __
+
+               rate equals 600 TICKS or 1 second.
+               ____
+
+               value is the hex value for this equation.
+               _____
+
+
+
+
+
+
+
+
+
+
+          April 22, 1987             - 25 -                   ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                                   3. LUD MACROS
+
+
+
+
+          3.4.  ENDLUD MACRO
+          __________________
+
+          The ENDLUD macro is used to generate tables that are
+          associated with Auto Sign-In and Auto Sign-Off.   This macro
+          should be used only after ALL of the LUD entries have been
+          made.  ENDLUD has no parameters.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          April 22, 1987             - 26 -                   ALCC.GEN
+
+
+
+
+
+
+
+
+
+                           SECTION 4. GENERAL MACROS
+
+
+
+
+          4.1.  THE HSTDEF MACRO
+          ______________________
+
+          This macro specifies the Tymnet host number asoicated with
+          the interface.
+
+          The format of the HSTDEF macro is:
+
+               HSTDEF(host#)
+
+          where:
+
+               host# is the decimal number of the host.
+               _____
+
+
+
+
+          4.2.  THE NMBFLT MACRO
+          ______________________
+
+          This macro defines the number of bufferlets to be used.
+
+          The format for this macro is:
+
+               NMBFLT(# bufferlets)
+
+          where:
+
+               #bufferlets is the decimal number of bufferlets to be
+               ___________
+                         allocated.  Each bufferlet has six data
+                         characters and two bytes of link.
+
+
+
+
+          4.3.  THE SHTANS MACRO
+          ______________________
+
+          This macro defines the soft shut and answered levels.
+
+          The format for this macro is:
+
+               SHTANS(# ports for shut,# ports for answer)
+
+          where:
+
+               # ports for shut is the decimal number of ports to be
+               ________________
+                         left in the available pool in order for the
+                         ALC-CMT to shut itself.  This 'shut' occurs
+                         if there are the configured number of ports
+                         or fewer available.
+
+
+
+          April 22, 1987             - 27 -                   ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                               4. GENERAL MACROS
+
+
+
+
+               #ports for answer is the decimal number of ports to be
+               _________________
+                         left in the available pool in order for the
+                         ALC-CMT to answer.  This number should be
+                         larger than the number configured for 'shut'.
+
+
+
+
+
+
+          4.4.  THE MAKBAN MACRO
+          ______________________
+
+          This macro defines the banner string.  It has only one
+          parameter, that of the banner message to be displayed to the
+          user upon logging in.  The banner string may contain any
+          number of characters up to the length of one entire screen,
+          although most banners will require only one or two lines.
+          Depending on the type of terminal used, banner data may or
+          may not wrap when the end of a line (80 characters) is
+          reached.  Therefore, it is prudent to define a carriage
+          return and linefeed after each 79th character of data
+          entered in the banner string.
+
+          The format for this macro is:
+
+               MAKBAN(banner string)
+
+          where:
+
+               banner string is the data string which will be dis-
+               _____________
+                         played to the user upon login.  Control
+                         characters such as carriage return or line
+                         feed can be defined by inserting a double
+                         quote followed by two hex digits for the
+                         ASCII code of the character.  The quote will
+                         not be displayed.
+
+               For example, given that "8D equals a carriage return,
+                         and "8A is a linefeed; with the banner string
+                         'Welcome to the ALC-CMT "8D"8A, the user will
+                         see 'Welcome to the ALC-CMT' followed by a
+                         carriage return and a linefeed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          April 22, 1987             - 28 -                   ALCC.GEN
+
+
+
+
+          ALCC SYS GEN                               4. GENERAL MACROS
+
+
+
+
+          4.5.  THE LOGOFF MACRO
+          ______________________
+
+          This macro defines the logoff string that the user will type
+          when logging off the system.  It can be up to 12 characters
+          in length, and may be defined with a minimum number of
+          characters to be input in order for the command to be valid.
+
+          The format for this macro is:
+
+               LOGOFF(str,length)
+
+          where:
+
+               str is the logoff string, which may consist of up to 12
+               ___
+                         ASCII characters.
+
+               length is the minimum number of logoff string
+               ______
+                         characters that may be typed in order for the
+                         command to take effect.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          April 22, 1987             - 29 -                   ALCC.GEN
+
+
+
+
+
+
+
+
+
+                    APPENDIX A:SAMPLE ALC-CMT CONFIGURATION
+
+
+
+  :(MATS.P2)ALCC02.T00   SAMPLE Tymfile
+  :
+  MAXCHAR EQ      $A 960       : number of characters before breaking
+  CRSTOP  EQ      0            : don't stop after crashing
+
+
+
+
+  :::START OF LUD:::
+
+          GL      MG2946,MAGVIP
+          SEG     A.ULUD
+  LUDLOK  HC      0
+  LUD     WS      0
+  MG2946  EQ      0
+  MAGVIP  EQ      1
+
+  -----------------------------------------------------------------
+  ::                                                             ::
+  :: Define allowable terminal types, must be before USER calls. ::
+  ::                                                             ::
+  -----------------------------------------------------------------
+
+   SETTRM(TTY52,TTY78,TTY102,TTY315,TTY415,TTY431,TTY440,TTY470)
+
+
+  ::-----------------------------------------------------------------::
+  ::                                                                 ::
+  :: CUSTOMER USER NAMES                                             ::
+  ::                                                                 ::
+  :: USER input parameters                                           ::
+  :: username,Industry code, printer type, terminal type, user type, ::
+  :: user licences, pointer to AGENT chain, pointer to AGCRES chain. ::
+  ::                                                                 ::
+  :: Global username: pointer to AGENT chain MUST be defined by      ::
+  ::              GLUSER macro instead of AGENT macro.               ::
+  ::                                                                 ::
+  ::-----------------------------------------------------------------::
+
+
+  USER(ICACKT0001,0,PTYNOP,LUD52,LUDNUR,0,ALASG1,AGC001)
+  USER(ICACKT0002,0,PTYNOP,LUD52+LUD102+LUD315+LUD470,LUDNUR,0,ALASG2,
+       AGC002)
+  USER(ICACKT0003,0,PTYNOP,LUD52+LUD102+LUD315+LUD470,LUDNUR,0,ALASG3,
+       AGC003)
+  USER(ICACKT0004,0,PTYNOP,LUD52+LUD102+LUD315+LUD470,LUDNUR,0,ALASG4,
+       AGC004)
+  USER(ICACKT0005,0,PTYNOP,LUD52+LUD78+LUD315+LUD470,LUDNUR,0,ALASG5,
+       AGC005)
+
+
+
+  April 22, 1987             - 30 -                   ALCC.GEN
+
+
+
+
+  ALCC SYS GEN         APPENDIX A:SAMPLE ALC-CMT CONFIGURATION
+
+
+
+
+  :::MONITOR USERNAMES:::
+
+
+  USER(ICACKT0011,0006, ,LUD440,LUDMUR,$00FF,0,0) : PRIVILEGED MONITOR
+
+
+
+  :::PROGRAMMER USERNAMES:::
+
+
+  USER(ICACKT0006,2601634,PTY736,LUD415+LUD102+LUD431+LUD470+LUD315+LUD78+
+  LUD52,LUDPUR,0,ALASG2,AG002)
+
+
+
+  :::MAG CIRCUIT USERNAMES:::
+
+
+  USER(ICACKT0007,0, ,0,LUDRUR,0,0,0)
+  USER(ICACKT0008,0, ,0,LUDRUR,0,0,0)
+  USER(ICACKT0009,0, ,0,LUDRUR,0,0,0)
+  USER(ICACKT0010,0, ,0,LUDRUR,0,0,0)
+
+
+  LUDEND  EQ      .
+  LUDSIZ  EQ      (LUDEND-LUD)/LUTLNG
+          IF      (LUDEND-LUD)-(LUDSIZ*LUTLNG)
+          REMARK  %***Error producing LUD username table.
+          EI
+
+  :::END OF LUD:::
+
+
+  ::--------------------------------------------------------------::
+  ::                                                              ::
+  ::  SETMAG input parameters                                     ::
+  ::                                                              ::
+  ::  Res number, Res code, line size, reset, screen type,        ::
+  ::  translation table, line number, airline support printer,    ::
+  ::  printer field delimiter, # of digits in industry code used  ::
+  ::  in printer message, pointer to form-specification table,    ::
+  ::  printer identification field length, bypass character,      ::
+  ::  pnr security process indicator, service indicator.          ::
+  ::                                                              ::
+  ::--------------------------------------------------------------::
+
+
+
+  :::Define Res System Symbols:::
+
+
+          SETRES(RES.T0,0)
+          SETRES(RES.UA,1)
+          SETRES(RES.EA,2)
+
+
+  April 22, 1987             - 31 -                   ALCC.GEN
+
+
+
+
+  ALCC SYS GEN         APPENDIX A:SAMPLE ALC-CMT CONFIGURATION
+
+
+
+
+          SETRES(RES.T1,3)
+
+
+          SEG     A.NLUD
+
+
+          MAGPROMPT(RES.T0,T0>)
+          MAGPROMPT(RES.UA,UA>)
+          MAGPROMPT(RES.EA,EA>)
+          MAGPROMPT(RES.T1,T1>)
+
+          BND     4
+
+          SETMAG(RES.T0,T0,64,10,SCNPAR,XLTPAR,01,1,0,0,0,0,0,0,MG2946)
+          SETMAG(RES.UA,UA,64,10,SCNPAR,XLTPAR,01,1,0,0,0,0,0,0,MG2946)
+          SETMAG(RES.EA,EA,64,10,SCNPAR,XLTPAR,01,1,0,0,0,0,0,0,MG2946)
+          SETMAG(RES.T1,T1,64,10,SCNPAR,XLTPAR,01,1,0,0,0,0,0,0,MG2946)
+
+
+  ::--------------------------------------------------------------::
+  ::                                                              ::
+  :: AGCRES input parameters                                      ::
+  ::                                                              ::
+  :: Res number (decimal), pseudo-city code, send-interface code, ::
+  :: send priority code, pricing-queue field, command timeout     ::
+  :: (seconds), pointer to next AGCRES block, pointer to IA_TA    ::
+  :: for this Res, Res timeout(seconds).                          ::
+  ::                                                              ::
+  :: USER AGENCY DATA CHAINS                                      ::
+  ::                                                              ::
+  ::--------------------------------------------------------------::
+
+
+  AGC001  AGCRES(RES.UA,AAA,0,0,0,1200,0,ALAS01,0)
+  AGC002  AGCRES(RES.T1,AAA,0,0,0,1200,0,ALAS02,0)
+  AGC003  AGCRES(RES.UA,AAA,0,0,0,1200,AGC004,ALAS03,0)
+  AGC004  AGCRES(RES.EA,AAA,0,0,0,2400,0,ALAS04,0)
+  AGC005  AGCRES(RES.T0,AAA,0,0,0,2400,0,ALAS05,0)
+
+
+  ::----------------------------------------------------------------::
+  ::                                                                ::
+  :: AGENT input parameters                                         ::
+  ::                                                                ::
+  :: Agent identifier,pointer to next AGENT,pointer to AIDRES block ::
+  ::                                                                ::
+  ::      GLUSER input parameter: pointer to AIDRES block           ::
+  ::                                                                ::
+  ::----------------------------------------------------------------::
+
+          BND     4
+
+
+
+
+
+  April 22, 1987             - 32 -                   ALCC.GEN
+
+
+
+
+  ALCC SYS GEN         APPENDIX A:SAMPLE ALC-CMT CONFIGURATION
+
+
+
+
+  ALASG1  AGENT(00,0,ALASD1)
+  ALASG2  AGENT(00,0,ALASD2)
+  ALASG3  GLUSER(ALASD3)
+  ALASG4  GLUSER(ALASD4)
+  ALASG5  GLUSER(ALASD5)
+
+
+  ::--------------------------------------------------------------::
+  ::                                                              ::
+  :: AIDRES input parameters                                      ::
+  ::                                                              ::
+  :: Res code, Res number (decimal), language licence             ::
+  :: (CARLON or CARLOF), Sine-in code, pointer to next AIDRES     ::
+  :: block, Agent-valid-for-printing license.                     ::
+  ::                                                              ::
+  ::--------------------------------------------------------------::
+
+  ALASD1  AIDRES(UA,RES.UA,CARLOF,,0,1)
+  ALASD2  AIDRES(T1,RES.T1,CARLOF,,0,1)
+  ALASD3  AIDRES(UA,RES.UA,CARLOF,,ALASD4,1)
+  ALASD4  AIDRES(EA,RES.EA,CARLOF,,0,1)
+  ALASD5  AIDRES(T0,RES.T0,CARLOF,,0,1)
+
+
+  -----------------------------------------------------------------------
+  ::                                                                   ::
+  :: Define number of simultaneous users (includes users and monitors) ::
+  :: and define the number of monitors.                                ::
+  ::                                                                   ::
+  -----------------------------------------------------------------------
+
+  DEFPRT(20,1)            : 12 decimal simultaneous users, 1 monitors
+
+
+
+
+  :::AUTO SIGN-IN/SIGN-OFF:::
+
+          BND     4
+  SIGNI1  SGNBEG
+            SGNCMD(CMD1)
+              SGNRSP(RSP1)
+              SGNRSP(#MD#)      :# wild characters
+            SGNCMD(CMD2)
+              SGNRSP(RSP2)
+          SGNEND(ENDGRP)
+  SIGNO1  SGNBEG
+            SGNCMD(CMD3)
+              SGNRSP(RSP3,RSPDNE)
+            SGNCMD(CMD4)
+              SGNRSP(RSP4)
+          SGNEND(ENDSET)
+          SGNBEG
+            SGNCMD(CMD5)
+
+
+  April 22, 1987             - 33 -                   ALCC.GEN
+
+
+
+
+  ALCC SYS GEN         APPENDIX A:SAMPLE ALC-CMT CONFIGURATION
+
+
+
+
+              SGNRSP(RSP5)
+          SGNEND(ENDGRP)
+  SIGNI2  SGNBEG
+            SGNCMD(CMD6)
+              SGNRSP(RSP61)
+              SGNRSP(RSP62)
+          SGNEND(ENDGRP)
+  SIGNO2  SGNBEG
+            SGNCMD(CMD7)
+              SGNRSP(RSP71)
+              SGNRSP(RSP72)
+          SGNEND(ENDGRP)
+  SIGNO3  SGNBEG
+            SGNCMD(CMD8)
+              SGNRSP(RSP8)
+            SGNCMD(CMD9)
+              SGNRSP(RSP9)
+            SGNCMD(CMD10)
+              SGNRSP(RSP10)
+            SGNCMD(CMD11)
+              SGNRSP(RSP11)
+            SGNCMD(CMD12)
+              SGNRSP(RSP12)
+          SGNEND(ENDSET)
+          SGNBEG
+            SGNCMD(CMD13)
+              SGNRSP(RSP13)
+          SGNEND(ENDGRP)
+
+         SGNRES(RES.UA,SIGNI1,SIGNO1)
+         SGNRES(RES.EA,SIGNI2,SIGNO2)
+         SGNRES(RES.T0,0,SIGNO3)
+
+
+  :::POOL DEFINITIONS:::
+
+
+          BND     2        : this must preceed the first pool macro
+
+  ALAS01
+          POOL(RES.UA)
+             CIATAS(01,10,14)
+          ENPOOL
+  ALAS02
+          POOL(RES.T1)
+             PIATAS(0120,0102)
+             PIATAS(0121,0103)
+          ENPOOL
+  ALAS03
+          POOL(RES.UA)
+             CIATAS(02,10,14)
+          ENPOOL
+  ALAS04
+          POOL(RES.EA)
+
+
+  April 22, 1987             - 34 -                   ALCC.GEN
+
+
+
+
+  ALCC SYS GEN         APPENDIX A:SAMPLE ALC-CMT CONFIGURATION
+
+
+
+
+             PIATAS(0122,0104)
+             PIATAS(0123,0105)
+          ENPOOL
+  ALAS05
+          POOL(RES.T0)
+             CIATAS(03,10,10)
+             PIATAS(0320,0302)
+          ENPOOL
+
+
+
+  :::OPTIONAL SYSTEM GENERATION PARAMETERS:::
+
+
+  :::Project Code:::
+
+            PJCODE(DISABLE)     : parameter = ENABLE or DISABLE
+
+  :::Host Table for MATS Statistics:::
+
+          STAHST(MATSTATS,72,HSOFF,1,R A I S S)
+
+
+          BND     4
+          GL      V.LUD.
+  V.LUD.  SC      /A.10/
+
+
+          ENDLUD
+
+  :::GENERAL MACROS:::
+
+  :::Host Number:::
+
+          HSTDEF(2225)
+
+  :::Logoff String:::
+
+           LOGOFF(QQUIT,3)     : logoff from alcc
+
+  :::Define the Banner:::
+
+
+          MAKBAN(Please sign in)
+
+
+
+
+  :::Define the number of Bufferlets:::
+
+
+          NMBFLT(1200)       : 1200 decimal bufferlets
+
+
+
+
+  April 22, 1987             - 35 -                   ALCC.GEN
+
+
+
+
+  ALCC SYS GEN         APPENDIX A:SAMPLE ALC-CMT CONFIGURATION
+
+
+
+
+  :::Define Soft SHUT and ANSWERED Levels:::
+
+
+    SHTANS(3,5)       : SHUT when 3 ports left, ANSWER again when 5
+
+
+
+  ::------------------------------------------------------------------::
+  ::                                                                  ::
+  :: Define whether data which violates half duplex order will        ::
+  :: will be processed or discarded, for each direction.              ::
+  ::                                                                  ::
+  ::------------------------------------------------------------------::
+
+   LOKCHK(ON,OFF)          : keyboard locks, host can send >1 response
+
+
+          EM
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  April 22, 1987             - 36 -                   ALCC.GEN
+
+
+
+
+
+
+
+
+
+                 APPENDIX B:USER BLOCK DIAGRAM
+
+
+  User block
+  (USER-LUT)
+  +---------------+      Agent Id block     Agent Id block
+  | Username      |      (AGENT-LAI)        (AGENT-LAI)
+  -----------------      +-----------+      +-----------+
+  | Industry code |  +-->| Agent Id  |  +-->| Agent Id  |    AGENT
+  -----------------  |   -------------  |   -------------    chain
+  | Printer type  |  |   | Pointer   |--+   | Pointer   |--->...
+  -----------------  |   -------------      -------------
+  | Terminal type |  |   | Pointer   |---+  | Pointer   |---+
+  -----------------  |   +-----------+   |  +-----------+   |
+  | User type     |  |                   |                  |
+  -----------------  |                   |                  |
+  | User Licenses |  |   Agent Id/       |  Agent Id/       |
+  -----------------  |   Res code block  |  Res code block  |
+  | Pointer       |--+   (AIDRES-LRS)    |  (AIDRES-LRS)    |
+  -----------------      +------------+  |  +------------+  |
+  | Pointer       |--+   | Res code   |<-+  | Res code   |<-+
+  +---------------+  |   --------------     --------------
+                     |   | Res number |     | Res number |
+                     |   --------------     --------------
+                     |   | Printer Ok |     | Printer Ok |
+  Agency Res Data    |   --------------     --------------
+  block (AGCRES-LAG) |   | CARLOF     |     | CARLOF     |
+  +---------------+  |   --------------     --------------
+  | Res number    |<-+   | Sine-in    |     | Sine-in    |
+  -----------------      --------------     --------------
+  | Pseudo-city   |      | Pointer    |--+  | Pointer    |--+
+  -----------------      +------------+  |  +------------+  |
+  | Send command  |                      |                  |
+  -----------------                      |                  |
+  | Send priority |                      V                  V
+  -----------------                   to next            to next
+  | Pricing queue |                 AIDRES block       AIDRES block
+  -----------------
+  | Cmd time-out  |
+  -----------------
+  | Res time-out  |
+  -----------------
+  | Pointer       |----------------->... to next AGCRES block
+  -----------------                      in chain
+  | Pointer       |---+
+  +---------------+   |    IA-TA Pool block
+                      |    (POOL-LIT)
+                      |    +-------------+
+                      +--->| Res number  |
+                           ---------------
+                           | # of IA-TAs |
+                           ---------------
+                           | IA-TA pool  |
+                           +-------------+
+
+
+  April 22, 1987             - 37 -                   ALCC.GEN
+
+
+
+
+
+
+
+
+
+                       TABLE OF CONTENTS
+
+
+
+
+  1 INTRODUCTION .........................................   2
+
+
+  2 ALC-CMT CONFIGURATION OVERVIEW .......................   3
+
+
+  3 LUD MACROS ...........................................   4
+
+     3.1 USER MACROS .....................................   4
+        3.1.1 The SETTRM Macro ...........................   4
+        3.1.2 The USER Macro .............................   5
+        3.1.3 The SETRES Macro ...........................   7
+        3.1.4 The SETMAG Macro ...........................   8
+        3.1.5 The MAGPROMPT Macro ........................   9
+        3.1.6 The AGCRES Macro ...........................  10
+        3.1.7 The AGENT/GLUSER Macro .....................  11
+        3.1.8 The AIDRES Macro ...........................  12
+        3.1.9 The DEFPRT Macro ...........................  13
+
+     3.2 ADDRESS MACROS ..................................  14
+        3.2.1 The POOL Macro .............................  14
+        3.2.2 The PIATAS Macro ...........................  14
+        3.2.3 The CIATAS Macro ...........................  15
+        3.2.4 The ENPOOL Macro ...........................  15
+
+     3.3 OPTIONAL MACROS .................................  16
+        3.3.1 AUTO SIGN-IN,SIGN-OFF MACROS ...............  16
+           3.3.1.1 The SGNBEG Macro ......................  17
+           3.3.1.2 The SGNCMD Macro ......................  18
+           3.3.1.3 The SGNRSP Macro ......................  18
+           3.3.1.4 The SGNEND Macro ......................  19
+           3.3.1.5 The SGNRES Macro ......................  19
+           3.3.1.6 Configurable Retry Parameters .........  20
+        3.3.2 The STAHST Macro ...........................  22
+        3.3.3 SECURITY CODE MACROS .......................  23
+           3.3.3.1 The BEGICP Macro ......................  23
+           3.3.3.2 The INCODE Macro ......................  23
+           3.3.3.3 The ENDICP Macro ......................  23
+        3.3.4 The LOKCHK Macro ...........................  24
+        3.3.5 The PJCODE Macro ...........................  25
+
+     3.4 ENDLUD MACRO ....................................  26
+
+
+  4 GENERAL MACROS .......................................  27
+
+
+
+
+
+
+  April 22, 1987             - i -                    ALCC.GEN
+
+
+
+
+  ALCC SYS GEN                               TABLE OF CONTENTS
+
+
+
+
+     4.1 THE HSTDEF MACRO ................................  27
+
+     4.2 THE NMBFLT MACRO ................................  27
+
+     4.3 THE SHTANS MACRO ................................  27
+
+     4.4 THE MAKBAN MACRO ................................  28
+
+     4.5 THE LOGOFF MACRO ................................  29
+
+
+  APPENDIX:SAMPLE ALC-CMT CONFIGURATION ..................  30
+
+
+  APPENDIX B:USER BLOCK DIAGRAM ..........................  37
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          April 22, 1987             - ii -                   ALCC.GEN
+
+
+
+   x  ©
