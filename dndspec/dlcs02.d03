@@ -1,0 +1,4358 @@
+
+
+
+
+
+
+
+                       TYMNET QLLC/SDLC INTERFACE                       ______ _________ _________
+
+
+                   System Generation Reference Manual
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                       Network Technology Division
+
+
+                              July 29,1985
+
+
+                               Version 1.2
+
+
+     ***************************************************************
+     ****                 PROPRIETARY INFORMATION               ****
+     ****    This document contains information considered a    ****
+     ****    trade secret by the  McDonnell Douglas  Network    ****
+     ****    Systems Company, Inc. and is supplied under the    ****
+     ****    terms of a licenese agreement or non-disclosure    ****
+     ****    statement with said  Corporation and may not be    ****
+     ****    disclosed,   copied,  or  used  in  any  manner    ****
+     ****    whatsoever  except in accordance with the terms    ****
+     ****    of said agreement.                                 ****
+     ****                                                       ****
+     ***************************************************************
+QLLC/SDLC Interface SYSGEN Reference Manual                        Page 1
+
+
+        Version 1.0     Dec. 12, 1983     Chung Shaw
+
+        Version 1.1     Feb. 24, 1985     Terry Wang
+
+        Version 1.2     Aug. 18, 1985     Drue Bondad
+
+        Version 2.2     Aug. 25, 1985     Almond Chao
+
+        Version 2.2     Oct. 10,1986      Almond Chao
+QLLC/SDLC Interface SYSGEN Reference Manual                        Page 1
+
+
+
+
+
+
+                                 PREFACE                                 _______
+
+
+
+
+        This system generation reference manual provides the information
+        necessary
+        to define and generate a TYMNET QLLC/SDLC Interface to provide
+        access between
+        SDLC protocol terminals and hosts, or SDLC protocol terminals or
+        hosts and
+        QLLC protocol terminals and hosts, utilizing the packet-switched
+        transmission
+        facilities of TYMNET. This manual is directed to network analysts
+        and network
+        programmers for defining a TYMNET SDLC Interface.
+
+
+        Prerequisites to use this manual are a basic understanding of
+        teleprocessing,
+        a general knowledge of SDLC protocol, QLLC protocol, X.25  and a
+        general
+        knowledge of the purpose of the TYMNET QLLC/SDLC Interface. These
+        may be
+        obtained from the following documents:
+
+
+        IBM Synchronous Data Link Control General Information        ___ ___________ ____ ____ _______ _______ ___________
+
+        TYMNET SDLC Interface External Reference Specification        ______ ____ _________ ________ _________ _____________
+
+        CCITT Provisional Recommendations X.25        _____ ___________ _______________ ____
+
+        IBM X.25 Interface For Attaching SNA Nodes to Packet-Switched        ___ ____ _________ ___ _________ ___ _____ __ _______________
+        Data        ____
+        Networks General Information Manual        ________ _______ ___________ ______
+
+
+
+        This manual  is divided into four main sections.
+
+
+        The first main section is the overview section.
+
+
+        The second section covers system generation and describes the
+        system
+        generation statements and default values.
+
+
+        The third section contains a sample Tymfile, a sample command
+QLLC/SDLC Interface SYSGEN Reference Manual                        Page 2
+
+
+        file, and a sample print-out for the assembling of an QLLC/SDLC
+        Interface.
+
+
+        The forth section contains the error or warning messages which
+        could be
+        displayed on the user's terminal during system generation time.
+
+
+QLLC/SDLC Interface SYSGEN Reference Manual                        Page 1
+
+
+
+
+
+
+
+
+                            Table of Contents                            _____ __ ________
+
+
+
+
+        1.0 OVERVIEW.................................................6
+
+        2.0 SYSTEM GENERATION........................................7
+
+              2.0.1 TYMFILE..........................................7
+
+           2.1 CONFIGURATION MACROS..................................8
+
+              2.1.1 HIERARCHY OF MACROS..............................8
+
+              2.1.2 ITEM-MACROS......................................8
+
+              2.1.3 ADVANTAGE OF HIERARCHY...........................8
+
+              2.1.4 SUMMARY OF MACROS................................9
+
+           2.2 CONTROL DIRECTIVES...................................11
+
+              2.2.1 PRINT/NOPRINT Directive.........................11
+
+              2.2.2 BEGINTYM Directive..............................11
+
+              2.2.3 ENDTYM Directive................................11
+
+           2.3 Network and ISIS Statements..........................13
+
+              2.3.1 SYSTEM Statement................................13
+
+              2.3.2 FREEZE Statement................................13
+
+              2.3.3 TIMEZONE Statement..............................13
+
+              2.3.4 ISISRING Statement..............................14
+
+              2.3.5 BUFSIZE Statement...............................14
+
+              2.3.6 PVCTIMER Statement..............................14
+
+              2.3.7 MSIOTP Statement................................15
+
+              2.3.8 ODNIC Statement.................................15
+
+           2.4 Monitor Statements...................................17
+QLLC/SDLC Interface SYSGEN Reference Manual                        Page 2
+
+
+              2.4.1 MONITOR Statement...............................17
+
+              2.4.2 MPORTS Statement................................17
+
+              2.4.3 UPD.INTERVAL Statement..........................17
+
+              2.4.4 MBUFQA Statement................................17
+
+              2.4.5 MLOG.TBL Statement..............................18
+
+              2.4.6 MUSR.TBL Statement..............................18
+
+              2.4.7 MGOODGUY Statement..............................18
+
+           2.5 Group Statements.....................................20
+
+              2.5.1 GROUP Statement.................................20
+
+              2.5.2 PRIMARY Statement...............................20
+
+              2.5.3 SECONDARY Statement.............................20
+
+              2.5.4 HOST Statement..................................20
+
+              2.5.5 SPEED Statement.................................21
+
+              2.5.6 DATAMODE Statement..............................21
+
+              2.5.7 VTAM Statement..................................21
+
+              2.5.8 SWITCHED Statement..............................21
+
+              2.5.9 RTSCTS Statement................................22
+
+              2.5.10 REPLYTO Statement..............................22
+
+              2.5.11 NETREPLYTO Statement...........................22
+
+              2.5.12 FRAMESIZE Statement............................23
+
+              2.5.13 WINDOWSIZE Statement...........................23
+
+              2.5.14 XMTFRMQA Statement.............................23
+
+              2.5.15 RCVFRMQA Statement.............................23
+
+              2.5.16 SNRMRETRIES Statement..........................24
+
+              2.5.17 RCVTORETRIES Statement.........................25
+
+              2.5.18 DISCRETRIES Statement..........................25
+
+              2.5.19 XIDRETRIES Statement...........................25
+
+              2.5.20 TESTRETRIES Statement..........................26
+QLLC/SDLC Interface SYSGEN Reference Manual                        Page 3
+
+
+              2.5.21 RNRXMTRETRIES Statement........................26
+
+              2.5.22 RNRRCVRETRIES Statement........................26
+
+              2.5.23 POLLTIMER Statement............................27
+
+              2.5.24 PAUSE Statement................................27
+
+              2.5.25 DHOST Statement................................28
+
+              2.5.26 PVCLINE Statement..............................28
+
+              2.5.27 SVCLINE Statement..............................28
+
+              2.5.28 LGN.USER Statement.............................29
+
+              2.5.29 LGN.PASSWORD Statement.........................29
+
+              2.5.30 LGN.GATEWAY Statement..........................29
+
+              2.5.31 SVC.CALLED Statement...........................30
+
+              2.5.32 SVC.CGROUP Statement...........................30
+
+              2.5.33 SVC.CUG Statement..............................31
+
+              2.5.34 SVC.TCLASS Statement...........................32
+
+              2.5.35 SVC.CHARGE Statement...........................32
+
+              2.5.26 ISTATUS Statement..............................32
+
+              2.5.37 DSIOTP Statement...............................33
+
+              2.5.38 QXID Statement.................................33
+
+              2.5.39 QLCX25 Statement...............................34
+
+              2.5.40 RNRSK1 Statement...............................35
+
+           2.6 Line statements......................................39
+
+              2.6.1 LINE Statement..................................39
+
+              2.6.2 HOST Statement..................................39
+
+              2.6.3 DHOST Statement.................................39
+
+              2.6.4 SPEED Statement.................................39
+
+              2.6.5 DATAMODE Statement..............................40
+
+              2.6.6 VTAM Statement..................................40
+
+              2.6.7 SWITCHED Statement..............................40
+QLLC/SDLC Interface SYSGEN Reference Manual                        Page 4
+
+
+              2.6.8 RTSCTS Statement................................40
+
+              2.6.9 REPLYTO Statement...............................41
+
+              2.6.10 NETREPLYTO Statement...........................41
+
+              2.6.11 FRAMESIZE Statement............................41
+
+              2.6.12 WINDOWSIZE Statement...........................41
+
+              2.6.13 XMTFRMQA Statement.............................41
+
+              2.6.14 RCVFRMQA Statement.............................42
+
+              2.6.15 SNRMRETRIES Statement..........................42
+
+              2.6.16 RCVTORETRIES Statement.........................43
+
+              2.6.17 DISCRETRIES Statement..........................43
+
+              2.6.18 XIDRETRIES Statement...........................43
+
+              2.6.19 TESTRETRIES Statement..........................44
+
+              2.6.20 RNRXMTRETRIES Statement........................44
+
+              2.6.21 RNRRCVRETRIES Statement........................45
+
+              2.6.22 POLLTIMER Statement............................45
+
+              2.6.23 PAUSE Statement................................45
+
+              2.6.24 PVCLINE Statement..............................45
+
+              2.6.25 SVCLINE Statement..............................46
+
+              2.6.26 LGN.USER Statement.............................46
+
+              2.6.27 LGN.PASSWORD Statement.........................46
+
+              2.6.28 LGN.GATEWAY Statement..........................46
+
+              2.6.29 PVC.RTPUT Statement............................47
+
+              2.6.30 PVC.TTPUT Statement............................47
+
+              2.6.31 SVC.CALLED Statement...........................47
+
+              2.6.32 SVC.CUG Statement..............................47
+
+              2.6.33 SVC.TCLASS Statement...........................48
+
+              2.6.34 SVC.CHARGE.....................................48
+
+              2.6.35 ISTATUS Statement..............................48
+QLLC/SDLC Interface SYSGEN Reference Manual                        Page 5
+
+
+              2.6.36 DSIOTP Statement...............................48
+
+              2.6.37 QXID Statement.................................48
+
+              2.6.38 QLCX25 Statement...............................48
+
+              2.6.39 RNRSK1 Statement...............................49
+
+           2.7 PU Statements........................................53
+
+              2.7.1 PU Statement....................................53
+
+              2.7.2 DHOST Statement.................................53
+
+              2.7.3 ADDR Statement..................................53
+
+              2.7.4 MAPADDR Statement...............................54
+
+              2.7.5 LGN.USER Statement..............................54
+
+              2.7.6 LGN.PASSWORD Statement..........................54
+
+              2.7.7 LGN.GATEWAY Statement...........................54
+
+              2.7.8 PVC.DCHAN Statement.............................55
+
+              2.7.9 PVC.DLINK Statement.............................55
+
+              2.7.10 PVC.RTPUT Statement............................56
+
+              2.7.11 PVC.TTPUT Statement............................56
+
+              2.7.12 SVC.CALLED Statement...........................56
+
+              2.7.13 ISTATUS Statement..............................56
+
+              2.7.14 QXID Statement.................................56
+
+        3.0 SAMPLE SYSTEM GENERATION FILES..........................58
+
+           3.1 Introduction To Timer................................58
+
+           3.2 Introduction to Retry Counter and Timer..............58
+
+           3.3 Sample Tymfile.......................................60
+
+           3.4 Sample Command File..................................64
+
+           3.5 Sample NAD Print-Out.................................65
+
+        4.0 SYSGEN ERROR/WARNING MESSAGES...........................71
+
+           4.1 Sysgen Error Codes/Error Messages....................71
+
+           4.2 Sysgen Warning Codes/Warning Messages................75
+QLLC/SDLC Interface SYSGEN Reference Manual                        Page 6
+
+
+        INDEX.......................................................76
+
+
+QLLC/SDLC Interface SYSGEN Reference Manual                        Page 7
+
+
+        SECTION 1.0 OVERVIEW        _______ ___ ________
+
+
+        TYMNET SDLC interfaces with primary and secondary  ports  provide
+        access  between  SDLC  protocol terminals and hosts utilizing the
+        packet- switching data transmission  services  of  TYMNET.   Both
+        Normal  Response  Mode (NRM) and Normal Disconnect Mode (NDM) are
+        supported.
+
+        No hardware or software changes are normally required at the host
+        computer.   Nonswitched,  full  or half duplex, point-to-point or
+        multipoint links to hosts are supported.  A secondary  port  will
+        appear  to  the  host computer as a single secondary station on a
+        point-to-point link or as a number of  secondary  stations  on  a
+        multipoint link.
+
+        No hardware or  software  changes  are  required  at  the  remote
+        terminal.   Nonswitched,  full  or half duplex, point-to-point or
+        multipoint links to terminals are supported.  A primary port will
+        appear  to  attached  terminals on a point-to-point or multipoint
+        link as a primary station.
+
+        The TYMNET SDLC interface supports Physical Unit types 1, 2,  and
+        4, and is transparent to all Logical Unit types.
+
+
+QLLC/SDLC Interface SYSGEN Reference Manual                        Page 8
+
+
+        SECTION 2.0 SYSTEM GENERATION        _______ ___ ______ __________
+
+
+        2.0.1 TYMFILE              _______
+
+        Configuration  of  an  SDLC   interface   requires   a   TYMFILE.
+        Basically,   a   TYMFILE   is  a  file  which  contains  all  the
+        configuration-related statements necessary for the generation  of
+        a   Slot   code   for  a  particular  configuration.   All  these
+        configuration-related   statements   are   represented   by   the
+        System-defined  macro  statements, which are further divided into
+        four categories.  They are control-directives, network  and  ISIS
+        statements, Monitor statements, and SDLC-station statements
+
+
+QLLC/SDLC Interface SYSGEN Reference Manual                        Page 9
+
+
+        SECTION 2.1 CONFIGURATION MACROS        _______ ___ _____________ ______
+
+
+        2.1.1 HIERARCHY OF SDLC-STATION STATEMENTS              _________ __ ____________ __________
+
+        An SDLC interface may be  viewed  as  a  logical  arrangement  of
+        elements,   each   kind   of   elements   occupying  a  different
+        hierarchical level within the  category  of  macros  called  SDLC
+        configuration aggregate-macros.
+
+        The highest element is the protocol group, either a primary or  a
+        secondary  group.  Each group in an SDLC interface is represented
+        by a GROUP aggregate-macro.
+
+        The next element is the communication line (or link).  Each  line
+        in  an  SDLC  interface is represented by a LINE aggregate-macro,
+        whether  the  line  is  non-switched   multipoint,   non-switched
+        point-to-point, or switched point-to-point.
+
+        The last element in the hierarchical levels is SDLC  station  (or
+        port).  Each SDLC station is represented by a PU aggregate-macro,
+        which represents the physical unit within the SDLC station.
+
+
+        2.1.2 ITEM MACROS              ____ ______
+
+        To supply  further  detailed  configuration  information  for  an
+        aggregate-macro,   several   item-macros   are   defined.    Each
+        individual   item-macro   clearly    specifies    a    particular
+        characteristic,   property  or  function  pertinent  to  an  SDLC
+        station, SDLC link, or SDLC group.
+
+
+        2.1.3 ADVANTAGE OF HIERARCHY              _________ __ _________
+
+        The principal advantage of macro hierarchy is that it provides  a
+        logical  structure.   In  addition,  it saves coding effort.  For
+        example, each of five characteristics common to  all  of  fifteen
+        SDLC  stations  on  a  link  can  be  specifiee, in the LINE
+        aggregate-macro, rather than in each of the fifteen individual PU
+        aggregate-macros.
+
+        The characteristic need not  to  be  identical  for  all  of  the
+        elements  at  a  level  to specify it at a higher level.  You may
+        code the exceptions at the lower level;  any  characteristic  you
+        code   at   the   lower   level   automatically   overrides   the
+        characteristic specified at the previous higher level.   If,  for
+        example,  only  ten  of the fifteen stations mentioned previously
+        have the same characteristics in common, you could still  specify
+        that  characteristic  in  the  LINE  level-macro,  then you would
+        specify the differing characteristics in the PU level-macros  for
+        the five exceptional stations.
+
+        Section 3.1 contains a sample TYMFILE that illustrates the  macro
+        coding sequences.
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 10
+
+
+        Section 2.1.4 SUMMARY OF MACROS                      _______ __ ______
+
+        Figure 2.1 lists all of the item-macros  of  the  SDLC  interface
+        configuration  macros for SDLC links.  The asterisk indicates the
+        macro under which the  description  of  the  item  appears.   The
+        plus(+) indicates other aggregate-macros in which the item may be
+        coded.
+
+        This summary does not indicate the conditions (for example,  type
+        of  line  control,  type  of  station)  under  which  the item is
+        appropriate, for this  information,  please  see  the  individual
+        macro descriptions in following sections.
+
+        Note:  This summary does  not  include  other  system  generation
+        macros such as PRINT, MONITOR, etc.
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 11
+
+
+                  --------------------------------------------------
+                  |                                                |
+                  |             Aggregate  Macros                  |
+                  |------------------------------------------------|
+                  |                  |         |         |         |
+                  |  Item Macros     | GROUP   |  LINE   |   PU    |
+                  |------------------------------------------------|
+                  |                  |         |         |         |
+                  | ADDR             |         |         |    *    |
+                  | DATAMODE         |    *    |    +    |         |
+                  | DHOST            |    *    |    +    |    +    |
+                  | DSIOTP           |    *    |    +    |         |
+                  | FRAMESIZE        |    *    |    +    |         |
+                  | GROUP            |    *    |         |         |
+                  | HOST             |    *    |    +    |         |
+                  | ISTATUS          |    *    |    +    |    +    |
+                  | LINE             |         |    *    |         |
+                  | LGN.GATEWAY      |    *    |    +    |    +    |
+                  | LGN.PASSWORD     |    *    |    +    |    +    |
+                  | LGN.USER         |    *    |    +    |    +    |
+                  | MAPADDR          |         |         |    *    |
+                  | NETREPLYTO       |    *    |    +    |         |
+                  | PAUSE            |    *    |    +    |         |
+                  | PRIMARY          |    *    |         |         |
+                  | PU               |         |         |    *    |
+                  | PVCLINE          |    *    |    +    |         |
+                  | PVC.DCHAN        |         |         |    *    |
+                  | PVC.DLINK        |         |         |    *    |
+                  | PVC.RTPUT        |         |    *    |    +    |
+                  | PVC.TTPUT        |         |    *    |    +    |
+                  | QXID             |    *    |    +    |    +    |
+                  | RCVFRMQA         |    *    |    +    |         |
+                  | REPLYTO          |    *    |    +    |         |
+                  | RETRIES          |    *    |    +    |         |
+                  | RTSCTS           |    *    |    +    |         |
+                  | SECONDARY        |    *    |         |         |
+                  | SPEED            |    *    |    +    |         |
+                  | SVCLINE          |    *    |    +    |         |
+                  | SVC.CALLED       |    *    |    +    |    +    |
+                  | SVC.CGROUP       |    *    |         |         |
+                  | SVC.CHARGE       |    *    |    +    |         |
+                  | SVC.CUG          |    *    |    +    |         |
+                  | SVC.TCLASS       |    *    |    +    |         |
+                  | SWITCHED         |    *    |    +    |         |
+                  | VTAM             |    *    |    +    |         |
+                  | WINDOWSIZE       |    *    |    +    |         |
+                  | XMTFRMQA         |    *    |    +    |         |
+                  --------------------------------------------------
+
+                       Figure 2.1 Summary of Configuration Macros
+
+
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 12
+
+
+        SECTION 2.2 CONTROL DIRECTIVES        _______ ___ _______ __________
+
+
+        This section describes those statements which  primarily  control
+        the   print-out   of  the  configuration  parameter  listing.   A
+        configuration  parameter  listing  is  the  listing  of  all  the
+        resulting functions and characteristics of an SDLC interface in a
+        summary and easily-readable form on the  user's  ASCII  terminal.
+        Please  see  section  3.3  for  a  sample configuration parameter
+        listing.
+
+
+        2.2.1 PRINT/NOPRINT              _____________
+
+        Syntax:  PRINT
+                 NOPRINT
+
+        Description:  The 'PRINT' and 'NOPRINT' control  directives  turn
+                 the  configuration  parameter  listing switch on and off
+                 respectively.  The user can insert these statements  any
+                 places  in  a  Tymfile.   Please  be  noted  that  these
+                 statements have  no  affects  on  the  regular  assembly
+                 listing.  Also, they have no affects on the BEGINTYM and
+                 ENDTYM statements below.
+
+        Default:  If none of the these two statements is coded before any
+                 other   configuration   statements,   the  configuration
+                 parameter listing for those statements are listed on the
+                 terminal.
+
+
+        2.2.2 BEGINTYM              ________
+
+        Syntax:  BEGINTYM
+
+        Description:  This statement denotes the begining of  a  Tymfile,
+                 and  prints  the  title  of  the configuration parameter
+                 listing.  The version number and revision level of  this
+                 SDLC   interface   are  also  part  of  a  configuration
+                 parameter listing title.  All  of  this  information  is
+                 listed whenever a BEGINTYM statement is coded in an SDLC
+                 interface Tymfile.
+
+        Default:  If this statement is  omitted,  then  no  configuration
+                 parameter  listing  title  is  printed.   However, it is
+                 strongly recommended that this statement be coded in  an
+                 SDLC interface Tymfile as the 'FIRST' statement.
+
+
+        2.2.3 ENDTYM              ______
+
+        Syntax:  ENDTYM
+
+        Description:  This statement denotes the end of  a  Tymfile,  and
+                 triggers the checking procedures for a consistent system
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 13
+
+
+                 configuration for this SDLC interface, A  final  section
+                 of  the  configuration  parameter listing which contains
+                 consistency checking messages will be  printed,  if  any
+                 in-consistency existed in the SDLC interface Tymfile.
+
+        Default:  If this statement  is  omitted,  then  the  consistency
+                 checking  procedures  are  bypassed.   Therefore,  it is
+                 strongly recommended that this statement be coded in  an
+                 SDLC interface Tymfile as the last statement.
+
+
+
+
+                  --------------------------------------------------
+                  |                      |           |             |
+                  |       Syntax         |  Default  |    Note     |
+                  |                      |           |             |
+                  --------------------------------------------------
+                  |                      |           |             |
+                  |       PRINT          |           |             |
+                  |       or             |  PRINT    |             |
+                  |       NOPRINT        |           |             |
+                  |                      |           |             |
+                  |                      |           |             |
+                  |    BEGINTYM          |  N/A      | Note 1.     |
+                  |                      |           |             |
+                  |    ENDTYM            |  N/A      | Note 2.     |
+                  |                      |           |             |
+                  |                      |           |             |
+                  --------------------------------------------------
+                  Note 1. Begintym should be the first or the second
+                          statement of a TYMFILE. The only statement
+                          which could be in front of BEGINTYM is
+                          PRINT/NOPRINT.
+                  Note 2. ENDTYM should be the last statement of a
+                          TYMFILE.
+
+                       Figure 2.2 Summary of Control Directives
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 14
+
+
+        SECTION 2.3 NETWORK AND ISIS STATEMENTS        _______ ___ _______ ___ ____ __________
+
+
+        This section describes those statements which primary purpose  is
+        to  specify  the  internal  constraints and characteristics of an
+        SDLC interface.  These internal constraints  and  characteristics
+        are  pertinent  to  the  network  technology  employed inside the
+        TYMNET or the system rules related to  the  ISIS  system.   Here,
+        ISIS  (which stands for the Internally Switched Interface System)
+        is a system which contains a set of rules as to how the different
+        interfaces are to be constructed, and how they are to communicate
+        with each other.   For  more  detailed  information  about  ISIS,
+        please see ISIS-II Internally Switched Interface System REFERENCE                   _______ __________ ________ _________ ______ _________
+        MANUAL.  Also, please be noted that the SDLC interfaces are  only        ______
+        compatible with the ISIS-II system.
+
+
+        2.3.1 SYSTEM              ______
+
+        Syntax:  SYSTEM(arg)
+                 where arg = TYMNT1 or TYMNT2
+
+        Description:   This  statement  specifies  the  internal  network
+                 technology  employeed in handling network services.  the
+                 SDLC Interface can be compatible with either TYMNET-I or
+                 TYMNET-II.
+
+        Default:  This statement may be  omitted,  then  the  default  is
+                 TYMNT2.
+
+
+        2.3.2 FREEZE              ______
+
+        Syntax:  FREEZE(arg)
+                 where arg = YES, or NO
+
+        Description:  These statements specify whether the SDLC interface
+                 should  stop,  should  a  crash  occur.   A 'crash' is a
+                 mechanism implemented in  the  SDLC  interface  to  trap
+                 either  the  hardware  or  software  problems.   After a
+                 'crash' occurred and  the  SDLC  interface  frozen,  the
+                 frozen  SDLC  interface code could be dumped into a disk
+                 file or directly 'looked' into by  a  qualified  network
+                 analyst  or  network developper to analyze and debug the
+                 trapped problem.
+
+        Default:  If none of FREEZE statements  is  specified,  then  the
+                 SDLC  interface  restarts  immediately,  should  a crash
+                 happen.
+
+
+        2.3.3 TIMEZONE              ________
+
+        Syntax:  TIMEZONE(n)
+                 where t = -23d to 23d
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 15
+
+
+        Description:  This statement specifies the  necessary  correction
+                 value  which  should  be the time-zone correction factor
+                 from  coordinated  universal  time.   For  example,  the
+                 time-zone  correction  value  for PACIFIC SAVING TIME is
+                 -8d.
+
+        Default:   If  this  statement  is  omitted,  then  the   default
+                 time-zone is Pacific Saving Time.
+
+
+        2.3.4 ISISRING              ________
+
+        Syntax:  ISISRING(n1,n2)
+                 where n1 is IRSIZE, and n2 is ORSIZE
+
+        Description:  IRSIZE and ORSIZE are the sizes of input  ring  and
+                 output  ring  for  the  internal  ISIS  dispatcher logic
+                 respectively.  These values  should  be  a  multiple  of
+                 four.   The recommended ring size is the total number of
+                 input or output characters that may be  expected  to  be
+                 received  from  or transmitted to the network in any one
+                 second period.
+
+        Default:  The default values  for  IRSIZE  and  ORSIZE  are  both
+                 4092d.
+
+
+        2.3.5 BUFSIZE              _______
+
+        Syntax:  BUFSIZE(n)
+                 where n is value in bytes and must be greater that 8d
+
+        Description:  This statement defines the buffer size for internal
+                 buffers.   The  size of the buffer should be selected to
+                 best utilize the available memory spaces.
+
+        Default:  If this statement is omitted, then the default size  is
+                 140d bytes.
+
+
+        2.3.6 PVCTIMER              ________
+
+        Syntax:  PVCTIMER(t)
+                 where t is time in seconds
+
+        Description:  This statement specifies the waiting time  required
+                 before  the  interface starts to build the circuit again
+                 after a circuit  is  cleared  due  to  various  reasons.
+                 Since certain internal clean-up procedures are needed to
+                 be performed before a new circuit can be  re-built,  the
+                 value specified should be greater than 30 seconds.
+
+        Default:  If this statement is omitted, then the default value is
+                 60d seconds.
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 16
+
+
+        2.3.7 MSIOTP              ______
+
+        Syntax:  MSIOTP(arg)
+                 where arg = M.TYP0 or M.TYP1.
+
+        Description:  This statement specifies sio  micro  code  version.
+                 Argument  M.TYP0  is defined to be the version type D or
+                 earlier, M.TYP1 is defined to be the version type  E  or
+                 latter.
+
+        Default:  If this statement is ommitted, then the  default  value
+                 is M.TYP0.
+
+
+        2.3.8 ODNIC              _____
+
+        Syntax:  ODNIC(n)
+
+                 where n = Data Network I.D.  for  this  interface.   The
+        ODNIC must be 4 digits long.
+
+        Description:  This statement  describes  the  Data  Network  I.D.
+                 used for this interface.  This value is used to validate
+                 the called address received on incoming calls.
+
+        Default:  3106 (same as X.25 interface), this statement  must  be
+                 defined if incoming SVCs defined in the interface.
+
+
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 17
+
+
+                  --------------------------------------------------
+                  |                      |           |             |
+                  |       Syntax         |  Default  |    Note     |
+                  |                      |           |             |
+                  --------------------------------------------------
+                  |                      |           |             |
+                  |   SYSTEM(arg)        |  TYMNT2   |  Note 1.    |
+                  |    arg = TYMNT1      |           |             |
+                  |     or   TYMNT2      |           |             |
+                  |                      |           |             |
+                  |                      |           |             |
+                  |    FREEZE(arg)       |  NO       |  Note 1.    |
+                  |     arg = YES        |           |             |
+                  |      or   NO         |           |             |
+                  |                      |           |             |
+                  |                      |           |             |
+                  |    TIMEZONE(n)       |  -8       |  Note 1.    |
+                  |     n = -23 to 23    |           |             |
+                  |                      |           |             |
+                  |                      |           |             |
+                  |    ISISRING(n1,n2)   |  n1=4092d |  Note 1.    |
+                  |     n1, n2 positive  |  n2=4092d |             |
+                  |      integers        |           |             |
+                  |                      |           |             |
+                  |                      |           |             |
+                  |    BUFSIZE(n)        |  n=140d   |  Note 1.    |
+                  |     n positive       |           |             |
+                  |       integer        |           |             |
+                  |                      |           |             |
+                  |                      |           |             |
+                  |    PVCTIMER(t)       |  t=60d    |  Note 1.    |
+                  |     t = time in sec. |           |             |
+                  |                      |           |             |
+                  |                      |           |             |
+                  |    MSIOTP(arg)       |  M.TYP0   |  Note 1.    |
+                  |     arg = M.TYP0     |           |             |
+                  |           M.TYP1     |           |             |
+                  |                      |           |             |
+                  |    ODNIC(n)          |  3106d    |  Note 2.    |
+                  |                      |           |             |
+                  --------------------------------------------------
+
+
+                  Note 1. This statement may be omitted.
+                  Note 2. This statement may be omitted if no SVC 
+                          incoming lines are defined for the interface.
+                  
+                       Figure 2.3 Summary of Network and ISIS Statements
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 18
+
+
+        SECTION 2.4 MONITOR STATEMENTS        _______ ___ _______ __________
+
+
+        This section describes those statements which primary purpose  is
+        to  define the characteristics of SDLC monitor feature.  For more
+        information  about  the  function  and  capability  of  the  SDLC
+        interface's  monitoring feature, please see TYMNET SDLC Interface                                                    ______ ____ _________
+        Reference Manual.        _________ ______
+
+
+        2.4.1 MONITOR              _______
+
+        Syntax:  MONITOR(host#)
+
+        Description:  This statement specifies that this  SDLC  interface
+                 has  the  monitor  function  capability, and at the same
+                 time defines the  host  #  for  the  monitor.   All  the
+                 following statements in this section are meaningful only
+                 when this statement is included.
+
+        Default:  If the monitor function is desired, this statement must
+                 be   included;    otherwise,   no  monitor  function  is
+                 supported in this interface.
+
+
+        2.4.2 MPORTS              ______
+
+        Syntax:  MPORTS(n)
+                 where n = number of monitor ports desired
+
+        Description:  This statement  specifies  the  number  of  monitor
+                 ports desired.
+
+        Default:  If this statement is omitted,  the  default  number  of
+                 ports is 3.
+
+
+        2.4.3 UPD.INTERVAL              ____________
+
+        Syntax:  UPD.INTERVAL(t)
+                 where t = time, in minutes
+
+        Description:  This statement specifies the  refresh  interval  in
+                 minutes for the monitor to refresh its displays.
+
+        Default:  If this statement is omitted, the default  interval  is
+                 one minute.
+
+
+        2.4.4 MBUFQA              ______
+
+        Syntax:  MBUFQA(n)
+                 where n = number of buffers
+
+        Description:  This statement specifies the buffer quota  assigned
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 19
+
+
+                 for  each  monitor  output  port.  The buffer size is as
+                 defined in 2.3.5.
+
+        Default:  If this statement is omitted, the default value is  ten
+                 buffer for each monitor port.
+
+
+        2.4.5 MLOG.TBL              ________
+
+        Syntax:  MLOG.TBL(n)
+                 where n = number of entries in the log table
+
+        Description:   This  statement  specifies  the  total  number  of
+                 entries  in  the  log  table.  The log table records the
+                 exceptional events occur in  the  SDLC  Interface  after
+                 this  Interface  is  initially  loaded  into the ENGINE.
+                 Each entry in the table is 10d  bytes  long.   The  data
+                 recorded  for  an  event  include  the time when such an
+                 event occurs, the event code, and  the  associated  line
+                 and/or  station number.  When the log table is full, the
+                 new event log will be written into the  log  table  from
+                 the begining of the table, and the oldest entries may be
+                 lost.
+
+        Default:  If this statement is omitted,  the  default  number  of
+                 entries for the log table is 50d.
+
+
+        2.4.6 MUSR.TBL              ________
+
+        Syntax:  MUSR.TBL(n)
+                 where n = number of entries in the monitor user table
+
+        Description:   This  statement  specifies  the  total  number  of
+                 entries  in the monitor user table.  This table contains
+                 the names of users' which are validated  to  access  the
+                 SDLC  Interface's Monitor.  Only authorized user can log
+                 into a Monitor port.
+
+        Default:  If this statement is omitted,  the  default  number  of
+                 entries for the monitor user table is 10d.
+
+
+        2.4.7 MGOODGUY              ________
+
+        Syntax:  MGOODGUY(string,level)
+                 where string = string of characters, level = 0 or 1
+
+        Description:  This statement authorizes the user  whose  name  is
+                 'string'  to  be  allowed to access the SDLC Interface's
+                 monitor port.  Each statement can  only  authorizes  one
+                 user.  Only authorized user can log into a Monitor port.
+                 The  authorization  level  gives  the   user   different
+                 priority  level  to  use  the  Op  monitor command.  The
+                 authorization level 0 user is allowed to use all the  Op
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 20
+
+
+                 monitor  commands.   The  authorization  level 1 user is
+                 allowed to use all the Op monitor  commands  except  the
+                 CHANGE category commands;  that means, the authorization
+                 level 1 user is protected  from  using  CHANGE  category
+                 commands.
+
+        Default:  None.
+
+
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 21
+
+
+                  --------------------------------------------------
+                  |                      |           |             |
+                  |       Syntax         |  Default  |    Note     |
+                  |                      |           |             |
+                  --------------------------------------------------
+                  |                      |           |             |
+                  |   MONITOR(host#)     |  N/A      |  Note 1.    |
+                  |                      |           |             |
+                  |                      |           |             |
+                  |    MPORTS(n)         |  3d       |  Note 2.    |
+                  |                      |           |             |
+                  |                      |           |             |
+                  |    UPD.INTERVAL(t)   |  1d       |  Note 2.    |
+                  |     t = time in min. |           |             |
+                  |                      |           |             |
+                  |                      |           |             |
+                  |    MBUFQA(n)         |  10d      |  Note 2.    |
+                  |                      |           |             |
+                  |                      |           |             |
+                  |    MLOG.TBL(n)       |  50d      |  Note 2.    |
+                  |                      |           |             |
+                  |                      |           |             |
+                  |    MUSR.TBL(n)       |  10d      |  Note 2.    |
+                  |                      |           |             |
+                  |                      |           |             |
+                  |MGOODGUY(string,level)|  N/A      |  Note 2.    |
+                  |    string = name     |           |  Note 3.    |
+                  |    level = 0 or 1    |  1        |             |
+                  |                      |           |             |
+                  --------------------------------------------------
+
+
+                  Note 1. If monitor function is desired, this statement
+                          must be included in the TYMFILE.
+                  Note 2. MONITOR statement is the pre-requisited
+                          statement.
+                  Note 3. The maximum number of this statement should not
+                          be greater than what has been specified in the
+                          MUSR.TBL statement.
+
+                       Figure 2.4 Summary of MONITOR Statements
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 22
+
+
+        SECTION 2.5 GROUP STATEMENTS        _______ ___ _____ __________
+
+
+        This section describes all the  statements  belong  to  the  same
+        category,  named  group,  which  is  the  first level in the SDLC
+        interface configuration macro hierarchy.
+
+
+        2.5.1 GROUP              _____
+
+        Syntax:  GROUP(n)
+
+                 where n = group #
+
+        Description:   This  statement  denotes  the  beginning   of   an
+                 aggregate  of item-macros which may be common to all the
+                 links under this group.  Each Group statement should use
+                 a sequencial group #.
+
+        Default:  The user may choose the option to define all the  links
+                 separately.   In  this  case,  SVC.GROUP  statement  for
+                 Closed User Group Factility may not be defined.
+
+
+        2.5.2 PRIMARY              _______
+
+        Syntax:  PRIMARY
+
+        Description:  This statement denotes that this is an SDLC primary
+                 protocol link group.
+
+        Default:  If both PRIMARY and SECONDARY statements are omitted at
+                 the  group  level  ,  the  default  for  this  group  is
+                 'PRIMARY'.
+
+
+        2.5.3 SECONDARY              _________
+
+        Syntax:  SECONDARY
+
+        Description:   This  statement  denotes  that  this  is  an  SDLC
+                 secondary protocol link group.
+
+        Default:  If both PRIMARY and SECONDARY statements are omitted at
+                 the  group  level  ,  the  default  for  this  group  is
+                 'PRIMARY'.
+
+
+        2.5.4 HOST               ____
+
+        Syntax:  HOST(host#)
+
+        Description:  This statement specifies the SDLC host  #  for  all
+                 the  lines  within  this group when it is a PVC group or
+                 SVC incoming group.  For an  SVC  outgoing  group,  this
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 23
+
+
+                 statement is not required.
+
+        Default:  If this statement is omitted in this group  level,  the
+                 host   #   parameter  under  the  LINE  level  for  each
+                 individual line in this group must be coded.
+
+
+        2.5.5 SPEED              _____
+
+        Syntax:  SPEED(n)
+                 where n = 2400,4800,8000,9600,19.2k,56k
+
+        Description:  This  statement  specifies  the  line  transmission
+                 speed  for  all the lines within this group.  This value
+                 is  used  internally  to  calculate   certain   hardware
+                 time-out  characteristics.   For a specified line speed,
+                 it still may be connected  to  lines  with  higher  line
+                 speeds;  however, it must not be connected to lines with
+                 lower line speeds.
+
+        Default:  if this statement is omitted, the default line speed is
+                 8000d.
+
+
+        2.5.6 DATAMODE              ________
+
+        Syntax:  DATAMODE(arg)
+                 where arg = HALF, HALFDUPLEX, FULL, or FULLDUPLEX
+
+        Description:  This statements specify the data transmission  mode
+                 is  either  full-duplex  or  half-duplex mode.  Here the
+                 mode is the mode of data transmission (SDLC protocol)  ;
+                 it is not the mode of the transmission facility.
+
+        Default:  The default mode is half-duplex.
+
+
+        2.5.7 VTAM              ____
+
+        Syntax:  VTAM(arg)
+                 where arg = YES or NO
+
+        Description:  This statement specifies whether the  lines  within
+                 this group are going to be connected to VTAM/3705 hosts.
+                 This  statement  may  only  be  specified  for  an  SDLC
+                 secondary group.
+
+        Default:  This statement is not  required  for  an  SDLC  primary
+                 group.   If  this  statement  is  omitted  for  an  SDLC
+                 secondary group, the default is 'YES'.
+
+
+        2.5.8 SWITCHED              ________
+
+        Syntax:  SWITCHED(arg)
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 24
+
+
+                 where arg = YES, or NO
+
+        Description:  This statement  should  only  be  defined  for  SVC
+                 lines.   This  statement  specifies  whether  a  DTR/DSR
+                 handshaking should be performed by  the  SDLC  interface
+                 and  the external system to inform each other that it is
+                 ready to considered the line to be  'really'  connected.
+                 Please  refer to EIA RS-232-C document for a description
+                 of these two electrical signals.  If 'YES' is specified,
+                 the  SDLC  interface  will  periodically  check  the DSR
+                 signal to see if the link has been disconnected.
+
+        Default:  If this statement  is  omited  for  an  SVC  line,  the
+                 default is DTR/DSR signal handshaking required.
+
+
+        2.5.9 RTSCTS              ______
+
+        Syntax:  RTSCTS(arg)
+                 where arg = YES or NO
+
+        Description:   This  statement  specifies  whether  the   RTS/CTS
+                 handshaking  sequences  should  be  performed whenever a
+                 group of contiguous frames are transmitting to  external
+                 system.    Please  refer  to  RS-232-C  document  for  a
+                 description of these two electrical signals.
+
+        Default:  If this statement is omitted, the default is 'YES'.
+
+
+        2.5.10 REPLYTO               _______
+
+        Syntax:  REPLYTO(t)
+                 where t = time, in 1/10 seconds
+
+        Description:  This statement specifies the reply  timeout  value,
+                 in  1/10  seconds,  for  the  primary lines in this line
+                 group.  If at the expiration of this interval  the  SDLC
+                 interface  has  not  received from the external system a
+                 response to polling, or to message  text,  it  makes  no
+                 further attempt to communicate with the external system.
+                 Instead, it indicates that a timeout error has occurred.
+                 For secondary lines this macro has no effect.
+
+        Default:  If this statement is omitted, the default  value  is  3
+                 seconds.
+
+
+        2.5.11 NETREPLYTO               __________
+
+        SYNTAX:  NETREPLYTO(T)
+                 Where T = Time, in 1/10 seconds
+
+        Description:  This statement specifies the  reply  timeout  value
+                 for  waiting  for  a  response  from  network,  in  1/10
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 25
+
+
+                 seconds, for the lines in this line group.   If  at  the
+                 expiration  of  this interval the SDLC interface has not
+                 received from the network a response to polling, to  XID
+                 message,  or  to  TEST  message,  it makes an attempt to
+                 switch from the state of waiting  for  a  response  from
+                 network  to the state of checking any polling or message
+                 text from the external system.  The timer  defines  here
+                 should  not  greater  than  the timer defines in REPLYTO
+                 macro for proper performance.
+
+        Default:  If this statement is omitted, the default value is  2.8
+                 seconds.
+
+
+        2.5.12 FRAMESIZE               _________
+
+        Syntax:  FRAMESIZE(n)
+                 where n = size in bytes
+
+        Description:  This statement specifies the maximum size in  bytes
+                 a  single  frame could be transmitted or received within
+                 the links of this line group.
+
+        Default:  If this statement is omitted, the default value is 270d
+                 bytes.
+
+
+        2.5.13 WINDOWSIZE               __________
+
+        Syntax:  WINDOWSIZE(n)
+                 where n = 1, 2, 3, 4, 5, 6, 7 frames
+
+        Description:  This statement  specifies  the  maximum  number  of
+                 un-acknowledged  frames that could be outstanding at any
+                 instance.
+
+        Default:  If this statement is omitted, the default  value  is  7
+                 frames.
+
+
+        2.5.14 XMTFRMQA               ________
+
+        Syntax:  XMTFRMQA(n)
+                 where n = number in frames
+
+        Description:  This statement specifies the buffer space in number
+                 of  frames allocated for the transmit direction for each
+                 station on all the links within this group.
+
+        Default:  If this statement is omitted, the default  value  is  7
+                 frames  for  SDLC  primary stations, and is 4 frames for
+                 SDLC secondary stations.
+
+
+        2.5.15 RCVFRMQA               ________
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 26
+
+
+        Syntax:  RCVFRMQA(n)
+                 where n = number in frames
+
+        Description:  same as XMTFRMQA statement above,  except  for  the
+                 receiving directions.
+
+        Default:  If this statement is omitted, the default is  the  same
+                 as that of XMTFRMQA except that the values specified for
+                 primary and secondary are switched.
+
+
+
+
+        2.5.16 SNRMRETRIES               ___________
+
+        Syntax:  SNRMRETRIES(m,t,n)
+                 where m = number, t = time in 1/10 seconds, n = number
+
+        Description:  This statement specifies the number of SNRM retries
+                 with two different aspect for TIF or HIF.
+
+                 As to the TIF side, SNRMRETRIES specifies the number  of
+                 SNRMs  sent  to CU from TIF.  Whenever TIF receives SNRM
+                 from TIF, it transmits the SNRM  to  CU,  sets  the  1st
+                 argument  of  SNRMRETRIES as SNRM retry counter.  If the
+                 UA does not  returned  from  from  CU,  then  TIF  sends
+                 another  SNRM  when  the PAU.LN times out.  When the 1st
+                 argument of SNRM retry reaches 0, TIF checks if the  2nd
+                 argument  which is the SNRM pause timer is 0 or not.  If
+                 2nd argument is set to 0, then the retry  activities  is
+                 stoped  (Since  the  2nd  argument  t  is  0,  the third
+                 argument n which is the retry sequence must be 0;   that
+                 means,  only the retries specified in the 1st argument m
+                 is attempts).  This macro is used in the line level, the
+                 default value for the TIF is (1,0,0) that means only one
+                 retry is attempted.
+
+                 If n is omitted and t is not 0, then n = 0;  that  means
+                 ,  the  retries  specified  in  the  1st  argument  m is
+                 attempted.
+
+                 If n is omitted and t is 0, n = 0 is assumed.
+
+                 As to the HIF side, SNRMRETRIES specifies the number  of
+                 SNRM  ignored  by  HIF in between the SNRMs sent accross
+                 the network.  Whenever HIF gets the SNRMs from fron  end
+                 processor and the SNRMSK is not set, HIF sets the SNRMSK
+                 during  the  retry  condition  and  decrements  the  1st
+                 argument  m.   When the 1st argument m reaches 0, SNRMSK
+                 is cleared and HIF will be able  to  receive  SNRM  from
+                 front  end  processor again.  The interval timer between
+                 each SNRM ignored by HIF is TNR.LN.  For the  reason  of
+                 complexity  of HIF code, the 2nd t and 3rd argument n is
+                 always set to 0 without choices.  The default  valu  for
+                 HIF  is (5,0,0), and this macro is specified in the line
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 27
+
+
+                 level.
+
+                 The t and n of HIF should always set to 0 without  other
+                 choices.
+
+        Default:  If this statement is omitted, the  assumed  value  will
+                 (1,0,0) for TIF, (5,0,0) for HIF.
+
+
+        2.5.17 RCVTORETRIES               ____________
+
+        Syntax:  RCVTORETRIES(m)
+                 where m = number of retries while receive timout occurs
+
+        Description:  This statement specifies the number of  retries  of
+                 either  RR/RNR  depends  on  the  busy condition of TIF.
+                 When a receive timeout occured to  TIF,  TIF  decrements
+                 TOTRLN  counter  and  sends  RR/RNR  to  CU.   If TOTRLN
+                 reaches 0, TIF enters into HPINOP and sends DM  to  HIF,
+                 then enters into HPNDM.  This macro is generated in line
+                 level, and is used in TIF only.  The  default  value  of
+                 this retry counter is 12.
+
+                 Default:  If this  statement  is  omitted,  the  assumed
+                 value will be m=12.
+
+
+        2.5.18 DISCRETRIES               ___________
+
+        Syntax:  DISCRETRIES(m)
+                 where m = number
+
+        Description:  This DISCRETRIES counts the number of DISC sent  to
+                 CU,  while  waiting to enter into NDM.  Whenever network
+                 circuit is down, TIF sends  DISC  to  CU  several  times
+                 until  the  contents  in  SCBDIS  reaches  0.  The retry
+                 counter of DISC is DISRLN, and used by TIF  only.   This
+                 macro  is  used in line level, and the default number is
+                 4.
+
+        Default:  If this statement is omitted, the assumed value will be
+                 m=4.
+
+
+        2.5.19 XIDRETRIES               __________
+
+        Syntax:  XIDRETRIES(m)
+                 where m = number
+
+        Description:  The XIDRETRIES macro is used  by  HIF  only.   This
+                 retry  counter  counts  the  number of XIDs ignored from
+                 host in between XIDs sent accross the network.  Whenever
+                 HIF  gets  XID  from  front  end  processor, it sets the
+                 XIDRLN into SCBXRD (SCBLKS).  HIF ignores the number  of
+                 XIDs  during  the  XIDMSK on situation.  When this retry
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 28
+
+
+                 counter reaches 0, XIDMSK is  cleared.   This  macro  is
+                 specified  in  line level for HIF use only.  The default
+                 value is 5.
+
+        Default:  If this statement is omitted, the assumed value will be
+                 m=5.
+
+
+        2.5.20 TESTRETRIES               ___________
+
+        Syntax:  TESTRETRIES(m)
+                 where m = number
+
+        Description:  The TESTRETRIES macro is used by  HIF  only.   This
+                 retry  counter  counts  the number of TESTs ignored from
+                 host  in  between  TESTs  sent  accross   the   network.
+                 Whenever HIF gets XIDs from front end processor, it sets
+                 the TESTLN into SSTRTN (SCBLKS).  HIF ignores the number
+                 of  TESTs  during  the  TSTMSK  on situation.  When this
+                 retry counter reaches 0, TSTMSK is cleared.  This  macro
+                 is  specified  in  line  level  for  HIF  use only.  The
+                 default value is 5.
+
+        Default:  If this statement is omitted, the assumed value will be
+                 m=5.
+
+
+                 2.5.21 RNRXMTRETRIES                        _____________
+
+                 Syntax:  RNRXMTRETRIES(t)
+                 where t = timer (minutes)
+
+        Description:  The RNRXMTRETRIES macro is used by TIF only.   This
+                 retry timer specifies how many minutes that the TIF will
+                 send RNR to CU, and is not able to get out  of  the  RNR
+                 transmit  loop  due to network congestion.  If the timer
+                 specified in this RNRXLN expires, TIF gives up trying by
+                 entering into HPBUSY, then NDM.
+
+                 If m = 0FF minutes, the infinitive RNR transmit retry is
+                 attempts.   The  default  value  of  this  RNR  transmit
+                 retries is 10 minutes before going into NDM.  This macro
+                 is defined in the line level, and is used by TIF only.
+
+        Default:  If this statement is omitted, the assumed value will be
+                 m=10.
+
+
+                 2.5.22 RNRRCVRETRIES                        _____________
+
+                 Syntax:  RNRRCVRETRIES(t)
+                 where t = timer (minutes)
+
+        Description:  The RNRRCVRETRIES macro is used for TIF only.  This
+                 retry timer specifies how many minutes that the TIF will
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 29
+
+
+                 receive consecutive RNR from CU, and is not able to  get
+                 out  of  the  RNR receive loop due to the station's busy
+                 condition or problem.  If the timer  specified  in  this
+                 RRNRLN  expires, TIF gives up trying by entering HPBUSY,
+                 then NDM.
+
+                 If m = 0FF minutes, the inifinitive RNR receive retry is
+                 attempt.   The default value of this RNR receive retries
+                 is 10 minutes before going  into  NDM.   This  macro  is
+                 defined in the line level, and is used by TIF only.
+
+        Default:  If this statement is omitted, the assumed value will be
+                 m=10.
+
+
+        2.5.23 POLLTIMER               _________
+
+        Syntax:  POLLTIMER(t)
+                 where t = time, in 1/10 seconds
+
+        Description:  This statement specifies the interval between  each
+                 RR or RNR for the lines in this group for TIF only.  for
+                 the lines in this line group.  SDLC interface will  wait
+                 for  t*1/10 sec, before sending another RR or RNR to the
+                 secondary station.  After this action has been taken for
+                 several  timer  for  RNR  only  (see  RNRXMTRETRIES), no
+                 further attempt to communicate with the external system.
+                 Instead,  the  TIF enters into HPNDM.  The default value
+                 for point-to-point  configuration  is  2*1/10  sec  ,for
+                 multi-point configuration is 0.
+
+        Default:  Point-to-point config t=1, Multi-point config t=0.
+
+
+        2.5.24 PAUSE               _____
+
+        Syntax:  PAUSE(t)
+                 where t = time in 1/10 seconds
+
+        Description:  This statement specifies the  average  duration  of
+                 the  polling  cycle  in 1/10 seconds.  The polling cycle
+                 extends from the moment polling begins  with  the  first
+                 active  entry  in the service running list to the moment
+                 polling next begins at the  same  entry.   If  the  time
+                 expended  in  a  complete  polling  cycle-  this  is, in
+                 servicing all active  entries  in  the  service  running
+                 list-  equals  or  exceeds  the time specified as t, the
+                 next polling cycle begins immediately.  If, on the other
+                 hand,  the  time expended in a complete polling cycle is
+                 less that t, the beginning of the next polling cycle  is
+                 deferred   until   t  seconds  have  elapsed  since  the
+                 beginning of  the  cycle  just  completed.   During  the
+                 pause,  the  SDLC  link  is  in  "POLL-WAIT" state;  any
+                 outgoing  data  ready  for  transmission  to  the   SDLC
+                 terminal stations on the link is sent during this pause.
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 30
+
+
+                 Allowing a pause to elapse when activity on the link  is
+                 relatively  low can reduce the amount of processing time
+                 consumed by unproductive polling.
+
+                 't' may be from 0 to 25.
+
+                 This statement is only applicable to  the  primary  SDLC
+                 GROUP/LINE.
+
+        Default:  If this statement is omitted, the default pause is  one
+                 second.
+
+
+        2.5.25 DHOST               _____
+
+        Syntax:  DHOST(host #)
+                 where host # = destination host number of circuit 
+
+        Description:  This statement is required  for  PVC  incoming  and
+                 outgoing  lines, and SVC outgoing lines.  For PVC or SVC
+                 outgoing circuits this macro defines the target host  #.
+                 For  PVC incoming circuits this macro defines the source
+                 host #.  The target host #  must  be  an  assigned  SDLC
+                 host.
+
+        Default:  If the host # is not defined for the logon of a network
+                 procedure, the target host will be the user's home host,
+                 if the 'home host' option has  been  selected  when  the
+                 user name was validated.
+
+
+        2.5.26 PVCLINE               _______
+
+        Syntax:  PVCLINE
+
+        Description:  This statement defines all lines in this  group  as
+                 Permanent  Virtual  Circuits (PVCs), when defined on the
+                 Group level.  When defined on the Line Level, just  this
+                 line  is  defined  as  a PVC.  This statement may not be
+                 used on the PU level.
+
+        Default:  If this statement or  the  SVCLINE  statement  are  not
+                 defined for a line in the Group or Line levels, the line
+                 defaults to a PVC.
+
+
+        2.5.27 SVCLINE               _______
+
+        Syntax:  SVCLINE(arg)
+
+                 where arg = INLNE (for incoming calls)  or  OUTLNE  (for
+                 outgoing calls)
+
+        Description:  This statement defines lines  as  Switched  Virtual
+                 Call  (SVCs),  and  whether they are incoming (INLNE) or
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 31
+
+
+                 outgoing (OUTLNE).  An incoming line waits for a Needle,
+                 wher  as an outgoing line initiates the SVC by sending a
+                 Pseudo-Needle  Request.   This  statement  may  only  be
+                 defined on the Group or Line levels.
+
+        Default:  If this statement and the  PVCLINE  statement  are  not
+                 defined on the Group or Line levels for a line, then the
+                 default is PVC.
+
+
+        2.5.28 LGN.USER               ________
+
+        Syntax:  LGN.USER(string)
+                 where string = string of characters
+
+        Description:  This statement is required for PVC or SVC  outgoing
+                 lines only.  This statement may be defined on the Group,
+                 Line or PU levels.  It specifies the user's name for the
+                 building  of the SVC or PVC to the destination QLLC/SDLC
+                 or X.25 ITF.  The user's name must  be  valided  by  the
+                 network validation program.
+
+        Default:  There is no default  for  the  user's  name.   If  this
+                 statement  is  omitted  in  GROUP level, then it must be
+                 define either in LINE or PU level.
+
+
+        2.5.29 LGN.PASSWORD               ____________
+
+        Syntax:  LGN.PASSWORD(string)
+                 where string = string of characters
+
+        Description:  This statement is required for PVC or SVC  outgoing
+                 lines only.  This statement may be defined on the Group,
+                 Line or PU levels.  It specifies the necessary  password
+                 for  the  building  of  a PVC or SVC within the network.
+                 The password must be validated by the network validation
+                 program.    Unless   the  validation  of  the  user  has
+                 specified that no password is required, the creating  of
+                 a  virtual  circuit within the network always requires a
+                 password.  For PVC lines, destined for an X.25 ITF,  the
+                 password  must  have  shut  override  and be of the null
+                 password type.
+
+        Default:   There  is  no  default  for   the   'password'.    The
+                 LGN.PASSWORD statement must be included for a PVC or SVC
+                 outgoing GROUP/LINE/PU definition, when  the  associated
+                 user's name required to have a password.
+
+
+        2.5.30 LGN.GATEWAY               ___________
+
+        Syntax:  LGN.GATEWAY(string,n)
+                 where string = string of  characters  and  n  =  gateway
+                 level
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 32
+
+
+        Description:  This statement  is  only  required  for  a  PVC/SVC
+                 outgoing SDLC GROUP/LINE/PU definition which is required
+                 to go through network gateways to reach the  destination
+                 SDLC/QLLC  or  X.25  Interface  host.   It  provides the
+                 necessary logon record for a  gateway  logon,  and  also
+                 indicates  when  this  gateway  logon  record  should be
+                 utilized.  The gateway  logon  record  has  the  similar
+                 format  as that of a regular network logon record except
+                 that the <;> after the gateway host should be  coded  as
+                 <"BB>.   Here  <BB>  is the ASCII code for the character
+                 <;>.
+
+        Default:  There is no default for this statement.   If  logon  on
+                 through gateway feature is desired, proper gateway logon
+                 record(s) must be provided.
+
+
+        2.5.31 SVC.CALLED               __________
+
+        Syntax:  SVC.CALLED(address)
+
+                 where address = must be 7 bytes long.  The first 2 bytes
+                 are  the  destination  DNIC,  the  next  3 bytes are the
+                 destination Host #, the next  byte  is  the  destination
+                 Line/Link  #,  and  the  last  byte  is  the destination
+                 station address.
+
+        Description:  This statement defines the destination address  for
+                 SVC  outoing  lines.   This is the address which will be
+                 included in the Called Address ISIS message sent to  the
+                 destination  interface.  If the destination interface is
+                 an X.25  ITF,  then  the  address  is  included  in  the
+                 Incoming Call Packet sent to the DTE.
+
+                 This address may identify a  pool  of  destination  SVCs
+                 with   the   same   host  number.   In  this  case,  the
+                 destination line # and station  address  should  be  all
+                 zeroes.
+
+        Default:  There is no default for this statement.  If  the  macro
+                 is  undefined  for an SVC outgoing station on either the
+                 Group, Line or PU levels, then an  assembly  time  error
+                 will be displayed.
+
+
+        2.5.32 SVC.CGROUP               __________
+
+        Syntax:  SVC.CGROUP(n)
+                 where n = interlock code which must be 8 decimal  digits
+                 (4  bytes),  the  first 2 bytes are the DNIC, the last 2
+                 bytes are any 4 hexadecimal digits.  The X.25  Interface
+                 defines the last 2 bytes in BCD.
+
+                 For example, the following interlock codes match:
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 33
+
+
+                 SDLC/QLLC ITF defines - SVC.CGROUP(31060929)
+                 X.25 ITF defines - CUGROUP(1,3106,2345)
+
+        Description:  This statement defines a valid interlock code  used
+                 for  Closed User Group Facility.  This statement is only
+                 valid for SVC lines and must be  defined  on  the  Group
+                 level  only.   More than one SVC.CGROUP statement may be
+                 used for the same group.  For outgoing SVCs with  Closed
+                 User  Group  (CUG)  facility  subscribed  to,  the first
+                 interlock code is included in the Facilities IIX message
+                 sent  to  the destination Interface.  For incoming SVCs,
+                 the  interlock  code  received  in  the  Facilities  IIX
+                 message  must  be  defined as one of the SVC.CGROUPs for
+                 this Group.
+
+        Default:  none
+
+
+        2.5.33 SVC.CUG               _______
+
+        Syntax:  SVC.CUG(arg1,arg2,arg3)
+
+                 where  arg1  =  Yes   (for   subsciber)   or   No   (for
+                 nonsubscriber),  arg2  =  INC  (for  incoming access) or
+                 blank (for no incoming access), arg3 = OUT (for outgoing
+                 access) or blank (for no outgoing access).
+
+        Example:  SVC.CUG(YES,INC,OUT) -  subscriber  with  incoming  and
+                 outgoing access.
+
+                 SVC.CUG(YES,,OUT)  -  subscriber  with   just   outgoing
+                 access.
+
+                 SVC.CUG(YES,INC,,)  -  subscriber  with  just   incoming
+                 access.
+
+                 SVC.CUG(YES,,,)  -  subscriber   without   incoming   or
+                 outgoing access.
+
+                 SVC.CUG(NO) - non subscriber
+
+        Description:  This statement is used to define an SVC line  as  a
+                 subscriber  or  non  subscriber to the Closed User Group
+                 (CUG) Facility,  and  whether  it  has  incoming  and/or
+                 outgoing  access.  This statement may only be defined on
+                 the Group or Line levels.  If the statement defines  the
+                 line(s)  as a CUG subscriber(s) then the valid CUG codes
+                 are as defined by the SVC.CGROUP statement in the  Group
+                 level.
+
+        Default:  If this statement is not defined  the  default  is  non
+                 subscriber  of  the  CUG facility, even if SVC.CGROUP is
+                 defined.
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 34
+
+
+        2.5.34 SVC.TCLASS               __________
+
+        Syntax:  SVC.TCLASS(t,r)
+
+                 where t  and  r  =  the  default  transmit  and  receive
+                 throughput (TPUT) class respectively.  Both values are 2
+                 decimal digits ranging from 03 to 12.  03 = 75 baud,  04
+                 =  150  baud,  05  =  300 baud, 06 = 600 baud, 07 = 1200
+                 baud, 08 = 2400 baud, 09 = 4800 baud, 10 = 9600 baud, 11
+                 = 19200 baud, and 12 = 48000 baud.
+
+        Description:  This statement defines the default Throughput Class
+                 Negotiation  values to be used during negotiation.  This
+                 statement is only used for SVC lines, and  can  only  be
+                 defined  on  the  Group  or  Line  levels.  The X.25 ITF
+                 always uses TPUT negotiation, whether it is  defined  in
+                 TYMFILE  or  not.   Terefore the QLLC/SDLC ITF will also
+                 always use this facility.
+
+        Default:  If this statement is not defined for the Group or Line,
+                 then  the  default  for  the line is a subscriber to the
+                 throughput class negotiation facility, and  the  default
+                 receive  and  transmit  classes  are  equal to the speed
+                 (defined in SPEED macro).
+
+
+        2.5.35 SVC.CHARGE               __________
+
+        Syntax:  SVC.CHARGE(n)
+
+                 where n = 01 for request reverse charge accepted, 02 for
+                 reverse  charge  NOT  requested accepted, or 03 for both
+                 reverse charge requested or NOT requested accepted.
+
+        Description:   This  statement  defines  this  SVC  line   as   a
+                 subscriber  to  the  Reverse  Charge  Facility, and also
+                 defines the  acceptance  status  for  a  reverse  charge
+                 request or reverse charge not requested.  This statement
+                 may only be defined on the Group or  Line  levels.   For
+                 SVC outgoing lines with Both defined (03) reverse charge
+                 requested is included in the Facilities IIX message sent
+                 to the destination interface.
+
+        Default:  If this statement is not defined for an SVC  line,  the
+                 line  defaults to a non subscriber to the Reverse Charge
+                 Facility.
+
+
+        2.5.36 ISTATUS               _______
+
+        Syntax:  ISTATUS(arg)
+                 where arg = ACTIVE or INACTIVE
+
+        Description:  This statement specifies whether the station(s)  in
+                 this  GROUP/LINE/PU  should  be  active or inactive when
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 35
+
+
+                 this SDLC interface is initially loaded into the ENGINE.
+                 An  inactive station or line could be activated later by
+                 the SDLC Interface monitor.
+
+        Default:  This statement may be  omitted,  then  the  default  is
+                 active.
+
+
+        2.5.37 DSIOTP               ______
+
+        SYNTAX:  DSIOTP(arg)
+                 where arg = D.TYP0 or D.TYP1
+
+        DESCRIPTION:  THIS STATEMENT SPECIFIES THE VERSION  TYPE  OF  SIO
+                 DAUGHTER  BOARD  WHICH  IS INSTALLED IN THE ENGINE.  NEW
+                 VERSIONS HAVE SWTICH  DCD  AND  CTS  EIA  SIGNALS.   THE
+                 PARAMETER  D.TYP0  IS  DEFINED  TO BE THE DAUGHTER BOARD
+                 VERSION G OR  EARLIER,  D.TYP1  IS  DEFINED  TO  BE  THE
+                 VERSION H OR LATTER.
+
+        DEFAULT:  IF THIS STATEMENT IS OMITTED, THE DEFAULT SIO  DAUGHTER
+                 BOARD VERSION IS D.TYP0.
+
+
+        2.5.38 QXID               ____
+
+        Syntax:  QXID(string)
+
+                 where string = QXID response  information  field.   This
+                 string may be no longer than 80 hex bytes.
+
+        Description:  This statement may  only  be  defined  for  Primary
+                 lines.   When  a  QXID is received from the newtork, the
+                 received QXID Command is discarded and a  QXID  response
+                 using  an information field defined by this statement is
+                 sent accross the network.
+
+        Default:  If this statement is not defined then the received QXID
+                 command  is  always  sent  as  an  XID  to the secondary
+                 station.
+
+
+        2.5.39 QLCX25               ______
+
+        Syntax:  QLCX25(arg)
+
+                 Where arg = YES or NO.
+
+        Level(s):  Define on Group or Line levels only.  Do not define on
+                 PU level.
+
+        Dependancies:  The remote side interface.
+
+        Description:  This statement specifies whether a line is  talking
+                 to  the  SDLC  interface or X.25 interface.  If 'YES' is
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 36
+
+
+                 specified, then the other side of the interface is X.25,
+                 otherwise;  the other side of the interface is QLLC.
+
+        Default:  If this statement is omited, the default  is  SDLC/QLLC
+                 extension cord configuration.
+
+        Suggested Setting:  Depends on the configuration.
+
+        Message(s):
+                                 *** WARNING 02 ***  ;If defined on PU
+                 level.
+                                 *** WARNING 01 ***  ;If no argument
+                 defined.
+                                 *** ERROR   07 ***  ;If argument is out
+                 of range.
+
+
+        2.5.39 RNRSK1               ______
+
+        Syntax:  RNRSK1(arg)
+
+                 Where arg = YES or NO.
+
+        Description:  There are two schemes used by the SDLC interface to
+                 check  if  SDLC interface is ready to receive SDLC frame
+                 from external stations.  If 'YES' is defined,  then  the
+                 value of receive bufferlet quotas defined by RCVFRMQA is
+                 compared  to  the  value  of  window  size  defined   by
+                 WINDOWSIZE.   If  'NO'  is  defined,  the  the  value of
+                 receive bufferlet quotas defined by RCVFRMQA is compared
+                 to the value of 1/2 window size defined by WINDOWSIZE.
+
+        Default:  'NO' scheme  is  always  used  if  this  macro  is  not
+                 defined.
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 37
+
+
+               -----------------------------------------------------
+               |                         |           |             |
+               |          Syntax         |  Default  |    Note     |
+               |                         |           |             |
+               -----------------------------------------------------
+               |                         |           |             |
+               | GROUP(n)                |  N/A      |  Note 1.    |
+               |                         |           |             |
+               |  PRIMARY/SECONDARY      | PRIMARY   |  Note 2.    |
+               |                         |           |             |
+               |  HOST(host#)            |  N/A      |  Note 3.    |
+               |                         |           |             |
+               |  SPEED(n)               |  8000d    |  Note 2.    |
+               |                         |           |             |
+               |  DATAMODE(arg)          |  HALF     |  Note 2.    |
+               |   arg= HALF/FULL        |           |             |
+               |                         |           |             |
+               |  VTAM(arg)              |  YES      |  Note 2.    |
+               |   arg = YES/NO          |           |             |
+               |                         |           |             |
+               |  SWITCHED(arg)          |  YES      |  Note 2.    |
+               |   arg = YES/NO          |           |             |
+               |                         |           |             |
+               |  RTSCTS(arg)            |  YES      |  Note 2.    |
+               |   arg = YES/NO          |           |             |
+               |                         |           |             |
+               |  REPLYTO(t)             |  3 sec.   |  Note 2.    |
+               |                         |           |             |
+               |  NETREPLYTO(t)          |  0.8 sec. |  Note 2.    |
+               |                         |           |             |
+               |  FRAMESIZE(n)           |  270d     |  Note 2.    |
+               |                         |           |             |
+               |  WINDOWSIZE(n)          |  7        |  Note 2.    |
+               |                         |           |             |
+               |  XMTFRMQA(n)            |  7 or 3   |  Note 2. 4. |
+               |                         |           |             |
+               |  RCVFRMQA(n)            |  7 or 3   |  Note 2. 4. |
+               |                         |           |             |
+               |  SNRMRETRIES(m,t,n)     |  m=5,t=0  |Note 1.2.4.10,11|
+               |                         |  n=0      |             |
+               |                         |           |             |
+               |  XIDRETRIES(m)          |  m=5      |Note 1.2.4.11|
+               |                         |           |             |
+               |  TESTRETRIES(m)         |  m=5      |Note 1.2.4.11|
+               |                         |           |             |
+               |  RNRXMTRETRIES(t)       |  t=10     |Note 1.2.4.10|
+               |                         |           |             |
+               |  RNRRCVRETRIES(t)       |  t=10     |Note 1.2.4.10|
+               |                         |           |             |
+               |  DISCRETRIES(m)         |  m=4      |Note 1.2.4.10|
+               |                         |           |             |
+               |  RCVTORETRIES(m)        |  m=12     |Note 1.2.4.10|
+               |                         |           |             |
+               |  POLLTIMER(t)           |  t=2      |Note 1.2.4.10|
+               |                         |           |             |
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 38
+
+
+               |  PAUSE(t)               |  1 sec.   |  Note 2.    |
+               |                         |           |             |
+               |  DHOST(host #)          |  N/A      |  Note 6.    |
+               |                         |           |             |
+               |  PVCLINE/SVCLINE(arg)   |  PVCLINE  |  Note 7.    |
+               |   arg = INLNE or OUTLNE |           |             |
+               |                         |           |             |
+               |  LGN.USER(string)       |  N/A      |  Note 3.    |
+               |                         |           |             |
+               |  LGN.PASSWORD(string)   |  N/A      |  Note 3.    |
+               |                         |           |             |
+               |  LGN.GATEWAY(string,n)  |  N/A      |  Note 3. 5. |
+               |                         |           |             |
+               |  SVC.CALLED(addr)       |  N/A      |  Note 8.    |
+               |                         |           |             |
+               |  SVC.CGROUP(n)          |  N/A      |  Note 9.    |
+               |   n = interlock code    |           |             |
+               |                         |           |             |
+               |  SVC.CUG(arg1,arg2,arg3)|  NO       |  Note 2.    |
+               |   arg1 = YES or NO      |           |             |
+               |   arg2 = INC or blank   |           |             |
+               |   arg3 = OUT or blank   |           |             |
+               |                         |           |             |
+               |  SVC.TCLASS(t,r)        |speed,speed|  Note 2.    |
+               |                         |           |             |
+               |  SVC.CHARGE(n)          |nonsubscrib|  Note 2.    |
+               |                         |           |             |
+               |  ISTATUS(arg)           |  ACTIVE   |  Note 2.    |
+               |   arg=ACTIVE or         |           |             |
+               |  INACTIVE               |           |             |
+               |                         |           |             |
+               |  DSIOTP(arg)            |  D.TYP0   |  Note 2.    |
+               |   arg=D.TYP0 or D.TYP1  |           |             |
+               |                         |           |             |
+               |  QXID(string)           |No canned  |  Note 2.    |
+               |                         |QXID rsp   |             |
+               |                         |           |             |
+               |  QLCX25(arg)            |  NO       |  Note 2.    |
+               |   arg=YES or NO         |           |             |
+               |                         |           |             |
+               |  RNRSK1(arg)            |  NO       |  Note 2.    |
+               |   arg= YES or NO        |           |             |
+               -----------------------------------------------------
+
+
+                  Note 1. The user may choose no to use GROUP statement,
+                          and define all the links individually.
+                  Note 2. This statement may be omitted.
+                  Note 3. This statement is applicable to outgoing lines
+                          within the group.
+                  Note 4. The value for the default depends on whether
+                          this is a primary or secondary group.
+                  Note 5. This statement is required when logon through
+                          gateway is desired.
+                  Note 6. The target host will be the user`s home host
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 39
+
+
+                          if the `home host` option has been selected 
+                          when the user name was validated.
+                  Note 7. The line defaults to a PVC incoming line.
+                  Note 8. This statement required for SVC outgoing line.
+                  Note 9. This statement required for SVC lines 
+                          subscribing to CUG.
+                  Note 10.This statement required for primary group.
+                  Note 11.This statement required for secondary group. 
+
+                       Figure 2.5 Summary of GROUP Statements
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 40
+
+
+        SECTION 2.6 LINE STATEMENTS        _______ ___ ____ __________
+
+
+        This section describes all the statements belonging to  the  same
+        category,  which  is  the second category in the macro hierarchy,
+        named LINE.
+
+        The characteristics which are specified again in  this  level  of
+        macro  hierarchy  may override the same characteristics which may
+        have been defined by an item-macro under GROUP level.
+
+
+        2.6.1 LINE              ____
+
+        Syntax:  LINE(n)
+                 where n = line #
+
+        Description:  This statement specifies a link  with  its  logical
+                 line  (SIO  logical  unit) number be set to line#.  This
+                 statement also  denotes  the  begining  of  a  group  of
+                 characteristics  which  may be applied to the next level
+                 PU macros.
+
+        Default:  There is no default for this statement.   For  each  of
+                 the  SIO  channels (i.e.  lines), there must be one LINE
+                 statement associated with it.
+
+
+        2.6.2 HOST               ____
+
+        Syntax:  HOST(host#)
+
+        Description:  This statement specifies the SDLC host #  for  this
+                 link   when   this   is   an   SVC   incoming   or   PVC
+                 incoming/outgoing line.  For a SVC  outgoing  line  this
+                 statement is not required.
+
+        Default:  This statement can not be omitted, unless it  has  been
+                 defined in the upper level - GROUP level.
+
+
+        2.6.3 DHOST              _____
+
+        Syntax:  DHOST(host #)
+
+                 see DHOST statement in Group section for details
+
+
+        2.6.4 SPEED              _____
+
+        Syntax:  SPEED(n)
+                 where n = 2400, 4800, 9600, 8000, 19.2k, 56k
+
+        Description:  This statement specifies the transmission speed  of
+                 this  line.  Please see SPEED statement in Group section
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 41
+
+
+                 for more information.
+
+        Default:  If this statement is omitted, and is not defined in the
+                 upper GROUP level, then the default line speed is 8000d.
+
+
+        2.6.5 DATAMODE              ________
+
+        Syntax:  DATAMODE(arg)
+                 where arg = HALF, HALFDUPLEX, FULL, FULLDUPLEX
+
+        Description:  This statement specifies the data transmission mode
+                 (1.e.protocol).    'Half   Duplex'   mode   is  one  way
+                 alternative transmission;  'Full Duplex' mode is two way
+                 simultaneous transmission.
+
+        Default:  The default is half-duplex data mode.
+
+
+        2.6.6 VTAM              ____
+
+        Syntax:  VTAM(arg)
+                 where arg = YES, or NO
+
+        Description:  This statement is only applied to an SDLC secondary
+                 link.   It  denotes  that  this  line  is  going  to  be
+                 physically connected to a VTAM/3705 host.
+
+        Default:  For an  SDLC  secondary  link,  the  default  for  this
+                 feature is 'YES'.
+
+
+        2.6.7 SWITCHED              ________
+
+        Syntax:  SWITCHED(arg)
+                 where arg = YES, or NO
+
+        Description:  This statement specifies whether this link requires
+                 the    DTR/DSR    handshaking   procedure.    For   more
+                 information, please  see  SWITCHED  statement  in  Group
+                 section.
+
+        Default:  The default is 'YES'.
+
+
+        2.6.8 RTSCTS              ______
+
+        Syntax:  RTSCTS(arg)
+                 where arg = YES, or NO
+
+        Description:   This  statement  specifies  whether  the   RTS/CTS
+                 handshaking  sequences  should  be  performed during the
+                 transmissions of  link  frames,  For  more  information,
+                 please see RTSCTS statment in Group section.
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 42
+
+
+        Default:  The default is 'YES'.
+
+
+        2.6.9 REPLYTO              _______
+
+        Syntax:  REPLYTO(t)
+                 where t = time in 1/10 seconds
+
+        Description:  This statement specifies the reply  timeout  value,
+                 in  1/10  seconds,  for  this  primary  link.   For more
+                 information , please  see  REPLYTO  statement  in  Group
+                 section.
+
+        Default:  The default is three seconds.
+
+
+        2.6.10 NETREPLYTO               __________
+
+        SYNTAX:  NETREPLYTO(t)
+                 Where t = Time in 1/10 seconds
+
+        Description:  This statement specifies the  reply  timeout  value
+                 for  waiting  for  a  response  from  network,  in  1/10
+                 seconds, for this link.  For  more  information,  please
+                 see NETREPLYTO statement in Group section.
+
+        Default:  The default is 0.9 seconds.
+
+
+        2.6.11 FRAMESIZE               _________
+
+        Syntax:  FRAMESIZE(n)
+                 where n = size in bytes
+
+        Description:  This statement specifies the  maximum  frame  size.
+                 For  the  description  of  this  statement,  please  see
+                 FRAMESIZE statement in Group section.
+
+        Default:  The default size is 270d bytes.
+
+
+        2.6.12 WINDOWSIZE               __________
+
+        Syntax:  WINDOWSIZE(n)
+                 where n = 1, 2, 3, 4, 5, 6, or 7 frames
+
+        Description :  This statement specifies  the  maximum  number  of
+                 outstanding   frames.    For  the  description  of  this
+                 statement, please  see  WINDOWSIZE  statement  in  Group
+                 section.
+
+        Default:  The default window size is seven frames.
+
+
+        2.6.13 XMTFRMQA               ________
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 43
+
+
+        Syntax:  XMTFRMQA(n)
+                 where n = number in frames
+
+        Description:  For the description of this statement , please  see
+                 XMTFRMQA statement in Group section.
+
+        Default:  For the default value, please see XMTFRMQA statement in
+                 Group section.
+
+
+        2.6.14 RCVFRMQA               ________
+
+        Syntax:  RCVFRMQA(n)
+                 where n = number in frames
+
+        Description:  For the description of this statement,  please  see
+                 RCVFRMQA statement in Group section.
+
+        Default:  For the default value, please see RCVFRMQA statement in
+                 Group section.
+
+
+        2.6.15 SNRMRETRIES               ___________
+
+        Syntax:  SNRMRETRIES(m,t,n)
+                 where m = number, t = time in 1/10 seconds, n = number
+
+        Description:  This statement specifies the number of SNRM retries
+                 with two different aspect for TIF or HIF.
+
+                 As to the TIF side, SNRMRETRIES specifies the number  of
+                 SNRMs  sent  to CU from TIF.  Whenever TIF receives SNRM
+                 from TIF, it transmits the SNRM  to  CU,  sets  the  1st
+                 argument  of  SNRMRETRIES as SNRM retry counter.  If the
+                 UA does not  returned  from  from  CU,  then  TIF  sends
+                 another  SNRM  when  the PAU.LN times out.  When the 1st
+                 argument of SNRM retry reaches 0, TIF checks if the  2nd
+                 argument  which is the SNRM pause timer is 0 or not.  If
+                 2nd argument is set to 0, then the retry  activities  is
+                 stoped  (Since  the  2nd  argument  t  is  0,  the third
+                 argument n which is the retry sequence must be 0;   that
+                 means,  only the retries specified in the 1st argument m
+                 is attempts).  This macro is used in the line level, the
+                 default value for the TIF is (1,0,0) that means only one
+                 retry is attempted.
+
+                 If n is omitted and t is not 0, then n = 0;  that  means
+                 ,  the  retries  specified  in  the  1st  argument  m is
+                 attempted.
+
+                 If n is omitted and t is 0, n = 0 is assumed.
+
+                 As to the HIF side, SNRMRETRIES specifies the number  of
+                 SNRM  ignored  by  HIF in between the SNRMs sent accross
+                 the network.  Whenever HIF gets the SNRMs from fron  end
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 44
+
+
+                 processor and the SNRMSK is not set, HIF sets the SNRMSK
+                 during  the  retry  condition  and  decrements  the  1st
+                 argument  m.   When the 1st argument m reaches 0, SNRMSK
+                 is cleared and HIF will be able  to  receive  SNRM  from
+                 front  end  processor again.  The interval timer between
+                 each SNRM ignored by HIF is TNR.LN.  For the  reason  of
+                 complexity  of HIF code, the 2nd t and 3rd argument n is
+                 always set to 0 without choices.  The default  valu  for
+                 HIF  is (5,0,0), and this macro is specified in the line
+                 level.
+
+                 The t and n of HIF should always set to 0 without  other
+                 choices.
+
+        Default:  If this statement is omitted, the  assumed  value  will
+                 (1,0,0) for TIF, (5,0,0) for HIF.
+
+
+        2.6.16 RCVTORETRIES               ____________
+
+        Syntax:  RCVTORETRIES(m)
+                 where m = number of retries while receive timout occurs
+
+        Description:  This statement specifies the number of  retries  of
+                 either  RR/RNR  depends  on  the  busy condition of TIF.
+                 When a receive timeout occured to  TIF,  TIF  decrements
+                 TOTRLN  counter  and  sends  RR/RNR  to  CU.   If TOTRLN
+                 reaches 0, TIF enters into HPINOP and sends DM  to  HIF,
+                 then enters into HPNDM.  This macro is generated in line
+                 level, and is used in TIF only.  The  default  value  of
+                 this retry counter is 12.
+
+                 Default:  If this  statement  is  omitted,  the  assumed
+                 value will be m=12.
+
+
+        2.6.17 DISCRETRIES               ___________
+
+        Syntax:  DISCRETRIES(m)
+                 where m = number
+
+        Description:  This DISCRETRIES counts the number of DISC sent  to
+                 CU,  while  waiting to enter into NDM.  Whenever network
+                 circuit is down, TIF sends  DISC  to  CU  several  times
+                 until  the  contents  in  SCBDIS  reaches  0.  The retry
+                 counter of DISC is DISRLN, and used by TIF  only.   This
+                 macro  is  used in line level, and the default number is
+                 4.
+
+        Default:  If this statement is omitted, the assumed value will be
+                 m=4.
+
+
+        2.6.18 XIDRETRIES               __________
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 45
+
+
+        Syntax:  XIDRETRIES(m)
+                 where m = number
+
+        Description:  The XIDRETRIES macro is used  by  HIF  only.   This
+                 retry  counter  counts  the  number of XIDs ignored from
+                 host in between XIDs sent accross the network.  Whenever
+                 HIF  gets  XID  from  front  end  processor, it sets the
+                 XIDRLN into SCBXRD (SCBLKS).  HIF ignores the number  of
+                 XIDs  during  the  XIDMSK on situation.  When this retry
+                 counter reaches 0, XIDMSK is  cleared.   This  macro  is
+                 specified  in  line level for HIF use only.  The default
+                 value is 5.
+
+        Default:  If this statement is omitted, the assumed value will be
+                 m=5.
+
+
+        2.6.19 TESTRETRIES               ___________
+
+        Syntax:  TESTRETRIES(m)
+                 where m = number
+
+        Description:  The TESTRETRIES macro is used by  HIF  only.   This
+                 retry  counter  counts  the number of TESTs ignored from
+                 host  in  between  TESTs  sent  accross   the   network.
+                 Whenever HIF gets XIDs from front end processor, it sets
+                 the TESTLN into SSTRTN (SCBLKS).  HIF ignores the number
+                 of  TESTs  during  the  TSTMSK  on situation.  When this
+                 retry counter reaches 0, TSTMSK is cleared.  This  macro
+                 is  specified  in  line  level  for  HIF  use only.  The
+                 default value is 5.
+
+        Default:  If this statement is omitted, the assumed value will be
+                 m=5.
+
+
+                 2.6.20 RNRXMTRETRIES                        _____________
+
+                 Syntax:  RNRXMTRETRIES(t)
+                 where t = timer (minutes)
+
+        Description:  The RNRXMTRETRIES macro is used by TIF only.   This
+                 retry timer specifies how many minutes that the TIF will
+                 send RNR to CU, and is not able to get out  of  the  RNR
+                 transmit  loop  due to network congestion.  If the timer
+                 specified in this RNRXLN expires, TIF gives up trying by
+                 entering into HPBUSY, then NDM.
+
+                 If m = 0FF minutes, the infinitive RNR transmit retry is
+                 attempts.   The  default  value  of  this  RNR  transmit
+                 retries is 10 minutes before going into NDM.  This macro
+                 is defined in the line level, and is used by TIF only.
+
+        Default:  If this statement is omitted, the assumed value will be
+                 m=10.
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 46
+
+
+        2.6.21 RNRRCVRETRIES               _____________
+
+        Syntax:  RNRRCVRETRIES(t)
+                 where t = timer (minutes)
+
+        Description:  The RNRRCVRETRIES macro is used for TIF only.  This
+                 retry timer specifies how many minutes that the TIF will
+                 receive consecutive RNR from CU, and is not able to  get
+                 out  of  the  RNR receive loop due to the station's busy
+                 condition or problem.  If the timer  specified  in  this
+                 RRNRLN  expires, TIF gives up trying by entering HPBUSY,
+                 then NDM.
+
+                 If m = 0FF minutes, the inifinitive RNR receive retry is
+                 attempt.   The default value of this RNR receive retries
+                 is 10 minutes before going  into  NDM.   This  macro  is
+                 defined in the line level, and is used by TIF only.
+
+        Default:  If this statement is omitted, the assumed value will be
+                 m=10.
+
+
+        2.6.22 POLLTIMER               _________
+
+        Syntax:  POLLTIMER(t)
+                 where t = time, in 1/10 seconds
+
+        Description:  This statement specifies the interval between  each
+                 RR or RNR for the lines in this group for TIF only.  for
+                 the lines in this line group.  SDLC interface will  wait
+                 for  t*1/10 sec, before sending another RR or RNR to the
+                 secondary station.  After this action has been taken for
+                 several  timer  for  RNR  only  (see  RNRXMTRETRIES), no
+                 further attempt to communicate with the external system.
+                 Instead,  the  TIF enters into HPNDM.  The default value
+                 for point-to-point  configuration  is  2*1/10  sec  ,for
+                 multi-point configuration is 0.
+
+        Default:  Point-to-point config t=1, Multi-point config t=0.
+
+
+        2.6.23 PAUSE               _____
+
+        Syntax:  PAUSE(t)
+                 where t = time in 1/10 seconds
+
+        Description:  This statement specifies the  average  duration  of
+                 the  polling  cycle  in  1/10 seconds.  Please see PAUSE
+                 statement in Group section for  a  description  of  this
+                 statement and its usages.
+
+        Default:  The default is one second.
+
+
+        2.6.24 PVCLINE               _______
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 47
+
+
+        Syntax:  PVCLINE
+
+        Description:  see PVCLINE statement in  Group  section  for  more
+                 details
+
+
+        2.6.25 SVCLINE               _______
+
+        Syntax:  SVCLINE
+
+        Description:  see SVCLINE statement in  Group  section  for  more
+                 details
+
+
+        2.6.26 LGN.USER               ________
+
+        Syntax:  LGN.USER(string)
+                 where string = string of characters
+
+        Description:  This statement is only required for a primary  SDLC
+                 link.   For  a  description  of  this  statement and its
+                 usages, please see LGN.USER statement in Group section.
+
+        Default:  There is no default for the user's name.   It  must  be
+                 defined in GROUP level, LINK level or PU level.
+
+
+        2.6.27 LGN.PASSWORD               ____________
+
+        Syntax:  LGN.PASSWORD(string)
+                 where string = string of characters
+
+        Description:  Please see LGN.PASSWORD statement in Group  section
+                 for the description and usages of this statement.
+
+
+        2.6.28 LGN.GATEWAY               ___________
+
+        Syntax:  LGN.GATEWAY(string,n)
+                 where string = string of  characters  and  n  =  gateway
+                 level
+
+        Description:  This statement is only required for a primary  SDLC
+                 GROUP/LINE/PU definition which is required to go through
+                 network gateways to reach the destination SDLC Interface
+                 host.   It  provides  the  necessary  logon record for a
+                 gateway logon, and  also  indicates  when  this  gateway
+                 logon  record  should  be  utilized.   The gateway logon
+                 record has the similar  format  as  that  of  a  regular
+                 network  logon  record  except  that  the  <;> after the
+                 gateway host should be coded as <"BB>.  Here <BB> is the
+                 ASCII code for the character <;>.
+
+        Default:  There is no default for this statement.   If  logon  on
+                 through gateway feature is desired, proper gateway logon
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 48
+
+
+                 record(s) must be provided.
+
+
+        2.6.29 PVC.RTPUT               _________
+
+        Syntax:  PVC.RTPUT(r)
+
+                 where r =  decimal  value  for  the  receive  throughput
+                 class,  the value must be between 2 and 13, 03= 75 Baud,
+                 04 = 150 Baud, 05 = 300 Baud, 06 = 600 Baud, 07  =  1200
+                 Baud, 08 = 2400 Baud, 09 = 4800 Baud, 10 = 9600 Baud, 11
+                 = 19200 Baud, 12 = 48000 Baud
+
+        Description:  This statement is only defined for PVC  lines,  and
+                 only  on  the  Line or PU levels.  The statement must be
+                 defined for both PVC builders  (high  host   )  and  PVC
+                 receivers  (low  host  ).  The purpose of this statement
+                 is to define the recive throughput class  for  this  PVC
+                 station.   This  value  MUST  match  the remote transmit
+                 throughput class, or the PVC will be rejected.
+
+        Default:  speed defined by SPEED statement
+
+
+        2.6.30 PVC.TTPUT               _________
+
+        Syntax:  PVC.TTPUT(t)
+
+                 where t = decimal value  transmit  throughput  class,  n
+                 must  have  same  values as the receive throughput class
+                 statement (see PVC.RTPUT)
+
+        Description:  This statement must be defined for each  PVC  line,
+                 and  can only be defined on the Line or PU levels.  This
+                 statement must be defined for both  PVC  builders  (high
+                 host  #)  and PVC receivers (low host #).  The value for
+                 this transmit throughput class  MUST  be  equal  to  the
+                 destination's  receive  throughput  class,  or  the  PVC
+                 request will be rejected.
+
+                 For outgoing PVC`s, this value  is  used  to  gouge  the
+                 circuit.
+
+        Default:  speed as defined by SPEED statement
+
+
+        2.6.31 SVC.CALLED               __________
+
+        Syntax:  SVC.CALLED(address)
+
+        Description:  see SVC.CALLED statement in Group section 2.5
+
+
+        2.6.32 SVC.CUG               _______
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 49
+
+
+        Syntax:  SVC.CUG(arg1,arg2,arg3)
+
+        Description:  see SVC.CUG statement in Group section 2.5
+
+
+        2.6.33 SVC.TCLASS               __________
+
+        Syntax:  SVC.TCLASS(t,r)
+
+        Description:  see SVC.TCLASS statement in Group section 2.5
+
+
+        2.6.34 SVC.CHARGE               __________
+
+        Syntax:  SVC.CHARGE(n)
+
+        Description:  see SVC.CHARGE statement in Group section 2.5
+
+
+        2.6.35 ISTATUS               _______
+
+        Syntax:  ISTATUS(arg)
+                 where string = ACTIVE or INACTIVE
+
+        Description:  This statement specifies whether the station(s)  in
+                 this  GROUP/LINE/PU  should  be  active or inactive when
+                 this SDLC interface is initially loaded into the ENGINE.
+                 An  inactive station or line could be activated later by
+                 the SDLC Interface monitor.
+
+        Default:  This statement may be  omitted,  then  the  default  is
+                 active.
+
+
+        2.6.36 DSIOTP               ______
+
+        SYNTAX:  DSIOTP(ARG)
+                 WHERE ARG = D.TYP0 or D.TYP1
+
+        DESCRIPTION:  THIS STATEMENT SPECIFIES THE VERSION  TYPE  OF  SIO
+                 DAUGHTER  BOARD  WHICH  IS INSTALLED IN THE ENGINE.  FOR
+                 THE DESCRIPTION OF THIS  STATEMENT,  PLEASE  SEE  DSIOTP
+                 STATEMENT IN GROUP SECTION.
+
+        DEFAULT:  THE DEFAULT SIO DAUGHTER BOARD VERSION IS D.TYP0.
+
+
+        2.6.37 QXID               ____
+
+        Syntax:  QXID(string)
+
+        Description:  see QXID statement in Group section 2.5
+
+
+        2.6.38 QLCX25               ______
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 50
+
+
+        Syntax:  QLCX25(string)
+
+        Description:  see QLCX25 statement in Group section 2.5
+
+
+        2.6.39 RNRSK1               ______
+
+        Syntax:  RNRSK1(string)
+
+        Description:  see RNRSK1 statement in Group section 2.5
+
+
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 51
+
+
+              ------------------------------------------------------
+              |                          |           |             |
+              |        Syntax            |  Default  |    Note     |
+              |                          |           |             |
+              ------------------------------------------------------
+              |                          |           |             |
+              | LINE(n)                  |  N/A      |  Note 1.    |
+              |    n = line              |           |             |
+              |                          |           |             |
+              |   HOST(host )            |  N/A      |  Note 3.    |
+              |                          |           |             |
+              |   DHOST(host  )          |  N/A      |  Note 6.    |
+              |                          |           |             |
+              |   SPEED(n)               |  8000d    |  Note 2.    |
+              |                          |           |             |
+              |   DATAMODE(arg)          |  HALF     |  Note 2.    |
+              |    arg= HALF/FULL        |           |             |
+              |                          |           |             |
+              |   VTAM(arg)              |  YES      |  Note 2.    |
+              |    arg = YES/NO          |           |             |
+              |                          |           |             |
+              |   SWITCHED(arg)          |  YES      |  Note 2.    |
+              |    arg = YES/NO          |           |             |
+              |                          |           |             |
+              |   RTSCTS(arg)            |  YES      |  Note 2.    |
+              |    arg = YES/NO          |           |             |
+              |                          |           |             |
+              |   REPLYTO(t)             |  3 sec.   |  Note 2.    |
+              |                          |           |             |
+              |   NETREPLYTO(t)          |  0.9 SEC. |  Note 2.    |
+              |                          |           |             |
+              |   FRAMESIZE(n)           |  270d     |  Note 2.    |
+              |                          |           |             |
+              |   WINDOWSIZE(n)          |  7        |  Note 2.    |
+              |                          |           |             |
+              |   XMTFRMQA(n)            |  7 or 3   |  Note 2. 4. |
+              |                          |           |             |
+              |   RCVFRMQA(n)            |  7 or 3   |  Note 2. 4. |
+              |                          |           |             |
+              |   SNRMRETRIES(m,t,n)     |  m=5,t=0  |Note 1.2.4.9.10| 
+              |                          |  n=0      |             |
+              |   XIDRETRIES(m)          |  m=5      |Note 1.2.4.10|
+              |                          |           |             |
+              |   TESTRETRIES(m)         |  m=5      |Note 1.2.4.10|
+              |                          |           |             |
+              |   RCVTORETRIES(m)        |  m=12     |Note 1.2.4.9 |
+              |                          |           |             |
+              |   DISCRETRIES(m)         |  m=4      |Note 1.2.4.9 |
+              |                          |           |             |
+              |   RNRXMTRETRIES(t)       |  t=10     |Note 1.2.4.9 |
+              |                          |           |             |
+              |   RNRRCVRETRIES(t)       |  t=10     |Note 1.2.4.9 |
+              |                          |           |             |
+              |   POLLTIMER(t)           |  t=2      |Note 1.2.4.9 |
+              |                          |           |             |
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 52
+
+
+              |   PAUSE(t)               |  1 sec.   |  Note 2.    |
+              |                          |           |             |
+              |   PVCLINE/SVCLINE(arg)   | PVCLINE   |  Note 7.    |
+              |    arg = INLNE or OUTLNE |           |             |
+              |                          |           |             |
+              |   DSIOTP(arg)            |  D.TYP0   |  Note 2.    |
+              |                          |           |             |
+              |   LGN.USER(string)       |  N/A      |  Note 3.    |
+              |                          |           |             |
+              |   LGN.PASSWORD(string)   |  N/A      |  Note 3.    |
+              |                          |           |             |
+              |   LGN.GATEWAY(string,n)  |  N/A      |  Note 3. 5. |
+              |                          |           |             |
+              |   PVC.RTPUT(r)           |  Speed    |  Note 2.    |
+              |                          |           |             |
+              |   PVC.TTPUT(t)           |  Speed    |  Note 2.    |
+              |                          |           |             |
+              |   SVC.CALLED(addr)       |  N/A      |  Note 8.    |
+              |                          |           |             |
+              |   SVC.CUG(arg1,arg2,arg3)|  NO       |  Note 2.    |
+              |    arg = yes/no          |           |             |
+              |                          |           |             |
+              |   SVC.TCLASS(t,r)        |Speed,Speed|  Note 2.    |
+              |                          |           |             |
+              |   SVC.CHARGE(n)          |           |             |
+              |                          |           |             |
+              |   ISTATUS(arg)           |  ACTIVE   |  Note 2.    |
+              |    arg = ACTIVE  or      |           |             |
+              |          INACTIVE        |           |             |
+              |                          |           |             |
+              |   DSIOTP(arg)            | D.TYP0    |  Note 2.    |
+              |    arg = D.TYP0,D.TYP1   |           |             |
+              |                          |           |             |
+              |   QXID(string)           | No canned |  Note 2.    |
+              |                          | QXID rsp. |             |
+              |                          |           |             |
+              |   QLCX25(arg)            |  NO       |  Note 2.    |
+              |    arg = YES or NO       |           |             |
+              |                          |           |             |
+              |   RNRSK1(arg)            |  NO       |  Note 2.    |
+              |    arg = YES or NO       |           |             |
+              ------------------------------------------------------
+
+
+                  Note 1. This statement is mandatory for each line.
+                  Note 2. This statement may be omitted.
+                  Note 3. This statement is applicable to an outgoing
+                          line only.
+                  Note 4. The value for the default depends on whether
+                          this is a primary or secondary line.
+                  Note 5. This statement is required when logon through
+                          gateway is desired.
+                  Note 6. The target host will be the user`s home host,
+                          if the `home host` option has been selected 
+                          when the user name was validated.
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 53
+
+
+                  Note 7. The line defaults to a PVC incoming line.
+                  Note 8. This statements required for SVC outgoing line.
+                  Note 9. This statements required for primary line.
+                  Note10. This statements required for secondary line.
+
+                       Figure 2.6 Summary of LINE Statements
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 54
+
+
+        SECTION 2.7 PU STATEMENTS        _______ ___ __ __________
+
+
+        This section describes all the statements defined under the level
+        of  PU, which is the bottom level in the SDLC configuration macro
+        hierarchy.  characteristics defined in this level  will  override
+        what has been defined in upper levels.
+
+
+        2.7.1 PU              __
+
+        Syntax:  PU(n)
+
+                 where n = PU #
+
+        Description:  This statement denotes the begining of a  group  of
+                 characteristics  which  may  be  specified  for  an SDLC
+                 station.  For each SDLC station , there must be  one  PU
+                 statement associated with it.
+
+        Default:  No default.
+
+
+        2.7.2 DHOST              _____
+
+                 Syntax:  DHOST(host  )
+
+        Description:  see DHOST statement in Group section 2.5
+
+
+        2.7.3 ADDR              ____
+
+        Syntax:  ADDR(addr)
+                 where addr = one byte of HEXADECIMAL number                                          ___________
+
+        Description:  This statement specifies the  polling  address  for
+                 the  associated  SDLC station.  The polling address must
+                 be coded in hexadecimal value.   For  examples,  if  the
+                 polling  address  is  '40'  in hexadecimal the statement
+                 should be ADDR(40), and if the polling address  is  'C1'
+                 in   hexadecimal  the  statement  should  be  ADDR(0C1).
+                 Please pay attention to the leading  zero  in  the  last
+                 example.  The address must be unique within a link.
+
+        Default:  There is no default value for a polling address.
+
+
+        2.7.4 MAPADDR              _______
+
+        Syntax:  MAPADDR(addr)
+                 where addr = number in HEXADECIMAL value                                        ___________
+
+        Description:  Since the  SDLC  interface  supports  'Split  Line'
+                 feature, a terminal (primary) link's polling address may
+                 be internally connected through  virtual  circuit  to  a
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 55
+
+
+                 host  (secondary) link with a different polling address.
+                 Therefore,  for  each  terminal  (primary)  link's  SDLC
+                 station,  a  mapping  polling address must be specified.
+                 This address must be coded with the desired  destination
+                 link's polling address.  This statement is only required
+                 for a primary SDLC station.
+
+                 The mapping address is included in QLLC  responses  sent
+                 accross  the  newtork  to  the destination X./25 or SDLC
+                 Interface.
+
+        Default:  No default.
+
+
+        2.7.5 LGN.USER              ________
+
+        Syntax:  LGN.USER(string)
+                 where string = string of characters
+
+        Description:  This statement is only required for an outgoing  PU
+                 (SDLC  station).   It  is  needed  during  the permanent
+                 circuit building (PVC) or Switched  Virtual  Call  (SVC)
+                 stage.  The user's name must be validated by the network
+                 validation program.  When the user name is being used to
+                 build a PVC to an X.25 ITF, the user name must have shut
+                 override capability and have a null password.
+
+        Default:  No default.
+
+
+        2.7.6 LGN.PASSWORD              ____________
+
+        Syntax:  LGN.PASSWORD(string)
+                 where string = string of characters
+
+        Description:  This statement is only  required  for  an  outgoing
+                 SDLC   PU  (station).   A  password  associated  with  a
+                 particular user's  name  must  be  provided  during  the
+                 creation  of  a  permanent  virtual  circuit, unless the
+                 user's name is validated with 'no password' option.
+
+        Default:  No default.  This statement my be  omitted  when  meets
+                 the condition mentioned above.
+
+
+        2.7.7 LGN.GATEWAY              ___________
+
+        Syntax:  LGN.GATEWAY(string,n)
+                 where string = string of  characters  and  n  =  gateway
+                 level
+
+        Description:  This statement is only  required  for  an  outgoing
+                 circuit  building SDLC GROUP/LINE/PU definition which is
+                 required to go through network  gateways  to  reach  the
+                 destination   SDLC  Interface  host.   It  provides  the
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 56
+
+
+                 necessary logon record for a  gateway  logon,  and  also
+                 indicates  when  this  gateway  logon  record  should be
+                 utilized.  The gateway  logon  record  has  the  similar
+                 format  as that of a regular network logon record except
+                 that the <;> after the gateway host should be  coded  as
+                 <"BB>.   Here  <BB>  is the ASCII code for the character
+                 <;>.
+
+        Default:  There is no default for this statement.   If  logon  on
+                 through gateway feature is desired, proper gateway logon
+                 record(s) must be provided.
+
+
+        2.7.8 PVC.DCHAN              _________
+
+        Syntax:  PVC.DCHAN(n)
+
+                 where n = destination  channel  number  in  hexadecimal,
+                 value  limits  are  greater than or equal to zero or les
+                 than or equal to FF
+
+        Description:  This statement is only defined  for  PVC  stations.
+                 The  purpose  of  this  statement is to specify the PVCs
+                 destination channel #.  If the destination  is  an  X.25
+                 ITF, then this is the channel # being used by the remote
+                 DTE.  If the destination is a  QLLC/SDLC  ITF  then  the
+                 value  of  n  will  be the polling station address being
+                 used by the remote station.
+
+                 This statement is similar to the DCHAN arguement for the
+                 PVCHANNEL statement in the X.25 ITF.
+
+                 This statement is required for each PVC  whether  it  is
+                 the circuit receiver (has low host #) or circuit builder
+                 (has high host #).
+
+        Default:  no default
+
+
+        2.7.9 PVC.DLINK              _________
+
+        Syntax:  PVC.DLINK(n)
+
+                 where  n  =  destiantion  link  #  in  hexadecimal,   if
+                 destination  is  X.25  ITF then n must be between -1 and
+                 33, if destination is SDLC ITF then n must be between -1
+                 and 17.
+
+        Description:  This statement is only defined  for  PVC  stations.
+                 The   purpose  of  this  statement  is  to  specify  the
+                 destination link.  If the destination is  an  X.25  ITF,
+                 then  n  is the link # being used by the remote DTE.  If
+                 the destination is an SDLC ITF, then the value of  n  is
+                 the  Line # being used by the remote SDLC station.  This
+                 statement must be defined for both  PVC  builders  (high
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 57
+
+
+                 host #), and PVC receivers (low host #).
+
+        Default:  none
+
+
+        2.7.10 PVC.RTPUT               _________
+
+
+                 Syntax:  RTPUT(r)
+
+        Description:  see PVC.RTPUT statement in  Line  section  2.6  for
+                 more details.
+
+
+        2.7.11 PVC.TTPUT               _________
+
+                 Syntax:  PVC.TTPUT(t)
+
+        Description:  see PVC.TTPUT statement in Line  section  for  more
+                 details.
+
+
+        2.7.12 SVC.CALLED               __________
+
+        Syntax:  SVC.CALLED(addr)
+
+                 see SVC.CALLED statement in Group section 2.5  for  more
+                 details
+
+
+        2.7.13 ISTATUS               _______
+
+        Syntax:  ISTATUS(arg)
+                 where string = ACTIVE or INACTIVE
+
+        Description:  This statement specifies whether the station(s)  in
+                 this  GROUP/LINE/PU  should  be  active or inactive when
+                 this SDLC interface is initially loaded into the ENGINE.
+                 An  inactive station or line could be activated later by
+                 the SDLC Interface monitor.
+
+        Default:  This statement may be  omitted,  then  the  default  is
+                 active.
+
+
+        2.7.14 QXID               ____
+
+        Syntax:  QXID(string)
+
+        Description:  see QXID statement in Group section 2.5 for details
+
+
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 58
+
+
+                  --------------------------------------------------
+                  |                      |           |             |
+                  |       Syntax         |  Default  |    Note     |
+                  |                      |           |             |
+                  --------------------------------------------------
+                  |                      |           |             |
+                  |PU(n)                 |  N/A      |  Note 1.    |
+                  |                      |           |             |
+                  | DHOST(host  )        |  N/A      |  Note 5.    |
+                  |                      |           |             |
+                  | ADDR(addr)           |  N/A      |  Note 1.    |
+                  |  addr = hex value    |           |             |
+                  |                      |           |             |
+                  | LGN.MAPADDR(addr)    |  N/A      |  Note 1. 3. |
+                  |                      |           |             |
+                  | LGN.USER(string)     |  N/A      |  Note 2. 3. |
+                  |                      |           |             |
+                  | LGN.PASSWORD(string) |  N/A      |  Note 2. 3. |
+                  |                      |           |             |
+                  | LGN.GATEWAY(string,n)|  N/A      |  Note 2. 3. |
+                  |                      |           |       4.    |
+                  | PVC.DCHAN(n)         |  N/A      |  Note 6.    |
+                  |                      |           |             |
+                  | PVC.DLINK(n)         |  N/A      |  Note 6.    |
+                  |                      |           |             |
+                  | PVC.RTPUT(r)         |  speed    |  Note 7.    |
+                  |                      |           |             |
+                  | PVC.TTPUT(t)         |  speed    |  Note 7.    |
+                  |                      |           |             |
+                  | SVC.CALLED(addr)     |  N/A      |  Note 8.    |
+                  |                      |           |             |
+                  | ISTATUS(arg)         |  ACTIVE   |  Note 2.    |
+                  |  arg = ACTIVE  or    |           |             |
+                  |        INACTIVE      |           |             |
+                  |                      |           |             |
+                  | QXID(string)         | no canned |  Note 7.    |
+                  |                      | QXID rsp. |             |
+                  --------------------------------------------------
+                  Note 1. This statement is mandatory for each station.
+                  Note 2. This statement may be omitted, if already
+                          defined at previous higher level.
+                  Note 3. This statement is applicable to an outgoing PU
+                          only.
+                  Note 4. This statement is required when logon through
+                          gateway is desired.
+                  Note 5. The target host will be the user`s home host
+                          if the `home host` option has been selected
+                          when the user name was validated.
+                  Note 6. This statement required for PVC PU (incoming
+                          or outgoing).
+                  Note 7. This statement may be omitted.
+                  Note 8. This statement is required for an SVC outgoing
+                          PU.
+
+                       Figure 2.7 Summary of PU Statements
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 59
+
+
+        SECTION 3.0 SAMPLE SYSTEM GENERATION FILES        _______ ___ ______ ______ __________ _____
+
+
+        SECTION 3.1 Introduction to Timer        _______ ___ ____________ __ _____
+
+
+        The following timer can be specified during the sysgen time:
+
+        NETREPLYTO(t) - Network Reply Timeout (TNR.LN)
+
+        This timer NETREPLYTO macro is defined as  TNR.LN,  whenever  HIF
+        (used  for  secondary  port  only)  received  a SNRM (XID, TEST).
+        Protocol handler keeps on scanning the UA  (XID,  TEST)  response
+        within  the TNR.LN from TIF (network).  If TNR.LN times out, then
+        SNRMRETRIES(n,t,m), XIDRETRIES(n), or TESTRETRIES(n)  is  applied
+        as  the retry counter for receiving another SNRM (XID, TEST) from
+        external secondary stations.  Since TNR.LN is the  timer  defined
+        in  HIF  between receiving SNRM and transmitting UA, the value of
+        TNR.LN -NETREPLYTO(t)  should  be  less  than  or  equal  to  the
+        external primary station's polling interval.
+
+
+        POLLTIMER(t) - TPD.LN
+
+        This timer TPD.LN is used when RR or RNR is being received by TIF
+        (used  for  primary  port only).  SDLC protocol handler waits for
+        TPD.LN time before transmitting RR (if not busy), RNR (if  busy),
+        or  I-frame  (if  I-frames  are available for transmission).  The
+        default value for TPD.LN of multi-point configuration  is  0,  of
+        point-to-point  configuration is 2 (1/5 sec).  If TPD.LN does not
+        time out, then the foreground dismiss is required.
+
+
+        TXR.LN - SIO Transmission Timer
+
+        This timer TXR.LN is stored in XTIME, whenever the  SIO  transmit
+        module   is  scheduled  by  SXMT.   To  make  sure  a  successful
+        transmission,  TXR.LN  should  be  calculated  depending  on  the
+        factors  as:   window  size,  Maximum frame size, and line speed.
+        TXR.LN is calculated by the formula as:
+
+                    (8-bit/char) * window size * Max. frame size)
+        TXR.LN > ( ----------------------------------------------- ) sec
+                                   line speed        
+
+
+
+
+        SECTION 3.2 Introduction to Retry Counter and Timer        _______ ___ ____________ __ _____ _______ ___ _____
+
+
+        SNRMRETRIES(n,t,m) - SNRM retry counter (SNRMLN)
+
+        This retry counter SNRMLN is used by  both  TIF,  and  HIF.   The
+        SNRMLN  of HIF is to count how many SNRMs are ignored by the HIF,
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 60
+
+
+        the second and third arguments t, and m are set to 0 always.  The
+        SNRMLN  of  TIF is to count how many SNRMs are transmitted to the
+        external secondary station by TIF.
+
+        For one-to-one SNRMs transmission, both TIF and  HIF  should  set
+        SNRMRETRIES(1,0,0).
+
+
+        XIDRETRIES(n) - XID retry counter (XIDRLN)
+
+        This retry counter XIDRLN is used by HIF (secondary  port  only).
+        The  XIDRLN  ignores  the  number  of XIDs from host specified in
+        argument n.  If an one-to-one XID transmission between  host  and
+        HIF is required, then specifies XIDRETRIES(1).
+
+
+        TESTRETRIES(n) - TEST retry counter (TESTLN)
+
+        This retry counter TESTLN is used by HIF (secondary  port  only).
+        The  TESTLN  ignores  the  number of TESTs from host specified in
+        argument n.  If an one-to-one TEST transmission between host  and
+        HIF is required, then specifies TESTRETRIES(1).
+
+
+        DISCRETRIES(n) - DISC retry counter (DISRLN)
+
+        This retry counter DISRLN is used by  TIF  (primary  port  only).
+        The  DISRLN  counts  the number of DISC sent from TIF to external
+        secondary station.  If UA or DM is not  received  while  DISC  is
+        sent,  then the retries n is applied n times before entering into
+        HPNDM.
+
+
+        RNRXMTRETRIES(t) - RNR re-transmission timer (RNRXLN)
+
+        This timer is used to take error recovery actions while TIF (used
+        for  prrimary  port  only)  keeps  transmitting  RNR  to external
+        secondary stations.  The retry timer specifies how  many  minutes
+        are  allowed  the  TIF to transmit RNR to controller.  If t times
+        out,  then  TIF  enters  into  HPNDM,  otherwise;   if  the  busy
+        condition of TIF disappears, and RR is transmit instead, then TIF
+        stays in normal operational mode.
+
+
+        RNRRCVRETRIES(t) - RNR receive retry timer (RRNRLN)
+
+        This timer is used to take error recovery actions while  the  TIF
+        (used  for  primary  port only) keeps receiving RNR from external
+        secondary stations.  The retry timer t allowes TIF to receive RNR
+        from  controller  for t minutes.  If t times out, then TIF enters
+        into HPNDM.  If RR is received within the retry timer t, then TIF
+        stays in the normal operational mode.
+
+
+        RCVTORETRIES(n) - Receive Timeout Retry Counter (TOTRLN)
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 61
+
+
+        This retry counter is to take error recovery  actions  while  the
+        TIF (used for primary port only) gets receive timeout.  TIF tries
+        to send  RR,  or  RNR  (if  busy)  to  controller  several  timer
+        specified  in  RCVTORETRIES.   When all the retry counts are used
+        up, but TIF still gets receiving timeout, then  TIF  enters  into
+        HPNDM.   If  retries several times after the receive timeout, and
+        receive timout situation disappears, then  TIF  stays  in  normal
+        operational mode.
+
+
+        SECTION 3.3 Sample Tymfile        _______ ___ ______ _______
+
+
+          SUBTTL      SDLC/QLLC INTERFACE -- SDLC02.T00
+        :
+        :
+        : NOPRINT TURN-OFF THE DISPLAY SWITCH
+         PRINT                          :PRINT SYSGEN 
+
+         BEGINTYM                       :START THE TYMFILE 
+
+        :
+         FREEZE(YES)                    :FREEZE ON CRASH
+
+        :
+        : SYSTEM PARAMETERS
+        :
+         SYSTEM(TYMNT2)
+
+         TIMEZONE(-8)                   :TIMEZONE CORRECTION
+
+         ISISRING(4092,4092)                  :IRSIZE  ORSIZE                                                      _
+
+         BUFSIZE(140)                   :BUFFER SIZE
+
+         PVCTIMER(60)                   :PVC CIRCUIT REBUID TIMER
+
+         ODNIC(3106)                    :OUR DATA NETWORK ID CODE
+
+         PSEUDO.HOST(862)
+
+         MSIOTP(M.TYP1)                       :MICRO CODE VERSION E OR
+        LATER
+
+        :
+        : MONITOR PARAMETERS
+        :
+         MONITOR(862)             :MONITOR HOST
+          MPORTS(4)               :MONITOR PORTS
+          UPD.INTERVAL(1)         :REFRESH INTERVAL IN MINUTES
+          MBUFQA(10)              :MONITOR OUTPUT BB QUOTA PER PORT
+          MLOG.TBL(50)            :MONITOR LOG TABLE SIZE
+          MUSR.TBL(10)            :MONITOR USR TABLE SIZE
+          MGOODGUY(BONDAD)        :GOODGUY
+          MGOODGUY(AKSELROD)      :GOODGUY
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 62
+
+
+          MGOODGUY(DRISCOLL)      :GOODGUY
+          MGOODGUY(MIKERUDE)      :GOODGUY
+        :
+        : DEFINE SDLC LINK PARAMETERS
+        :
+         GROUP(0)                 :SECONDARY LINK GROUP
+          SECONDARY               :THIS IS A SECONDARY GROUP
+          HOST(863)               :HOST NUMBER
+          SPEED(9600)             :9600 BAUD LINES
+          DATAMODE(HALFDUPLEX)    :HALF-DUPLEX DATA MODE
+          NETREPLYTO(8)           :.8 SEC TO WAIT FOR RESPONSE FROM NET
+          VTAM(NO)                :LINK TO IBM VTAM HOST
+          RTSCTS(NO)              :RTS/CTS HANDSHAKING
+          DSIOTP(D.TYP0)          :SIO VERSION G OR EARLIER
+          REPLYTO(3)              :REPLY TIMEOUT IN SECOND
+          FRAMESIZE(270)          :FRAME SIZE
+          WINDOWSIZE(7)           :MAX. OUTSTANDING FRAMES
+          XMTFRMQA(7)             :XMT FRAME BB QUOTA
+          RCVFRMQA(3)             :RCV FRAME BB QUOTA
+                SNRMRETRIES(5,0,0)            :SNRM RETRIES
+                XIDRETRIES(5)                   :XID RETRIES
+                TESTRETRIES(5)                  :TEST RETRIES
+
+
+        : Line(0) is a PVC incoming (circuit receiver) line,
+        :the source line for this PVC is Line 1.
+
+          LINE(0)                 :SDLC LOGICAL LINE 0
+          PVCLINE                 :PVC LINE
+
+
+                PU(0)                   :1ST PU IN THIS LINE
+                      ADDR(40)          :POLLING ADDRESS IN HEX
+                      MAPADDR(40)       :DEST. POLLING ADDRESS
+                      DHOST(864)        :DESTINATION HOST  
+                      PVC.DLINK(1)      :DESTINATION LINE  
+                      PVC.DCHAN(40)     :DESTINATION POLLING ADDRESS
+                      PVC.RTPUT(12)     :RECEIVE TPUT
+                      PVC.TTPUT(03)     :TRANSMIT TPUT
+
+
+         GROUP(1)                       :PRIMARY LINK GROUP
+          PRIMARY                       :THIS IS A PRIMARY GROUP
+          HOST(864)                     :THIS GROUPS HOST  
+          SPEED(9600)                   :9600 BAUD LINES
+          DSIOTP(D.TYP0)                :SIO VERSION G OR EARLIER
+          DATAMODE(HALFDUPLEX)          :HALF-DUPLEX DATA MODE
+          RTSCTS(NO)                    :RTS/CTS HANDSHAKING
+          REPLYTO(3)                    :REPLY TIMOUT IN SECOND
+          SNRMRETRIES(1,0,0)                  :SNRM RETRY
+                RCVTORETRIES(12)                        :RCV TIMEOUT
+        RETRIES
+                RNRXMTRETRIES(10)                       :RNR RCV RETRIES
+                RNRXMTRETRIES(10)                       :RNR XMT RETRIES
+                DISCRETRIES(4)                          :DISC RETRIES
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 63
+
+
+          PAUSE(1)                      :POLLING PAUSE
+          FRAMESIZE(270)                :FRAME SIZE
+          WINDOWSIZE(7)                 :MAX. OUTSTANDING FRAMES
+          XMTFRMQA(3)                   :XMT FRAME BB QUOTA
+          RCVFRMQA(7)                   :RCV FRAME BB QUOTA
+
+
+        : Line(1) is a PVC outgoing (circuit builder) line,
+        : the destination is Line 0.
+
+          LINE(1)                       :SDLC LOGICAL LINE 1
+          PVCLINE                       :THIS IS A PVC LINE
+          QXID(0123456789)              :CANNED QXID RESPONSE
+                PU(0)                   :1ST PU IN THIS LINE
+                      ADDR(40)          :POLLING ADDRESS
+                      MAPADDR(40)       :DEST. POLLING ADDRESS
+                      DHOST(863)        :LOGON DESTINATION HOST  
+                      PVC.DLINK(0)      :DESTINATION HOST LINE
+                      PVC.DCHAN(40)     :DESTINATION HOST POLLING ADDR
+                      LGN.USER(username)      :LOGON USERNAME
+                      LGN.PASSWORD(password)  :LOGON PASSWORD
+                      PVC.RTPUT(03)     :RECEIVE TPUT
+                      PVC.TTPUT(12)     :TRANSMIT TPUT
+
+
+         GROUP(2)
+          SECONDARY               :SECONDARY LINK GROUP
+          HOST(862)               :HOST   FOR THIS GROUP
+          SPEED(9600)             :9600 BAUD LINES
+          DATAMODE(HALFDUPLEX)    :HALF-DUPLEX DATA MODE
+          DSIOTP(D.TYP0)          :SIO VERSION G OR EARLIER
+          NETREPLYTO(8)           :.8 SEC TO WAIT FOR RESPONSE FROM NET
+          VTAM(NO)                :NOT LINKED TO VTAM HOST
+          SWITCHED(N0)            :NO DTR/DSR HANDSHAKING
+          RTSCTS(NO)              :NO RTS/CTS HANDSHAKING
+          REPLYTO(3)              :REPLY TIMEOUT IN SECONDS
+          FRAMESIZE(270)          :FRAME SIZE
+          WINDOWSIZE(7)           :MAX. OUTSTANDING FRAMES
+          XMTFRMQA(3)             :XMT FRAME BB QUOTA
+          RCVFRMQA(3)             :RCV FRAME BB QUOTA
+          SVC.CGROUP(11111111)    :CUG GROUP
+          SVC.CGROUP(22222222)    :CUG GROUP
+          SVC.CGROUP(33333333)    :CUG GROUP
+
+
+        : Line 2 is an SVC outgoing (circuit builder) line,
+        : the destination is line 3.
+
+                LINE(2)                 :SDLC LOGICAL LINE 2
+                SVCLINE(OUTLNE)         :SWITCHED VIRTUAL CALL,OUTGOING
+                SVC.TCLASS(03,12)       :RTPUT=12, TTPUT=3
+                SVC.CHARGE(03)          :BOTH
+                SVC.CUG(YES)            :SUBSCRIBER OF CUG FACILITY
+                      PU(0)             :1ST PU IN THIS LINE
+                      ADDR(60)          :ADDRESS
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 64
+
+
+                      DHOST(833)        :DESTINATION HOST  
+                      MAPADDR(60)       :DEST. STATION ADDRESS
+                      LGN.USER(GATEWAY) :LOGON USERNAME
+                      LGN.PASSWORD(PATIENCE)  :LOGON PASSWORD
+                      SVC.CALLED(31060008330360)    :CALLED ADDR
+
+
+         GROUP(3)
+          PRIMARY                 :PRIMARY LINK GROUP
+          HOST(833)               :HOST   FOR THIS GROUP
+          SPEED(9600)             :9600 BAUD LINES
+          DATAMODE(HALFDUPLEX)    :HALF-DUPLEX DATA MODE
+          VTAM(NO)                :NOT LINKED TO VTAM HOST
+          SWITCHED(N0)            :NO DTR/DSR HANDSHAKING
+          RTSCTS(NO)              :NO RTS/CTS HANDSHAKING
+          REPLYTO(3)              :REPLY TIMEOUT IN SECONDS
+          FRAMESIZE(270)          :FRAME SIZE
+          WINDOWSIZE(7)           :MAX. OUTSTANDING FRAMES
+          XMTFRMQA(3)             :XMT FRAME BB QUOTA
+          RCVFRMQA(3)             :RCV FRAME BB QUOTA
+          SVC.CGROUP(44444444)    :CUG GROUP
+          SVC.CGROUP(11111111)    :CUG GROUP
+          SVC.CUG(NO)
+          SVC.TCLASS(12,03)       :RTPUT=03,TTPUT=12
+          SVC.CHARGE(02)          :NOT REQUESTED
+
+
+        : Line 3 is an SVC incoming (circuit receiver) line,
+        : the source of this SVC is Line 2.
+
+                LINE(3)           :SDLC LOGICAL LINE 2
+                SVCLINE(INLNE)    :SWITCHED VIRTUAL CALL
+                SVC.CCUG(YES,,)   :subscriber of CUG facility
+                QXID(9876543210)  :CANNED QXID RESPONSE
+                      PU(0)       :1ST PU IN THIS LINE
+                      ADDR(60)    :ADDRESS
+                      MAPADDR(60) :DESTINATION POLLING ADDRESS
+
+
+         ENDTYM                                 :END OF TYMFILE
+
+
+
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 65
+
+
+        SECTION 3.2 Sample Command File        _______ ___ ______ _______ ____
+
+
+        ;;SDLC02.C00
+        ;;COMMAND FILE FOR SDLC/QLLC INTERFACE
+        ;;VERSION 2 REVLEV 0
+        ;;NOVEMBER 15, 1984
+        TITLE SDLC/QLLC INTERFACE
+        ;A(SOURCE)SDLC02.I00
+        ;A(SOURCE)SDLC02.T00
+        ;A(SOURCE)SDLC02.R00
+        ;A(SOURCE)SDLC02.P00
+        1;FSDLC02.N00
+        SEG0,S0SIZE;P
+        SEG1,S1SIZE;P
+        SEG2,S2SIZE;P
+        SEG3,S3SIZE;P
+        SEG4,S4SIZE;P
+        SEG5,S5SIZE;P
+        SEG6,S6SIZE;P
+        CTA,CTASIZ;P
+        %P
+        %Q
+
+
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 66
+
+
+        SECTION 3.3 Sample NAD Print-Out        _______ ___ ______ ___ _________
+
+
+
+        -R NAD
+        040182
+        ;X   SDLC00.C00
+
+        ;;COMMAND FILE FOR SDLC EXTENSION CORD SERVICE
+        ;;APRIL 15, 1982
+        TITLE (SDLCEX) SDLC EXTENSION CORD SERVICE
+        ;A   (SOURCE)SDLC00.I00
+
+        End of assembly
+        ;A   (SOURCE)SDLC00.T00
+
+
+
+        **********************************************************
+
+            *****  S D L C / Q L L C   I N T E R F A C E  *****
+
+                       Version  2    Revlev  0
+
+                           November 15, 1984
+
+
+
+         The Default Statements for This Interface If Not Defined Below
+         Are:
+         1)Network and ISIS Statements
+           System(Tymnt2), Freeze(No), Timezone(-8), Isisring(4092,4092)
+           Bufsize(140), Pvctimer(60), Pseudo.Host(0), MSIOTP(M.TYP0)
+
+         2)Monitor Statements
+           Mports(3), Upd.Interval(1), Mbufqa(10), Mlog.Tbl(50)
+           Muser.Tbl(50)
+
+         3)Group/Line Statements
+           Primary, Speed(9600), Datamode(Half_Duplex), Vtam(Yes),
+           Switched(Yes), Rtscts(Yes), Replyto(3), Framesize(270),
+           Windowsize(7), Xmtfrmqa(7 or 3), Rcvfrmqa(3 or 7),
+           Retries(3,,), Pause(1), Rcvsiofr(8)
+
+         4)Group/Line/Pu Statements
+           Istatus(Active)
+
+
+
+         The SDLC Interface will be frozen when slot crash.
+         This is a TYMNET-II Interface.
+         The Time-Zone Correction Factor = -8
+         IRSIZE of Input Ring            = 4092 Bytes
+         ORSIZE of Output Ring           = 4092 Bytes
+         Size of Big-Bufferlet           = 140 Bytes
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 67
+
+
+         PVC Re-Built Waiting Timer      = 60 Sec.
+         Our Data Network I.D. Code      = 3106
+         Pseudo Host # for this slot     = 862
+        SIO Microcode version E or higher must be installed to run this
+        code
+
+        **********************************************************
+
+          Monitor With Host Number 862
+            Number of Monitor Ports = 4 Ports
+            Refresh Interval        = 1 Min.
+            Monitor Output BB Quota = 10 Buffers
+            LOG Table Entries       = 50
+            USER Table Entries      = 10
+            Monitor Goodguy List    = CSHAW , BONDAD , DRISCOLL ,
+                                      AKSELROD , MIKERUDE , 
+
+        ##########################################################
+
+         GROUP(0)
+
+            Link Protocol for this Group   = Secondary
+            Host # for this Group          = 863
+            Trans. Speed for this Group    = 9600 Bits/Sec.
+            Data Mode for this Group       = Half_Duplex
+            Network Reply_Timeout for this group   = 8 Sec.
+            Host_Front_End for this Group  = Non-Vtam
+            RTS/CTS Signals for this Group = Not_Required
+            SIO Version type for this Group        = Version G or earlier
+            Reply_Timout for this Group    = 3 Sec.
+            Framesize for this Group       = 270 Bytes
+            Windowsize for this Group      = 7 Frames
+            Xmtfrmqa for this Group        = 7 Frames
+            Rcvfrmqa for this Group        = 3 Frames
+
+
+        ********************************************************
+
+          LINE 0
+            Type of circuit for this Line   = PVC
+
+        ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+           STATION 0
+            Polling Address for this STN   = 40 (Hexadecimal)
+            Destination polling address for this PVC STN    = 40 (hex)
+            Target Host for this PVC STN    = 864
+            Target link for this PVC STN    = 1
+            Target channel for this PVC STN = 40 (hex)
+            Receive Thtoughput Class for this STN           = 12
+            Transmit Throughput Class for this STN          = 3
+
+
+        skip 1
+        ##########################################################
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 68
+
+
+         GROUP(1)
+
+            Link Protocol for this Group   = Primary
+            Host # for this Group          = 864
+            Trans. Speed for this Group    = 9600 Bits/Sec.
+            SIO Version type for this Group= Version G or earlier
+            Data Mode for this Group       = Half_Duplex
+            RTS/CTS Signals for this Group = Not_Required
+            Reply_Timeout for this Group   = 3 sec.
+            Retries for this Group         = (7,3 Sec.,7)
+            Polling Pause for this Group   = 1 Sec.
+            Framesize for this Group       = 270 Bytes
+            Windowsize for this Group      = 7 Frames
+            Xmtfrmqa for this Group        = 3 Frames
+            Rcvfrmqa for this Group        = 7 Frames
+
+
+        ********************************************************
+
+          LINE 1
+            Type of circuit for this Line       = PVC
+            RTS/CTS Signals for this Line  = Not_Required
+
+        ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+           STATION 0
+            Polling Address for this STN   = 40 (Hexadecimal)
+            Destination polling address for this PVC STN  = 40 (hex)
+            Target Host for this PVC STN   = 863
+            Target Link for this PVC STN   = 0
+            Target channel for this PVC STN = 40 (hex)
+            Logon User ID for this STN     = GATEWAY
+            Logon Password for this STN    = PATIENCE
+            Receive Throughput Class for this STN  = 3
+            Transmit Throughput Class for this STN = 12
+
+        ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+           STATION 1
+            Init. Status for this STN      = Inactive
+            Polling Address for this STN   = 0C1 (Hexadecimal)
+
+        skip 1
+        ##########################################################
+
+         GROUP(2)
+
+            Link Protocol for this Group   = Secondary
+            Host # for this Group          = 862
+            Trans. Speed for this Group    = 9600 Bits/Sec.
+            Data Mode for this Group       = Half_Duplex
+            Network Reply_Timeout for this group   = 8 Sec.
+            Host_Front_End for this Group  = Non-Vtam
+            RTS/CTS Signals for this Group = Not_Required
+            SIO Version type for this Group        = Version G or earlier
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 69
+
+
+            Reply_Timout for this Group    = 3 Sec.
+            Framesize for this Group       = 270 Bytes
+            Windowsize for this Group      = 7 Frames
+            Xmtfrmqa for this Group        = 3 Frames
+            Rcvfrmqa for this Group        = 3 Frames
+            Closed User Group Code for this Group  = 11111111
+            Closed User Group Code for this Group  = 22222222
+            Closed User Group Code for this Group  = 33333333
+
+
+        ********************************************************
+
+          LINE 2
+            Type of circuit for this line  = SVC OUTLNE
+            Throughput Class Negotiation status for this Line = yes
+            Transmit TPUT Class = 3
+            Receive TPUT Class  = 12
+            Reverse Charge Subscription status for this line  = yes
+            Both reverse charge requested or not requested accepted
+            Closed User Group Subscription status for this line = YES,,
+
+        ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+           STATION 0
+            Polling Address for this STN   = 60 (Hexadecimal)
+            Target Host for this SVC STN   = 833
+            Destination polling address for this SVC STN = 60 (hex)
+            Logon User ID for this STN     = GATEWAY
+            Logon Password for this STN    = PATIENCE
+            Called Address for this SVC STN  = 31060008330360
+
+
+        ##########################################################
+
+         GROUP(3)
+
+            Link Protocol for this Group   = Primary
+            Host # for this Group          = 833
+            Trans. Speed for this Group    = 9600 Bits/Sec.
+            Data Mode for this Group       = Half_Duplex
+            Host_Front_End for this Group  = Non_Vtam
+            RTS/CTS Signals for this Group = Not_Required
+            Reply_Timeout for this Group   = 3 sec.
+            Framesize for this Group       = 270 Bytes
+            Windowsize for this Group      = 7 Frames
+            Xmtfrmqa for this Group        = 3 Frames
+            Rcvfrmqa for this Group        = 3 Frames
+            Closed User Group Code for this Group = 44444444
+            Closed User Group Code for this Group = 11111111
+            Closed User Group Subscription status for this Group = YES,,
+            Throughput Class Negotiation status for this Group   = Yes
+            Transmit TPUT Class  = 12
+            Receive TPUT Class   = 3
+            Reverse Charge Subscription status for this Group = Yes
+            Only reverse charge NOT requested is accepted
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 70
+
+
+        ********************************************************
+
+          LINE 3
+            Type of circuit for this Line   = SVC INLNE
+
+        ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+           STATION 0
+            Polling Address for this STN   = 60 (Hexadecimal)
+            Destination polling address for this SVC STN   = 60 (hex)
+
+        **********************************************************
+
+
+
+        End of assembly
+        ;A   (SOURCE)SDLC00.R00
+
+        GBLDEF 0 0
+        Start.Lib Version 0.05
+        TRACE 0  100A0
+        RING 60  1025A
+        CRASH.LIB    11-15-84  AWT
+        THIS VERSION HAS AN OPTION FOR EXTENDED CRASH PROCESSING
+        CRASH 60 10474
+        TIMOUT 114 1054A
+        BID 1054A  1055A
+        BBUFER 140 10672
+        CONVRT 14C  106FA
+        DATIME 16C 1090C
+        GBLDEF 1AC  1C0
+        CTLDEF 1C0  1C0
+        CTLDEF 1C0  47A
+        FRNTND 47A  10D7A
+        SDLCDF 5AE  5AE
+        SIODEF 5AE  10E8A
+        SDLCFX 5C2  10F0E
+        SFGRCV 5FA  113BA
+        SFGXMT 650  11B6A
+        CMDLST 878  11CA6
+        MAIN 880  11E16
+        SFGPTP 884  12A60
+        GBLDEF 940  12A6A
+        SFGPTP 940  138D0
+        SFGPTP 940  147AC
+        MAIN 940  14A1A
+        MAIN 940  20E6E
+        STCTLM 940  1644E
+        BUFRTN 9E0  16590
+        INPUT 9E4  18616
+        OUTPUT 0B5D  19338
+        CKTHDL 16946 16DB0
+        DCBRTN 0BAC  19436
+        MISC 0BAC  19668
+        TABINI 0C2C  198DE
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 71
+
+
+        MONITR 0C6C  1C19A
+        MAIN 1C19A  1C31E
+        STATUS 1C31E  1C52E
+        STATUS 1C52E  1C920
+        STATUS 1634  17B2
+        STATUS 17B2  1D298
+        DEFAULT AREA PROTECTIONS ASSUMED.
+
+        SEGMENT 0-length 6994d, requires 1C00x bytes of core.
+        SEGMENT 1-length 57492d, requires 0E100x bytes of core.
+        SEGMENT 2-length 3824d, requires 0F00x bytes of core.
+        SEGMENT 3-length 8192d, requires 2000x bytes of core.
+        SEGMENT 4-length 372d, requires 200x bytes of core.
+        SEGMENT 5-length 19328d, requires 4C00x bytes of core.
+        SEGMENT 6-length 2d, requires 100x bytes of core.
+        SEGMENT 7-length 14560d, requires 3900x bytes of core.
+        SEGMENT 0E-length 252d, requires 100x bytes of core.
+               110d K-bytes of core
+        End of assembly
+        ;A    (SOURCE)SDLC02.P00
+        End of assembly
+        1;F   SDLC00.N00
+
+        SEG0,S0SIZE;P
+
+        SEG1,S1SIZE;P
+
+        SEG2,S2SIZE;P
+
+        SEG3,S3SIZE;P
+
+        SEG4,S4SIZE;P
+
+        SEG5,S5SIZE;P
+
+        CTA,CTASIZ;P
+
+        %P
+        %Q
+        EXIT
+
+        -
+        -
+
+
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 72
+
+
+        SECTION 4.0 Sysgen Error/Warning Messages        _______ ___ ______ _____________ ________
+
+
+
+             The assembling of an SDLC Interface may produces  diagnostic
+        error   messages   or  warning  messages.   The  errors  must  be
+        corrected, but the warning messages may be just ignored.
+
+             The formats of these messages are as follows:
+
+                  *** ERROR nn *** Macro_Statement_1 <->
+                  Macro_Statement_2
+         .INDENT+5
+             or
+                  *** ERROR nn *** Macro_Statement
+             or
+                  *** ERROR nn *** Line #m Station #n , text
+             or
+                  *** ERROR nn *** Line #m , text
+             or
+                  *** WARNING nn *** Macro_Statement_1 <->
+                  Macro_Statement_2
+             or
+                  *** WARNING nn *** Macro_Statement
+
+                  where
+                       nn = ERROR CODE OR WARNING CODE
+                       #m = LINE NUMBER
+                       #n = STATION NUMBER
+                       Macro_statement = OFFEND STATEMENT
+                       Macro_statement_1 = OFFEND STATEMENT
+                       Macro_statement_2 = RELEVANT STATEMENT
+                       text = BRIEF ERROR MESSAGE
+
+
+             The error codes, their  error  messages,  explanations,  and
+        their associated actions are described below.
+
+
+        SECTION 4.1 Error Codes/Error Messages        _______ ___ _____ ___________ ________
+
+
+        4.1.1 *** ERROR 01 ***
+
+        Message Format:  Line #m Station #n , Logon Data
+
+        Explanation:  Station #n on Line #m is a primary station  and  is
+                 required to have its network logon record(s) defined.
+
+        Response Action:  Provide at  least  the  LGN.USER  for  Line  #m
+                 Station #n.
+                 Re-Assemble.
+
+
+        4.1.2 *** ERROR 02 ***
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 73
+
+
+        Message Format:  Line #n , Host Number
+
+        Explanation:  Line #n is a PVC incoming/outgoing, or SVC incoming
+                 line.   Therefore,  a network host number is required to
+                 associated to it.
+
+        Response Action:  Define HOST statement for Line #n.
+                 Re-Assemble.
+
+
+        4.1.2 *** ERROR 03 ***
+
+        Message Format:  Macro_Statement
+
+        Explanation:   The  argument   or   value   specified   for   the
+                 Macro_Statement  is  a)  not  specified  b) out of range
+                 (either too large or too small).
+
+        Response Action:  Correct the error.
+                 Re-Assemble.
+
+
+        4.1.4 *** ERROR 04 *** Message Format:  MONITOR_Statement
+
+        Explanation:  The MONITOR statement must be specified before  any
+                 of the SDLC characteristic statements.  There must be at
+                 most one monitor host within an SDLC Interface.
+        Response Action:  Correct and rearrange TYMFILE statements.
+                 Re-Assemble.
+
+
+        4.1.5 *** ERROR 05 ***
+
+        Message Format:  Macro_Statement
+
+        Explanation:  The argument or value must be  specified  for  this
+                 Macro_Statement.
+
+        Response Action:  Correct the error.
+                 Re-Assemble.
+
+
+        4.1.6 *** ERROR 06 ***
+
+        Message Format:  Macro_Statement_1 <-> Macro_Statement_2
+
+        Explanation:  The specifying of Macro_Statement_1  requires  that
+                 the Macro_Statement_2 be specified earlier.
+
+        Response   Action:    Provide   Macro_Statement_2    or    delete
+                 Macro_Statement_1.
+                 Re-Assemble.
+
+
+        4.1.7 *** ERROR 07 ***
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 74
+
+
+        Message Format:  Macro-Statement
+
+        Explanation:  The Macro_Statement contains  illegal  argument  or
+                 value.
+
+        Response Action:  Correct the error.
+                 Re-Assemble.
+
+
+        4.1.8 *** ERROR 08 ***
+
+        Message Format:  Macro_Statement
+
+        Explanation:  This Macro_Statement must  be  defined  in  the  Pu
+                 level.
+
+        Response Action:  Correct the error.
+                 Re-Assemble.
+
+
+        4.1.9 *** ERROR 09 ***
+
+        Message Format:  Line #m Station #n , Gateway Level
+
+        Explanation:   Station  #n  on  Line  #m  has  improper   gateway
+                 record(s) defined.
+
+        Response Action:  Correct the error.
+                 Re-Assemble.
+
+
+        4.1.10 *** ERROR 10 ***
+
+        Message Format:  Macro_Statement
+
+        Explanation:  Too much Macro_Statements defined.
+
+        Response Action:  Correct the error.
+                 Re-Assemble.
+
+
+        4.1.11 *** ERROR 11 ***
+
+        Message Format:  Macro_Statement
+
+        Explaination:  Must be defined on Line or PU level.
+
+        Response Action:  Correct the error, and re-assemble.
+
+
+        4.1.12 *** ERROR 12 ***
+
+        Message Format:  Macro_Statement
+
+        Explaination:  Must be defined on Line level only.
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 75
+
+
+        Response Action:  Correct the error and re-assemble.
+
+
+        4.1.13 *** ERROR 13 ***
+
+        Message Format:  Macro_Statement
+
+        Explaination:  Must be defined on Group level only.
+
+        Response Action:  Correct error and reassemble.
+
+
+        4.1.14 *** ERROR 14 ***
+
+        Message Format:  Macro_Statement
+
+        Explaination:  This macro must be defined for all lines.
+
+        Response Action:  Correct error and reassemble.
+
+
+        4.1.15 *** ERROR 15 ***
+
+        Message Format:  Macro_Statement
+
+        Explaination:  Must be defined for all PVC lines.
+
+        Response Action:  Correct error and reassemble.
+
+
+        4.1.16 *** ERROR 16 ***
+
+        Message Format:  Macro_Statement
+
+        Explaination:  This macro must be defined for all SVC lines.
+
+        Response Action:  Correct error and reassemble.
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 76
+
+
+                 Section 4.2 Warning Codes/Warning Messages                 _______ ___ _______ _____________ ________
+
+
+        4.2.1 *** WARNING 01 ** 
+
+        Message Format:  Macro_Statement
+
+        Explanation:  The Macro_Statement contains incorrect argument  or
+                 value.
+
+        System Action:  The incorrect argument or  value  is  substituted
+                 with the assumed default argument or value.
+
+        Response Action:  If the assumed  default  is  not  acceptable  ,
+                 correct the error, and re-assemble.
+
+
+        4.2.2 *** WARNING 02 ***
+
+        Message Format:  Macro_Statement
+
+        Explanation:  This Macro_Statement is not required.
+
+        System Action:  Ignore this Macro_Statement.
+
+        Response Action:  None.
+                 However, the user may delete this  Macro_Statement  from
+                 the TYMFILE later.
+
+
+
+
+QLLC/SDLC Interface SYSGEN Reference Manual                       Page 77
+
+
+                                  INDEX                                  _____
+
+
+
+                 ADDR
+                   PU Statements . . . . . .  54, 62-64
+                 AGGREGATE MACROS  . . . . .  9
+
+                 BEGINTYM
+                   Contorl Directives  . . .  61
+                   Control Directives  . . .  12
+                 BUFSIZE
+                   Network and ISIS Statements  15, 61
+
+                 Control Directives  . . . .  12
+                   BEGINTYM  . . . . . . . .  12
+                   ENDTYM  . . . . . . . . .  12
+                   NOPRINT . . . . . . . . .  12
+                   PRINT . . . . . . . . . .  12
+
+                 DATAMODE
+                   Group Statements  . . . .  23, 62-64
+                   Line Statements . . . . .  41
+                 DHOST
+                   Group Statements  . . . .  30
+                   Line Statements . . . . .  40
+                   PU Statements . . . . . .  54, 62-64
+                 DISCRETRIES
+                   Group Statements  . . . .  27, 44
+                 DSIOTP
+                   GROUP STATEMENTS  . . . .  35
+                   Group Statements  . . . .  62-63
+                   LINE STATEMENTS . . . . .  49
+
+                 ENDTYM
+                   Control Directives  . . .  12, 64
+                 Error Messages  . . . . . .  72
+
+                 FRAMESIZE
+                   Group Statements  . . . .  25, 63-64
+                 Framesize
+                   Group Statements  . . . .  62
+                 FRAMESIZE
+                   Line Statements . . . . .  42
+                 FREEZE
+                   Network and ISIS Statements  14, 61
+
+                 GROUP
+                   Group Statements  . . . .  22, 62-64
+                 Group Statement
+                   QLCX25  . . . . . . . . .  35
+                   QXID  . . . . . . . . . .  35
+                   RNRSK1  . . . . . . . . .  36
+                 Group Statements  . . . . .  22
+                   DATAMODE  . . . . . . . .  23
+                   DHOST . . . . . . . . . .  30
+                   DISCRETRIES . . . . . . .  27, 44
+                   DSIOTP  . . . . . . . . .  35
+                   FRAMESIZE . . . . . . . .  25
+                   GROUP . . . . . . . . . .  22
+                   HOST  . . . . . . . . . .  22
+                   ISTATUS . . . . . . . . .  34
+                   LGN.GATEWAY . . . . . . .  31
+                   LGN.PASSWORD  . . . . . .  31
+                   LGN.USER  . . . . . . . .  31
+                   NETREPLYTO  . . . . . . .  24
+                   PAUSE . . . . . . . . . .  29
+                   PRIMARY . . . . . . . . .  22
+                   PVCLINE . . . . . . . . .  30
+                   RCVFRMQA  . . . . . . . .  25
+                   RCVTORETRIES  . . . . . .  27, 44
+                   REPLYTO . . . . . . . . .  24
+                   RNRRCVRETRIES . . . . . .  28, 46
+                   RNRXMTRETRIES . . . . . .  28, 45
+                   RTSCTS  . . . . . . . . .  24
+                   SECONDARY . . . . . . . .  22
+                   SNRMRETRIES . . . . . . .  26, 43
+                   SPEED . . . . . . . . . .  23
+                   SVC.CALLED  . . . . . . .  32
+                   SVC.CGROUP  . . . . . . .  32
+                   SVC.CHARGE  . . . . . . .  34
+                   SVC.CUG . . . . . . . . .  33
+                   SVC.TCLASS  . . . . . . .  34
+                   SVCLINE . . . . . . . . .  30
+                   SWITCHED  . . . . . . . .  23
+                   TESTRETRIES . . . . . . .  28, 45
+                   VTAM  . . . . . . . . . .  23
+                   WINDOWSIZE  . . . . . . .  25
+                   XIDRETRIES  . . . . . . .  27, 44
+                   XMTFRMQA  . . . . . . . .  25
+
+                 HIERARCHY . . . . . . . . .  9
+                 HOST
+                   Group Statements  . . . .  62-64
+                 HOST 
+                   Group Statements  . . . .  22
+                   Line Statements . . . . .  40
+
+                 ISISRING
+                   Network and ISIS Statements  15, 61
+                 ISTATUS
+                   Group Statements  . . . .  34
+                   Line Statements . . . . .  49
+                   PU Statements . . . . . .  57
+                 ITEM MACROS . . . . . . . .  9
+
+                 LGN.GATEWAY
+                   Group Statements  . . . .  31
+                   Line Statements . . . . .  47
+                   PU Statements . . . . . .  55
+                 LGN.PASSWORD
+                   Group Statements  . . . .  31
+                   Line Statements . . . . .  47
+                   PU Statements . . . . . .  55, 63-64
+                 LGN.USER
+                   Group Statements  . . . .  31
+                   Line Statements . . . . .  47
+                   PU Statements . . . . . .  55, 63-64
+                 LINE
+                   Line Statements . . . . .  40, 62-64
+                 Line Statements . . . . . .  40
+                   DATAMODE  . . . . . . . .  41
+                   DHOST . . . . . . . . . .  40
+                   DSIOTP  . . . . . . . . .  49
+                   FRAMESIZE . . . . . . . .  42
+                   HOST  . . . . . . . . . .  40
+                   ISTATUS . . . . . . . . .  49
+                   LGN.GATEWAY . . . . . . .  47
+                   LGN.PASSWORD  . . . . . .  47
+                   LGN.USER  . . . . . . . .  47
+                   LINE  . . . . . . . . . .  40
+                   NETREPLYTO  . . . . . . .  42
+                   PAUSE . . . . . . . . . .  46
+                   POLLTIMER . . . . . . . .  29, 46
+                   PVC.RTPUT . . . . . . . .  48
+                   PVC.TTPUT . . . . . . . .  48
+                   PVCLINE . . . . . . . . .  46
+                   QLCX25  . . . . . . . . .  49
+                   QXID  . . . . . . . . . .  49
+                   RCVFRMQA  . . . . . . . .  43
+                   REPLYTO . . . . . . . . .  42
+                   RNRSK1  . . . . . . . . .  50
+                   RTSCTS  . . . . . . . . .  41
+                   SPEED . . . . . . . . . .  40
+                   SVC.CALLED  . . . . . . .  48
+                   SVC.CHARGE  . . . . . . .  49
+                   SVC.CUG . . . . . . . . .  48
+                   SVC.TCLASS  . . . . . . .  49
+                   SVCLINE . . . . . . . . .  47
+                   SWITCHED  . . . . . . . .  41
+                   VTAM  . . . . . . . . . .  41
+                   WINDOWSIZE  . . . . . . .  42
+                   XMTFRMQA  . . . . . . . .  42
+                 Logical Unit types  . . . .  7
+
+                 MAPADDR
+                   PU Statements . . . . . .  54, 62-64
+                 MBUFQA
+                   Monitor Statements  . . .  18, 61
+                 MGOODGUY
+                   Monitor Statements  . . .  19, 61
+                 MLOG.TBL
+                   Monitor Statements  . . .  19, 61
+                 MONITOR
+                   Monitor Statements  . . .  18, 61
+                 Monitor Statements  . . . .  18
+                   MBUFQA  . . . . . . . . .  18
+                   MGOODGUY  . . . . . . . .  19
+                   MLOG.TBL  . . . . . . . .  19
+                   MONITOR . . . . . . . . .  18
+                   MPORTS  . . . . . . . . .  18
+                   MUSR.TBL  . . . . . . . .  19
+                   UPD.INTERVAL  . . . . . .  18
+                 MPORTS
+                   Monitor Statements  . . .  18, 61
+                 MSIOTP
+                   Network and ISIS Statements  16
+                 Msiotp
+                   Network and ISIS Statements  61
+                 MUSR.TBL
+                   Monitor Statements  . . .  19, 61
+
+                 NDM
+                   support . . . . . . . . .  7
+                 NETREPLYTO
+                   GROUP STATEMENTS  . . . .  24
+                   Group Statements  . . . .  62-63
+ 
+                   support . . . . . . . . .  7
+
+                 ODNIC
+                   Interface Statement . . .  16, 61
+
+                 PAUSE
+                   Group Statements  . . . .  29, 63
+                   Line Statements . . . . .  46
+                 Physical Unit types . . . .  7
+                 POLLTIMER
+                   Line Statements . . . . .  29, 46
+                 PRIMARY
+                   Group Statements  . . . .  22, 64
+                 Primary
+                   Group Statements  . . . .  62
+                 PRINT
+                   Control Directives  . . .  12, 61
+                
+                   support . . . . . . . . .  7
+
+                 ODNIC
+                   Interface Statement . . .  16, 61
+
+                 PAUSE
+                   Group Statements  . . . .  29, 63
+                   Line Statements . . . . .  46
+                 Physical Unit types . . . .  7
+                 POLLTIMER
+                   Line Statements . . . . .  29, 46
+                 PRIMARY
+                   Group Statements  . . . .  22, 64
+                 Primary
+                   Group Statements  . . . .  62
+                 PRINT
+                   Control Directives  . . .  12, 61
+                 PU
+                   PU Statements . . . . . .  54, 62-64
+                 PU Statements . . . . . . .  54
+                   ADDR  . . . . . . . . . .  54
+                   DHOST . . . . . . . . . .  54
+                   ISTATUS . . . . . . . . .  57
+                   LGN.GATEWAY . . . . . . .  55
+                   LGN.MAPADDR . . . . . . .  54
+                   LGN.PASSWORD  . . . . . .  55
+                   LGN.USER  . . . . . . . .  55
+                   PU  . . . . . . . . . . .  54
+                   PVC.DCHAN . . . . . . . .  56
+                   PVC.DLINK . . . . . . . .  56
+                   PVC.RTPUT . . . . . . . .  57
+                   PVC.TTPUT . . . . . . . .  57
+                   QXID  . . . . . . . . . .  57
+                   SVC.CALLED  . . . . . . .  57
+                 PVC.DCHAN
+                   PU Statements . . . . . .  56, 62-63
+                 PVC.DLINK
+                   PU Statements . . . . . .  56, 62-63
+                 PVC.RTPUT
+                   Line Statements . . . . .  48
+                   PU Statements . . . . . .  57, 62-63
+                 PVC.TTPUT
+                   Line Statements . . . . .  48
+                   PU Statements . . . . . .  57, 62
+                 PVCLINE
+                   Group Statements  . . . .  30
+                   Line Statements . . . . .  46, 62-63
+                 PVCTIMER
+                   Network and ISIS Statements  15, 61
+
+                 QLCX25
+                   Group Statement . . . . .  35
+                   Line Statements . . . . .  49
+                 QXID
+                   Group Statement . . . . .  35
+                   Line Statements . . . . .  49, 63-64
+                   PU Statements . . . . . .  57
+
+                 RCVFRMQA
+                   Group Statements  . . . .  25, 62-64
+                   Line Statements . . . . .  43
+                 RCVTORETRIES
+                   Group Statements  . . . .  27, 44
+                 REPLYTO
+                   Group Statements  . . . .  24, 62-64
+                   Line Statements . . . . .  42
+                 RNRRCVRETRIES
+                   Group Statements  . . . .  28, 46
+                 RNRSK1
+                   Group Statement . . . . .  36
+                   Line Statements . . . . .  50
+                 RNRXMTRETRIES
+                   Group Statements  . . . .  28, 45
+                 RTSCST
+                   Group Statements  . . . .  62, 64
+                 RTSCTS
+                   Group Statements  . . . .  24, 63
+                   Line Statements . . . . .  41
+
+                 Sample Command File . . . .  65
+                 Sample NAD Print-Out  . . .  66
+                 Sample Tymfile  . . . . . .  61
+                 SECONDARY
+                   Group Statements  . . . .  22, 62-63
+                 SNRMRETRIES
+                   Group Statements  . . . .  26, 43, 62
+                 SPEED
+                   Group Statements  . . . .  23, 62-64
+                   Line Statements . . . . .  40
+                 SVC.CALLED
+                   Group Statements  . . . .  32
+                   Line Statements . . . . .  48
+                   PU Statements . . . . . .  57, 64
+                 SVC.CGROUP
+                   Group Statements  . . . .  32, 63-64
+                 SVC.CHARGE
+                   Group Statements  . . . .  34, 64
+                   Line Statements . . . . .  49, 63
+                 SVC.CUG
+                   Group Statements  . . . .  33, 64
+                   Line Statemants . . . . .  63
+                   Line Statements . . . . .  48, 64
+                 SVC.TCLASS
+                   Group Statements  . . . .  34, 64
+                   Line Statements . . . . .  49, 63
+                 SVCLINE
+                   Group Statements  . . . .  30
+                   Line Statements . . . . .  47, 63-64
+                 SWITCHED
+                   Group Statements  . . . .  23, 63-64
+                   Line Statements . . . . .  41
+                 SYSTEM
+                   Control Directives  . . .  61
+                   Network and ISIS Statements  14
+
+                 TESTRETRIES
+                   Group Statements  . . . .  28, 45
+                 TIMEZONE
+                   Control Directives  . . .  61
+                   Network and ISIS Statements  14
+                 TYMFILE . . . . . . . . . .  8
+
+                 UPD.INTERVAL
+                   Monitor Statements  . . .  18, 61
+
+                 VTAM
+                   Group Statements  . . . .  23, 62-64
+                   Line Statements . . . . .  41
+
+                 Warning Messages  . . . . .  72
+                 WINDOWSIZE
+                   Group Statements  . . . .  25, 62-64
+                   Line Statements . . . . .  42
+
+                 XIDRETRIES
+                   Group Statements  . . . .  27, 44
+                 XMTFRMQA
+                   Group Statements  . . . .  25, 62-64
+                   Line Statements . . . . .  42
+
+ \{|l|
