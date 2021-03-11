@@ -1,0 +1,76 @@
+*************************************************************************
+*                                                                     *
+*                       SUBROUTINE: DATCON                            *
+*                                                                     *
+*       THIS SUBROUTINE CONVERTS A DATE FROM FORMAT: DD-MMM-YY        *
+*       WHE DD AND YY ARE INTEGER AND MMM IS ALPHA TO A FORMAT OF     *
+*       YYMMDD (WHERE YY=YEAR,MM=MONTH,DD=DAY AND ALL ARE NUMERIC.    *
+*                                                                     *
+*       I:      SYSDAT  2WORD ARRAY CONTAINING DATE IN FORMAT:        *
+*                       DD-MMM-YY.                                    *
+*                                                                     *
+*       O:      IDATE   INTEGER VARIABLE CONTAINING DATE CONVERTED    *
+*                       TO YYMMDD FORMAT.                             *
+*                                                                     *
+*       O:      IERR    ERROR FLAG. SET AS FOLLOWS.                   *
+*                       -1 = FATAL ERROR
+*                        0 = NO ERROR                                 *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE DATCON(SYSDAT,IDATE,IERR)
+
+        INTEGER SYSDAT(2),MONTBL(12)
+
+        MONTBL(1)="453035600000
+        MONTBL(2)="433134200000
+        MONTBL(3)="467036200000
+        MONTBL(4)="407416200000
+        MONTBL(5)="467037100000
+        MONTBL(6)="453535600000
+        MONTBL(7)="453535400000
+        MONTBL(8)="407534700000
+        MONTBL(9)="517136000000
+        MONTBL(10)="477076400000
+        MONTBL(11)="473376600000
+        MONTBL(12)="423134300000
+
+*       ** CONVERT DAY AND YEAR TO INTEGER VARIABLES
+
+        CALL RTC (ICHAR,SYSDAT,1)
+        DECODE (1,110,ICHAR)ID1
+110     FORMAT  (I1)
+        CALL RTC (ICHAR,SYSDAT,2)
+        DECODE (1,110,ICHAR)ID2
+        CALL RTC (ICHAR,SYSDAT,8)
+        DECODE (1,110,ICHAR)ID3
+        CALL RTC (ICHAR,SYSDAT,9)
+        DECODE (1,110,ICHAR)ID4
+
+*       ** CONVERT MONTH TO AN INTEGER VARIABLE
+        K=1
+        DO 120 I=4,6
+        CALL RTC (ICHAR,SYSDAT,I)
+        CALL STC (ICHAR,IMNTH,K)
+        K=K+1
+120     CONTINUE
+
+        DO 125 I=1,12
+        IF (IMNTH.EQ.MONTBL(I)) GO TO 130
+125     CONTINUE
+
+        TYPE 127,IMNTH
+127     FORMAT (5X,'ERROR!! SYSTEM RETURNED UNRECOGNIZABLE MONTH NAME: '
+     X,A5,/)
+        IERR=-1
+        GO TO 999
+
+*       ** FINALLY PUT SYSTEM DATE INTO YYMMDD FORMAT.
+
+130     IDATE=ID3*100000+ID4*10000+I*100+ID1*10+ID2
+
+
+*               FINISHED. RETURN
+
+999     RETURN
+        END
