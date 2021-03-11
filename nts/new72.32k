@@ -1,0 +1,427 @@
+     
+   
+                           32K  V72
+
+
+         THIS IS THE LOADER THAT IS USED FOR LOADING A 32K MACHINE. THE
+         SYNCHRONOUS BOOTSTRAP FOR 32K IS AT THE END OF THIS LISTING.
+   
+         THE TWO ARE LISTED TOGETHER TO GIVE YOU A BETTER UNDERSTANDING
+         OF WHAT THE MACHINE IS DOING.
+   
+         THIS DOCUMENT IS IN THE FILE (CES:33)NEW72.32K .  THE COMPLETE
+         ASSEMBLY LISTING IS UNDER (CES:33)32KV72.LST .
+   
+                 *
+                 * INITIALIZATION FOR LOADER
+                 *
+   57240 014056 START   LDA     ENTRY   LOCATE THE ENTRY
+   57241 006140         SUBI    NWDSB           LOCATE START OF BOOT
+   57242 000111 
+   57243 005014         TAX
+   57244 054102         STA     BOOTRT+1        SAVE RETURN TO BOOT
+                 *
+   57245 015000         LDA     EXEA,X          FETCH I/O INS FROM BOOT
+   57246 154340         ANA     OCT77           REMOVE ADDRESS
+   57247 054047         STA     ENTRY           SAVE FOR NOW
+                 *
+   57250 124017         ADD     ST01            TURN OFF 'RUPTS
+   57251 054016         STA     ST01
+                 *
+   57252 014037         LDA     ST02            ENABLE 'RUPTS
+   57253 124043         ADD     ENTRY
+   57254 054035         STA     ST02
+   57255 054250         STA     ST03
+   57256 054212         STA     ST07
+                 *
+   57257 014227         LDA     ST04            INPUT INST
+   57260 124036         ADD     ENTRY
+   57261 005311         DAR
+   57262 054224         STA     ST04
+                 *
+   57263 014257         LDA     ST05            OUTPUT ZERO DET
+   57264 124032         ADD     ENTRY
+   57265 054255         STA     ST05
+                 *
+   57266 005311         DAR                     OUTPUT DATA
+   57267 054155         STA     ST06
+                 *
+   57270 100000 ST01    EXC     IDA+00         TURN OFF 'RUPTS
+   57271 015015         LDA     VECT,X          LOCATE IVECTS
+   57272 154314         ANA     OCT77           REMOVE UNWANTED BITS
+   57273 005012         TAB                     POINT B AT IT
+                 *
+   57274 006010         LDAI    INPUT1          SET INPUT VEC
+   57275 057505 
+   57276 056003         STA     3,B
+                 *
+   57277 006010         LDAI    OUTPUT1         SET OUTPUT
+   57300 057444 
+   57301 056001         STA     1,B
+                 *
+   
+   57302 015130         LDA     ZDET2,X          FETCH ZERO DETECT
+   57303 054317         STA     ZDET1
+                 *
+   57304 024303         LDB     LSTADR
+   57305 014314         LDA     SYNCIT          BUILD ACKNOWLEGEMENT RECORD
+   57306 056000         STA     0,B
+   57307 005001         TZA                     CLEAR OUT COUNT
+   57310 056001         STA     1,B
+   57311 076002         STX     2,B
+   57312 100200 ST02    EXC     IDA+200         ENABLE 'RUPTS
+   57313 001000         JMP     ACK             LOOK OUT HERE WE GO!!!!
+   57314 057333 
+   57315 103277 FPANL   OBR     77              DRIVES FRONT PANEL
+   57316 001000         JMP     *-*             RETURN TO BOOT
+   57317 000000 
+                ENTRY   E       *-1             LABEL DEFINITION
+   57320 005041         TXA                     SEE IF LOADED WRONG
+   57321 006140         SUBI    ENDLD           BETTER BE ZERO
+   57322 057640 
+   57323 001010         JAZ     START
+   57324 057240 
+   57325 005041         TXA                     LOADED IN WRONG PLACE
+   57326 006140         SUBI    ENDLD-ENTRY+1   GET BACK TO THE BOOT
+   57327 000322 
+   57330 054001         STA     *+2
+   57331 001000         JMP     *-*
+   57332 000000 
+   57333 024254 ACK     LDB     LSTADR          FETCH LAST BUFFER
+   57334 064254         STB     SNDBLK          START THE TRANSMITTER
+   57335 002000         JMPM    CKSUM           COMPUTE THE CHECKSUM
+   57336 057555 
+                 *
+   57337 014264         LDA     VIRT            GET VIRTICAL SUM
+   57340 056000         STA     0,B             PUT INTO BUFFER
+   57341 014263         LDA     DIAG            AND THE DIAGONAL SUM
+   57342 056001         STA     1,B
+                 *
+   57343 014016 NAK     LDA     LIMIT           RESET RECORD TIMER
+   57344 054261         STA     ICNT
+                 *
+                 * WAIT OUT TIMEOUT WHILE LOOKING FOR A RECORD
+                 *
+   57345 014260 NA01    LDA     ICNT            IF TIME IS UP
+   57346 001010 BOOTRT  JAZ     0               RETURN TO BOOT
+   57347 000000 
+   57350 024241         LDB     RECVD           IF NOT UP SEE IF A RECORD
+   57351 001020         JBZ     NA01            IS IN
+   57352 057345 
+   57353 064234         STB     LSTADR          SAVE LAST RECEIVED REC ADDRESS
+                 *
+   57354 005001         TZA                     SET RECORD RECEIVED FLAG OFF
+   57355 054234         STA     RECVD
+                 *
+   
+   57356 002000 RECRCV  JMPM    CKSUM           ITS HERE, IS IT GOOD?
+   57357 057555 
+   57360 014243         LDA     VIRT            CHECK VIRTICAL SUM
+   57361 136000         ERA     0,B
+   57362 114242 LIMIT   ORA     DIAG            CHECK DIAGONAL SUM
+   57363 136001         ERA     1,B
+   57364 001010         JAZ     GOOD            ITS GOOD!!!
+   57365 057370 
+   57366 001000         JMP     NAK             ITS BAD!!!
+   57367 057343 
+                 *
+   57370 014217 GOOD    LDA     LSTADR          FETCH BEGGINING OF RECORD
+   57371 005014         TAX                     SET  TO BUFFER ADR
+   57372 124213         ADD     DATSIZ          LOCATE END OF BUFFER
+   57373 054233         STA     FILSTOP
+                 *
+   57374 015001         LDA     1,X             GET THE COUNT
+   57375 001010         JAZ     0               COUNT ZERO GO START LOADED CODE
+   57376 000000 
+                 *
+   57377 024065         LDB     COM             BUILD INSTRUCTION COM  ,A
+   57400 064035         STB     OPT             FILL WITH ZEROES
+   57401 005002         TZB                     SET COUNT ZERO
+   57402 065001         STB     1,X
+   57403 001002         JAP     SETOK           BR IF POSITIVE COUNT
+   57404 057411 
+                 *
+   57405 024156         LDB     LOAD            BUILD LOAD INSTRUCTION
+   57406 064027         STB     OPT
+   57407 024175         LDB     MAXCHA          SET COUNT FOR ALL CHARACTERS
+   57410 065001         STB     1,X             SET AS COUNT FOR RETURN
+                 *
+   57411 025002 SETOK   LDB     2,X             GET MEMORY ADDRESS
+   57412 154174         ANA     OCT77           STRIP UNUSED BITS
+   57413 001010         JAZ     FILLIT          BR IF DUMP ONLY
+   57414 057432 
+                 *
+   57415 124172         ADD     LSTADR          LOCATE STOPPING POINT
+   57416 054213         STA     MSTOP
+                 *
+   57417 015003 MOVIT   LDA     3,X             GET ONE FROM THE INPUT BUFFER
+   57420 056000         STA     0,B             PUT IT INTO CORE
+                 *
+   57421 005201         COM     ,A              RETURN -1
+   57422 055003         STA     3,X
+                 *
+   57423 005122         IBR                     BUMP THE POINTERS
+   57424 003026         XBNZ    FPANL           DRIVE THE FRONT PANEL IF V70
+   57425 057315 
+   57426 005145         INC     X,AX
+   57427 144202         SUB     MSTOP           CHECK FOR THE END
+   
+   57430 001004         JAN     MOVIT           KEEP GOING
+   57431 057417 
+                 *
+                 * THE FOLLOWING FILLS IN WITH -1 OR TRANSFERS MEMORY FOR OUTPUT
+                 *
+   57432 005041 FILLIT  TXA                     CHECK FOR END OF FILL
+   57433 144173 FILL1   SUB     FILSTOP
+   57434 001002         JAP     ACK             GO ACKNOWLEGE IF DONE
+   57435 057333 
+                 *
+   57436 000000 OPT     *-*                     FILLED IN LATTER
+   57437 055003         STA     3,X             TUCK IT AWAY
+   57440 005122         IBR                     POINT TO NEXT MEMORY WORD
+   57441 005145         INC     X,AX
+   57442 001000         JMP     FILL1           GO TRY AGAIN
+   57443 057433 
+                 *
+                 * OUTPUT INTERRUPT PROCESSING
+                 *
+   57444 000000 OUTPUT1 0
+   57445 103000 ST06    OME     IDA,OTDATA              SEND OUT THE DATA
+   57446 057633 
+   57447 044156         INR     ICNT            BUMP THE TIMER
+   57450 054163         STA     OTASAV
+                 *
+   57451 064163         STB     OTBSAV
+   57452 014141         LDA     OTSTAT          CHECK OUTPUT STATE
+   57453 001004         JAN     OZSTAT          BR STATE ZERO
+   57454 057474 
+                 *
+                 * STATE 1 XFER STATE
+                 *
+   57455 024136         LDB     OTPOS           GET NEXT CHAR
+   57456 016000         LDA     0,B
+   57457 054153         STA     OTDATA
+   57460 005121         INC     B,A             GET NEW POSITION
+   57461 054132         STA     OTPOS
+                 *
+   57462 144153         SUB     OTEND
+   57463 001004         JAN     OTEXIT          EXIT IF NOT DONE
+   57464 057467 
+   57465 005201 COM     COM     ,A
+                 *
+   57466 054125         STA     OTSTAT          RETURN TO STATE ZERO
+                 *
+   57467 014144 OTEXIT  LDA     OTASAV          RESTORE + RETURN
+   57470 024144         LDB     OTBSAV
+   57471 100200 ST07    EXC     200+IDA         ENABLE INTERRUPTS
+   57472 001000         JMP     OUTPUT1,I
+   57473 137444 
+                 *
+   57474 014114 OZSTAT  LDA     SNDBLK          LOOK FOR SNDBLK
+   57475 054116         STA     OTSTAT          SET OUTPUT STATE
+   57476 124114         ADD     WDSREC          LOCATE END OF BUFFER
+   57477 054136         STA     OTEND
+   57500 005201         COM     ,A
+   57501 054107         STA     SNDBLK          CLEAR SEND FLAG
+   57502 054130         STA     OTDATA          AT LEAST 1 PAD SEND
+   
+   57503 001000         JMP     OTEXIT
+   57504 057467 
+                 *
+                 * INPUT INTERRUPT PROCESSING
+                 *
+   57505 000000 INPUT1  0
+   57506 054125         STA     INASAV          SAVE A
+   57507 102500 ST04    CIA     0               BRING IN THE DATA
+   57510 074124         STX     INXSAV
+   57511 034103         LDX     INPOS
+   57512 055000         STA     0,X             PUT AWAY THE DATA
+                 *
+   57513 014102         LDA     INSTAT          WHAT STATE ARE WE IN?
+   57514 001002         JAP     INZSTA          BR SYNC LOOK MODE
+   57515 057547 
+                 *
+   57516 005141 IN01    INC     X,A             CHECK FOR END
+   57517 054075         STA     INPOS
+   57520 144100         SUB     INEND
+   57521 054074         STA     INSTAT          SET NEW STATE IF NEED BE
+   57522 001002         JAP     RECIN           BR IF ALL HERE
+   57523 057531 
+                 *
+   57524 014107 INRET   LDA     INASAV          RESTORE AND RETURN
+   57525 034107         LDX     INXSAV
+   57526 100200 ST03    EXC     200+IDA         RESTORE INTERRUPTS
+   57527 001000         JMP     INPUT1,I
+   57530 137505 
+                 *
+   57531 014065 RECIN   LDA     LSTREC          INDICATE RECORD IS IN
+   57532 054057         STA     RECVD
+                 *
+   57533 014064         LDA     NXTREC          REVERSE BUFFERS
+   57534 054060         STA     INPOS
+   57535 124055         ADD     WDSREC
+   57536 054062         STA     INEND
+   57537 014057         LDA     LSTREC
+   57540 054057         STA     NXTREC
+   57541 014053         LDA     INPOS
+   57542 054054         STA     LSTREC
+                 *
+   57543 103000 ST05    OME     IDA,ZDET1       SET ZERO DET
+   57544 057623 
+   57545 001000         JMP     INRET
+   57546 057524 
+                 *
+   57547 015000 INZSTA  LDA     0,X             GET BACK THE DATA
+   57550 134051         ERA     SYNCIT
+   57551 001010         JAZ     IN01
+   57552 057516 
+   
+   57553 001000         JMP     ST05
+   57554 057543 
+                 *
+                 * CHECKSUM COMPUTATION SUBROUTINE
+                 *
+   57555 000000 CKSUM   0
+   57556 005123         INC     B,AB            GET AROUND SYNC WORD
+   57557 124026         ADD     DATSIZ   
+   57560 054046         STA     FILSTOP         SAVE END OF RECORD
+                 *
+   57561 005001         TZA                     RESET SUMS
+   57562 054041         STA     VIRT
+   57563 054041         STA     DIAG
+                 *
+                LOAD    E       *               LABEL DEFINITION
+   57564 016000 CKLOOP  LDA     0,B             COMPUTE EACH SUM
+   57565 134036         ERA     VIRT
+   57566 054035         STA     VIRT
+   57567 014035         LDA     DIAG
+   57570 004241         LRLA    1
+   57571 136000    64.20         750 2       .0000 48N   1   1YA
+   55031CMMIFAN      1300DIGITAL EQUIPMENT CORPORATION N 13 1301115851031FOCUS   INFORMATION BUILDERS            .3600       .1116     1 2018     0500156 1   387      852.60         468 2       .0000 48N   1   1YA
+   55031COLOROCO     1300DIGITAL EQUIPMENT CORPORATION N 13 1301115851031FOCUS   INFORMATION BUILDERS            .3600       .1116     1 2018     0  5160 1    20      303.30         167 2       .0000 48N   1   1YA
+   55031COSPCO       1300DIGITAL EQUIPMENT CORPORATION N 13 1301115851031FOCUS   INFORMATION BUILDERS            .3600       .1116     1 2018     0427121 1   459     7500T.V.T                         N 75 7535  2850531MAGCOM13TYMSHARE - DMS                  .0000       .0000     110353     0 33032 2     8     1270.97         500 1       .0000 90N   7   0YA
+    6131B13GESIND    7500T.V.T                         N 75 7535  2850531MAGCOM13TYMSHARE - DMS                  .0000       .0000     110353     0167301 2     1       23.78           8 1       .0000 90N   7   0YD
+    6131B13GESIND    7500T.V.T                         N 75 7535  2850531MAGSCO13TYMSHARE - DMS                  .0000       .0000     110354     0167301 2     0       24.61          66 1       .0000 90N   7   0YA
+    6131B13TVT       7500T.V.T                         N 75 7535  2850531MAGSCO13TYMSHARE - DMS                  .0000       .0000     110354     0112215 2     2      100.46         262 1       .0000 90N   7   0YA
+    6131CAMCO        7500T.V.T                         N 75 7535  2850531MAGSCO13TYMSHARE - DMS                  .0000       .0000     110354     0151431 2     3      154.38         407 1       .0000 90N   7   0YA
+    6131AGBSUP       7500T.V.T                         N 75 7535  2850531MAGPCO13TYMSHARE - DMS                  .0000       .0000     110355     0336114 2     0       11.46           4 1       .0000 90N   7   0YA
+    6131B13GESIND    7500T.V.T                         N 75 7535  2850531MAGPCO13TYMSHARE - DMS                  .0000       .0000     110355     0167301 2     9      565.82         217 1       .0000 90N   7   0YA
+    6131B13TVT       7500T.V.T                         N 75 7535  2850531MAGPCO13TYMSHARE - DMS                  .0000       .0000     110355     0112215 2   591    28658.95       20400 1       .0000 90N   7   0YA
+    6131CAMCO        7500T.V.T                         N 75 7535  2850531MAGPCO13TYMSHARE - DMS                  .0000       .0000     110355     0151431 2    17      785.53         284 1       .0000 90N   7   0YA
+   TERRUPTS
+                *
+   77641 014126         LDA     ZDET            DISABLE ALL LINES
+   77642 005311 DISABLE DAR
+   77643 103127         OAR     IDAB
+   77644 103125         OAR     25              TURN OFF SECOND CARD
+   77645 005311         DAR
+   77646 001002         JAP     DISABLE
+   77647 077642 
+                *
+   77650 124117         ADD     ZDET            ENABLE LOAD LINE
+   77651 103127         OAR     IDAB
+                *
+   77652 050010         STA     POWFAL          PUT HALT IN POWERFAIL 'RUPT
+   77653 006010         LDAI    2000            LOAD INPUT 'RUPT
+   77654 002000 
+   77655 050040 STVEC   STA     LINE0
+   77656 050042         STA     LINE0+2
+   77657 054114         STA     CKSUMB
+   77660 050012         STA     POWST           SETUP RESTART
+   77661 006010         LDAI    INPUT
+   77662 077762 
+   77663 050043         STA     LINE0+3
+   77664 006010         LDAI    OUTPUT
+   77665 077753 
+   77666 050041         STA     LINE0+1
+   77667 006010         LDAI    SETUP-1         SET RESTART BRANCH
+   77670 077637 
+   77671 050013         STA     POWST+1
+   77672 100227         EXC     200+IDAB        TURN ON 'RUPTS
+                *
+   77673 006030 BEGIN   LDXI    START
+   77674 057240 
+   77675 006020         LDBI    -(NBLOCKS+1)    NUMBER OF BLOCKS
+   77676 177767 
+                *
+   77677 014073         LDA     DELAYP          SET UP DELAY LIMIT
+   77700 054076         STA     DELAY
+   77701 005122 SBLOCK  IBR                     RECEIVED ALL BLOCKS?
+   77702 001020         JBZ     DONE            CHECK CKSUM IF YES
+   77703 077746 
+   77704 006010         LDAI    -(WDPBLK-1)     BLOCK WORD COUNT MINUS
+   77705 177740                                 CHECKSUM
+   77706 054066         STA     BLCKCNT
+                *
+   77707 103027 SYNC    OME     IDAB,ZDET       SET ZERO DETECT
+   77710 077770 
+   77711 064064         STB     WRDIN           RESET INPUT WORD
+   77712 014064 SYNC1   LDA     DELAY           HAVE WAITED LONG ENOUGH?
+   77713 001002         JAP     SETUP           RESTART IF YES
+   77714 077640 
+   77715 014060         LDA     WRDIN           WAIT FOR A CHAR
+   77716 001004         JAN     SYNC1
+   77717 077712 
+                *
+   
+   77720 134050         ERA     SYNCH           SYNC?
+   77721 001010         JAZ     SYNCED          YES START REC
+   77722 077725 
+   77723 001000         JMP     SYNC            GO SYNC AGAIN
+   77724 077707 
+                *
+   77725 014045 SYNCED  LDA     DELAYP          RESET DELAY
+   77726 054050         STA     DELAY
+   77727 064032 SYNCD1  STB     INPUT           WAIT FOR 'RUPT
+   77730 014031 SYNCD2  LDA     INPUT
+   77731 001004         JAN     SYNCD2
+   77732 077730 
+                *
+   77733 014042         LDA     WRDIN           PUT IN WORD
+   77734 055000         STA     0,X
+   77735 134036         ERA     CKSUMB
+   77736 054035         STA     CKSUMB
+   77737 005144         IXR
+   7774034         INR     BLCKCNT         ALL OF BLOCK IN?
+   77741 014033         LDA     BLCKCNT
+   77742 001010         JAZ     SBLOCK          YES GET NEXT ONE
+   77743 077701 
+   77744 001000         JMP     SYNCD1          NO GET MORE
+   77745 077727 
+                *
+   77746 014025 DONE    LDA     CKSUMB
+   77747 002010         JAZM    ENTRY           GO TO LOADER
+   77750 057317 
+   77751 001000         JMP     SETUP
+   77752 077640 
+   77753 000000 OUTPUT  0
+   77754 103026         OME     IDAB-1,WRDOUT   PUT OUT WORD
+   77755 077772 
+   77756 044020         INR     DELAY           BUMP DELAY COUNTER
+   77757 100227         EXC     200+IDAB        TURN ON 'RUPTS
+   77760 001000         JMP     OUTPUT,I
+   77761 177753 
+                *
+   77762 000000 INPUT   0
+   77763 102026         IME     IDAB-1,WRDIN    GET THE WORD
+   77764 077776 
+   77765 100227         EXC     200+IDAB        TURN ON 'RUPTS
+   77766 001000         JMP     INPUT,I
+   77767 177762 
+                *
+   77770 000021 ZDET    +ZEROD
+   77771 031062 SYNCH   +SYN
+   77772 177777 WRDOUT  -1
+   77773 172110 DELAYP  -(+LINSP/16D)*10D
+   77774 002000 CKSUMB  2000
+   77775 000000 BLCKCNT 0
+   77776 000000 WRDIN   0
+   77777 000000 DELAY   0
+                *
+         000111 NWDSB   E       DONE+3-SETUP
+         000000 EXEA    E       SETUP-SETUP
+         000015 VECT    E       STVEC-SETUP
+         000040 LINE0   E       40
+         000130 ZDET2   E       ZDET-SETUP
+     
+    {3Dþ
