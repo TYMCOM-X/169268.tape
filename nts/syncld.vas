@@ -1,0 +1,301 @@
+VERSION E       2
+*
+* THIS PROGRAM LOAD A SYNCHRONOUT BOOTSTRAP INTO PLACE
+* THE ADDRESSES (BOTH I/O AND MEMORY) ARE ALTERED FOR THE
+* MACHINE FOUND
+*
+* FIRST SOME EQUATES
+*
+PAROFF  E       545             TURN PARITY INTERRUPTS OFF
+IDA620  E       77              OLD DEVICE ADDRESS
+IDAV70  E       27              NEW DEVICES ADDRESSES
+IDAX201 E       25              ADDRESS OF EXTRA 201 CARD
+*
+* NOW THE EXECUTION
+*
+        JMP     START           GO START EXECUTION
+*
+* NOW FOR THE BEGGINING OF CODE
+*
+        R       101             START AT 101 FOR FUN
+        +VERSION                LETS HAVE A VERSION NUMBER
+*
+* THE BEGGINING FIRST INSURE THAT EVERYTHING IS TURNED OFF
+*
+START   EXC     PAROFF          DISABLE PARITY
+        EXC     +IDA620         DISABLE 620
+        EXC     0+IDAV70        DISABLE V70
+        EXC     0+IDAX201       DISABLE EXTRA 201 CARD
+*
+* DETERMINE WHAT LINE WE WANT TO RECEIVE ON
+*
+        TZA
+        XS1     ADD1            COMPUTE NUMERIC VALUE OF SWITCHES
+        XS2     ADD2
+        XS3     ADD4
+        STA     INDIC           SAVE FOR FUTURE ADDITIONS
+*
+*UPDATE FOR LINE NUMBER
+*
+        LDBI    LINEAD          B POINTS AT UPDATE TABLE
+LINLOP  LDA     0,B
+        JAN     LINDON          BR IF DONE
+*
+        TAX
+        LDA     0,X
+        ADD     INDIC
+        STA     0,X
+        IBR
+        JMP     LINLOP
+*
+* UPDATE ZERO DETECT
+*
+LINDON  LDA     INDIC
+        LSRA    1
+        LDX     ZDETLOC
+        ADD     0,X
+        STA     0,X
+*
+* DETERMINE WHAT I/O ADDRESS TO USE
+*
+* IF WE HAVE A 620 THE JANZ WILL NOT BRANCH
+*
+        TZX
+        JANZ    V70
+        IXR
+V70     LDA     DEVICE,X        GET THE DEVICE CONSTANT
+        STA     DEVADR
+*
+* UPDATE DEVICE ADDRESSES
+*
+        LDBI    DEVLOC          B POINTS TO CHANGE TABLE
+DEVLOP  LDA     0,B             FETCH LOCATION
+        JAN     DEVDON          BR IF DONE
+*
+        TAX
+        LDA     0,X
+        ADD     DEVADR
+        STA     0,X
+        IBR
+        JMP     DEVLOP          KEEP GOING
+*
+* FIND OUT WHERE THE BOOT BELONGS
+*
+DEVDON  LDXI    BASEAD-1        X POOINTS TO TABLE OF POSSIBLE LOCATIONS
+MEMLOP  IXR
+        LDA     0,X             GET AN ADDRESS
+        JAN     GOTIT           BR IF 32 K IS IT
+*
+        TAB                     B POINTS TO TRIAL AREA
+        STA     0,B             IS THERE MEMORY HERE
+        SUB     0,B
+        JAZ     MEMLOP          KEEP LOOKING IF THERE IS MEMORY
+*
+GOTIT   DEC     X,X             X IS ONE PAST THE DESIRED LOCATION
+        LDX     0,X
+        STX     BOOTAD
+*
+* UPDATE THE ADDRESSES IN THE BOOT
+*
+        LDBI    CHLOC           B POINTS TO TABLE OF WHAT TO CHANGE
+CHALOP  LDA     0,B             FETCH A LOCATION
+        JAN     CHADON          BR IF DONE
+*
+        TAX
+        LDA     1,X             UPDATE LOCATION
+        ADD     BOOTAD
+        STA     1,X
+        IBR
+        JMP     CHALOP          KEEP GOING
+*
+* MOVE THE BOOT DOWN
+*
+CHADON  LDX     BOOTAD          X POINTS TO THE DEW LOC
+        LDBI    BOOT            B POINTS TO THE INSIDE BOOT
+MOVIT   LDA     0,B             MOVE IT DOWN
+        STA     0,X
+        IXR
+        INC     B,AB
+        SUBI    BOOTEN          DONE?
+        JAN     MOVIT           BRANCH IF NOT
+*
+* WE ARE DONE BRANCH TO THE BOOT
+*
+        JMP     *-*             EXECUTE THE BOOT
+BOOTAD  E       *-1
+*
+* TABLES AND CONSTANTS
+*
+INDIC   0                       INTERRUPT INDICATOR
+DEVICE  +26                     V70 DEVICE ADDRESSES
+        +76                     620 DEVICE ADDRESSES
+DEVADR  0                       TEMPORARY HOLD AREA
+*
+* LOCATIONS TO CHANGE FOR A DIFFERENT LINE AND SOME ASSOC. CONSTANTS
+*
+LINEAD  +STVEC
+        +STVEC+1
+        +AD02+2
+        +AD03+2
+        -1
+ZDETLOC +ZDET
+ADD1    ADD     A20
+ADD2    ADD     A10
+ADD4    ADD     A4
+A4      +4
+A10     +10
+A20     +20
+*
+* POSSIBLE BOOTSTRAP LOCATIONS
+*
+BASEAD  +27640
+        +37640
+        +57640
+        +77640
+        -1
+*
+* DEVICE ADDRESSES TO CHANGE
+*
+DEVLOC  +SETUP                  TABLE OF DEVICE ADDRESS LOCATIONS
+        +IO01
+        +IO02
+        +IO03
+        +IO04
+        +IO05
+        +SYNC
+        +AD17
+        +AD19
+        -1
+*
+* TABLE OF LOCATION CONTAINING ADDRESSES TO BE UPDATED
+*
+CHLOC   +AD01
+        +AD02
+        +AD03
+        +AD04
+        +AD05
+        +AD06
+        +AD07
+        +AD08
+        +AD09
+        +AD10
+        +AD11
+        +AD12
+        +AD13
+        +AD14
+        +AD15
+        +AD16
+        +AD17
+        +AD18
+        +AD19
+        +AD20
+        -1
+*
+*SYNCHRONOUS BOOTSTRAP
+*
+* FIRST SOME EQUATES FOR THE BOOT
+*
+POWFAL  E       10              LOCATION OF POWERFAIL INTERRUPT
+POWST   E       12              LOCATION OF POWER RESTART INTERRUPT
+NBLOCKS E       10              NUMBER OF BLOCKS IN LOADER
+WDPBLK  E       41              NUMBER OF WORDS PER BLOCK
+ZEROD   E       21              ZERO DETECT FOR LINE 0
+SYN     E       31062           SYNCH CHARACTER USED
+LINSP   E       4800D           LINE SPEED USED FOR DELAYS
+LINE0   E       40              INTERRUPT VECTOR FOR LINE 0
+IDAB    E       1
+        R       10000           USED TO FORCE RELATIVE ADDRESSING
+X       E       *               DEFINED FOR SHORT EXPRESSIONS
+BOOT    E       *               START OF MOVE AREA FOR BOOT
+SETUP   EXC     000+IDAB        TURN OFF 201 INTERRUPTS
+        EXC     000+25          TURN OFF SECOND CARD
+*
+        LDA     ZDET            DISABLE ALL LINES
+DISABLE DAR
+IO01    OAR     IDAB
+        DAR
+AD01   JAP     DISABLE-X
+*
+        ADD     ZDET            ENABLE LOAD LINE
+IO02    OAR     IDAB
+*
+        STA     POWFAL          PUT HALT IN POWERFAIL 'RUPT
+        LDAI    2000            LOAD INPUT 'RUPT
+STVEC   STA     LINE0
+        STA     LINE0+2
+        STA     CKSUMB
+        STA     POWST           SETUP RESTART
+AD02    LDAI    INPUT-X
+        STA     LINE0+3
+AD03    LDAI    OUTPUT-X
+        STA     LINE0+1
+AD04    LDAI    SETUP-1-X       SET RESTART BRANCH
+        STA     POWST+1
+IO03    EXC     200+IDAB        TURN ON 'RUPTS
+*
+AD05    E       *
+BEGIN   LDXI    START1-X
+        LDBI    -(NBLOCKS+1)    NUMBER OF BLOCKS
+*
+        LDA     DELAYP          SET UP DELAY LIMIT
+        STA     DELAY
+SBLOCK  IBR                     RECEIVED ALL BLOCKS?
+AD06    JBZ     DONE-X          CHECK CKSUM IF YES
+        LDAI    -(WDPBLK-1)     BLOCK WORD COUNT MINUS CHECK SUM
+        STA     BLCKCNT
+*
+AD07    E       *
+SYNC    OME     IDAB,ZDET-X     SET ZERO DETECT
+        STB     WRDIN           RESET INPUT WORD
+SYNC1   LDA     DELAY           HAVE WAITED LONG ENOUGH?
+AD08    JAP     SETUP-X         RESTART IF YES
+        LDA     WRDIN           WAIT FOR A CHAR
+AD09    JAN     SYNC1-X
+*
+        ERA     SYNCH          SYNC?
+AD10    JAZ     SYNCED-X        YES START REC
+AD11    JMP     SYNC-X          GO SYNC AGAIN
+*
+SYNCED  LDA     DELAYP          RESET DELAY
+        STA     DELAY
+SYNCD1  STB     INPUT           WAIT FOR 'RUPT
+SYNCD2  LDA     INPUT
+AD12    JAN     SYNCD2-X
+*
+        LDA     WRDIN           PUT IN WORD
+        STA     0,X
+        ERA     CKSUMB
+        STA     CKSUMB
+        IXR
+        INR     BLCKCNT         ALL OF BLOCK IN?
+        LDA     BLCKCNT
+AD13    JAZ     SBLOCK-X        YES GET NEXT ONE
+AD14    JMP     SYNCD1-X        NO GET MORE
+*
+DONE    LDA     CKSUMB
+AD15    JAZM    ENTRY-X         GO TO LOADER
+AD16    JMP     SETUP-X
+OUTPUT  0
+AD17    OME     IDAB-1,WRDOUT-X PUT OUT WORD
+        INR     DELAY           BUMP DELAY COUNTER
+IO04    EXC     200+IDAB        TURN ON 'RUPTS
+AD18    JMP     OUTPUT-X,I
+*
+INPUT   0
+AD19    IME     IDAB-1,WRDIN-X  GET THE WORD
+IO05    EXC     200+IDAB        TURN ON 'RUPTS
+AD20    JMP     INPUT-X,I
+*
+ZDET    +ZEROD
+SYNCH   +SYN
+WRDOUT  -1
+DELAYP -(+LINSP/16D)*10D
+CKSUMB  2000
+BLCKCNT 0
+WRDIN   0
+DELAY   0
+BOOTEN  E       *               END OF MOVE AREA FOR BOOT
+*
+ENTRY   E       X-321
+START1  E       X-400
+    
