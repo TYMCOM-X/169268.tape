@@ -1,0 +1,2167 @@
+********************
+*****
+*****     traffic statistics program - TOOLS2.FTF/SAV
+*****     nancy lau, network analysis
+*****     11 april 1988
+*****          produces 3 reports:
+*****                1)  BNDW2.TRF - bandwidth needed to support
+*****                    current traffic (also max/ave kbps)
+*****                2)  STAT2.TRF - misc. traffic stats (connect
+*****                    hours, simultaneous users, max in/out
+*****                    cps)
+*****                3)  USER2.TRF - traffic (kchars, connect hours)
+*****                    for each terminating host by username
+*****
+*****     modified AUGUST 1988 from TOOLS.FTF to accommodate
+*****     multiple hosts for reports 2 and 3 (adds data for all 
+*****     specified hosts into one set of reports)
+*****
+*****     modified Nov 1989 and Feb 1990 to handle 1990 traffic and
+*****     to improve statistics by Trudy Leonhard, network analysis
+********************
+
+           integer irpts, ifind, ifind2, ifile(4)
+           integer inoday, ibdate, iedate
+           integer nhost1, nhost2, ihost1(1000), ihost2(1000)
+           integer iterm(1000), noterm
+           integer ofile1(5), ofile2(5), ofile3(5)
+           integer ifile1(5), ifile2(5)
+           integer itraf, isort, iusr, iconhr, iscrn
+        MAXDAY = 5
+
+           call dbstrt(1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
+     +                  1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0)
+
+*  menus - get information from user
+*     irpts = desired reports
+*     ifind = by node/ host
+*     ifind2= originating/terminating/both
+
+          call scrtyp(iscrn,MAXDAY)
+
+          call intro(iscrn)
+
+
+90        call getall(MAXDAY,iscrn,irpts,ibdate,iedate)
+
+          if ((irpts .ne. 1) .and. (irpts .ne. 4))
+     +         go to 100
+
+          call scr12(1,iscrn,ifnd11,ifnd12,
+     +               ihost1,nhost1,ofile1)
+
+100       continue
+
+          if ((irpts .ne. 2) .and. (irpts .ne. 4))
+     +         go to 102
+
+          call scr12(2,iscrn,ifnd21,ifnd22,
+     +               ihost2,nhost2,ofile2)
+
+102       continue
+
+          if ((irpts .ne. 3) .and. (irpts .ne. 4))
+     +         go to 110
+
+          call scr3(iscrn,iusr,itraf,iconhr,isort,
+     +              iterm,noterm,ofile3)
+
+110       continue
+
+          if ((irpts .ne. 1) .and. (irpts .ne. 4))
+     +         go to 112
+
+          ib = ibdate
+
+          call data1(ihost1,nhost1,ib,iedate,irpts,
+     +                ifnd11,ifnd12,iscrn,ofile1,MAXDAY)
+
+112       continue
+
+          if ((irpts .ne. 2) .and. (irpts .ne. 4))
+     +         go to 114
+
+          ib = ibdate
+
+          call data2(ihost2,nhost2,ib,iedate,irpts,
+     +                ifnd21,ifnd22,iscrn,ofile2,MAXDAY)
+
+114       continue
+
+          if ((irpts .ne. 3) .and. (irpts .ne. 4))
+     +         go to 240
+
+          ib = ibdate
+
+          call data3(ib,iedate,iterm,noterm,
+     +               iusr,itraf,iconhr,isort,iscrn,ofile3)
+
+240       continue
+
+999       continue
+          call dbend
+          return
+          end
+
+********************
+*****
+***** subroutine GETDT
+*****         get start and end dates from user
+*****
+********************
+
+          subroutine getdt(IBEG,IEND,MAXDAY)
+
+          integer IBEG, IEND
+
+1000      type 1010
+1010      format(///,
+     +         10X,'***** ',
+     +         'Please input dates in the format YMMDD.',
+     +         ' *****',////,
+     +         25X,'Beginning date:  ',$)
+          read(5,1020) IBEG
+1020      format(A5)
+          type 1030
+1030      format(/,
+     +         25X,'   Ending date:  ',$)
+          read(5,1020) IEND
+
+        decode (5,1035,IBEG)iday1
+1035    format(i5)
+        iday1=iday1+900000
+        decode (5,1035,IEND)iday2
+        iday2=iday2+900000
+        call difdat(iday1,iday2,ndays)
+        ndays=ndays+1
+        if (ndays.le.MAXDAY) goto 1099
+                type 1037,MAXDAY
+1037    format (//,6x,'YOU MAY NOT PROCESS MORE THAN ',i3,
+     +  ' DAYS AT ONE TIME',//)
+        goto 1000
+
+1099      continue
+          return
+          end
+
+********************
+*****
+***** subroutine FOPENn
+*****      opens 1022 NETSTAT files for use
+*****
+********************
+
+          subroutine FOPEN(IBEG, IEND, IFL,NUMFIL)
+
+          integer IBEG, IEND
+          integer IFL, NUMFIL
+          integer FILEA(4), FILEB(4), FILEC(4), FILED(4)
+          integer icnt, dummy, mday
+          integer im1, im2, id1, id2, iy1, iy2
+
+          IFL = 0
+
+          call rtc(dummy,IBEG,1)
+          decode(1,100,dummy)icnt
+          iy1 = icnt
+          call rtc(dummy,IBEG,2)
+          decode(1,100,dummy) icnt
+100       format(I1)
+          im1 = icnt
+          call rtc(dummy,IBEG,3)
+          decode(1,100,dummy) icnt
+          im1 = im1*10 + icnt
+          call rtc(dummy,IBEG,4)
+          decode(1,100,dummy) icnt
+          id1 = icnt
+          call rtc(dummy,IBEG,5)
+          decode(1,100,dummy) icnt
+          id1 = id1*10 + icnt
+          
+          call rtc(dummy,IEND,1)
+          decode(1,100,dummy) iy2
+          call rtc(dummy,IEND,2)
+          decode(1,100,dummy) icnt
+          im2 = icnt
+          call rtc(dummy,IEND,3)
+          decode(1,100,dummy) icnt
+          im2 = im2*10 + icnt
+          call rtc(dummy,IEND,4)
+          decode(1,100,dummy) icnt
+          id2 = icnt
+          call rtc(dummy,IEND,5)
+          decode(1,100,dummy) icnt
+          id2 = id2*10 + icnt
+
+          if (iy1 .gt. iy2) go to 186
+          if (im1 .gt. im2) go to 186
+          if ((id1 .gt. id2) .and. (im1 .eq. im2)) go to 186
+
+          FILEA(1) = '(NETS'
+          FILEA(2) = 'TAT)'
+          FILEA(4) = '.DMS '
+          FILEB(1) = '(NETS'
+          FILEB(2) = 'TAT)'
+          FILEB(4) = '.DMS '
+          FILEC(1) = '(NETS'
+          FILEC(2) = 'TAT)'
+          FILEC(4) = '.DMS '
+          FILED(1) = '(NETS'
+          FILED(2) = 'TAT)'
+          FILED(4) = '.DMS '
+          call stc('A',FILEA,15)
+          call stc('B',FILEB,15)
+          call stc('C',FILEC,15)
+          call stc('D',FILED,15)
+
+          do 110 i = 1, 5
+               call rtc(dummy,IBEG,i)
+               call stc(dummy,FILEA,i+9)
+               call stc(dummy,FILEB,i+9)
+               call stc(dummy,FILEC,i+9)
+               call stc(dummy,FILED,i+9)
+110       continue
+
+          open(24,FILED,input,err=112)
+          NUMFIL = 4
+          close(24)
+          call dbopen(FILEA,FILEB,FILEC,FILED)
+          go to 120
+
+112       continue
+          open(24,FILEC,input,err=114)
+          close(24)
+          NUMFIL = 3
+          call dbopen(FILEA,FILEB,FILEC)
+          go to 120
+
+114       continue
+          open(24,FILEB,input,err=116)
+          close(24)
+          NUMFIL = 2
+          call dbopen(FILEA,FILEB)
+          go to 120
+
+116       continue
+          open(24,FILEA,input,err=118)
+          close(24)
+          NUMFIL = 1
+          call dbopen(FILEA)
+          go to 120
+
+118       continue
+          IFL = 2
+
+120       continue
+
+* increment IBEG by one day
+
+          mday = 30
+          if (im1 .eq. 2) mday = 28
+          if ((im1 .eq. 1) .or. (im1 .eq. 3)) mday = 31
+          if ((im1 .eq. 5) .or. (im1 .eq. 7)) mday = 31
+          if ((im1 .eq. 8) .or. (im1 .eq. 10)) mday = 31
+          if (im1 .eq. 12) mday = 31
+
+          id1 = id1 + 1
+          if (id1 .le. mday) go to 150
+          id1 = 1
+          im1 = im1 + 1
+          if (im1 .le. 12) go to 150
+          im1 = 1
+          iy1 = iy1 + 1
+          
+150       continue
+
+* replace IBEG with incremented date
+          ibl = ' '
+          encode(1,160,dummy) iy1
+160       format(I1)
+          call stc(dummy,IBEG,1)
+          icnt = im1 / 10
+          encode(1,160,dummy) icnt
+          if (eq(ibl,1,dummy,1,1)) dummy = '0'
+          call stc(dummy,IBEG,2)
+          icnt = im1 - (im1/10)*10
+          encode(1,160,dummy) icnt
+          if (eq(ibl,1,dummy,1,1)) dummy = '0'
+          call stc(dummy,IBEG,3)
+          icnt = id1 / 10
+          encode(1,160,dummy) icnt
+          if (eq(ibl,1,dummy,1,1)) dummy = '0'
+          call stc(dummy,IBEG,4)
+          icnt = id1 - (id1/10)*10
+          encode(1,160,dummy) icnt
+          if (eq(ibl,1,dummy,1,1)) dummy = '0'
+          call stc(dummy,IBEG,5)
+
+          go to 199
+
+186       continue
+          IFL = 1
+
+199       continue
+          return
+          end
+
+********************
+*****
+***** subroutine DATA1
+*****      collects data for report 1
+*****      and writes reports to files
+*****
+********************
+
+          subroutine data1(ihost,nohost,ibeg,iend,irpts,
+     +                      ifind, ifind2,iscrn,ofile,maxday)
+
+          integer ihour(24), ichar(24), inum(24)
+          integer maxin, maxout, iscrn
+        integer srange, erange, maxday, dates(10), cday
+          integer iline(10), iltype(10,2), ofile(5)
+          integer iday, itime1, itime2, totbw(10)
+          integer mcin(5,24,60), mcout(5,24,60), mctot(5,24,60)
+          integer muser(5,24,60), mxin, mxout, mxtot, cday
+          integer outc2, inc2, outchr, inchr
+          integer isel, istype(2), iuser(5,24), imin(5,24)
+          integer ionum, innum
+          real ioave, inave
+          integer inc(1440), outc(1440), ifl, nofile
+          integer ibeg, iend, ihost(1000), nohost
+          real temp1, temp2, temp3, temp4, temp5
+
+
+***  2.4 kbps line, 50%
+          iline(1) = 2400/2
+          iltype(1,1) = '  2.'
+          iltype(1,2) = '4'
+          totbw(1) = 2400
+***  4.8 kbps line, 50%
+          iline(2) = 4800/2
+          iltype(2,1) = '  4.'
+          iltype(2,2) = '8'
+          totbw(2) = 4800
+***  9.6 kbps line, 50%
+          iline(3) = 9600/2
+          iltype(3,1) = '  9.'
+          iltype(3,2) = '6'
+          totbw(3) = 9600
+***  14.4 kbps line, 60%
+          iline(4) = (14400*6)/10
+          iltype(4,1) = '  14'
+          iltype(4,2) = '.4'
+          totbw(4) = 14400
+***  19.2 kbps line, 70%
+          iline(5) = (19200*7)/10
+          iltype(5,1) = '  19'
+          iltype(5,2) = '.2'
+          totbw(5) = 19200
+***  2 X 19.2 kbps line (38.4), 70%
+          iline(6) = (38400*7)/10
+          iltype(6,1) = '2 X '
+          iltype(6,2) = '19.2'
+          totbw(6) = 38400
+***  56 kbps line, 80%
+          iline(7) = (56000*8)/10
+          iltype(7,1) = '   5'
+          iltype(7,2) = '6'
+          totbw(7) = 56000
+***  2 X 56 kbps line (112), 80%
+          iline(8) = (112000*8)/10
+          iltype(8,1) = ' 2 X'
+          iltype(8,2) = ' 56'
+          totbw(8) = 112000
+***  over 56 kbps
+          iline(9) = 99999999
+          iltype(9,1) = 'over'
+          iltype(9,2) = ' 56'
+
+
+               maxin = 0
+               maxout = 0
+               inave = 0.0
+               ioave = 0.0
+               innum = 0
+               ionum = 0
+
+ccccc
+c Initalize the arrays that accumulate the data over the date range.
+ccccc
+              do 215 cday = 1,maxday
+               do 214 ii = 1, 24
+                    iuser(cday,ii) = 0
+                    imin(cday,ii) = 0
+                    do 218 jj = 1, 60
+                         muser(cday,ii,jj) = 0
+                         mcin(cday,ii,jj) = 0
+                         mcout(cday,ii,jj) = 0
+                         mctot(cday,ii,jj) = 0
+218                 continue
+214            continue
+215          continue
+
+          isday = ibeg
+          decode(5,204,ibeg)iday1
+204       format(i5)
+          srange = iday1 + 900000
+        decode (5,204,iend)iday
+          erange = iday + 900000
+ccccc
+c Place all of the dates in the date range into the dates array
+ccccc
+        idate = srange
+        dates(1)=srange
+        do 210 index = 1,maxday
+                call chgdat(idate,index)
+                if (idate.gt.erange) goto 15
+                dates(index+1) = idate
+                idate = dates(1)
+210     continue
+
+ccccc
+c Clear the screen, tell the user what is happening, and open the
+c output file.
+ccccc
+15        call clear(iscrn)
+
+          type 20
+20        format(//////////,
+     +           20x,'processing data for report 1',//)
+
+          open(20,ofile,output)
+
+
+          write(20,504)
+504       format(10x,'line',7x,'estimated kbps',6x,
+     +           '% util bndw',5x,'% over',/,
+     +           1x,'host',2x,'recommended',3x,'maximum',
+     +           1x,'pk.avg',5x,'total',1x,'allowed',
+     +           3x,'breakpt',/)
+
+
+CCCCC
+C PROCESS EACH HOST THAT THE USER SPECIFIED
+CCCCC
+100     DO 220 KK = 1, NOHOST
+
+ccccc
+c Label 200 marks the beginning of the loop to process all of the
+c dates in the date range.
+ccccc
+200       continue
+
+ccccc
+c Determine the date to process and then open all of the Netstat
+c files for that date.
+ccccc
+          ikeep = ibeg
+          decode(5,204,ibeg)iday
+          iday = iday + 900000
+
+          call fopen(ibeg, iend, ifl, nofile)
+
+ccccc
+c if 'ifl' = 1, then all of the dates in the date range have been
+c processed.
+c if 'ifl' = 0, then some files have been opened for the day, continue.
+c else, there are no files in the Netstat directory for that date,
+c go look at the next date.
+ccccc
+          if (ifl .eq. 1) go to 500
+          if (ifl .eq. 0) go to 208
+          type 206, ikeep
+206       format(//,'***** ',a5,' files do not exist ',
+     +           'in the NETSTAT directory *****',//)
+          go to 200
+
+208       continue
+
+          inoday = inoday + 1
+
+
+c       ccccc
+c       c For each host, go through each netstat file getting records
+c       c for the host.
+c       ccccc
+               do 230 jj = 1, nofile
+                    call dbset(jj)
+                    call select(ihost(kk),ifind,ifind2)
+                    call dbfind('FILE','NTERM2')
+239             call dbnrec(irec)
+240                 continue
+                    call dbgrec($232)
+                        icount = icount +1
+                    call dbval('INPUTCHAR',inchr,
+     +                         'OUTPUTCHAR',outchr,
+     +                         'STARTTIME',istime,
+     +                         'ENDTIME',ietime,
+     +                         'STARTDATE',isdate,
+     +                         'ENDDATE',iedate,
+     +                         'TOTMIN',inomin,
+     +                         'TOTSEC',itsec)
+
+c       ccccc
+c       c If the connect time in seconds and the inputchars and the
+c       c outputchars are all zero then this is probably a 
+c       c duplicate record caused by going through a ctm, disregard
+c       c this record.
+c       ccccc
+        if ( itsec.eq.0 .and. inchr.eq.0 .and. outchr.eq.0 ) goto 240
+
+
+ccccc
+c Break the start and end times into their hour and minute
+c component parts.
+ccccc
+                    ih1 = ietime / 100
+                    ih2 = istime / 100
+                    im1 = ietime - (ih1*100)
+                    im2 = istime - (ih2*100)
+
+ccccc
+c Make sure that the connect time is not zero.  Minimum connect
+c time = 1 minute.
+ccccc
+                    if (inomin .eq. 0) inomin = 1
+ccccc
+c Determine the average number of input, output, and total characters
+c per minute ocurred during the session.
+ccccc
+                    inc2 = inchr / inomin
+                    outc2 = outchr / inomin
+                    itot = inc2 + outc2
+
+                    
+c               ccccc
+c               c
+c               c Start by ignoring any record that ends
+c               c before the range being processed starts, or that
+c               c starts after the range being processed ends.
+c               ccccc
+                if ( isdate .gt. erange. or. iedate. lt. srange)
+     +                  goto 240
+
+c               ccccc
+c               c If the session started before the range starts
+c               c or ended after the range ends, reset the start time
+c               c and date or the end time and date.
+c               ccccc
+                igood = igood+1
+                if ( isdate.ge.srange) goto 222
+                        isdate = srange
+                        istime = 0
+                        goto 224
+
+222             if ( iedate.le.erange) goto 224
+                        iedate = erange
+                        ietime = 2359
+
+c               ccccc
+c               c Now ccheck if the session ends on the
+c               c same day that it started.
+c               ccccc
+224             if ( isdate.ne.iedate) goto 226
+                        do 223 index = 1,maxday
+                                if (isdate.eq.dates(index))goto 225
+223                     continue
+225                     call increm( index, istime,ietime,iuser,imin,
+     +                          muser,mcin,mcout,mctot,inc2,outc2,
+     +                          itot)
+c               ccccc
+c               c Finsihed with this session. Go get next one.
+c               ccccc
+                goto 240
+
+c               ccccc
+c               c This session lasts more than one day.
+c               c It will have two partial days to process and 0 or
+c               c more full days.  First determine the
+c               c number of full days to process.
+c               ccccc
+226             call difdat(iedate,isdate,numdays)
+C               ccccc
+c               c Add one day to get the number of days in the range
+c               c defined by the start and end dates.  Then substract
+c               c two days, one for the start date and one for the 
+c               c end dates, both of which have already been processed.
+c               ccccc
+                numdays = numdays + 1 - 2
+
+c               ccccc
+c               c Now process the two partial days. One for
+c               c the startday and one for the end day.
+c               ccccc
+                        do 227 indexs = 1,maxday
+                                if (isdate.eq.dates(indexs))goto 228
+227                     continue
+228                     call increm (indexs,istime,2359,iuser,imin,
+     +                     muser,mcin,mcout,mctot,inc2,outc2,itot)
+                        do 229 indexe = 1,maxday
+                                if (iedate.eq.dates(indexe)) got
+229                     continue
+231                     call increm (indexe,0,ietime,iuser,imin,
+     +                      muser,mcin,mcout,mctot,inc2,outc2,itot)
+c               ccccc
+c               c Now process all of the full days.
+c               ccccc
+
+                if (numdays .eq. 0) goto 236
+                do 235 i = 1,numdays
+                        call increm(indexs+i,0,2359,iuser,imin,
+     +                          muser,mcin,mcout,mctot,inc2,outc2,itot)
+235             continue
+
+c               ccccc
+c               c Finished with this session. go get next one.
+c               ccccc
+236             goto 240
+
+232                 continue
+
+
+c               ccccc
+c               c Now process orig values if any
+c               ccccc
+                    call dbset(jj)
+                    call dbfind('FILE','NORIG2')
+439             call dbnrec(irec)
+440                 continue
+                    call dbgrec($432)
+                        icount = icount +1
+                    call dbval('INPUTCHAR',inchr,
+     +                         'OUTPUTCHAR',outchr,
+     +                         'STARTTIME',istime,
+     +                         'ENDTIME',ietime,
+     +                         'STARTDATE',isdate,
+     +                         'ENDDATE',iedate,
+     +                         'TOTMIN',inomin,
+     +                         'TOTSEC',itsec)
+
+c       ccccc
+c       c If the connect time in seconds and the inputchars and the
+c       c outputchars are all zero then this is probably a 
+c       c duplicate record caused by going through a ctm, disregard
+c       c this record.
+c       ccccc
+        if ( itsec.eq.0 .and. inchr.eq.0 .and. outchr.eq.0 ) goto 440
+
+
+ccccc
+c Break the start and end times into their hour and minute
+c component parts.
+ccccc
+                    ih1 = ietime / 100
+                    ih2 = istime / 100
+                    im1 = ietime - (ih1*100)
+                    im2 = istime - (ih2*100)
+
+ccccc
+c Make sure that the connect time is not zero.  Minimum connect
+c time = 1 minute.
+ccccc
+                    if (inomin .eq. 0) inomin = 1
+ccccc
+c Determine the average number of input, output, and total characters
+c per minute ocurred during the session.
+ccccc
+                    inc2 = inchr / inomin
+                    outc2 = outchr / inomin
+                    itot = inc2 + outc2
+
+                    
+c               ccccc
+c               c
+c               c Start by ignoring any record that ends
+c               c before the range being processed starts, or that
+c               c starts after the range being processed ends.
+c               ccccc
+                if ( isdate .gt. erange. or. iedate. lt. srange)
+     +                  goto 440
+
+c               ccccc
+c               c If the session started before the range starts
+c               c or ended after the range ends, reset the start time
+c               c and date or the end time and date.
+c               ccccc
+                igood = igood+1
+                if ( isdate.ge.srange) goto 422
+                        isdate = srange
+                        istime = 0
+                        goto 424
+
+422             if ( iedate.le.erange) goto 424
+                        iedate = erange
+                        ietime = 2359
+
+c               ccccc
+c               c Now ccheck if the session ends on the
+c               c same day that it started.
+c               ccccc
+424             if ( isdate.ne.iedate) goto 426
+                        do 423 index = 1,maxday
+                                if (isdate.eq.dates(index))goto 425
+423                     continue
+425                     call increm( index, istime,ietime,iuser,imin,
+     +                          muser,mcin,mcout,mctot,inc2,outc2,
+     +                          itot)
+c               ccccc
+c               c Finsihed with this session. Go get next one.
+c               ccccc
+                goto 440
+
+c               ccccc
+c               c This session lasts more than one day.
+c               c It will have two partial days to process and 0 or
+c               c more full days.  First determine the
+c               c number of full days to process.
+c               ccccc
+426             call difdat(iedate,isdate,numdays)
+C               ccccc
+c               c Add one day to get the number of days in the range
+c               c defined by the start and end dates.  Then substract
+c               c two days, one for the start date and one for the 
+c               c end dates, both of which have already been processed.
+c               ccccc
+                numdays = numdays + 1 - 2
+
+c               ccccc
+c               c Now process the two partial days. One for
+c               c the startday and one for the end day.
+c               ccccc
+                        do 427 indexs = 1,maxday
+                                if (isdate.eq.dates(indexs))goto 428
+427                     continue
+428                     call increm (indexs,istime,2359,iuser,imin,
+     +                     muser,mcin,mcout,mctot,inc2,outc2,itot)
+                        do 429 indexe = 1,maxday
+                                if (iedate.eq.dates(indexe)) goto 431
+429                     continue
+431                     call increm (indexe,0,ietime,iuser,imin,
+     +                    muser,mcin,mcout,mctot,inc2,outc2,itot)
+c               ccccc
+c               c Now process all of the full days.
+c               ccccc
+
+                if (numdays .eq. 0) goto 436
+                do 435 i = 1,numdays
+                        call increm(indexs+i,0,2359,iuser,imin,
+     +                          muser,mcin,mcout,mctot,inc2,outc2,itot)
+435             continue
+
+c               ccccc
+c               c Finished with this session. go get next one.
+c               ccccc
+436             goto 440
+
+c       ccccc
+c       c Finished with all sessions for this file
+c       ccccc
+432                 continue
+c       ccccc
+c       c Go process next file for this day
+c       ccccc
+230     continue
+c       ccccc
+c       c Finished with all of the files for this day.
+c       c Go process next day of date range
+c       ccccc
+        DO 270 I = 1,NOFILE
+        CALL DBCLOS
+270     CONTINUE
+        GOTO 200
+ccccc
+c Finished with all of the dates in the date range.
+ccccc
+500     continue
+
+
+ccccc
+c Find the max input and output for this host over the date range
+ccccc
+
+        do 505 iii = 1,maxday
+               do 274 ii = 1, 24
+                    maxus = 0
+                    mxin = 0
+                    mxout = 0
+                    mxtot = 0
+                    do 284 jj = 1, 60
+                         if (muser(iii,ii,jj) .gt. maxus) 
+     +                        maxus = muser(iii,ii,jj)
+                         if (mcin(iii,ii,jj) .gt. mxin)
+     +                        mxin = mcin(iii,ii,jj)
+                         if (mcout(iii,ii,jj) .gt. mxout)
+     +                        mxout = mcout(iii,ii,jj)
+                         if (mctot(iii,ii,jj) .gt. mxtot)
+     +                        mxtot = mctot(iii,ii,jj)
+284                 continue
+
+                    if (maxin .lt. mxin) maxin = mxin
+                    if (maxout .lt. mxout) maxout = mxout
+                    if (mxin .eq. 0) go to 237
+                    inave = inave + mxin
+                    innum = innum + 1
+237                 continue
+                    if (mxout .eq. 0) go to 238
+                    ioave = ioave + mxout
+                    ionum = ionum + 1
+238                 continue
+
+274            continue
+505     continue
+
+c               ccccc
+c               c Find the average inputchars and avterage outputchars
+c               ccccc
+               if (innum .eq. 0) innum = 1
+               if (ionum .eq. 0) ionum = 1
+               imax = 0
+               ioave = ioave / ionum
+               inave = inave / innum
+
+c               ccccc
+c               c Find the max of the max input and max output
+c               ccccc
+               imax = maxin
+               if (imax .lt. maxout) imax = maxout
+
+c               ccccc
+c               c Find the max of the avg input and avg output
+c               ccccc
+               temp5 = inave
+               if (maxin .lt. maxout)
+     +              temp5 = ioave
+
+C               ccccc
+c               c Multiply the max bps times 1.25 TO ADD IN THE PACKET
+c               c OVERHEAD CHARACTERS.
+c               ccccc
+                imax = imax * 1.25
+
+c               ccccc
+c               c convert the max and avg values to KBPS
+c               c Also, convert the max value to BPS
+c               ccccc
+               temp5 = (temp5 * 8.0) / (60*1000)
+               temp2 = (imax * 8.0) / (60.0 * 1000.0)
+               imax = (imax * 8) / 60
+
+c               ccccc
+c               c Find the minimum bandwidth whose available bps rate
+c               c will meet the bps requirement for this host
+c               ccccc
+               jj = 0
+530            continue
+               jj = jj + 1
+               if (imax .gt. iline(jj)) go to 530
+
+c               ccccc
+c               c Determine the % utilization that the bps of this host
+c               c is of the allowed bps for the recommented bandwidth.
+c               ccccc
+               temp1 = (imax*100.0) / iline(jj)
+
+c                       ccccc
+c               c Determine the % utilization that the bps of this host
+c               c is of the total bps for the reommended bandwidth.
+c               ccccc
+               temp3 = (imax*100.0) / totbw(jj)
+
+c               ccccc
+c               c Look at the next lower bandwidth than the one
+c               c recommended and determine how much over the
+c               c allowd bandwidth the bps for this host was.
+c               ccccc
+               ip = 0
+               if (jj .gt. 1) ip = iline(jj-1)
+               ip = iline(jj) - ip
+               ip2 = imax
+               if (jj .gt. 1) ip2 = imax - iline(jj - 1)
+               temp4 = (ip2*100.0) / (ip*1.0)
+
+               write(20,540) ihost(kk),iltype(jj,1),
+     +                       iltype(jj,2),temp2,temp5,
+     +                       temp3,temp1,temp4
+540            format(i5,4x,2a4,4x,f6.2,2x,f6.2,4x,f6.2,
+     +                       2x,f6.2,4x,f6.2)
+
+ccccc
+c Process the next host
+ccccc
+              do 315 iii = 1,maxday
+               do 314 ii = 1, 24
+                    iuser(iii,ii) = 0
+                    imin(iii,ii) = 0
+                    do 318 jj = 1, 60
+                         muser(iii,ii,jj) = 0
+                         mcin(iii,ii,jj) = 0
+                         mcout(iii,ii,jj) = 0
+                         mctot(iii,ii,jj) = 0
+318                 continue
+314            continue
+315          continue
+        maxin = 0
+        maxout = 0
+        inave = 0.0
+        ioave = 0.0
+        innum = 0
+        ionum = 0
+C       CCCCC
+C       C RESET PROCESS DATE TO BEGINNING OF DATE RANGE
+C       CCCCC
+        ibeg = isday
+220     continue
+
+ccccc
+c Finished with all hosts
+ccccc
+999       continue
+
+          call delet('NTERM2.DMV',ijunk)
+          call delet('NORIG2.DMV',ijunk)
+
+          return
+          end
+
+********************
+*****
+***** subroutine DATA2
+*****      collects data for report 2
+*****      and writes reports to files
+*****
+********************
+
+          subroutine data2(ihost,nohost,ibeg,iend,irpts,
+     +                      ifind, ifind2,iscrn, ofile, maxday)
+
+          integer ihour(24), ichar(24), inum(24)
+          integer maxin, maxout, iscrn, srange, erange
+          integer iday, itime1, itime2, maxday, dates(10), cday
+          integer mcin(5,24,60), mcout(5,24,60), mctot(5,24,60)
+          integer muser(5,24,60), mxin, mxout, mxtot
+          integer outc2, inc2, outchr, inchr
+          integer isel, istype(2), iuser(5,24), imin(5,24)
+          real rsin, rsout,rstot, rschr
+          real rcin, rcout, rctot, rcchr
+          real rcmax
+          integer isday, ishr, istusr
+          integer ismusr, ismax
+          integer icday, ichr, ictusr
+          integer icmusr
+          integer inc(1440), outc(1440), ifl, nofile
+          integer ibeg, iend, ihost(1000), nohost
+          integer ofile(5)
+
+
+ccccc
+c Initalize the arrays that accumulate the data over the date range.
+ccccc
+              do 215 cday = 1,maxday
+               do 214 ii = 1, 24
+                    iuser(cday,ii) = 0
+                    imin(cday,ii) = 0
+                    do 218 jj = 1, 60
+                         muser(cday,ii,jj) = 0
+                         mcin(cday,ii,jj) = 0
+                         mcout(cday,ii,jj) = 0
+                         mctot(cday,ii,jj) = 0
+218                 continue
+214            continue
+215          continue
+
+          decode(5,204,ibeg)iday
+204       format(i5)
+          srange = iday + 900000
+        decode (5,204,iend)iday
+          erange = iday + 900000
+ccccc
+c Place all of the dates in the date range into the dates array
+ccccc
+        idate = srange
+        dates(1)=srange
+        do 210 index = 1,maxday
+                call chgdat(idate,index)
+                if (idate.gt.erange) goto 15
+                dates(index+1) = idate
+                idate = dates(1)
+210     continue
+
+ccccc
+c Clear the screen, tell the user what is happening, and open the
+c output file.
+ccccc
+15        call clear(iscrn)
+
+          type 20
+20        format(//////////,
+     +           20x,'processing data for report 2',//)
+
+          open(22,ofile,output)
+
+ccccc
+c Label 200 marks the beginning of the loop to process all of the
+c dates in the date range.
+ccccc
+200       continue
+
+ccccc
+c Determine the date to process and then open all of the Netstat
+c files for that date.
+ccccc
+          ikeep = ibeg
+          decode(5,204,ibeg)iday
+          iday = iday + 900000
+
+          call fopen(ibeg, iend, ifl, nofile)
+
+ccccc
+c if 'ifl' = 1, then all of the dates in the date range have been
+c processed.
+c if 'ifl' = 0, then some files have been opened for the day, continue.
+c else, there are no files in the Netstat directory for that date,
+c go look at the next date.
+ccccc
+          if (ifl .eq. 1) go to 500
+          if (ifl .eq. 0) go to 208
+          type 206, ikeep
+206       format(//,'***** ',a5,' files do not exist ',
+     +           'in the NETSTAT directory *****',//)
+          go to 200
+
+208       continue
+
+          inoday = inoday + 1
+
+ccccc
+c Process each host that the user specified.
+ccccc
+          do 220 kk = 1, nohost
+
+c       ccccc
+c       c For each host, go through each netstat file getting records
+c       c for the host.
+c       ccccc
+               do 230 jj = 1, nofile
+                    call dbset(jj)
+                    call select(ihost(kk),ifind,ifind2)
+                    call dbfind('FILE','NTERM2')
+239             call dbnrec(irec)
+240                 continue
+                    call dbgrec($232)
+                        icount = icount +1
+                    call dbval('INPUTCHAR',inchr,
+     +                         'OUTPUTCHAR',outchr,
+     +                         'STARTTIME',istime,
+     +                         'ENDTIME',ietime,
+     +                         'STARTDATE',isdate,
+     +                         'ENDDATE',iedate,
+     +                         'TOTMIN',inomin,
+     +                         'TOTSEC',itsec)
+
+c       ccccc
+c       c If the connect time in seconds and the inputchars and the
+c       c outputchars are all zero then this is probably a 
+c       c duplicate record caused by going through a ctm, disregard
+c       c this record.
+c       ccccc
+        if ( itsec.eq.0 .and. inchr.eq.0 .and. outchr.eq.0 ) goto 240
+
+
+ccccc
+c Break the start and end times into their hour and minute
+c component parts.
+ccccc
+                    ih1 = ietime / 100
+                    ih2 = istime / 100
+                    im1 = ietime - (ih1*100)
+                    im2 = istime - (ih2*100)
+
+ccccc
+c Make sure that the connect time is not zero.  Minimum connect
+c time = 1 minute.
+ccccc
+                    if (inomin .eq. 0) inomin = 1
+ccccc
+c Determine the average number of input, output, and total characters
+c per minute ocurred during the session.
+ccccc
+                    inc2 = inchr / inomin
+                    outc2 = outchr / inomin
+                    itot = inc2 + outc2
+
+                    
+c               ccccc
+c               c
+c               c Start by ignoring any record that ends
+c               c before the range being processed starts, or that
+c               c starts after the range being processed ends.
+c               ccccc
+                if ( isdate .gt. erange. or. iedate. lt. srange)
+     +                  goto 240
+
+c               ccccc
+c               c If the session started before the range starts
+c               c or ended after the range ends, reset the start time
+c               c and date or the end time and date.
+c               ccccc
+                igood = igood+1
+                if ( isdate.ge.srange) goto 222
+                        isdate = srange
+                        istime = 0
+                        goto 224
+
+222             if ( iedate.le.erange) goto 224
+                        iedate = erange
+                        ietime = 2359
+
+c               ccccc
+c               c Now ccheck if the session ends on the
+c               c same day that it started.
+c               ccccc
+224             if ( isdate.ne.iedate) goto 226
+                        do 223 index = 1,maxday
+                                if (isdate.eq.dates(index))goto 225
+223                     continue
+225                     call increm( index, istime,ietime,iuser,imin,
+     +                          muser,mcin,mcout,mctot,inc2,outc2,
+     +                          itot)
+c               ccccc
+c               c Finsihed with this session. Go get next one.
+c               ccccc
+                goto 240
+
+c               ccccc
+c               c This session lasts more than one day.
+c               c It will have two partial days to process and 0 or
+c               c more full days.  First determine the
+c               c number of full days to process.
+c               ccccc
+226             call difdat(iedate,isdate,numdays)
+C               ccccc
+c               c Add one day to get the number of days in the range
+c               c defined by the start and end dates.  Then substract
+c               c two days, one for the start date and one for the 
+c               c end dates, both of which have already been processed.
+c               ccccc
+                numdays = numdays + 1 - 2
+
+c               ccccc
+c               c Now process the two partial days. One for
+c               c the startday and one for the end day.
+c               ccccc
+                        do 227 indexs = 1,maxday
+                                if (isdate.eq.dates(indexs))goto 228
+227                     continue
+228                     call increm (indexs,istime,2359,iuser,imin,
+     +                          muser,mcin,mcout,mctot,inc2,outc2,itot)
+                        do 229 indexe = 1,maxday
+                                if (iedate.eq.dates(indexe)) goto 231
+229                     continue
+231                     call increm (indexe,0,ietime,iuser,imin,
+     +                          muser,mcin,mcout,mctot,inc2,outc2,itot)
+c               ccccc
+c               c Now process all of the full days.
+c               ccccc
+
+                if (numdays .eq. 0) goto 236
+                do 235 i = 1,numdays
+                        call increm(indexs+i,0,2359,iuser,imin,
+     +                          muser,mcin,mcout,mctot,inc2,outc2,itot)
+235             continue
+
+c               ccccc
+c               c Finished with this session. go get next one.
+c               ccccc
+236             goto 240
+
+232                 continue
+
+
+c               ccccc
+c               c Now process orig values if any
+c               ccccc
+                    call dbset(jj)
+                    call dbfind('FILE','NORIG2')
+439             call dbnrec(irec)
+440                 continue
+                    call dbgrec($432)
+                        icount = icount +1
+                    call dbval('INPUTCHAR',inchr,
+     +                         'OUTPUTCHAR',outchr,
+     +                         'STARTTIME',istime,
+     +                         'ENDTIME',ietime,
+     +                         'STARTDATE',isdate,
+     +                         'ENDDATE',iedate,
+     +                         'TOTMIN',inomin,
+     +                         'TOTSEC',itsec)
+
+c       ccccc
+c       c If the connect time in seconds and the inputchars and the
+c       c outputchars are all zero then this is probably a 
+c       c duplicate record caused by going through a ctm, disregard
+c       c this record.
+c       ccccc
+        if ( itsec.eq.0 .and. inchr.eq.0 .and. outchr.eq.0 ) goto 440
+
+
+ccccc
+c Break the start and end times into their hour and minute
+c component parts.
+ccccc
+                    ih1 = ietime / 100
+                    ih2 = istime / 100
+                    im1 = ietime - (ih1*100)
+                    im2 = istime - (ih2*100)
+
+ccccc
+c Make sure that the connect time is not zero.  Minimum connect
+c time = 1 minute.
+ccccc
+                    if (inomin .eq. 0) inomin = 1
+ccccc
+c Determine the average number of input, output, and total characters
+c per minute ocurred during the session.
+ccccc
+                    inc2 = inchr / inomin
+                    outc2 = outchr / inomin
+                    itot = inc2 + outc2
+
+                    
+c               ccccc
+c               c
+c               c Start by ignoring any record that ends
+c               c before the range being processed starts, or that
+c               c starts after the range being processed ends.
+c               ccccc
+                if ( isdate .gt. erange. or. iedate. lt. srange)
+     +                  goto 440
+
+c               ccccc
+c               c If the session started before the range starts
+c               c or ended after the range ends, reset the start time
+c               c and date or the end time and date.
+c               ccccc
+                igood = igood+1
+                if ( isdate.ge.srange) goto 422
+                        isdate = srange
+                        istime = 0
+                        goto 424
+
+422             if ( iedate.le.erange) goto 424
+                        iedate = erange
+                        ietime = 2359
+
+c               ccccc
+c               c Now ccheck if the session ends on the
+c               c same day that it started.
+c               ccccc
+424             if ( isdate.ne.iedate) goto 426
+                        do 423 index = 1,maxday
+                                if (isdate.eq.dates(index))goto 425
+423                     continue
+425                     call increm( index, istime,ietime,iuser,imin,
+     +                          muser,mcin,mcout,mctot,inc2,outc2,
+     +                          itot)
+c               ccccc
+c               c Finsihed with this session. Go get next one.
+c               ccccc
+                goto 440
+
+c               ccccc
+c               c This session lasts more than one day.
+c               c It will have two partial days to process and 0 or
+c               c more full days.  First determine the
+c               c number of full days to process.
+c               ccccc
+426             call difdat(iedate,isdate,numdays)
+C               ccccc
+c               c Add one day to get the number of days in the range
+c               c defined by the start and end dates.  Then substract
+c               c two days, one for the start date and one for the 
+c               c end dates, both of which have already been processed.
+c               ccccc
+                numdays = numdays + 1 - 2
+
+c               ccccc
+c               c Now process the two partial days. One for
+c               c the startday and one for the end day.
+c               ccccc
+                        do 427 indexs = 1,maxday
+                                if (isdate.eq.dates(indexs))goto 428
+427                     continue
+428                     call increm (indexs,istime,2359,iuser,imin,
+     +                          muser,mcin,mcout,mctot,inc2,outc2,itot)
+                        do 429 indexe = 1,maxday
+                                if (iedate.eq.dates(indexe)) goto 431
+429                     continue
+431                     call increm (indexe,0,ietime,iuser,imin,
+     +                          muser,mcin,mcout,mctot,inc2,outc2,itot)
+c               ccccc
+c               c Now process all of the full days.
+c               ccccc
+
+                if (numdays .eq. 0) goto 436
+                do 435 i = 1,numdays
+                        call increm(indexs+i,0,2359,iuser,imin,
+     +                          muser,mcin,mcout,mctot,inc2,outc2,itot)
+435             continue
+
+c               ccccc
+c               c Finished with this session. go get next one.
+c               ccccc
+436             goto 440
+
+432                 continue
+230     CONTINUE
+220     continue
+        DO 270 I = 1,NOFILE
+        CALL DBCLOS
+270     CONTINUE
+        GOTO 200
+500     continue
+
+        do 510 cday = 1, inoday
+               write(22,272) 
+272            format('1',//,
+     +              19x,'max',/,
+     +              12x,'total',2x,'sim',16x,
+     +              'maximum cps',19x,'connect',/,
+     +              1x,'date',2x,'hour',1x,'users',1x,'users',
+     +              12x,'in',9x,'out',7x,'total',9x,'hours',//)
+
+               do 274 ii = 1, 24
+                    maxus = 0
+                    mxin = 0
+                    mxout = 0
+                    mxtot = 0
+                    do 284 jj = 1, 60
+                         if (muser(cday,ii,jj) .gt. maxus) 
+     +                        maxus = muser(cday,ii,jj)
+                         if (mcin(cday,ii,jj) .gt. mxin)
+     +                        mxin = mcin(cday,ii,jj)
+                         if (mcout(cday,ii,jj) .gt. mxout)
+     +                        mxout = mcout(cday,ii,jj)
+                         if (mctot(cday,ii,jj) .gt. mxtot)
+     +                        mxtot = mctot(cday,ii,jj)
+284                 continue
+                    rxin = mxin / 60.0
+                    rxout = mxout/60.0
+                    rxtot = mxtot / 60.0
+                    rjunk = imin(cday,ii)/60.0
+
+                    if (ismax .ge. maxus) go to 524
+                    ismax = maxus
+                    isday = dates(cday)
+                    ishr = ii
+                    istusr = iuser(cday,ii)
+                    ismusr = maxus
+                    rsin = rxin
+                    rsout = rxout
+                    rstot = rxtot
+                    rschr = rjunk
+
+524                 continue
+
+                    if (rcmax .ge. rjunk) go to 528
+                    rcmax = rjunk
+                    icday = dates(cday)
+                    ichr = ii
+                    ictusr = iuser(cday,ii)
+                    icmusr = maxus
+                    rcin = rxin
+                    rcout = rxout
+                    rctot = rxtot
+                    rcchr = rjunk
+
+528                 continue
+
+                    if (maxin .lt. mxin) maxin = mxin
+                    if (maxout .lt. mxout) maxout = mxout
+
+                    write(22,276) dates(cday),ii,iuser(cday,ii), maxus,
+     +                   rxin, rxout, rxtot, rjunk
+276                 format(1x,i6,2x,i2,2x,i4,2x,i4,4x,f10.2,2x,
+     +                   f10.2,2x,f10.2,4x,f10.2)
+
+274            continue
+510     continue
+               write(22,511) 
+511            format('1',
+     +                5X,'maximum of maximum simultaneous ',
+     +                'users',//)
+           
+               write(22,520) isday, ishr, istusr,
+     +                       ismusr, rsin, rsout,
+     +                       rstot, rschr
+520            format(19x,'max',/,
+     +              12x,'total',2x,'sim',16x,
+     +              'maximum cps',19x,'connect',/,
+     +              1x,'date',2x,'hour',1x,'users',1x,'users',
+     +              12x,'in',9x,'out',7x,'total',9x,'hours',//,
+     +              1x,i6,2x,i2,2x,i4,2x,i4,4x,f10.2,2x,
+     +                   f10.2,2x,f10.2,4x,f10.2)
+
+               write(22,530)
+530            format(//,5X,'maximum of connect hours',//)
+
+               write(22,520) icday, ichr, ictusr,
+     +                       icmusr, rcin, rcout,
+     +                       rctot, rcchr
+
+          write(22,700)
+700       format('1')
+
+          close(22)
+
+          call delet('NTERM2.DMV',ijunk)
+          call delet('NORIG2.DMV',ijunk)
+
+          return
+          end
+
+********************
+*****
+***** subroutine SELECT
+*****        selects records for calculations in DATA1 and DATA2
+*****
+********************
+
+          subroutine select(ival,isel1,isel2)
+
+          integer isel1, ival, isel2
+
+          call dbfind('ORIGNODE','EQ',-1)
+          call dbsave('norig2')
+          call dbsave('nterm2')
+* node
+          if (isel1 .ne. 1) go to 250
+          if (isel2 .eq. 2) go to 220
+
+* orignode
+          call dbfind('ORIGNODE','EQ',ival)
+          call dbsave('norig2')
+
+          if (isel2 .eq. 1) go to 299
+
+220       continue
+
+* termnode
+          call dbfind('all')
+          call dbsrch('LAST','AND','TERMNODE','EQ',ival)
+          call dbsave('nterm2')
+          go to 299
+
+* host
+250       continue
+
+          if (isel2 .eq. 2) go to 260
+
+* orighost
+          call dbfind('ORIGHOST','EQ',ival)
+          call dbsave('norig2')
+
+          if (isel2 .eq. 1) go to 299
+
+260       continue
+
+* termhost
+          call dbfind('TERMHOST','EQ',ival)
+          call dbsave('nterm2')
+
+299       continue
+          return
+          end
+
+********************
+*****
+***** subroutine data3
+*****      collects data from NETSTAT files for report 3
+*****      and writes report to file
+*****
+********************
+
+          subroutine data3(ibegdt, ienddt, iterm,
+     +                     noterm, iusr, itrth, ichth,
+     +                     isort,iscrn,ofile)
+
+          integer iusr, itrth, ichth, isort, iscrn
+          integer ibegdt, ienddt, iterm(1000)
+          integer noterm, ofile(5)
+          integer NOFILE, ITRAF, ICFILE, MAXFIL
+          integer IMIN, ICHAR, INODE, IHOST, TEMP
+          integer KCHAR, NSESS, ICONHR
+          integer TSESS, INPA,INXX, IREGN, JFILE(4)
+          integer IFILE(4,4),ITFILE, DFILE(2),NOUSER
+          integer IB, IE, IDATE
+          integer TUSER(5), FILEA(4), FILEB(4), FILEC(4)
+          integer FILED(4), KUSER(5), IBUG
+
+          call clear(iscrn)
+          type 20
+20        format(//////////,
+     +           20x,'processing data for report 3',//)
+
+1         continue
+
+          ib = ibegdt
+          ie = ienddt
+
+          JFILE(1) = 'NTPA2'
+          JFILE(2) = 'NTPB2'
+          JFILE(3) = 'NTPC2'
+          JFILE(4) = 'NTPD2'
+
+* loop for each set of NETSTAT files
+
+1100      continue
+
+          ikeep = ibegdt
+          call fopen(ibegdt, ienddt, iflag, maxfil)
+          if (iflag .eq. 1) go to 2010
+          if (iflag .eq. 0) go to 1010
+          type 1024, ikeep
+1024      format(//,'***** ',a5,' files do not exist ',
+     +              'in the NETSTAT directory *****',//)
+          go to 1100
+
+1010      continue
+
+          call dbopen('NOCLOSE','TRTMP2')
+          call dbset(maxfil+1)
+          call dbfind('ALL')
+          call dbexec('DELETE')
+
+*  do for each term host
+
+          do 1020 ijk = 1, noterm
+
+               do 1050 jj = 1, MAXFIL
+                    call dbset(jj)
+                    call dbfind('TERMHOST','EQ',iterm(ijk))
+                    ITFILE = JFILE(jj)
+                    call dbsave(ITFILE)
+1050           continue
+
+* continue with processing of one day
+
+          do 500 ICT = 1, MAXFIL
+
+700            continue
+
+** initialize variables for each user name
+
+               NSESS = 0
+               ICONHR = 0
+               KCHAR = 0
+               do 223 I = 1,5
+                    TUSER(I) = '     '
+223            continue
+               call dbset(ICT)
+               ITFILE = JFILE(ICT)
+               call dbfind('FILE',ITFILE)
+
+224            continue
+
+               call dbgrec($500)
+
+               call dbval('USRNAM',TUSER)
+               call strip(TUSER)
+
+               do 400 ICT2 = ICT, MAXFIL
+
+                    call dbset(ICT2)
+                    ITFILE = JFILE(ICT2)
+                    call dbfind('FILE',ITFILE)
+                    call dbsrch('LAST', 'AND',
+     +                    'USRNAM', 'CT', TUSER)
+
+230                 continue
+
+                    CALL DBGREC($240)
+                    call dbval('TOTMIN',IMIN,'TOTALCHARS',ICHAR)
+                    NSESS = NSESS + 1
+                    ICONHR = ICONHR + IMIN
+                    KCHAR = KCHAR + ICHAR
+
+                    go to 230
+
+240                 continue
+
+400            continue
+
+** drop records for that user name
+
+          do 280 I = ICT, MAXFIL
+
+               call dbset(I)
+               ITFILE = JFILE(I)
+               call dbfind('FILE',ITFILE)
+               call dbsrch('LAST', 'AND', 'USRNAM', 'NCT', TUSER)
+               call dbsave(ITFILE)
+
+280       continue
+
+* update temporary database
+
+          call dbset(maxfil + 1)
+          call dbfind('USER','EQ',tuser)
+          call dbgrec($290)
+
+* update existing record
+          call dbval('NOSESS',i1,'CHARS',i2,'MINUTE',i3)
+          nsess = i1 + nsess
+          iconhr = iconhr + i3
+          kchar = kchar + i2
+          call dbchng('NOSESS',nsess,'CHARS',kchar,
+     +                'MINUTE',iconhr)
+          go to 390
+
+290       continue
+
+* add a new record
+          call dbadd('HOST',iterm(ijk),
+     +               'USER',tuser,'CHARS',kchar,
+     +               'NOSESS',nsess,'MINUTE',iconhr)
+
+390       continue
+
+          go to 700
+
+500       continue
+
+1020      continue
+
+          go to 1100
+
+* print out file
+
+2010      continue
+
+          open(14,ofile,output)
+
+          call prtrep(ib,ie,iterm,noterm,
+     +                isort,iusr,itrth,ichth)
+
+9999      continue
+
+          close(14)
+          close(22)
+          call delet('NTPA2.DMV',ijunk)
+          call delet('NTPB2.DMV',ijunk)
+          call delet('NTPC2.DMV',ijunk)
+          call delet('NTPD2.DMV',ijunk)
+
+          return
+          end
+
+********************
+*****
+***** subroutine STRIP
+*****      strips user name after the first semicolon
+*****
+********************
+
+          subroutine STRIP(TUSER)
+
+          dimension TUSER(5)
+
+          I = 1
+
+10        continue
+
+          call rtc(dummy,TUSER,I)
+          if ((dummy .eq. ';') .or. (I .eq. 25)) go to 100
+          I = I + 1
+          go to 10
+
+100       continue
+
+          I = I + 1
+
+          do 110 J = I, 25
+               call stc(' ',TUSER,J)
+110       continue
+
+          return
+          end
+
+********************
+*****
+***** subroutine PRTREP
+*****      sort data and print report 3 to file
+*****
+********************
+
+          subroutine prtrep(ib,ie,iterm,noterm
+     +                      isort,iusr,itrth,ichth)
+
+          integer KUSER(5), CONHR, KCHAR
+          integer ichar, imin, ib, ie
+          integer NSESS, NOUSER, iterm(1000), IP
+          integer isort, noterm
+          real rtraf, rtrper, rconhr, rchper
+
+          call dbopen('TRTMP2')
+
+          write(14,2500) ib, ie
+2500      format(20x,'FOR PERIOD:  ',A5,' - ',A5,///,
+     +           1x,4x,2X,'USERNAME',
+     +           16X,'K-CHAR',8X,
+     +           '%',9X,'CON-HR',8X,'%',4X,'#SESS',//)
+
+          call dbfind('ALL')
+
+          ichar = 0
+          itime = 0
+
+2022      continue
+
+          call dbgrec($2050)
+          call dbval('CHARS',i1,'MINUTE',i2,
+     +               'NOSESS',i3)
+          if (i2 .eq. 0) i2 = i3
+          ichar = ichar + i1
+          itime = itime + i2
+          go to 2022
+
+2050      continue
+
+          if (iusr .eq. 2) go to 2100
+
+* correct values for threshold percentages 
+          if (itrth .eq. 0) itraf = 1
+          if (itrth .ne. 0) itraf = ichar * (itrth/100)
+
+          if (ichth .eq. 0) imin = 1
+          if (ichth .ne. 0) imin = itime * (ichth/100)
+
+          if (ichar .eq. 0) ichar = 1
+          if (itime .eq. 0) itime = 1
+
+2100      continue
+
+          call dbfind('ALL')
+
+          call dbfind('LAST','AND',
+     +                'CHARS','GE',itraf,'AND',
+     +                'MINUTE','GE',imin)
+
+* sort selected records
+
+          if (isort .ne. 1) go to 2202
+          call dbsort('USER')
+          go to 2300
+2202      continue
+          if (isort .ne. 2) go to 2204
+          call dbsort('CHARS','DESCENDING')
+          go to 2300
+2204      continue
+          if (isort .ne. 3) go to 2300
+          call dbsort('MINUTE','DESCENDING')
+
+2300      continue
+          call dbgrec($2200)
+          call dbval('USER',kuser,'CHARS',i1,
+     +               'MINUTE',i2, 'NOSESS',i3)
+          if (i2 .lt. i3) i2 = i3
+          rtraf = i1 / 1000.0
+          rtrper = (i1*100.0) / ichar
+          rconhr = i2 / 60.0
+          rchper = (i2*100.0) / itime
+         if (rchper .gt. 100.00) rchper = 100.00
+
+          write (14,8) kuser(1),kuser(2),kuser(3),
+     +                 rtraf, rtrper, rconhr, rchper, i3
+8         format(5x, 2x, 3a5, 2x, f13.2, 2x, 
+     +           f7.2, 2x, f13.2, 2x, f7.2, 2x, i7)
+
+          go to 2300
+
+2200      continue
+
+2999      continue
+
+          call delet('nt.out',ijunk)
+
+          return
+          end
+
+********************
+*****
+***** subroutine scrtyp
+*****     gets screen type from user
+*****
+********************
+
+          subroutine scrtyp(iscrn,MAXDAY)
+
+          integer iscrn
+
+          type 100,MAXDAY
+100       format(//////////////////////////,
+     +  20x,'    THIS IS A NEW VERSION OF TOOLS2!!',/,
+     +  20x,'               APRIL, 1990',//,
+     +  20X,'   PLEASE READ FILE: (MSS)TOOLS2.INF',/,
+     +  20X,'      BEFORE USING THIS VERION FOR',/,
+     +  20X,'            THE FIRST TIME.',//,
+     +  20x,'YOU MAY PROCESS ONLY ', I3,' DAYS AT ONE TIME',/,
+     +  20x,'             WITH THIS VERSION.',//,
+     +  20x,'TOOLS2 IS NO LONGER SUPPORTED BY NETWORK ANALYSIS!',//,
+     +  20x,'PLEASE CONTACT SALES SUPPORT IF YOU HAVE ANY ',/,
+     +  20x,'             PROBLEMS OR QUESTIONS',//,
+     +           20x,'terminal type (425/444/0) => ',$)
+
+          read(5,110) iscrn
+110       format(i3)
+
+          return
+          end
+
+********************
+*****
+***** subroutine clear
+*****      clears the screen for 444 or 425 terminal
+*****
+********************
+
+          subroutine clear(itty)
+
+          integer clea1, clea2
+
+          if ((itty .ne. 425) .and. (itty .ne. 444))
+     +         go to 200
+
+          clea1 = "33
+          if (itty .eq. 425) clea2 = "73
+          if (itty .eq. 444) clea2 = "112
+
+          call onechr(clea1)
+          call onechr(clea2)
+
+200       continue
+          return
+          end
+
+********************
+*****
+***** subroutine intro
+*****      prints the introduction of program
+*****
+********************
+
+          subroutine intro(itty)
+
+          integer itty
+
+          call clear(itty)
+
+          type 50
+50        format(60x,'introduction')
+
+          type 100
+100       format(/,
+     +           1x,25x,'traffic statistics program',//,
+     +           1x,10x,'this program calculates various traffic',
+     +              ' statistics, using',/,
+     +           1x,20x,'the daily NETSTAT 1022 database files.')
+
+          type 110
+110       format(/,
+     +           1x,10x,'the reports produced are:',//,
+     +           1x,15x,'1) bandwidth report - calculates the',/,
+     +           1x,15x,'      required bandwidth to support',/,
+     +           1x,15x,'      existing traffic;',//,
+     +           1x,15x,'2) statistics report - calculates traffic',/,
+     +           1x,15x,'      statistics (kbps, connect hours,',/,
+     +           1x,15x,'      number of users; and',//,
+     +           1x,15x,'3) traffic broken down by username for',/,
+     +           1x,15x,'      terminating host',/)
+
+           type 150
+150        format(/,15x,'***** type <ret> to continue *****')
+           read(5,152) ijunk
+152        format(a1)
+
+           return
+           end
+
+********************
+*****
+***** subroutine getall
+*****      get values needed for all reports
+*****
+********************
+
+          subroutine getall(MAXDAY,iscrn,irpts,ibdate,iedate)
+
+          integer iscrn, ibdate, iedate, irpts
+
+          call clear(iscrn)
+
+          type 50
+50        format(60x,'reports 1/2/3')
+
+          call getdt(ibdate,iedate,MAXDAY)
+
+          call clear(iscrn)
+
+          type 100
+100       format(/,
+     +           1x,10x,'*****  type of report  *****',//,
+     +           1x,10x,5x,'1) bandwidth',/,
+     +           1x,10x,5x,'2) statistics',/,
+     +           1x,10x,5x,'3) user name',/,
+     +           1x,10x,5x,'4) all of the above',//)
+
+110       continue
+
+          type 120
+120       format(1x,10x,'=> ',$)
+
+          read(5,130) irpts
+130       format(i1)
+          if ((irpts .lt. 1) .or. (irpts .gt. 4))
+     +         go to 110
+
+          return
+          end
+
+********************
+*****
+***** subroutine scr12
+*****      get flag values for reports 1 and 2
+*****
+********************
+
+          subroutine scr12(irpts,iscrn,ifind,ifind2,
+     +                     ihost,nohost,ofile)
+
+          integer iscrn, ifind, ifind2, ifile1(5)
+          integer ihost(1000), nohost, ofile(5)
+
+          call clear(iscrn)
+
+          type 50, irpts
+50        format(60x,'report ',i1)
+
+          type 100
+100       format(/,
+     +           1x,10x,'***** records selected by *****',//,
+     +           1x,10x,5x,'1) node',/,
+     +           1x,10x,5x,'2) host',//)
+
+110       continue
+          type 120
+120       format(1x,10x,'=> ',$)
+          read(5,130) ifind
+130       format(i1)
+          if ((ifind .lt. 1) .or. (ifind .gt. 2)) go to 110
+
+          type 150
+150       format(//,
+     +           1x,10x,'***** node/host type *****',//,
+     +           1x,10x,5x,'1) originating',/,
+     +           1x,10x,5x,'2) terminating',/,
+     +           1x,10x,5x,'3) both',//)
+
+160       continue
+          type 170
+170       format(1x,10x,'=> ',$)
+          read(5,180) ifind2
+180       format(i1)
+          if ((ifind .lt. 1) .or. (ifind .gt. 3)) go to 160
+
+          type 200
+200       format(//,
+     +           1x,10x,'input filename (all caps) => ',$)
+          read(5,210) ifile1
+210       format(5a5)
+
+          type 212
+212       format(10x,'output filename (all caps) => ',$)
+          read(5,210) ofile
+
+          ii = 1
+
+          open(16,ifile1,input)
+220       continue
+          read(16,230,err=220,end=240) ihost(ii)
+230       format(i5)
+          ii = ii + 1
+          go to 220
+
+240       continue
+          close(16)
+          nohost = ii - 1
+
+          return
+          end
+
+
+********************
+*****
+***** subroutine scr3
+*****      get flags for report 3
+*****
+********************
+
+          subroutine scr3(iscrn,iusr,itraf,iconhr,isort,
+     +                    iterm,noterm, ofile)
+
+          integer iscrn, iusr, itraf, iconhr
+          integer isort, ifile2(5), iterm(1000)
+          integer noterm, ofile(5)
+
+          call clear(iscrn)
+
+          type 10
+10        format(60x,'report 3')
+
+          type 50
+50        format(/,
+     +           1x,10x,'***** usernames selected by *****',//,
+     +           1x,10x,'     1) traffic (k-chars) threshold',/,
+     +           1x,10x,'     2) connect hours threshold',/,
+     +           1x,10x,'     3) both',//)
+
+60        continue
+          type 70
+70        format(1x,10x,'=>',$)
+          read(5,80) ijunk
+80        format(i1)
+          if ((ijunk .lt. 1) .or. (ijunk .gt. 3)) go to 60
+
+          call clear(iscrn)
+
+          type 84
+84        format(60x,'report 3')
+
+          type 100
+100       format(/,
+     +           1x,10x,'***** threshold calculated *****',//,
+     +           1x,10x,'     1) percentages of total',/,
+     +           1x,10x,'     2) nominal values',//)
+
+110       continue
+
+          type 120
+120       format(1x,10x,'=> ',$)
+          read(5,130) iusr
+130       format(i1)
+          if ((iusr .lt. 1) .or. (iusr .gt. 2)) go to 110
+
+          if (ijunk .eq. 2)  go to 164
+
+          type 150
+150       format(1x,10x,'traffic threshold => ',$)
+          read(5,160) itraf
+160       format(i10)
+
+164       continue
+
+          if (ijunk .eq. 1) go to 184
+
+          type 170
+170       format(1x,10x,'connect hours threshold => ',$)
+          read(5,180) iconhr
+180       format(i10)
+
+184       continue
+
+          call clear(iscrn)
+
+          type 188
+188       format(60x,'report 3')
+
+          type 190
+190       format(/,
+     +           1x,10x,'***** usernames sorted *****',//,
+     +           1x,10x,'     1) alphabetically',/,
+     +           1x,10x,'     2) by traffic (descending)',/,
+     +           1x,10x,'     3) by connect hours (descending)',//)
+
+192       continue
+
+          type 194
+194       format(1x,10x,'=> ',$)
+          read(5,196) isort
+196       format(i1)
+          if ((isort .lt. 1) .or. (isort .gt. 3)) go to 192
+
+          type 200
+200       format(//,1X,10x,'input filename (all caps) => ',$)
+          read(5,210) ifile2
+210       format(5a5)
+
+          type 212
+212       format(11x,'output filename (all caps) => ',$)
+          read(5,210) ofile
+
+          ii = 1
+
+          open(16,ifile2,input)
+220       continue
+          read(16,230,err=220,end=250) iterm(ii)
+230       format(i5)
+          ii = ii + 1
+          go to 220
+
+250       continue
+          close(16)
+          noterm = ii - 1
+
+          return
+          end
+
+********************
+ccccc
+c Subroutine: Increment
+c
+c THis subroutine increments the correct counters for each
+c minute of the specified day that the session was active during.
+ccccc
+        subroutine increm(date, istime, ietime, iuser, imin, muser,
+     +                  mcin, mcout, mctot, inc2, outc2, itot)
+
+        integer date, istime,ietime, inc2, outc2, itot, nn,
+     +          itime1, itime2, ll, iuser(5,24), imin(5,24),
+     +          muser(5,24,60), mcin(5,24,60), mcout(5,24,60),
+     +          mctot(5,24,60)
+
+                    do 254 nn = 1, 24
+c                       ccccc
+c                       c Determine the start and end time of the
+c                       c hour being processed.
+c                       ccccc
+                         itime1 = (nn - 1) * 100
+                         itime2 = nn * 100
+c                       ccccc
+c                       c       If the sessions was not active during
+c                       c during this hour, continue with the next hour.
+c                       ccccc
+                         if (istime .ge. itime2) go to 256
+                         if (ietime .le. itime1) go to 256
+c                       ccccc
+c                       c The session was active during this hour
+c                       c increment the number of total users during
+c                       c this hour.
+c                       ccccc
+                         iuser(date,nn) = iuser(date,nn) + 1
+                         if (istime .le. itime1) ist = 1
+                         if (istime .gt. itime1) 
+     +                           ist = istime - itime1
+                         if (ietime .ge. itime2) iet = 60
+                         if (ietime .lt. itime2) 
+     +                           iet = ietime - itime1
+                    do 258 ll = ist, iet
+                         imin(date,nn) = imin(date,nn) + 1
+                         muser(date,nn,ll) = muser(date,nn,ll) + 1
+                         mcin(date,nn,ll) = mcin(date,nn,ll) + inc2
+                         mcout(date,nn,ll) = mcout(date,nn,ll) + outc2
+                         mctot(date,nn,ll) = mctot(date,nn,ll) + itot
+258                      continue
+256                      continue
+254                 continue
+
+        end
+    ,pz
