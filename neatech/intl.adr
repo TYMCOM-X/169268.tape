@@ -1,0 +1,292 @@
+
+
+
+
+
+
+
+
+               INTERNATIONAL ADDRESSING & TYMNET            August 1987
+
+
+
+
+CCITT X.121 STANDARD
+
+
+The CCITT (an international standards group) X.121 standard is a packet 
+network addressing standard.  X.121 states that a public data network
+address can be maximum of 14 digits and consists of a:
+   
+       4 DIGIT  Data Network Identification Code (DNIC)  +
+   
+   0 - 10 DIGIT  Network Terminal Number  (NTN)
+   
+   example:  302086908120     DNIC is 3020
+                              NTN  is 86908120
+   
+   The DNIC is used for addressing a Public Data Network.  It is similar
+   to a telephone country code.  The CCITT assigns a different DNIC for
+   each geographical area in the world.  Tymnet's DNIC is 3106.
+
+   The NTN is used for addressing within a Public Data Network.
+   CCITT leaves the implementation of the NTN open to each individual
+   network.
+
+
+
+TYMNET's IMPLEMENTATION of CCITT X.121 ADDRESSING
+
+
+Tymnet uses a flexible and secure implementation of X.121 addressing
+through its X.75/X.25 gateways.  There are 4 formats for Tymnet
+addresses.  Every Tymnet address will begin with 3106 (Tymnet's DNIC).
+The function of the address is DETERMINED BY THE DIGIT FOLLOWING THE
+DNIC.
+
+                                                          Page 2
+
+
+  4 ADDRESS FORMATS
+
+  1)  3106  +
+              0 + <5 DIGIT HOST NUMBER> + <optional 0-4 DIGIT SUBADDRESS>
+              ^   {           Network Terminal Number - NTN             }
+              
+      example:  310600122401
+     
+
+  2)  3106  +
+              7 + <0-9 DIGIT origination-only address>
+              ^
+  ***  THIS ADDRESS FORMAT WILL NOT BE COVERED FURTHER IN THIS DOCUMENT ***
+  
+
+  3)  3106  +
+              9 + <1 DIGIT optional SUBADDRESS> + <5 DIGIT HOST NUMBER> +
+              ^                                 <optional 3 DIGIT SUBADDRESS>
+                  {          Network User Number  -  NUN                    }
+                 
+       example:  31069305557
+       
+       
+  4)  31069 - Null Address
+             
+       example:  31069
+
+       
+When a Tymnet X.75 gateway receives a call request from another network
+THE GATEWAY WILL PROCESS THE CALL DIFFERENTLY BASED ON THE VALUE OF THE
+FIRST DIGIT AFTER 3106 IN THE CALLED ADDRESS.
+
+  DIFFERENCES in 3 FORMATS:
+
+  1) a ZERO follows the 3106    example:  3106005557
+                                              ^
+      A user in another network calls Tymnet with        310600555701
+      The Tymnet X.75 gateway receives the call request 
+      packet and:
+                
+      1. Verifies the DNIC in the called address       - 3106
+
+      2. Since ZERO follows the DNIC, it strips off    -     05557
+         the next 5 digits. This is the HOST ADDRESS.
+
+      3. Uses any remaining digits (up to 4)           -           01
+         as the SUB-HOST ADDRESS
+
+
+                                                            Page 3
+
+
+      4. The gateway then CONSTRUCTS A USERNAME for the supervisor 
+         in the format:
+
+         <Intl Record Carrier>.<Calling Net DNIC>:<Host #>.<Subaddress>;
+
+          example: RCA.2624:05557.01;
+
+                   RCA.2624         is the username with a
+                                    COLON OPTION & NULL PASSWORD
+                   RCA              is the IRC the call transitted
+                       2624         is the CALLING DNIC (Germany)
+                            5557    is the HOST NUMBER
+                                 01 is the SUB-HOST ADDRESS
+                   (The sub-host address is optional, if it is not in
+                    the address it is left off the username)
+
+         The username RCA.2624 has already been validated on the SUP with
+         a colon option and HOMED TO GROUP 19. (Check it in Valinfo and see.)
+         If host 5557 is not in Group 19 the call will be cleared.
+
+      5. The username in the NEEDLE sent to the Tymnet host will be
+         RCA.2624:.01  If the host interface will not accept a subhost 
+         address of 01 then it will clear the call with the message 
+         USERNAME INVALID...DISCONNECTING.
+ 
+      EXAMPLE to illustrate how a domestic host interface must be set up:
+      
+      Jason's Database Service, Inc.  is an Async Tymcom, HOST 5557, with 
+      worldwide access.  A user in Germany enters  310600555701  to access
+      Jason's Database.  For the call to connect:
+
+      1. Host 5557 MUST BE in GROUP 19.
+
+      2. If Sub-host addressing is to be used, There MUST BE a SUBHOST 01
+         i.e.  -- SHST(JDAT,01) --
+         NOTE - The username in the needle sent to the host could be:
+                RCA.2624:.01  or
+                TRT.2624:.01  or
+                WUI.2624:.01  or ....
+         ....it is impossible to tell what the first two characters
+         of the username will be.  So, in general, you should use
+         SINDXP(-2) in the Tymcom file so the sub-host addressing will look
+         at the LAST TWO DIGITS of the username, NOT the first two.
+
+
+                                                               Page 4
+
+
+
+  2) a NINE follows the 3106      example:  3106900224401
+                                            NUN is 900224401
+       
+       A user in another country calls Tymnet with  3106900224401
+       The Tymnet X.75 gateway will NOT build a 
+       username as above, instead it will :
+       
+       1. Verify the DNIC in the called address  -  3106
+       
+       2. Since NINE follows the DNIC            -      9
+       
+       3. It SENDS THE REMAINDER OF THE ADDRESS, -      900224401
+          the NUN, to the Supervisor as a USERNAME, 
+          with all OF THE PROPERTIES OF A USERNAME.
+          
+       4. The username in the NEEDLE will be     900224401
+
+       EXAMPLE to illustrate how a domestic host must be set up:
+
+       Mr. McCormick in Sweden enters 3106900224401 to access a Tymnet host.
+       
+       1. The USERNAME 900224401 must be HOMED to host 2244.
+           In this case the host is not required to be in Group 19.
+
+       2. If sub-host routing is to be used a TYMCOM would key off
+          "01".  If the host interface is 3270 with a local user
+          directory (LUD) then it would key off "90."
+          
+
+   3) a single NINE (9) following the DNIC   example:  31069
+                                                       NULL ADDRESS
+
+      A subscriber in another country calls Tymnet with the called
+      address 31069.  The gateway receives the call and:
+
+      1. Verifies the DNIC - 3106
+
+      2. Checks the call user data field for a username,
+
+      3. If the call user data field is empty, the gateway sends back a
+         call connected packet and prompts the user to "please log in:"
+
+      4. Whatever username and password the user enters will be sent to
+         the sup for routing.  If the destination host is an X.25 hos,
+         the called address sent to the host will be 31069.  The
+         username must be in class 4 (regular domestic class).  This
+         method of access is secure.  However, call user data can not be
+         used.
+         
+                                                              Page 5    
+
+
+
+WHY ARE THERE THREE FORMATS FOR TYMNET ADDRESSES?
+
+
+Why are there three different formats in the X.75 gateways for handling
+incoming calls.
+
+  ADVANTAGE of 3106-ZERO FORMAT:
+
+    o A host might have many possible sub-host or X.25 gateway addresses.
+      For example, Host 3344 might want to be accessed with
+      
+      3106003344
+      310600334401
+      310600334402 
+           .
+           .
+           .
+           
+      It would use many system & administrative resources to validate and 
+      track each ADDRESS as a USERNAME.  We only have to put host 3344 in
+      Group 19 and every sub-host from 1 thru 9999 is valid.
+      
+    o The customer does not have to pay for a username.
+
+    o The host number is very obvious in the address and follows an
+      easy-to-remember format for the customer.
+
+    o This does not mean that all hosts on Tymnet are automatically accessible
+      other countries in this way.  Only those that are in Group 19.  
+
+  ADVANTAGE of 3106-9XXXXXXXXX FORMAT:
+
+    o With the properties of a username this address can be multi-targetted
+      or priority targetted.   For example,   3106900334401 
+      can be MULTI-TARGETTED to hosts 3344 and 3350.  Remember that the same
+      username -- 900334401 will be sent to either host in the needle.
+
+    o Can be used for 3270 interfaces that can only search the first two
+      digits of a username.
+      
+    o A  3106-nine  address can have a PASSWORD assigned to it. For example, 
+      if the address is set up with a password, and a customer in Japan 
+      enters  310690033401, they would see:      tymnet:  password:
+                                                           Page 6
+
+
+
+  ANOTHER OPTION:
+    
+    The Null Address, or 31069 option, is very useful for customers who
+    are already familiar with a Tymnet login.  It is also very secure
+    and provides all the routing features of the Tymnet login.
+
+ADDITIONAL POINTS
+
+
+    Tymnet's implementation of CCITT X.121 addressing is both simple for
+    the customer and more secure than other PDNs.
+
+    1) The usernames that the gateways send to the supervisor can only
+       originate from CLASS 1 hosts.  These are the gateway hosts.
+       This prevents someone from dialing a Public net node and entering
+       910033440, or WUI.2624.
+
+    2) To find out if a DTE address has been validated on Tymnet:
+
+       please log in: DTE;TYM INTL
+
+       At this point you will be prompted for a system username.
+       This can be obtained from your manager.  
+
+       After entering your system username, you will be prompted by a
+       menu driven database.  You may query addresses by company name or
+       address.
+
+    3) All requests for validating a host for international access should
+       be sent using the DTE program.  Tymnet validations will process
+       the request.
+
+    4) The above rules apply only to calls from foreign PTTs, THROUGH X.75
+       GATEWAYS, into Tymnet. They DO NOT APPLY to calls from foreign PTTs
+       originating on Tymsats on the public net Sup.  These calls do not
+       involve an X.121 address   (exp. Portugal, Bermuda).
+
+If there are additional questions or if you wish a SECURITY PROPOSAL for
+a customer with international access please contact External Network 
+Technical Services via Ontyme ID TYM.ITS or call 703-356-6995.
+
+    
