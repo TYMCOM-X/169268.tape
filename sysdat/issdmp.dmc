@@ -1,0 +1,72 @@
+!            PROGRAM:       ISSDMP.DMC
+!            AUTHOR:        Rob Nielsen
+!            DATE:          July 30, 1986
+! 
+!            PURPOSE:       To dump data from the data base ISISCN.DMS for
+!                 hard copy and for analysis on the PC. ISISCN contains data
+!                 on configuration, hosts, Consat slot traffic, and
+!                 performance for ISIS Consats (study dates July 7 and July
+!                 10 1986)
+
+             OPEN (SYSDAT)ISISCN.
+
+!            INIT 1 (SYSDAT)ISSDMP.1.    !      First hard copy file
+!            INIT 2 (SYSDAT)ISSDMP.2.    !      Second hard copy file
+             INIT 3 (SYSDAT)ISSDMP.3.    !      PC file
+
+             DPL START.
+             FIND ALL.
+             SORT MINXCNT ASYNC SYNC SIO.
+
+!               UNCOMMENT THE NEXT LINE TO DO A PC DUMP ONLY             
+             GOTO Print3.
+
+             PRINT ON 1 FORMAT /,                                        &
+                  "Node ",1x,"Kernel",1x,"     City      ",3x,           &
+                  "SIO",1x,"Sync",1x,"Async",1x,"2400",3x,"Consat",1x,   &
+                  "T3270",1x,"H3270",1x,"Cmt",1x,"SNA",1x,"Tymcom",1x,   &
+                  "SDLC",1X,"HASP",1X,"X25",6X,"Other" END.
+
+             PRINT ON 1 NODE KERNEL CITY SIO SYNC ASYNC SPEED CONSAT     &
+                  T3270 H3270 CMT SNA TYMCOMM SDLC HASP X25 OTHER1       &
+                  OTHER2 OTHER3                                          &
+             FORMAT  I5 1X I6 1X A15   3X I3 1X I4 1X I5 4X I1           &
+                  3X I6 1X I5 1X I5 1X I3 1X I3 1X I6 1X I4 1X I4 1X     &
+                  I3      4X A8 1X A8 1X A8 END.
+
+             PRINT ON 2 FORMAT 15X "EXEC Loops" END.
+
+             PRINT ON 2 FORMAT
+                  " Node",1x,"Slots",3x," Min",1x," LWM",1x,"CpsIN",1x,  &
+                  "CpsOUT",1x,"Delay",3x,"Sessions",2x,"Characters",3x,  &
+                  "Connect" END.
+
+             PRINT ON 2 NODE NUMSLOT MINXCNT MINXLP MAXCPSIN MAXCPSOUT  &
+                  MAXDELAY SESSIONS CHARS CONNECT                        &
+             FORMAT I5 1X I5 3X   I4 1X I4 1X I5 1X I6 1X I5   3X I8 1X  &
+                  FS8.1 1X FS5.2 END.
+
+!                Insert !(comment) in next line to allow PC(STATPRO) dump
+             GOTO TheEnd.
+Print3:      PRINT ON 3 FORMAT '"Node"'1X,'"Sync"',1X,'"SIO"',1X, &
+                  '"ASYNC"',1X,'"2400"',1X,'"Slots"',1X,           &
+                  '"Consat"',1X,'"T3270 "',1X,'"H3270"',1X,        &
+                  '"CMT"',1X,'"SNA"',1X,'"Tymcomm"',1x,'"SDLC"', &
+                  1X,'"HASP"', 1X, '"X25"',1X,'"MinXCNT"',1x,         &
+                  '"MINXLP"',1x,'"Delay"',1x,'"CpsIN"',1x,        &
+                  '"CpsOUT"',1x,'"Sessions"',1x,'"Chars"',1x,       &
+                  '"Connect"',1x,'"MaxCPS"' END.
+
+             PRINT ON 3 NODE SYNC SIO ASYNC SPEED NUMSLOT CONSAT T3270   &
+                  H3270 CMT SNA TYMCOMM SDLC HASP X25 MINXCNT MINXLP    &
+                  MAXDELAY MAXCPSIN MAXCPSOUT SESSIONS CHARS CONNECT MAXCPS &
+             FORMAT I5 1X I2 1X I2 1X I2 1X I1 1X I2 1X I2   &
+                  1X I2 1X I2 1X I2 1X I2 1X I2 1X I2 1X I2 1X I2 1X I4  &
+                  1X I4 1X I6 1X I6 1X I6 1X I6 1X F7.1 1X F5.2 1X I6 1x END.
+
+
+TheEnd:      RELEASE 1.
+             RELEASE 2.
+             RELEASE 3.
+             DPL STOP.
+             DPL END.
