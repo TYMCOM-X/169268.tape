@@ -1,0 +1,107 @@
+!            Program switch.dmc
+
+! This program looks through ckts for switcher to switcher active or 
+! pending links in Tymnet sites and creates the database switch.dms.
+! In the second part of the program it finds the links between
+! the supervisor nodes and the switchers and add those links to switch.dms.
+
+set fmsg off.
+
+o         (netstat)ckts (perstats)switch.dms.
+
+
+define integer xpt1.
+define text 15 xplace1.
+define integer xsite1.
+define integer xv1.
+define integer xh1.
+define integer xclass1.
+define integer xpt2.
+define text 15 xplace2.
+define integer xsite2.
+define integer xv2.
+define integer xh2.
+define integer xclass2.
+define text 1  xstatus.
+define text 5  xbndw.
+
+
+        dpl start.
+
+        dbs 2.
+        f all.
+        delete.
+
+        dbs 1.
+
+        f all.
+        search  point1 le point2 .
+        search last class1 le 5 and class1 ge 1.
+        search last class2 le 5 and class2 ge 1.
+        search last pty1 eq 'SWITCHER' and pty2 eq 'SWITCHER'.
+        search last status A or P.
+
+lab1:   dbs 1.
+        getrec lab20.
+
+        let xpt1    eq pt1.
+        let xplace1 eq place1.
+        let xsite1  eq site1.
+        let xclass1 eq class1.
+        let xv1     eq v1.
+        let xh1     eq h1.
+        let xpt2    eq pt2.
+        let xplace2 eq place2.
+        let xsite2  eq site2.
+        let xclass2 eq class2.
+        let xv2     eq v2.
+        let xh2     eq h2.
+        let xstatus eq status.
+        let xbndw   eq bndw.
+
+        dbs 2.
+        add node1 xpt1 city1 xplace1 site1 xsite1 class1 xclass1 
+            v1 xv1 h1 xh1
+            node2 xpt2 city2 xplace2 site2 xsite2 class2 xclass2 
+            v2 xv2 h2 xh2 status xstatus bndw xbndw.
+
+        goto lab1.
+
+lab20:  dbs 1.
+
+        f all.
+        f last pt1 le 2005 and pt1 ge 2001.
+
+        search  point1 le point2 .
+        search last class1 le 5 and class1 ge 1.
+        search last class2 le 5 and class2 ge 1.
+        search last status A or P.
+        search last pty2 eq 'SWITCHER'.
+
+lab21:  dbs 1.
+        getrec lab999.
+
+        let xpt1    eq pt1.
+        let xplace1 eq place1.
+        let xsite1  eq site1.
+        let xclass1 eq class1.
+        let xv1     eq v1.
+        let xh1     eq h1.
+        let xpt2    eq pt2.
+        let xplace2 eq place2.
+        let xsite2  eq site2.
+        let xclass2 eq class2.
+        let xv2     eq v2.
+        let xh2     eq h2.
+        let xstatus eq status.
+        let xbndw   eq bndw.
+
+        dbs 2.
+        add node1 xpt1 city1 xplace1 site1 xsite1 class1 xclass1 
+            v1 xv1 h1 xh1
+            node2 xpt2 city2 xplace2 site2 xsite2 class2 xclass2 
+            v2 xv2 h2 xh2 status xstatus bndw xbndw.
+
+         goto lab21.
+
+lab999: dpl end.
