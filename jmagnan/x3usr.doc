@@ -1,0 +1,438 @@
+				APPENDIX C
+
+
+----------------------------------------------------------------------------
+				Table 1
+	Terminal Parameter Numbers, Meanings, and TYMNET Extended 
+	 "Set" Command Formats ("ON"  and "1" are equivalent. "OFF" and
+	 "0" are equivalent)
+
+X.3 Parameter		Meaning			TYMNET Extended
+ Reference					"Set" Command Format
+   1		Escape character (see Note 1)	ESCape_n
+   2		Echo 				ECHo_{ON/OFF}
+   3		Selection of data forwarding
+		signal (see Note 2)		FORward_n
+   4		Selection of idle timer delay	IDLe_n
+   5		Ancillary device control	ANCillary_{ON/OFF}
+   6		Command service signals (Note 3)SERvice_n
+   7		Action on break character	BREak_n
+		(see Note 4)
+   8		Discard output flag		FLUsh_{ON/OFF}
+   9		Padding after carriage return	CRPadding_n
+  10		Line folding			WIDth_n
+  11		Terminal speed (see Notes 5,6)	SPEed_n
+  12		Flow control by DTE		FLOw_{ON/OFF}
+  13		LF insertion after CR (Note 7)	CRLf_n
+  14		Linefeed padding		LFPadding_n
+  15		Edit in data transfer		EDIt_{ON/OFF}
+  16		Character delete symbol		CHAracterdelete_n
+  17		Line delete symbol		LINedelete_n
+  18		Display line symbol		DISplayline_n
+
+
+TYMNET National		Meaning			"Set" Command Format
+ Parameters
+   1		Echo of Control-I		TAB_{ON/OFF}
+   2		Echo Control-H			BACkspace_{ON/OFF}
+   3		Echo LF with LF/CR/RUBOUT	LFCr_{ON/OFF}
+   4		Input baud rate	(see Note 6)	IBAudrate_n
+   5		Output baud rate (see Note 6)	OBAudrate_n
+   6		Parity Selection (see Note 8)	OPArity_n
+   7		Half duplex operation		HALfduplex_{ON/OFF}
+   8		Carriage return delay		CRDelay_{ON/OFF}_A_B_C_D
+   9		Parameter A			(see Note 9)
+  10		Parameter B			(see Note 9)
+  11		Parameter C			(see Note 9)
+  12		Parameter D			(see Note 9)
+  13		Katakana characters		KATakana_{ON/OFF}
+
+
+Notes:
+  1. The possible values of the escape from data transfer character as
+specified by "n" are:
+	0	- escape from data transfer impossible
+	1	- 1/0(DLE) is the escape character
+	2-31	- the ASCII character having this value is the escape
+			character (but only when the interface is configured
+			in the TYMNET Extended mode of operation)
+	32-127	- the ASCII character having this value is the escape 
+			character
+Control-a and NUL can never be escape characters.
+
+
+  2. The data forwarding characters corresponding to values of "n" are:
+	0	- no data forwarding characters
+	1	- alphanumeric characters (A-Z, a-z, 0-9)
+	2	- CR
+	4	- ESC, BEL, ENQ, ACK
+	8	- DEL, CAN, DC2
+       16	- ETX, EOT
+       32	- HT, LF, VT, FF
+       64	- all other characters not in columns 0 and 1 not
+			included in the above
+      128	- all other characters not included in the above
+
+	A combination of these values may be used in place of a single
+value as shown in Table 1/X.3 (eg. 3 means all alphanumeric characters
+and carriage return).
+
+  3. Service signals are sent to the DTE based on the values:
+	0 	- no service signals
+	1	- service signals other than the prompt
+	4	- prompt service signal
+
+	A combination of these values may also be used.
+
+  4. The result of a break character being received from the terminal
+is determined by the following values of "n":
+	0	- no action
+	1	- send interrupt packet 
+	2	- reset
+	4	- send Indication of Break (X.29 or break message)
+	8	- escape from data transfer state
+       16	- discard output to the DTE
+
+	A combination of these values may be used in place of a single
+value as shown in Table 1/X.3.
+
+  5. The terminal speed may be further divided into input and output
+speeds using TYMNET National parameters 5 and 6.
+
+  6. Valid terminal rates as specified by "n" are CCITT representations
+of actual terminal speeds as listed below.
+
+	Actual Speed		CCITT Representation
+	110 bits/s			 0
+	300 bits/s			 2
+       1200 bits/s			 3
+       2400 bits/s			12
+       4800 bits/s			13
+       9600 bits/s			14
+
+  7. Multiple values are used to indicate in which direction(s) the linefeeds
+are to be inserted (combinations of values may also be used).
+	0 - no linefeed insertion
+	1 - after each carriage return in the data stream to the DTE
+	2 - after each carriage return in the data stream from the DTE
+	4 - after each carriage return in the echo to the DTE
+
+  8. Parity of the data (out)to the DTE may assume the values:
+	0 - save original parity
+	1 - mark parity
+	2 - space parity
+	3 - even parity
+	4 - odd parity
+
+  9. This parameter is incorporated into the set command for TYMNET
+National terminal parameter 8 (carriage return delay).
+
+
+
+----------------------------------------------------------------------------
+				Table 2
+			Clear indication service signals
+
+Clear indication	Mnemonics	Explanation
+  service signal			(see CCITT Recommendation X.96)
+----------------	------------	---------------------------------
+Number busy		OCC		The called DTE is detected by the DCE
+					as engaged in other calls and is 
+					unable to accept the incoming call
+
+Network congestion	NC		A condition exists within the 
+					network such as:
+					 1) temporary network congestion
+					 2) temporary fault condition within
+						the network
+
+Invalid facility 	INV		Invalid facility requested by calling
+ request				DTE
+
+Access barred		NA		The calling DTE is not permitted to
+					connect to the called DTE (eg.
+					incompatible closed user group)
+
+Local procedure error	ERR		A procedure error caused by the DTE
+					was detected (eg. incorrect format)
+
+Remote procedure error	RPE		A procedure caused by the DTE is
+					detected by the remote DCE/DTE
+
+Not obtainable		NP		The called DTE address is out of the
+					number plan or is not assigned to
+					any DTE
+
+Out of order		DER		The called number is out of order
+
+PAD clearing		PAD		The call has been cleared by the 
+					local PAD as an answer to an
+					invitation to clear from remote DTE
+
+DTE clearing		DTE		The remote DTE has cleared the call
+
+
+____________________________________________________________________________
+				Table 3
+			Reasons for call reset
+
+Reason			Mnemonic	Explanation
+______			_________	____________________________________
+DTE reset		DTE		The remote DTE has reset the call
+Local procedure
+ error			ERR		A procedure error caused by the DTE
+Network congestion	NC		A condition exists within the 
+					network such as:
+					 1) temporary network congestion
+					 2) temporary fault condition
+
+
+
+
+----------------------------------------------------------------------------
+			Table 4
+		Summary of terminal commands
+
+Command Type		CCITT Format		TYMNET Extended Format
+
+Selection	C_[fac1,..]-[adr][Pc1...c12]	C_[fac1...]-[adr][Pc1...c12]
+		C_[fac1,...]-[adr][Dc1...c12]	C_[fac1...]-[adr][Dc1...c12]
+						C_[fac1...]-[adr][Hab1...ab12]
+
+Clear		CLR				CLR_[diag] or CLEar_[diag]
+
+Reset		RESET				RESet_[diag]
+
+Interrupt	INT				INTerrupt
+
+Call Status	STAT				STAtus
+
+Terminal
+ Profile	PROFn				PROfile_n
+						PROfile
+						PROfile?_n
+
+Read Terminal	PAR?[n1,...[,0:0,t1,...]]	PAR?[n1,...[,0:0,t1,...]]
+ Parameters	PAR?0:0[t1,t2,...]		PAR?0:0[t1,t2,...]
+						COMmandname (see Table 1)
+
+Set Terminal	SETn1:v1[,...[,0:0,t1:w1,...]]	SETn1:v1[,...[,0:0,t1:w1,...]]
+ Parameters	SET0:0,t1:w1[,t2:w2,...]	SET0:0,t1:w1[,t2:w2,...]
+						COMmandname_Parametervalue
+
+Concurrent Set	SET?[n1:v1,...[,0:0,t1:w1,...]]	SET?[n1:v1,...[,0:0,t1:w1,...]]
+ and Read of	SET?0:0,t1:w1[,t2:w2,...]	SET?0:0,t1:w1[,t2:w2,...]
+ Terminal Parameters				COMmandname?_Parametervalue
+
+Editing:
+ Character	Character delete symbol		Character delete symbol
+  Delete
+
+ Line Delete	Line delete symbol		Line delete symbol
+
+ Display Line	Display line symbol		Display line symbol
+
+List of Commands	---			HELp_[value]
+ (Help Facility)
+
+----------------------------------------------------------------
+				Table 5
+			  Available Profiles
+	
+	The following profiles are currently supported by the TYMSAT.
+A "T" in the value field means that the parameter value is determined by
+the terminal identifier (TID) entered when contact with the TYMSAT is first
+made (ie. by the service request signal). The TID may be the same as was
+used for the unenhanced TYMSAT or may  be a carriage return (which always
+causes command mode to be entered).
+
+
+Profile 1, CCITT simple standard profile
+----------------------------------------
+CCITT
+Parameter   Value	Description
+    1       1		Command mode entered not only from login mode, but
+			during a call (escape from data transfer mode)
+    2	    1		Echo initially on
+    3	    126		Data forwarded when full packets (128 chars),
+			idle timer expires, or on forwarding characters
+    4       0		No idle timer
+    5	    T		Use of X-ON and X-OFF by TYMSAT set by TID (Note 1)
+    6	    5		All service signals sent to the start-stop mode DTE
+    7	    2		Break signal causes a reset
+    8	    0		Normal data delivery (no discard output)
+    9	    T		Padding after carraige return set by TID
+   10	    0		No line folding
+   11	    T		Speed of DTE set by TID
+   12	    1		Use of X-ON and X-OFF by DTE
+   13	    T		Linefeed insertion after carriage return (Note 2)
+   14	    T		Linefeed padding set by TID
+   15	    1		Editing allowed in data transfer state
+   16	    8		Default character delete symbol is control-h (BS)
+   17	   24		Default line delete symbol is control-x (CAN)
+   18	    5		Default line display symbol is control-e (ENQ)
+
+
+TYMNET
+Parameter   Value	Description
+    1	    T		Echo control-i (tab) value set by TID (Note 3)
+    2	    T		Echo control-h (backspace) set by TID (Note 4)
+    3	    T		Linefeed echoed by LF/CR/Rubout set by TID (Note 5)
+    4	    T		Speed from DTE set by TID
+    5	    T		Speed to DTE set by TID
+    6	    T		Parity selection set by TID (Note 6)
+    7	    0		No half duplex operation
+    8	    T		Carriage return delay set by TID (Note 7)
+    9	    T		Parameter A set by TID
+   10	    T		Parameter B set by TID
+   11	    T		Parameter C set by TID
+   12	    T		Parameter D set by TID
+   13	    0		No use of katakana characters
+
+Profile 2, CCITT transparent profile
+------------------------------------
+CCITT
+Parameter   Value	Description
+    1       0		Command mode entered only from login mode, not
+			during a call (data transfer state)
+    2	    0		Echo initially off
+    3	    0		Data forwarded when full packets (128 chars) or
+			idle timer expires (no forwarding characters)
+    4       20		Data forwarded when idle for 1 second (20/20ths)
+    5	    T		Use of X-ON and X-OFF by TYMSAT set by TID (Note 1)
+    6	    0		No service signals sent to the start-stop mode DTE
+    7	    2		Break signal causes a reset
+    8	    0		Normal data delivery (no discard output)
+    9	    T		Padding after carraige return set by TID
+   10	    0		No line folding
+   11	    T		Speed of DTE set by TID
+   12	    0		No use of X-ON and X-OFF by DTE
+   13	    T		Linefeed insertion after carriage return (Note 2)
+   14	    T		Linefeed padding set by TID
+   15	    0		No editing in data transfer state
+   16	    8		Default character delete symbol is control-h (BS)
+   17	   24		Default line delete symbol is control-x (CAN)
+   18	    0		No default line display symbol
+
+TYMNET
+Parameter   Value	Description
+    7	    0		No half duplex operation
+   13	    0		No use of katakana characters
+1-6,8-12    T		Parameters set by TID (see profile 0)
+
+
+
+Profile 3, TYMNET simple standard profile
+----------------------------------------
+CCITT
+Parameter   Value	Description
+    1       1		Command mode entered not only from login mode, but
+			during a call (escape from data transfer mode)
+    2	    1		Echo initially on
+    3	    255		Data forwarded on each character
+    4       0		No idle timer
+    5	    T		Use of X-ON and X-OFF by TYMSAT set by TID (Note 1)
+    6	    5		All service signals sent to the start-stop mode DTE
+    7	    2		Break signal causes a reset
+    8	    0		Normal data delivery (no discard output)
+    9	    T		Padding after carraige return set by TID
+   10	    0		No line folding
+   11	    T		Speed of DTE set by TID
+   12	    1		Use of X-ON and X-OFF by DTE
+   13	    T		Linefeed insertion after carriage return (Note 2)
+   14	    T		Linefeed padding set by TID
+   15	    1		Editing allowed in data transfer state
+   16	    8		Default character delete symbol is control-h (BS)
+   17	   24		Default line delete symbol is control-x (CAN)
+   18	    5		Default line display symbol is control-e (ENQ)
+
+TYMNET
+Parameter   Value	Description
+    7	    0		No half duplex operation
+   13	    0		No use of katakana characters
+1-6,8-12    T		Parameters set by TID (see profile 0)
+
+
+Profile 4, TYMNET Semi-transparent profile (ie. to login mode, except for BRK)
+------------------------------------------------------------------------------
+CCITT
+Parameter   Value	Description
+    1       0		Command mode entered only from login mode, not
+			during a call (data transfer mode)
+    2	    1		Echo initially on
+    3	    255		Data forwarded on each character
+    4       0		No idle timer
+    5	    T		Use of X-ON and X-OFF by TYMSAT set by TID (Note 1)
+    6	    5		Service signals sent to the start-stop mode DTE
+    7	    8		Break signal causes escape from data transfer state
+    8	    0		Normal data delivery (no discard output)
+    9	    T		Padding after carraige return set by TID
+   10	    0		No line folding
+   11	    T		Speed of DTE set by TID
+   12	    0		No use of X-ON and X-OFF by DTE
+   13	    T		Linefeed insertion after carriage return (Note 2)
+   14	    T		Linefeed padding set by TID
+   15	    0		No editing in data transfer state
+   16	    8		Default character delete symbol is control-h (BS)
+   17	   24		Default line detlet symbol is control-x (CAN)
+   18	    5		Default line display symbol is control-e (ENQ)
+
+TYMNET
+Parameter   Value	Description
+    7	    0		No half duplex operation
+   13	    0		No use of katakana characters
+1-6,8-12    T		Parameters set by TID (see profile 0)
+
+
+Profile 5, TYMNET transparent profile (ie. transparent in "login" mode)
+-----------------------------------------------------------------------
+CCITT
+Parameter   Value	Description
+    1       0		Command mode entered only from login mode, not
+			during a call (data transfer mode)
+    2	    1		Echo initially on
+    3	    255		Data forwarded on each character
+    4       0		No idle timer
+    5	    T		Use of X-ON and X-OFF by TYMSAT set by TID (Note 1)
+    6	    5		All service signals sent to the start-stop mode DTE
+    7	    4		Break signal causes indication of break
+    8	    0		Normal data delivery (no discard output)
+    9	    T		Padding after carraige return set by TID
+   10	    0		No line folding
+   11	    T		Speed of DTE set by TID
+   12	    0		No use of X-ON and X-OFF by DTE
+   13	    T		Linefeed insertion after carriage return (Note 2)
+   14	    T		Linefeed padding set by TID
+   15	    0		No editing in data transfer state
+   16	    8		Default character delete symbol is control-h (BS)
+   17	   24		Default line delete symbol is control-x (CAN)
+   18	    5		Default line display symbol is control-e (ENQ)
+
+TYMNET
+Parameter   Value	Description
+    7	    0		No half duplex operation
+   13	    0		No use of katakana characters
+1-6,8-12    T		Parameters set by TID (see profile 0)
+
+
+
+
+Notes:
+	1. Currently, all supported TIDs turn off the (X-ON and X-OFF)
+flow control of the DTE by the TYMSAT.
+	2. Currently, all supported TIDs turn on linefeed insertion after
+carriage return in the echo to the start-stop mode DTE.
+	3. A TID of "d" at 110 bps turns on the echo ctl-h (tab) function.
+All other TIDs turn the tab function off.
+	4. Currently, all supported TIDs turn off the echo of a
+ctl-h (backspace).
+	5.  Currently, all supported TIDs turn on the echo of LF/CR/Rubout
+for a linefeed.
+	6. No parity modification of data to the DTE will occur unless the
+TID is J(at 150 bps) or I or G(at 1200 to 9600 bps). These TIDs result
+in even parity being set for data to the DTE.
+	7. A TID of "g" turns off the carriage return delay switch. All
+other TIDs turn this switch on. This switch determines the length and
+position of the carriage return and linefeed delays.
+
+    
