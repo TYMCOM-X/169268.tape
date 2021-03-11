@@ -1,0 +1,1535 @@
+
+      IBM 3270 BSC Protocol                                  January 12, 1987
+
+
+
+
+
+
+                            12 -  IBM 3270 BSC Protocol
+
+
+           Two  types of  characters are  transmitted between  the  Front End
+      Processor and HIF  (also between the TIF  and Control Unit).   They are
+      Data-Link Control Characters and 3274 message data.
+
+
+
+
+
+
+                        12.1  Data-Link Control Characters
+
+
+           The  Data-Link Control  Characters are  used for  message framing,
+      acknowledgment and identification of the  start of text or end  of text
+      transmission. The data-link  control characters and their  EBCDIC codes
+      are listed as follows:
+       
+      Data-Link Control Character       EBCDIC (HEX)
+      ---------------------------       ------------
+      ACK 0  (2 Bytes)                  1070
+      ACK 1  (2 Bytes)                  1061
+      DLE                               10
+      ENQ                               2D
+      EOT                               37
+      ESC                               27
+      ETB                               26
+      ETX                               03
+      ITB                               1F
+      NAK                               3D
+      RVI    (2 Bytes)                  107C
+      SOH                               01
+      STX                               02
+      SYN                               32
+      TTD    (2 Bytes)                  022D
+      WACK   (2 Bytes)                  106B
+       
+
+           The detailed description of each control character can be found in
+      the IBM 3270 IDS manuals listed in Appendix.
+
+
+
+
+
+
+
+
+                                        64                         BGUIDE.DOC
+
+      IBM 3270 BSC Protocol                                  January 12, 1987
+
+
+                              12.2  3274 Message Data
+
+
+           The 3274 message data consists of all address, command, order, and
+      display/print characters sent to the  3274 and of all buffer  data, AID
+      bytes, and status/sense bytes read from the 3274.
+
+
+
+
+
+                  12.2.1  Calling Addresses
+
+           There can be up to 32 devices declared in one control unit  and up
+      to 8 control unit declared in  one interface slot. Each of the  PBT and
+      PBH supports up to 255 devices (device 0 - 254).
+       
+         Format for GP/SP/Select 
+         (Using CU 0 Device 0 for example)
+         =================================
+       
+      GP = General Poll
+      SP = Specific Poll
+       
+      IBM/FUJITSU
+      ----------- 
+      GP:      SYN SYN 40 40 7F 7F ENQ PAD 
+      SP:      SYN SYN 40 40 40 40 ENQ PAD
+      Select:  SYN SYN 60 60 40 40 ENQ PAD
+       
+      HITACHI
+      -------
+      GP:      SYN SYN C0 C0 E0 E0 ENQ PAD 
+      SP:      SYN SYN C0 C0 A0 A0 ENQ PAD
+      Select:  SYN SYN C0 C0 C0 C0 ENQ PAD
+       
+
+           Following is a quick reference  table for the valid CU  and device
+      addresses  for polling.   The  "Control Unit"  in IBM  (or  FUJITSU) is
+      called "Station" in HITACHI host.  The "Device" in IBM (or  FUJITSU) is
+      called "Unit" in HITACHI host. The corresponding address are  in EBCDIC
+      HEX if not specified.  Also,  since graphic symbols can be used  in the
+      tymfile to define the addresses, the 4th column in the table  lists out
+      the graphic symbol for each of the address.
+
+
+
+
+
+
+
+
+
+
+                                        65                         BGUIDE.DOC
+
+      IBM 3270 BSC Protocol                                  January 12, 1987
+
+
+       
+       (IBM/FUJITSU)
+       Item 1: General Poll and Specific Poll of CU and devices
+       Item 2: General Poll and Specific Poll of CU and devices
+       Item 3: Graphic symbols of corresponding addresses
+       Item 4: CU addresses at Select Poll
+       
+       (HITACHI)
+       Item 5: 1. General Poll & Select Poll of Station address
+               2. Station & Unit address at Select Poll
+       Item 6: Specific Poll of Unit address
+       
+            (IBM/FUJITSU)                 (HITACHI)
+      |--|-----------------------------|---------------|
+      |  |  I1    I2     I3       I4   |  I5       I6  |
+      |  |       (ASCII)               |               |
+      |--|-----------------------------|---------------|
+      | 0|  40    20     SPACE    60   |   C0      A0  |
+      | 1|  C1    41     A        61   |   C1      A1  |
+      | 2|  C2    42     B        E2   |   C2      A2  |
+      | 3|  C3    43     C        E3   |   C3      A3  |
+      | 4|  C4    44     D        E4   |   C4      A4  |
+      | 5|  C5    45     E        E5   |   C5      A5  |
+      | 6|  C6    46     F        E6   |   C6      A6  |
+      | 7|  C7    47     G        E7   |   C7      A7  |
+      | 8|  C8    48     H        E8   |   C8      A8  |
+      | 9|  C9    49     I        E9   |   C9      A9  |
+      |10|  4A    5B     [        6A   |   CA      AA  |
+      |11|  4B    2E     .        6B   |   CB      AB  |
+      |12|  4C    3C     <        6C   |   CC      AC  |
+      |13|  4D    28     (        6D   |   CD      AD  |
+      |14|  4E    2B     +        6E   |   CE      AE  |
+      |15|  4F    7C     |        6F   |   CF      AF  |
+      |16|  50    26     &        F0   |   D0      B0  |
+      |17|  D1    4A     J        F1   |   D1      B1  |
+      |18|  D2    4B     K        F2   |   D2      B2  |
+      |19|  D3    4C     L        F3   |   D3      B3  |
+      |20|  D4    4D     M        F4   |   D4      B4  |
+      |21|  D5    4E     N        F5   |   D5      B5  |
+      |22|  D6    4F     O        F6   |   D6      B6  |
+      |23|  D7    50     P        F7   |   D7      B7  |
+      |24|  D8    51     Q        F8   |   D8      B8  |
+      |25|  D9    52     R        F9   |   D9      B9  |
+      |26|  5A    21     !        7A   |   DA      BA  |
+      |27|  5B    24     $        7B   |   DB      BB  |
+      |28|  5C    2A     *        7C   |   DC      BC  |
+      |29|  5D    29     )        7D   |   DD      BD  |
+      |30|  5E    3B     ;        7E   |   DE      BE  |
+      |31|  5F    5E     ^        7F   |   DF      BF  |
+      |--------------------------------|---------------|
+
+
+
+
+                                        66                         BGUIDE.DOC
+
+      IBM 3270 BSC Protocol                                  January 12, 1987
+
+
+                  12.2.2  Commands
+
+           The commands from HOST could be one of the following:
+       
+       |------------------------|--------|-------------------------|
+       | COMMAND                | EBCDIC |  COMMENTS               |
+       |------------------------|--------|-------------------------|
+       | Copy                   |  F7    | supported               | 
+       | Erase All Unprotected  |  6F    | supported               |
+       | Erase/Write            |  F5    | supported               |
+       | Erase/Write Alternate  |  7E    | treated as Erase/Write  |
+       | Read Buffer            |  F2    | supported               |
+       | Read Modified          |  F6    | supported               |
+       | Read Modified All      |  6E    | not supported           |
+       | Write                  |  F1    | supported               |
+       | Write Structured Field |  F3    | pass through            |
+       |------------------------|--------|-------------------------|
+       
+      |----------------------|
+      |       STX            |
+      |       ESC            |
+      | any WRITE command    |
+      |       WCC            |
+      | Orders and/or Data   |
+      |                      |
+         ....
+         ....
+         ....
+      |       ETX or ETB     |
+      |----------------------|
+
+
+
+
+
+                  12.2.3  Orders
+
+           The  outbound  data  stream  can  contain  orders   directing  the
+      formatting of a display terminal buffer or the formatting of  a printer
+      operation.
+       
+                 CRT FORMATIING ORDERS
+       
+       |----------------------------|-------|--------|--------|-------|
+       | ORDER                      |EBCDIC |Byte 2  |Byte 3  |Byte 4 |
+       |----------------------------|-------|--------|--------|-------|
+       | Start Field           (SF) | 1D    | Attribute char (1 byte) |
+       | Set Buffer Address    (SBA)| 11    | addr 0 | addr 1 | ///// |
+       | Insert Cursor         (IC) | 13    | /////////////////////// |
+       | Program Tab           (PT) | 05    | /////////////////////// |
+       | Repeat to Addr        (RA) | 3C    | addr 0 | addr 1 | char  |
+       | Erase Unprot. to Addr (EUA)| 12    | addr 0 | addr 1 | ///// |
+       |----------------------------|-------|--------|--------|-------|
+
+                                        67                         BGUIDE.DOC
+
+      IBM 3270 BSC Protocol                                  January 12, 1987
+
+
+       
+       Note: The ASCII hex for PT is 09.
+             The ASCII hex for RA is 14.
+             All the other ones has same hex values for EBCDIC & ASCII.
+       
+                 PRINTER FORMATTING ORDERS
+       
+       |-----------------------------|------|
+       | ORDER                       |EBCDIC|
+       |-----------------------------|------|
+       | Display of New Line    (NL) | 15   |
+       | End of Message         (EM) | 19   |
+       | Forms Feed             (FF) | 0C   |
+       | Suppress Index         (SI) | 0F   |
+       | Carriage Return        (CR) | 0D   | 
+       |-----------------------------|------|
+       
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        68                         BGUIDE.DOC
+
+      IBM 3270 BSC Protocol                                  January 12, 1987
+
+
+                  12.2.4  AID bytes
+
+           The Attention  IDs are used  in Long Read  and Short  Read format.
+      Following is a table copied partially from a IBM 3270 IDS  manual.  The
+      purpose is to provide a quick reference to the PF and PA keys for their
+      corresponding EBCDIC and ASCII hex values.
+       
+        AID          EBCDIC      ASCII   Graphic
+        key          hex         hex     character
+       -----        -------      -----   ---------
+       ENTER KEY     7D          27        .
+       PF 1  KEY     F1          31        1
+       PF 2  KEY     F2          32        2
+       PF 3  KEY     F3          33        3
+       PF 4  KEY     F4          34        4
+       PF 5  KEY     F5          35        5
+       PF 6  KEY     F6          36        6
+       PF 7  KEY     F7          37        7
+       PF 8  KEY     F8          38        8
+       PF 9  KEY     F9          39        9
+       PF 10 KEY     7A          3A        :
+       PF 11 KEY     7B          23        #
+       PF 12 KEY     7C          40        @
+       PF 13 KEY     C1          41        A
+       PF 14 KEY     C2          42        B
+       PF 15 KEY     C3          43        C
+       PF 16 KEY     C4          44        D
+       PF 17 KEY     C5          45        E
+       PF 18 KEY     C6          46        F
+       PF 19 KEY     C7          47        G
+       PF 20 KEY     C8          48        H
+       PF 21 KEY     C9          49        I
+       PF 22 KEY     4A          5B        cent sign
+       PF 23 KEY     4B          2E        .
+       PF 24 KEY     4C          3C        <
+       
+       ----- above ones should use Long Read format
+             following ones should use Short Read format
+       
+       PA 1  KEY     6C          25        %
+       PA 2  KEY     6E          3E        >
+       PA 3  KEY     6B          2C        '
+       CLEAR KEY     6D          5F        _
+       
+
+
+
+
+
+
+
+
+
+
+                                        69                         BGUIDE.DOC
+
+      IBM 3270 BSC Protocol                                  January 12, 1987
+
+
+         A LONG READ looks as follows 
+         (each line is one byte):
+       
+         |----------------------|
+         |  STX  (02)           |
+         |  CU address          |
+         |  Device Address      |
+         |  AID                 |  
+         |cursor address byte 0 |
+         |cursor address byte 1 |
+         |  SBA                 |
+         |  address byte 0      |
+         |  address byte 1      |  
+         |  alphameric data     |
+         | ...........          |
+         
+         | ...........          |
+         |     any order        |
+         |  alphameric data     |
+         | ...........          |
+         |  ETX (03)            |
+         |  BCC                 |
+         |  BCC                 |
+         |  PAD                 |
+         |----------------------|
+       
+       
+         A SHORT READ format looks as follows:
+       
+         |-----------------|
+         |  STX  (02)      |
+         |  CU address     |
+         |  Device address |
+         |  AID key        |
+         |  ETX  (03)      |
+         |  BCC            |
+         |  BCC            |
+         |  PAD            |
+         |-----------------|   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        70                         BGUIDE.DOC
+
+      IBM 3270 BSC Protocol                                  January 12, 1987
+
+
+                  12.2.5  WCC - Write Control Character
+
+           The WCC byte format and the explanation of each bit is as follows:
+       
+      |---|-------|----------|-------|-------|----------|---------|
+      | . | reset | printout | start | sound | keyboard | reset   |
+      |   | bit   | format   | print | alarm | restore  | MDT bits|
+      |---|-------|----------|-------|-------|----------|---------|
+       
+      |-----|-------------------------------------------------------|
+      | 0   | Determined by bits 2-7                                |
+      |-----|-------------------------------------------------------|
+      | 1   | WCC reset bit. When set to 1, resets the functions    |
+      |-------------------------------------------------------------|
+      | 2,3 | Define the printout format, as follows:               |
+      |     | 00 - The NL,EM, and CR orders in the data stream      |
+      |     |      determine print line length. Provides a 132 print|
+      |     |      position line when the orders are not prsent.    |
+      |     | 01 - Specifies 40-character print line.               |
+      |     | 10 - Specifies 64-character print line.               |
+      |     | 11 - Specifies 80-character print line.               |
+      |-----|-------------------------------------------------------|
+      | 4   | Start Printer bit. When set to 1, initiates a printout|
+      |     | operation at completion of the write operation.       |
+      |-----|-------------------------------------------------------|
+      | 5   | The Sound Alarm bit. When set to 1, sounds the audible|
+      |     | alarm at the selected device at the end of the        |
+      |     | operation if that device has an audible alarm.        |
+      |-----|-------------------------------------------------------|
+      | 6   | The Keyaoard Restore bit. When set to 1, restores     |
+      |     | operation of the keyboard by resetting the INPUT      |
+      |     | INHIBITED indicator on 3277 displays, and the System  |
+      |     | Lock or Wait symbol on Category A displays. It also   |
+      |     | resets the AID byte at the termination of the I/O     |
+      |     | command.                                              |
+      |-----|-------------------------------------------------------|
+      | 7   | Reset MDT bits. When set to 1, all MDT bits in the    |
+      |     | selected devices' exisiting buffer data are reset     |
+      |     | before any data is written or arders are executed.    |
+      |-----|-------------------------------------------------------|
+       
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        71                         BGUIDE.DOC
+
+      IBM 3270 BSC Protocol                                  January 12, 1987
+
+
+                  12.2.6  Field-Attribute Character
+
+           The  field-attribute   character  occupies  the   first  character
+      position  of   each  display   field  in   a  formatted   display;  the
+      corresponding character position on the display screen is always blank.
+      This Start Field (SF) order. Its bit assignment is listed as follows:
+       
+      |-----|--------------------------------------------------|
+      | 0,1 | Value determined by contents of bits2-7.         |
+      | 2   | 0= Unprotected                                   |
+      |     | 1= Protected                                     |
+      | 3   | 0= Alphameric                                    |
+      |     | 1= Numeric (causes automatic upshift or data     |
+      |     |    entry keyboard)                               |
+      |     | Note: Bits 2 and 3 equal to 11 causes an         |
+      |     | automatic skip.                                  |
+      | 4,5 | 00= Display/not selector-light-pen detectable.   |
+      |     | 01= Display/selector-light-pen dectable.         |
+      |     | 10= Intensified display/selector-light-pen       |
+      |     |     detectable.                                  |
+      |     | 11= Nondisplay,nonprint,nondetectable.           |
+      | 6   | Reserved                                         |
+      | 7   | Modified Data Tag (MDT); identifies modified     |
+      |     | fields during Read Modified command operations.  |
+      |     | 0= Field has not been modified                   |
+      |     | 1= Field has been modified by the operator.      |
+      |     |    Can also be set by program in data stream.    |
+      |-----|--------------------------------------------------| 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        72                         BGUIDE.DOC
+
+      IBM 3270 BSC Protocol                                  January 12, 1987
+
+
+                  12.2.7  Sense s Message
+
+
+           Sense Status Messages are sent by the CU or by the PBHI  to report
+      a change in the status of  a device.  For example, when a  device which
+      had  been   unavailable  (turned   off,  disconnected,   etc.)  becomes
+      available, this information is relayed  to the host via a  sense status
+      message.  Sense status  messages are sent in  response to a  general or
+      specific poll.  The format is:
+       
+         SOH                (01)
+          %                 (6C)
+          R                 (D9)
+         STX                (02)
+         3274 Poll Address  (see Appendix)
+         Device address     (see Appendix)
+         S/S 0              (see next section)
+         S/S 1              (see next section)
+         ETX                (03)
+         BCC
+       
+
+           The S/S 0 and  S/S 1 bytes are  Status and Sense Bytes  for remote
+      BSC. Understand  what each bit  means helps to  debug the  problem, for
+      example, when  Operation Check is  returned.  Understanding  them could
+      also help you to define special feature in the tymfile to meet customer
+      requirement.  For example,  to  send Device  End C240  when  circuit is
+      terminated.  This has been required by several customers in the past to
+      prevent the  user from  logging in to  the previous  session terminated
+      abnormally.  The Sense and  Status bytes for HITACHI host  is different
+      from  that   of  the   IBM  (or  FUJITSU)   host.    Please   refer  to
+      (DNDSPEC:25)JBSTH.GED for those information.
+
+
+           Following is the definitions of the Status and Sense Bytes  of IBM
+      and FUJITSU. This information can also be found in IBM IDS manuals.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        73                         BGUIDE.DOC
+
+      IBM 3270 BSC Protocol                                  January 12, 1987
+
+
+                         S/S Byte 0
+                         ==========
+      Bit #    Description
+      ------  ---------------------------------------------------
+      bit 0   Dependent upon setting of bits 2-7
+      bit 1   Always a 1
+      bit 2   Reserved
+      bit 3   Reserved
+       
+      bit 4   Device Busy (DB) - 
+           1. This bit indicates that the addressed device (except
+              the 3278 or 3279) is busy executing an operation or
+              that a busy detection was previously made by a 
+              command or Specific Poll. The device is busy when it
+              is executing an Erase All Unprotected command or a 
+              print operation, accepting data from the operator
+              identification card reader, or performing various 
+              keyboard operations (ERASE INPUT, Backtab, and CLEAR).
+       
+           2. This bit is set with Operation Check when a Copy
+              command is received which specifies a "busy" device
+              with its "from" address.
+       
+           3. This bit is set with Unit Specify when a command is 
+              addressed to a busy device. This can occur by chaining
+              a command to a Write, Erase/Write,Erase/Write Alternate,
+              or Copy command which started a printer or by chaining
+              a command to a Specific Poll addressed to a busy device.
+       
+           Note: DB is not returned for the 3278 or 3279 when 
+              executing an Erase All Unprotected command, accepting
+              data from the MSR or MHS, or performing ERASE INPUT,
+              Backtab, or CLEAR keyboard operations.
+       
+      bit 5   Unit Specify (US) - This bit is set if any S/S bit is
+              set as a result of a device-detected error or if a
+              command is addressed to a busy device.
+       
+      bit 6   Device End (DE) -  This bit indicates that the 
+              addressed device has changed from unavailable to 
+              available and not ready to ready, or busy to not busy.
+              This bit is included during a Specific or General Poll
+              but is not considered pending status by a selection- 
+              address sequence.
+           
+              If a selection-addressing sequence detects that the
+              addressed device has pending status and also detects
+              one of the above status changes that warrants a Device
+              End, then the Device End bit is set and preserved along
+              with the other pending status, and an RVI response is 
+              made.
+       
+       7   Reserved.
+
+                                        74                         BGUIDE.DOC
+
+      IBM 3270 BSC Protocol                                  January 12, 1987
+
+
+                            S/S Byte 1              
+                            ==========
+      Bit #   Description
+      ------  ----------------------------------------------------
+      bit 0   Dependent upon setting of bits 2-7
+      bit 1   Always a 1
+      bit 2   Command Reject (CR) - This bit is set upon receipt
+              of an invalid 3270 command.
+       
+      bit 3   Intervention Required (IR) - This bit is set if:
+              1. A Copy command contains a "from" address in its
+                 data stream which specifies an unavailable device.
+              2. A command attempted to start a printer but found
+                 it not ready. The printout is suppressed.
+              3. The 3274 receives a selection-addressing sequence
+                 or a Specific Poll sequence for a device which is
+                 unavailable or which became not ready during a 
+                 printout. A General Poll sequence does not respond 
+                 to the unavailable/not ready indication and 
+                 proceeds to determine the state of the next device.
+              4. The 3274 receives a command for a device which has
+                 been logged as unavailable or not ready.
+       
+      bit 4   Equipment Check (EC) - This bit indicates a printer 
+              character generator or sync check errorred, the
+              printer became mechanically disabled, or a 3274 
+              detected bad parity from the device. 
+       
+      bit 5   Data Check (DC) - This bit indicates a 3274 opeation
+              to a device was unsuccessful (i.e., the device was 
+              disabled with DC returned to the host; IR will be
+              returned on subsequenct retry by the host).
+       
+      bit 6   Reserved.
+       
+      bit 7   Opeation Check (OC) - This bit, when set alone, 
+              indicates one of the following:
+              1. Receipt of an illegal buffer address or of an
+                 incomplete order sequence on a Write, Erase/Write,
+                 or Erase/Write Alternate command.
+              2. The device did not receive a CCC or a "from"
+                 address on a Copy command.
+              3. Receipt of an invalid command sequence. (ESC is
+                 not received in the second data character position
+                 of the sequence.)
+              4. The internal buffering capability is exceeded on a
+                 3274. This bit is set with Unit Specify to indicate
+                 that the "from" address on a Copy command specified
+                 a device with a "locked" buffer (the device data is
+                 secure).
+
+
+
+
+                                        75                         BGUIDE.DOC
+
+      IBM 3270 BSC Protocol                                  January 12, 1987
+
+
+                  12.2.8  Test Request Message
+
+
+           The Test Request message is sent to the host when the user presses
+      the SYS REQ key in  the real 3270 environment without Tymnet.   The SYS
+      REQ key is not supported by the PBTI.  The Test Request message  may be
+      sent by the  PBHI as a disconnect  message when defined in  the tymfile
+      with the TSTREQ or DEFTRQ macro.
+       
+         SOH                (01)
+          %                 (6C)
+          /                 (61)
+         STX                (02)
+         Text
+         ETX or ETB         (03 or 26)
+         BCC
+
+
+
+
+
+                  12.2.9  Read Modified
+
+
+           The Read Modified is sent to the host in response to a poll when a
+      user has entered  an aid key, such  as enter, function keys,  etc., and
+      contains the aid key and data from the terminal.
+       
+         STX                (02)
+         3270 poll address  (see Appendix)
+         device address     (see Appendix)
+         Text      
+         ETX or ETB         (03 or 26)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        76                         BGUIDE.DOC
+
+      IIX - Interface Information Exchange                   January 12, 1987
+
+
+                            13.2  IIX Command/Response
+
+
+           This section introduces the  format of a command or  response; the
+      Global  and Dialec  type messages;  Turkey messages  in 3270  etc.  The
+      purpose is to let  the reader get used  to these messages in  the IRING
+      and ORING. It is  not to teach the  reader to learn to  interpret these
+      messages.
+
+
+
+
+
+                  13.2.1  Command/Response Format
+       
+      |------|--|------|--------|------|-----|------|--|
+      |rport#|BF|rport#|cmd/resp|length|field|rport#|C0|
+      |------|--|------|--------|------|-----|------|--|
+       
+      BF = SIIX (start of IIX), necessary
+      C0 = TIIX (termination of IIX), optional
+      length = 0 to 2 bytes, indicate the length of the 
+               command/response
+      field = information field of varying length 
+              depending on the command/response
+      cmd/resp = 2 bytes command or response type
+       
+      EXAMPLE:
+      -------
+      0020 BF   0020 0480 8180 84 
+      0020 BF   0020 04C0 9300 01 
+      0020 BF   0020 0AC0 8700 0000 0000 0000 00 
+      0020 BF   0020 0AC0 880E 1234 5678 9009 87
+      0020 BF   0020 03C0 8D00
+      0020 BF   0020 13C0 8910 57C1 C125 0002 4040 D100 
+                0000 0000 0000 
+      0020 BF   0020 09C0 9480 0004 0012 C240  
+       
+      EXPLANATION: (Rport = 0020)
+      -----------
+      SIIX, Select Dialect, 3270 DSP
+      SIIX, Turkey level 1
+      SIIX, Called address, 7 digits, filled with 0
+      SIIX, Calling Address, 14 digits address
+      SIIX, Facility, 1 byte follows
+      SIIX, Call User Data, 16 bytes, is a TIF, 
+            Source CU addr= C1, Source Device Addr= C1,
+            25 00 (see manual for these 2 bytes), CRM2,
+            application 40, CU addr 40, device addr D1,
+            plus 7 bytes other destination designators
+      SIIX, DSP Data message, 4 bytes, Status Message,
+            Device Ready. 
+
+
+                                        84                         BGUIDE.DOC
+
+      IIX - Interface Information Exchange                   January 12, 1987
+
+
+                  13.2.2  Global Type Messages
+       
+      Existing Global Messages
+      ========================
+       
+      8080  Select Dialect
+      8081  Selected Dialect
+      8082  Gateway Reached Smart Host
+      8083  Gateway Reached Dumb Host
+      8084  Logon Status
+      8085  Resynchronize
+      8086  Interface ID/Version
+      8087  REQ Interface ID/Version
+
+
+
+
+
+                  13.2.3  Dialect Type Messages
+       
+      Dialect Values
+      ==============
+       
+      8080  all dialects were rejected
+      8081  ASCII data
+      8082  TYMNET/TYMNET gateway
+      8083  X.25/X.75 interface
+      8084  3270 DSP
+      8085  IBM SDLC
+      8086  IBM SNA
+      8087  UTS 4000
+      8088  Univac NTR
+      8089  TINET
+      808A  Outdial
+      808B  2780
+      808C  HASP
+      808D  Circuit Redirect
+      808E  UMB
+      808F  3780
+      8090  NETWORK CONSOLE
+      8091  Microdata File Transfer
+       
+      Note: in 3270 BSC slot, dialects from 
+          8085 downare not used. Mostly used
+          are 8081, 8082, 8083, 8084.
+
+      For example:
+      0020  0480 8180 84  (selected dialect 3270 DSP)
+      0020  0480 8080 84  (select   dialect 3270 DSP)
+      where 0020 is rport number, 04 is the byte count.
+
+
+
+
+                                        85                         BGUIDE.DOC
+
+      Turkey Messages in 3270                                January 12, 1987
+
+
+
+
+
+
+                           14 -  Turkey Messages in 3270
+
+
+           Once the dialect is selected and confirmed, the protocol gets into
+      Turkey level.
+       
+      C087  Called Address
+      C088  Calling Address
+      C089  Call User Data
+      C08A  Interrupt Packet
+      C08B  Interrupt Confirmation
+      C08C  Network Utility
+      C08D  Facility
+      C091  Reset Confirmation
+      C092  Call Accept
+      C093  Turkey Level
+       
+
+           The following messages are used by interfaces talking Turkey level
+      1 or higher. 3270 talks Turkey level 1.
+       
+      C094  Data
+      C095  Clear Indication
+      C096  Reset Indication
+      C097  Clear Information
+      C098  Abnormality Report
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        86                         BGUIDE.DOC
+
+      Turkey Messages in 3270                                January 12, 1987
+
+
+                           14.1  DSP Data Message - C094
+
+
+           The 3270 Display System  Protocol, also called DSP, is  an end-to-
+      end protocol  which supports IBM  3270 type devices  on an  X.25 packet
+      switched network. The end-to-end protocol is required to allow data and
+      control  information  to  be transferred  through  the  network. Simple
+      description of the DSP messages will be listed out below.  For detailed
+      information  check into  the  "3270 DISPLAY  SYSTEM  PROTOCOL" document
+      published in June 1983 by GTE Telenet Communications Corporation.
+
+
+           The DSP data message is further divided into  the command/response
+      message and DSP control message. It is determined by the highest bit (Q
+      bit) in the flag byte right after the C094 bytes. If Q bit is  set then
+      it is a DSP control message, otherwise it is either a DSP command  or a
+      DSP response message.
+       
+      |------|------|--------|---------------------|
+      | C094 | flag | length |data/message field   |
+      |------|------|--------|---------------------|
+       
+      flag: 1 byte = QDRRRRRM 
+                     Q: 1 ==> data control message
+                        0 ==> DSP data message 
+                     D: delivery confirmation flag
+                     R: reserved
+                     M: more data flag
+      length: 2 bytes indicate the data/message bytes
+              followed
+      data/message field: if Q bit = 0 and legnth > 0
+              it is data. If Q bit = 1 then it is a 
+              1-byte DSP Data Control Message and its
+              value bytes.
+       
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        87                         BGUIDE.DOC
+
+      Turkey Messages in 3270                                January 12, 1987
+
+
+                            14.2  DSP Command/Response
+
+
+           These are messages which has the Q bit = 0.  A Command  message is
+      used to convey commands (data) from the host to the 3270-type device. A
+      Response messatge  is used  to convey  data (except  Status/Sense data)
+      from the 3270-type device to the host.
+
+
+           Following are the formats of each one:
+
+
+
+
+
+                  14.2.1  COMMAND  message - first segment
+           
+      |--------------------------|
+      |       0                  |
+      |LCM ACK XPR 0 0 0 0 0     |
+      |  sequence #              |
+      |  ESC (27)                |
+      | IBM 3270 command code    |
+      |  data                    |
+      | ....... (more data)      |
+      | ITB or ETB or ETX or ENQ |
+      |--------------------------|
+       
+      Note: Each line is a byte.
+      for example:  
+        001C 29C0 9401 0024 0000 0727  F5C3 
+                 ..... (1E bytes following)
+      rport = 001C
+      29 (hex) bytes in this packet
+      C094 as DSP data message
+      data flag = 01 ==> more bit set, Q bit not
+          set is a command, has subsequent segment
+      0024 = length (hex) in the command message
+       
+      (command message starts from here)
+      0000 = first 2 bytes are set to 0
+      07   = sequence number
+      27   = ESC
+      F5   = Erase Write (3270 command)
+      C3   = WCC  byte
+
+
+
+
+
+
+
+
+
+                                        88                         BGUIDE.DOC
+
+      Turkey Messages in 3270                                January 12, 1987
+
+
+                  14.2.2  COMMAND  message - subsequent segment
+         
+        |----|---------------------|
+        |FS=1| user circuit number |
+        |----|---------------------|
+        |   data                   |
+        |  ......... (more data)   |
+        | ITB or ETB or ETX or ENQ |
+        |--------------------------|
+       
+        Note: each line is a byte.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        89                         BGUIDE.DOC
+
+      Turkey Messages in 3270                                January 12, 1987
+
+
+                  14.2.3  RESPONSE message - first segment
+       
+        |---------------------------|
+        |      0                    |
+        | LCM ACK XPR TRQ  0 0 0 0  |
+        | sequence number           |
+        | data                      |
+          .......
+        | ETB or ETX or ENQ         |
+        |---------------------------|
+       
+         Note: each line is a byte
+         for example:  
+             001C 17C0 9400 0012  0000 027D
+             404B C3E2 E2C6 40D3 D6C7 D6C6 C603
+       
+         001C: rport number
+         17 (hex) bytes in this packet
+
+         C094: a DSP data message
+         00:   is a response message
+         0012: 12 (hex) bytes in this message
+         0000: first 2 bytes are 0's
+         02:   sequence number
+       
+         (response message starts from here)
+         7D 404B: enter key at address 404B
+         following 11 (decimal) bytes translated into
+              CSSF LOGOFF
+         03: ETX
+       
+
+
+
+
+
+                  14.2.4  RESPONSE message - subsequent segment
+       
+        |--------------------------|
+        |FS=1| user circuit number |
+        |   data                   |
+           .......
+        | ITB or ETB or ETX or ENQ |
+        |--------------------------|
+       
+        Note: each line is a byte.
+
+
+
+
+
+
+
+
+                                        90                         BGUIDE.DOC
+
+      Turkey Messages in 3270                                January 12, 1987
+
+
+                          14.3  DSP Data Control Messages
+
+
+            These are  messages which has  the Q bit  set, i.e.   the message
+      looks as following:
+       
+      |-----|-------|----|--|-------|--|-----|-------|
+      |rport|size a |C094|80|size b |00| msg | field |
+      |-----|-------|----|--|-------|--|-----|-------|
+      2 bytes  1       2    1    2    1    1  variable
+       
+         size a = size b + 5  
+       
+
+           Each  has  various  length  bytes  following  it  to  present  the
+      condition. For example, a message may looks like:
+       
+      1. 0008 08C0 9480 0003 0001 21     or
+      2. 0008 09C0 9480 0004 0010 0004 
+       
+      #1: msg 01 is Invitation to Clear, 
+          reason code 21 is Facility Failure
+       
+      #2: msg 10 is Command/Response Undelivered,
+          seq# = 00, error code 04 = TIMEOUT
+       
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        91                         BGUIDE.DOC
+
+      Turkey Messages in 3270                                January 12, 1987
+
+
+                  14.3.1  DSP Data Control message Description
+
+
+           The table below  lists out the  description, page number  (in 3270
+      DISPLAY SYSTEM PROTOCOL document) and  size b portion of each  DSP data
+      control message.
+       
+       Msg  Description                   Page   size b
+       ---  ---------------------------   ----   ------
+       01   Invitation to Clear            34     3
+       10   Command/Response Undelivered   36     4-6
+       11   Command/Response Aborted       39     4-6
+       12   Status Message                 42     4
+       14   ACK message                    44     3
+       20   Circuit Enabled                46     10/up
+       21   Circuit Reset                  49     5
+       22   Circuit Request                51     7/up
+       24   Circuit Disconnect             54     3
+
+
+
+
+
+                  14.3.2  Format and Reason Code
+
+
+           Each box represents a 8-bit information.  Type 20 (circuit enable)
+      and type 22 (circuit request) messages will be explained later.
+       
+      INVITATION TO CLEAR (01)
+      |----|----|--------|
+      | 00 | 01 | reason |
+      |----|----|--------|
+         reason: 00 - undefined
+                 01 - user initiated
+                 10 - unidentified DQ packet
+                 11 - invalid state transition
+                 12 - invalid DQ format
+                 13 - invalid data packet format
+                 20 - timeout
+                 21 - facility failure
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        92                         BGUIDE.DOC
+
+      Turkey Messages in 3270                                January 12, 1987
+
+
+
+      COMMAND/RESPONSE UNDELIVERED (10)
+      |----|----|------|------------|-------|-------|
+      | 00 | 10 | seq# | error-code | S/S 0 | S/S 1 |
+      |----|----|------|------------|-------|-------|
+      error
+      code: 01 - EOT received
+            02 - RVI received
+            03 - facility failure detected
+            04 - TIMEOUT
+            05 - NAK received
+            06 - WACK received
+            07 - reserved
+            08 - unrecognizable msg format
+            09 - unrecognizable response from terminal
+       
+        COMMAND RESPONSE ABORTED  (11)
+      |----|----|------|------------|-------|-------|
+      | 00 | 11 | seq# | error-code | S/S 0 | S/S 1 |
+      |----|----|------|------------|-------|-------|
+       error code: 03 - facility failure
+                   04 - TIMEOUT
+                   05 - NAK
+                   0A - terminal related problem
+       
+        STATUS MESSAGE (12)
+      |----|----|-------|-------|
+      | 00 | 12 | S/S 0 | S/S 1 |
+      |----|----|-------|-------|
+       
+        ACK MESSAGE (14)
+      |----|----|------|
+      | 00 | 14 | seq# |
+      |----|----|------|
+       
+         CIRCUIT RESET  (21)
+      |----|----|---------------|--------------|--------|
+      | 00 | 21 | response seq# | command seq# | reason |
+      |----|----|---------------|--------------|--------|
+       
+        CIRCUIT DISCONNECT (24)
+      |----|----|--------|
+      | 00 | 24 | reason |
+      |----|----|--------|
+       reason: 00 - undefined
+               01 - user initiated
+               10 - unidentified DQ packet
+               11 - invalid state transition
+               12 - invalid DQ format
+               13 - invalid data packet format
+               20 - TIMEOUT
+               21 - facility failure
+
+
+                                        93                         BGUIDE.DOC
+
+      Turkey Messages in 3270                                January 12, 1987
+
+
+                  14.3.3  Format of Circuit Enable Message - type 20
+
+
+           Each line below is a byte of information.
+       
+      |----------------------------------------------|
+      | 00                                           |
+      | 20                                           |
+      | source CUA                                   |
+      | source DVA                                   |
+      | device information, see page 46              |
+      | device information, see page 46              |
+      | CRM                                          |
+      | application ID                               |
+      | destination CUA                              |
+      | destination DVA                              |
+      | additional destination designator information|
+      | same as previous byte                        |
+      | same as previous byte                        |
+      | same as previous byte                        |
+      |----------------------------------------------|
+
+
+
+
+
+                  14.3.4  Format of Circuit Request Message- type 22
+
+           Each line is a byte of information.
+       
+      |----------------------------------|
+      | 00                               |
+      | 22                               |
+      | source CUA                       |
+      | source DVA                       |
+      | device information, see page 51  |
+      | device information, see pge 51   |
+      | CRM                              |
+      | destination designators          |
+      | ..... various number of bytes    |
+      |----------------------------------|
+       
+
+
+
+
+
+
+
+
+
+
+
+
+                                        94                         BGUIDE.DOC
+
+      Turkey Messages in 3270                                January 12, 1987
+
+
+                   14.4  User Data Field of Call Request Packet
+
+
+
+           This field  follows the Call  User Data (C089)  message and  the 1
+      byte length. It is very important to discuss it because of the Protocol
+      ID and Attached  Printer bit are  newly implemented for  the multi-host
+      and CRM4  features respectively.   They will  be more  discussion about
+      them later.  Its format is as following:
+       
+        |----------------------------------------|
+        | Protocol ID                            |
+        | source CU address                      |
+        | source Device address                  |
+        | CR SM TT EA device-format-size DP      |
+        | reserved att-ptr colour character-set  |
+        | connection request mode (CRM)          |
+        | destination designators (n bytes)      |
+        |   ..........                           |
+        |                                        |
+        | reserved (m bytes)                     |
+        |    ..........                          |
+        |----------------------------------------|
+        
+        Note: Each line is a byte. 
+       
+
+
+
+
+
+                  14.4.1  Multi-host Implementation of Protocol ID
+       
+        |------------|-------|------|
+        | HOST TYPE  | PBH   | PBT  |
+        |------------|-------|------|
+        | IBM        | 56    | 57   |
+        | FUJITSU    | 66    | 67   |
+        | HITACHI    | 76    | 77   |
+        |------------|-------|------|
+       
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        95                         BGUIDE.DOC
+
+      Turkey Messages in 3270                                January 12, 1987
+
+
+                  14.4.2  Connection Request Mode - CRM
+
+
+           The  Connection   Request  Mode  definitions   are  implementation
+      dependent formats  for the Destination  Designator section of  the User
+      Data Field  and Circuit Request  message structures. It  is one  of the
+      Logon Elements  in PBT.  3270  BSC implemented 4  of them:  CRM1, CRM2,
+      CRM3 and CRM4. Their definitions are as following:
+
+
+
+           CRM1:  Fixed class CRM.
+
+
+           The  physical CU  and  device addresses  must match  those  at the
+      destination host.
+
+
+
+           CRM2:  Specified class CRM.
+
+
+           So called one-to-one mapping CRM. Logon is targeted to  a specific
+      application  identification,  destination  control  unit   address  and
+      destination device address.
+
+
+
+           CRM3:  Nonspecified class CRM.
+
+
+           The so called wild-card CRM.  The logon is targed to any available
+      device. PBH allocate  device from the bottom  up, which means  from the
+      last device defined in the tymfile.
+
+
+
+           CRM4:  Associated device class CRM.
+
+
+           Logon is targeted  to an associated printer.   Document PBHCRM.DOC
+      provides  information  of  CRM  on  PBH.   Document   CRM.DOC  provides
+      information of CRM on CMT.
+
+
+
+
+
+
+
+
+
+
+
+                                        96                         BGUIDE.DOC
+  lZ|
