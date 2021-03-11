@@ -1,0 +1,3960 @@
+
+
+
+
+
+
+
+                        C R D U   T I F
+
+                    GENERAL EXTERNAL DESIGN
+
+
+                         29 July 1988
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                           - 1  -
+
+
+
+
+
+
+
+
+
+
+
+                         1.  _S_C_O_P_E
+
+This document describes the software product CRDU TIF.  The
+CRDU TIF functions in the ISIS environment and converses
+through Tymnet Circuits with a Tymnet X.25 Interface (XCOM).
+It also sends entries to the Supervisor Log, which can be
+viewed with the Tymnet products Probe and TMCS.  See the
+appropriate standard Tymnet documents for descriptions of
+these other products.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                           - 2  -
+
+
+
+
+
+
+
+
+
+
+
+                      2.  _I_N_T_R_O_D_U_C_T_I_O_N
+
+
+
+The CRDU TIF, Terminal Interface, is software which runs in
+a Tymnet Engine Slot connected to multi-drop terminal lines
+which use Air France CRDU protocol.  CRDU TIF acts as the
+master of the multi-drop lines.  CRDU TIF will communicate
+with a Tymnet X.25 Interface connected to a UNISYS DCPxx
+which serves as a Front End for the Air France TOP host
+systems.
+
+The messages to and from the CRDU terminals will be passed
+through the X.25 link packaged in an Air France Envelope;
+CRDU TIF will add the Envelope on input and remove it on
+output.
+
+
+2.1  _R_e_f_e_r_e_n_c_e_s
+
+
+Air France documents specifying the requirements are
+included as annexes to the CRDU TIF Phase I contract.   The
+following Air France specifications are relevant:
+
+
+   o+ CRDU Protocol
+
+   o+ Air France Envelope
+
+   o+ X.25 Connection Between MDIS and AF DCP
+
+   o+ CRDU TIF Network Management
+
+   o+ Menu Requirements
+
+   o+ Erratum to CRDU Protocol, Air France, 29 July 1988,
+     Ontyme message S55768.
+
+The following Tymnet documents describe related products:
+
+
+   o+ X.25 Interface Reference Manual
+
+   o+ Probe Reference Manual
+
+   o+ TMCS Reference Manual
+
+
+
+
+
+
+
+                           - 3  -
+
+
+
+
+
+
+
+
+
+
+
+2.2  _S_y_s_t_e_m__B_a_c_k_g_r_o_u_n_d__A_n_d__F_u_n_c_t_i_o_n_a_l__O_v_e_r_v_i_e_w
+
+
+The present Air France TOP system uses DCPxx Front-End
+processors to control the communication lines to its CRDU
+controllers.  These controllers have connected to them TU
+and TC1 terminal devices which include CRTs and printers.
+
+
+2.3  _A_i_r__F_r_a_n_c_e__L_o_o_p__N_e_t_w_o_r_k
+
+
+An intermediate concentrator called a CLCU intervenes
+between the DCPxx and the CRDUs.  The DCPxx is connected via
+a loop line to several CLCUs.  Each CLCU may control four or
+five CRDU lines.
+
+
+2.4  _A_i_r__F_r_a_n_c_e__N_e_w__N_e_t_w_o_r_k
+
+
+Air France projects a New Network in which eventually the
+CLCUs and the DCPxxs will be replaced.  The New Network will
+furthermore handle a much enlarged terminal population.
+
+The plan envisions that existing CRDU lines will be
+connected to components called "CRDU TIF", Terminal
+Interface, in the new network.  CRDU TIFs will thus replace
+CLCUs.  It envisions that the DCPxxs will be replaced by
+components in the new network called "TOP HIF", Host
+Interface, connected to the TOP mainframes through a direct
+channel connection.
+
+
+2.4.1  _C_R_D_U__T_I_F__F_u_n_c_t_i_o_n_a_l_i_t_i_e_s
+
+The CRDU TIF described here is an initial implementation
+which will communicate with an X.25 Interface connected to a
+DCPxx.
+
+A CRDU TIF will function as a replacement for a CLCU,
+driving a number of CRDU lines.  The MDIS private network,
+connecting the CRDU TIF through the X.25 Interface to the
+DCP 40, will function in place of CLCU loop lines.
+
+The Air France Envelope is required by Air France in all the
+terminal messages which pass through the X.25 link connected
+to the DCPxx.  The X.25 Interface will be the standard
+Tymnet product, and so will not do any processing on the Air
+France Envelope; therefore the CRDU TIF will manage the Air
+France Envelope.
+
+
+
+                           - 4  -
+
+
+
+
+
+
+
+
+
+
+
+While this initial-version CRDU TIF generally serves the
+same function as the projected future CRDU TIF, this version
+differs insofar as it must communicate with a Tymnet
+standard X.25 Interface instead of the TOP HIF envisioned in
+the overall plan.
+
+
+2.4.2  _O_p_e_r_a_t_i_n_g__E_n_v_i_r_o_n_m_e_n_t
+
+CRDU TIF executes as a slot in the ISIS Operating System;
+CRDU TIF can run in any model of the Tymnet Engine.
+
+CRDU TIF uses standard ISIS facilites to control synchronous
+lines in CRDU protocol.  It communicates through Tymnet
+virtual circuits to a standard Tymnet X.25 Interface which
+is connected to the Air France TOP-system host.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                           - 5  -
+
+
+
+
+
+
+
+
+
+
+
+          3.  _L_I_N_E__C_O_N_T_R_O_L__P_R_O_C_E_D_U_R_E_S__I_N__C_R_D_U__T_I_F
+
+
+This chapter describes the CRDU protocol as it is
+implemented in CRDU TIF.  It describes the messages of CRDU
+protocol as the CRDU TIF requires them on input from the
+line, and as the CRDU TIF creates them to send output on the
+line.
+
+
+3.1  _C_h_a_r_a_c_t_e_r__S_e_t
+
+
+The character code is 7-bit Ascii plus Odd Parity.
+
+The following characters are reserved for line control and
+may not occur within the body of messages.
+
+
+    01 - SOH
+
+        - Start-of-Header.  Used to establish sync at the
+        start of every message.
+
+    03 - ETX
+
+        - End-of-Text.  Whenever ETX occurs it ends the
+        current message.
+
+    04 - EOT
+
+        - End-of-Transmission.  Whenever EOT occurs it ends
+        the current message.  When a message from a CRDU
+        ends in EOT, the CRDU has finished its transmission
+        and the CRDU TIF switches from input to output mode.
+
+    FFh - BUSY/P.
+
+        This character is used after the end of messages to
+        create time delay.  It is recognized from its
+        "wrong", i.e., even, parity.  If the CRDU TIF
+        detects BUSY/P before the end of a message in an
+        input from the CRDU, it will act as for parity
+        errors, as discussed in the section on Input
+        Procedures.
+
+        NOTE: 7Fh, the odd-parity code corresponding to
+        BUSY-P, is not a reserved character code in CRDU
+        TIF.  The CRDU TIF will permit code 7F in text.
+
+The following codes are defined within specific Link-Level
+
+
+
+                           - 6  -
+
+
+
+
+
+
+
+
+
+
+
+messages but are not reserved codes:
+
+
+    3Xh - Poll.
+
+        Label byte of a Poll message.  X is a 4-bit site
+        number.
+
+    4Xh - CTS
+
+        Label byte of a CTS message.  X is a 4-bit site
+        number.
+
+    5Xh - Wait
+
+        Label byte of a Wait message.  X is a 4-bit site
+        number.
+
+        The CRDU TIF does not transmit Wait messages.
+
+    09 - INFO - Label byte for INFO message.
+
+    05 - RTS - Label byte for RTS message.
+
+    07 - KRPT - Label byte for KRPT message
+
+    12h - RPT - Label byte for RPT message
+
+    70h and 71h - Label byte, Valbonne Up or Down messages.
+
+        The CRDU TIF does not transmit Valbonne Up/Down
+        messages.
+
+
+3.2  _S_u_m_m_a_r_y__o_f__L_i_n_k_-_L_e_v_e_l__M_e_s_s_a_g_e__F_o_r_m_a_t_s
+
+This section summarizes the Link-Level message formats.  All
+traffic passing over the communications line between the
+CRDU TIF and the CRDU must conform to these descriptions
+regardless of the type of device.  The link level does not
+differ for displays versus printers.
+
+
+3.2.1  _O_u_t_p_u_t_:__C_R_D_U__T_I_F__t_o__C_R_D_U
+
+The following is the format of all messages sent by the CRDU
+TIF.  All characters (except FFh) are actually in odd
+parity.
+
+
+
+
+
+
+                           - 7  -
+
+
+
+
+
+
+
+
+
+
+
+    Poll
+
+            01  01  3Xh       FFFFh
+            SOH SOH POLL/Site BUSY/P
+
+
+    Clear to Send (CTS)
+
+            01  01  4Xh      FFFFh
+            SOH SOH CTS/site BUSY/P
+
+
+    Information (INFO)
+
+            01  01  09   dev+20h   <text>   03  FFFFh
+            SOH SOH INFO dev_addr           ETX BUSY/P
+
+
+        The text content of Information messages is
+        transmitted between the CRDU TIF and the host,
+        passing through through the network's host
+        connection.
+
+        The text area includes LAD and in some cases
+        response-time values; for TC1 devices it also
+        includes the Terminal Envelope.  How the CRDU TIF
+        treats these fields is discussed in the chapter
+        about the Air France Envelope.
+
+
+    Repeat
+
+            01  01  12h dev+20h  FFFFh
+            SOH SOH RPT dev_addr BUSY/P
+
+
+3.2.2  _I_n_p_u_t_:__C_R_D_U__t_o__C_R_D_U__T_I_F
+
+The CRDU TIF recognizes the following messages transmitted
+by CRDUs:
+
+   No Data
+
+        01  01  04  FFFFh
+        SOH SOH EOT BUSY/P
+
+
+   Request to Send (RTS)
+
+
+
+
+
+
+                           - 8  -
+
+
+
+
+
+
+
+
+
+
+
+        01  01  05   04    FFFFh
+        SOH SOH RTS  EOT   BUSY/P
+
+
+   Information (INFO)
+
+        01  01  09   dev+20h  <text>   (03 or 04)    FFFFh
+        SOH SOH INFO dev_adr          (ETX or EOT)  BUSY/P
+
+
+   Kalculator Repeat (KRPT)
+      There are two forms of KRPT, one for TU devices and
+      another for TC1.  For TU:
+
+
+        01  01  07   dev+20h  (03 or 04)    FFFFh
+        SOH SOH KRPT dev_adr (ETX or EOT)   BUSY/P
+
+
+      For TC1:
+
+                                                 [03 or
+        01  01  09   dev+20h   (13 chars)   07    04]   FFFFh
+        SOH SOH INFO dev_adr <TC1 Envelope> KRPT [ETX   BUSY/P
+                                                or EOT]
+
+
+      The TIF further checks that the TM field of the TC1
+      Envelope must be hex 51, to recognize a KRPT message.
+      The section on Session Protocol and the Air France
+      Envelope describes the TC1 Envelope, and how CRDU TIF
+      uses the fields in it.
+
+
+
+3.3  _A_d_d_r_e_s_s_i_n_g__-__S_i_t_e_,__D_e_v_i_c_e_,__a_n_d__I_R_T
+
+
+Each line is multi-dropped to a number of CRDUs, and each
+CRDU has a number of devices: some printers and some
+displays.  Every CRDU has a number, the "Site" number.  Each
+device has a number, the "Device Address"; the Device
+Address must be different for every device on the line
+because several messages contain only the Device Address,
+not the Site number.
+
+IRT is a "logical number" in the Air France Host System
+which refers to one remote line or a group of remote lines.
+
+
+
+
+
+
+                           - 9  -
+
+
+
+
+
+
+
+
+
+
+
+3.3.1  _U_s_e__o_f__S_i_t_e__n_u_m_b_e_r__a_n_d__D_e_v_i_c_e__A_d_d_r_e_s_s__(_C_R_T_)
+
+A Site number is the number assigned to one CRDU.  The Site
+number is used in Poll and CTS messages.
+
+The Device Address (and not the Site number) is used in
+INFO, RPT, and KRPT messages.  The CRDU accepts Information
+messages and responds to Repeat messages, which contain the
+Device Address of any of its devices.
+
+The Device Address is often designated "CRT" for both
+displays and printers in Air France protocol specifications.
+
+Each Site address and all the Device Addresses which belong
+to it are configured into the CRDU TIF by Network Control
+Center personnel when they create each TIF's TYM file.
+
+The Device Address is used by the DCPxx to address each
+device on the line.  It is in the Air France Envelope; it is
+called "CRT" in the Envelope specifications.
+
+
+3.3.2  _U_s_e__o_f__I_R_T
+
+IRT is the host system's number for one remote line or a
+small group of lines.  When an IRT refers to a group of
+lines, then every terminal in the whole group must have a
+different "CRT" address.  IRT is in the Air France envelope
+and identifies which remote destination the message goes to
+(output) or comes from (input).
+
+To address any one specific terminal, every TOP host uses
+the same IRT/CRT value.
+
+For CRDU TIF, all the lines of one IRT must be connected to
+one CRDU TIF slot.  The CRDU TIF's configuration file
+defines the IRT number for each CRDU line.
+
+
+
+3.4  _P_o_l_l_i_n_g__a_n_d__I_n_p_u_t__P_r_o_c_e_d_u_r_e_s
+
+
+The CRDU TIF functions as the master station of a
+Poll/Select protocol, on a line multi-dropped to a number of
+Sites (CRDU control units) functioning as slave stations.
+
+The TIF polls all the sites periodically, to receive the
+input they have to send.  Devices which have not been
+responding get polled infrequently.
+
+
+
+
+                           - 10  -
+
+
+
+
+
+
+
+
+
+
+
+The TIF, being the master station, gives each of the various
+sites permission to transmit from time to time; it does this
+by sending one of the messages Poll or CTS or RPT according
+to the procedures described in the remainder of this
+section.  The addressed site answers according to the
+procedures.
+
+The TIF is said to be in "sending mode" except when it has
+given the site permission to transmit; then the TIF is in
+"receiving mode".  When it receives the termination of the
+site's transmission, the TIF then returns to sending mode.
+The TIF also uses a maximum character count while receiving,
+to handle the case where a line fault makes it miss the EOT
+character which signals end of transmission.  The maximum is
+4000 characters in a message, 8000 characters in a chain.
+If the chain maximum gets exhausted, the TIF will return to
+sending mode.  These maximums will be symbolically defined
+for easy modification.
+
+A site terminates every transmission with an EOT character.
+When the site sends the EOT, its turn is over; the TIF then
+returns to sending mode.
+
+The TIF will time out a site which fails to answer, and will
+return to sending mode.  The timeouts are described in a
+later section on timeouts.
+
+
+
+3.4.1  _N_o_r_m_a_l__P_o_l_l__a_n_d__I_n_p_u_t
+
+The TIF eventually polls every site on the line according to
+the Fast Poll and Slow Poll lists.
+
+After it sends Poll to a site, the TIF changes to receiving
+mode, and the site should respond within a time limit.  The
+sequence for normal input then is:
+
+   o+ First Response:
+
+     If the site has nothing to transmit, it transmits:
+
+         No-Data message.
+
+     The site's turn is then over and the TIF returns to
+     transmit mode.
+
+     If the site has any kind of message to transmit, it
+     transmits:
+
+         RTS message.
+
+
+
+                           - 11  -
+
+
+
+
+
+
+
+
+
+
+
+     The TIF then changes back to transmit mode.
+
+   o+ If the site sent RTS, the TIF will send
+
+         CTS message with site number,
+
+     and will change to receiving mode.  The site may now
+     transmit its messages.  It must transmit within a time
+     limit.  Time limits are discussed in separate following
+     sections.
+
+     Note: The TIF may delay the CTS while it transmits
+     other messages to other sites, or Info messages to this
+     site.  (The TIF will generally prefer to transmit
+     rather than give CTS, while it has output to be
+     transmitted; the output policy is described in
+     following sections.)
+
+   o+ Upon receiving CTS, the site may transmit one or
+     several messages.  Its last message is terminated with
+     EOT; messages before the last one are terminated with
+     ETX.  When the TIF receives EOT, it changes back to
+     transmit mode; the site's turn is then over and it may
+     not transmit any more until another Poll or an RPT is
+     addressed to it.
+
+
+3.4.2  _T_i_m_e_o_u_t__f_o_r__I_n_p_u_t
+
+The CRDU TIF starts a 200 ms timer after sending a message
+which gives a site permission to transmit; that is, after
+transmitting a Poll, CTS, or RPT.  If no input occurs before
+the timer expires, the TIF counts an error and advances to
+the next device in the polling list, as described in the
+section discussing the polling cycle.
+
+If the site fails n times in a row to answer a permission to
+transmit, it is put on the Slow Poll list - see the section
+discussing the polling cycle.  The site is considered down,
+that is, it is put on slow poll, and a log entry gets made.
+The number of times, "n", is called the Response-Timeout
+Threshold.
+
+
+3.4.3  _T_i_m_e_o_u_t__f_o_r__O_u_t_p_u_t__I_n_s_e_r_t_i_o_n
+
+When the CRDU TIF sends poll and starts the 200 ms timer, it
+will start a second 110 ms timer, the Timeout for Output
+Insertion, at the same time.  If this timer expires, the TIF
+will transmit output if it has any to send, to any site.
+Transmission at this time is called "Output Insertion".
+
+
+
+                           - 12  -
+
+
+
+
+
+
+
+
+
+
+
+Note that this implies that the TIF may yet receive the poll
+response while it is transmitting this output.  If the
+physical link is full-duplex, the TIF can receive and
+recognize the response under these circumstances.
+
+If the TIF performs this output insertion, and then the
+Poll-no-Response timer (200 ms) does expire and the TIF has
+detected no good response, it will not count a no-response,
+but will poll the site again.
+
+
+3.4.4  _P_a_r_i_t_y__E_r_r_o_r_s__o_n__I_n_p_u_t__-__T_e_x_t__f_r_o_m__a__D_e_v_i_c_e
+
+If the TIF detects a parity error within any message
+received from a terminal device, after the device address
+has been received without error, the TIF will perform the
+Repeat procedure as follows.
+
+Repeat Procedure: the TIF discards the erroneous message and
+records that it got a parity error from the device.
+
+When the site finishes transmission (TIF receives EOT), the
+TIF will send
+
+    Repeat message (RPT) with device address,
+
+addressed to the device which gave a parity error.
+
+The site responds to RPT by retransmitting the last message
+it sent from the device addressed in the RPT.
+
+If ite also has other input messages to send at this
+time, it will send those after the retransmitted message.
+The message format of this transmission is the same as the
+normal transmissions in response to CTS: these messages are
+chained; the final message ends in EOT, and messages before
+the final one end in ETX.
+
+If the TIF detects parity error n times in a row from one
+device, the device is declared down and the TIF makes a
+"parity error" log entry.  "n" is the configured threshold
+value for device parity errors, the "RPT Threshold", and the
+NCC operator can alter the value.  For a single device,
+being "declared down" only means that NCC queries of the
+device status will show "malfunctioning".
+
+
+3.4.5  _I_n_p_u_t__P_a_r_i_t_y__E_r_r_o_r_s__-__H_e_a_d_e_r_s__a_n_d__C_o_n_t_r_o_l__M_e_s_s_a_g_e_s
+
+If the TIF detects a parity error before receiving a correct
+device address, or in CRDU-level messages - messages not
+
+
+
+                           - 13  -
+
+
+
+
+
+
+
+
+
+
+
+from a specific terminal device - it will count an erroneous
+reception from the site and will discard the message.  If
+this occurs more times in a row than the configured
+threshold for site parity errors, the site will be declared
+down.  That is, the site will be put on slow poll and the
+TIF will make a "site down" log entry.
+
+Response timer: when the TIF detects the type of parity
+error just described, it does not stop the Poll-no-Response
+timer if that is running.  In other words it considers that
+the site has not responded.  If the timer expires, the TIF
+counts a no-response for the site which was polled.
+
+
+3.4.6  _K_R_P_T__-__s_i_t_e__d_e_m_a_n_d_s__R_e_p_e_a_t
+
+The site sends KRPT if it detected a parity error in output;
+this is to request a retransmission.
+
+The CRDU TIF does not respond to KRPT messages but transmits
+them to the host per Air France requirements.
+
+The CRDU TIF will count KRPTs per site.  It will detect if
+the count exceeds the parity error threshold for the device,
+if the error is persistent.  To do this, it also counts in
+another counter, the persistent-KRPT counter for the site,
+as long as the error persists.
+
+The TIF keeps track of whether a KRPT is persistent, by the
+following logic: If the TIF transmits to a site and then has
+a successful poll/reply exchange with the site, it will zero
+the site's persistent-KRPT counter.  A successful exchange
+is either:
+
+   o+ poll and receive No Data, or,
+
+   o+ poll, RTS, CTS, receive a complete transmission from
+     the site including the EOT, without any KRPT and
+     without errors.
+
+If the Persistent-KRPT counter reaches the KRPT Threshold,
+the TIF will log a "site malfunctioning" event and record a
+"malfunctioning" status for the site.
+
+
+
+
+
+
+
+
+
+
+
+                           - 14  -
+
+
+
+
+
+
+
+
+
+
+
+3.5  _T_h_e__P_o_l_l_i_n_g__C_y_c_l_e__a_n_d__S_l_o_w__P_o_l_l
+
+
+CRDU TIF keeps every site on either the Fast Poll list or
+the Slow Poll list.  The TIF repeatedly goes through the
+Fast Poll list polling each device.  It polls devices from
+the Slow list less frequently, as described in the
+following.
+
+A "Polling Cycle" is a number of polls, n, defined by TIF
+configuration (and redefinable by operator command).  The
+"Polling Cycle" is an artificial number not related to the
+number of devices being polled on the Fast List; the number
+is 10 by default.  As the TIF passes repeatedly through the
+Fast Poll list, it counts 1 for every poll; when the count
+reaches n, one Polling Cycle is considered complete.
+
+The TIF polls one site from the Slow Poll list at the end of
+every second Polling Cycle.  If a device on the Slow Poll
+list answers the poll, it is moved off the Slow Poll list
+onto the Fast Poll list.
+
+
+3.6  _O_u_t_p_u_t__P_r_o_c_e_d_u_r_e_s
+
+
+The TIF sends output which it receives from the DCPxx, to
+the site as soon as it can, at any time when it is in
+sending mode.
+
+Note that when the TIF receives RTS from a site, it will
+prefer to send output rather than reply with CTS to the RTS.
+
+The TIF will respond with CTS to the requesting site after a
+time.  To assure that it does this, there is a configurable
+limit on the amount of output the TIF sends while any site
+is awaiting CTS.
+
+
+3.7  _P_h_y_s_i_c_a_l__L_a_y_e_r
+
+
+The CRDU TIF controls a synchronous port using the standard
+ISIS sync-IO facilities.  CRDU TIF may operate at up to 9600
+baud.
+
+CRDU TIF will hold the RTS pin true all the time it is
+running, whether it is transmitting or not.
+
+
+
+
+
+
+                           - 15  -
+
+
+
+
+
+
+
+
+
+
+
+                4.  _I_N_T_R_A_N_E_T_W_O_R_K__P_R_O_C_E_D_U_R_E_S
+
+
+This section describes how information is exchanged between
+the CRDU TIF and the XCOM interface.  This largely
+determines how the XCOM interfaces then communicates through
+the X.25 link to the DCPxx.
+
+This section focuses on the intranetwork protocols and on
+the circuit procedures. The intranetwork protocol part
+specifies the format of the messages exchanged between the
+CRDU TIF and the XCOM interfaces. The circuit procedures
+part describes the way in which a connection between the
+CRDU TIF and the XCOM interface is established, maintained
+and released.
+
+
+4.1  _I_n_t_r_a_n_e_t_w_o_r_k__p_r_o_t_o_c_o_l_s
+
+
+Intranetwork protocols are the protocols that govern the
+exchange of information between two TYMNET Interfaces.
+Between the CRDU TIF and XCOM there are two levels of
+protocol: basic Tymnet circuit protocol, and IIX
+(Intelligent Interface eXchange).  IIX is a Tymnet
+"session-level" protocol that allows two interfaces to
+exchange control information and still pass data
+transparently.
+
+The basic Tymnet circuit protocol for maintaining and
+clearing circuits is common to all the TYMNET interfaces.
+The scope of this General External Design is to describe
+what is specific to the CRDU TIF implementation.
+
+
+4.1.1  _I_I_X__p_r_o_t_o_c_o_l
+
+Once the network circuit is built, CRDU TIF establishes with
+the XCOM interface an IIX (Intelligent Interface eXchange)
+protocol connection.  IIX protocol is an end-to-end protocol
+within Tymnet; in this case the two ends are CRDU TIF and
+XCOM.
+
+IIX is used by various Tymnet interfaces to establish dialog
+and use a "dialect" specific to the interface.  XCOM has its
+own specific dialect; in the XCOM dialect, X.25 information
+such as Call Setup and packet boundaries can be passed
+through the Tymnet circuit.
+
+
+
+
+
+
+                           - 16  -
+
+
+
+
+
+
+
+
+
+
+
+4.1.2  _I_I_X__P_r_o_t_o_c_o_l__m_e_s_s_a_g_e__s_t_r_u_c_t_u_r_e
+
+IIX Protocol is messages are composed using the Tymnet
+circuit-protocol messages SIIX and TIIX to bracket the
+message bytes.  Since the SIIX and TIIX are out-of-band
+signals, this protocol permits transparent use of 8-bit
+data.
+
+All the IIX commands have the following structure:
+
+1.  An SIIX (Start of IIX) message.
+
+2.  The message body, which consists of one or more ISIS
+    data messages.  The first two bytes of data that follow
+    the SIIX message contain the code that defines the IIX
+    message type. The rest of the message has a format that
+    depends on the type of message. The next section, "IIX
+    protocol message formats", defines the various formats.
+
+3.  An optional TIIX (Termination of IIX) message.
+
+There are two classes of IIX messages: Global and Dialect-
+Dependent. The Global messages are the same for all Tymnet
+interfaces which use IIX; they permit two Tymnet components
+to determine whether they can converse in a specific
+dialect.  Dialect messages are messages for a specific type
+of connection.
+
+An XCOM interface is able to support the DSP dialect and the
+X.25 dialect (and it can handle non-IIX circuits, in PAD
+mode).  The connection between the XCOM interface and the
+CRDU TIF will use the X.25 dialect.
+
+
+4.1.3  _I_I_X__P_r_o_t_o_c_o_l__m_e_s_s_a_g_e__f_o_r_m_a_t_s
+
+The following list defines the format of the IIX messages
+employed to exchange data between the CRDU TIF and the XCOM
+interface:
+
+Global Messages:
+
+    _S_e_l_e_c_t _d_i_a_l_e_c_t: Code (2 bytes), List of dialect values
+        (4 bytes).
+
+    _S_e_l_e_c_t_e_d _d_i_a_l_e_c_t _r_e_s_p_o_n_s_e: Code (2 bytes), Dialect value
+        (2 bytes).
+
+X.25 Dialect:
+
+
+
+
+
+                           - 17  -
+
+
+
+
+
+
+
+
+
+
+
+    _T_u_r_k_e_y _l_e_v_e_l: Code (2 bytes), Dialect level (2 bytes).
+
+    _C_a_l_l_e_d _a_d_d_r_e_s_s: Code (2 bytes), Address length (1 byte),
+        Address.
+
+    _C_a_l_l_i_n_g _a_d_d_r_e_s_s: Code (2 bytes), Address length (1
+        byte), Address.
+
+    _F_a_c_i_l_i_t_y _f_i_e_l_d: Code (2 bytes), Length of the rest of
+        the message (1 byte), Length of the facility fields
+        (1 byte), Facility fields.
+
+    _C_a_l_l _u_s_e_r _d_a_t_a: Code (2 bytes), Length of the rest of
+        the message (1 byte), Call user data fields.
+
+    _R_e_s_e_t _C_o_n_f_i_r_m_a_t_i_o_n: Code (2 bytes).
+
+    _C_a_l_l _a_c_c_e_p_t_e_d: Code (2 bytes),  Length of the rest of
+        the message (2 bytes), Call connected packet as
+        transmitted by the X.25 link.
+
+    _D_a_t_a: Code (2 bytes), Data flags (1 byte), Data length
+        (2 bytes), Data.
+
+        One IIX Data Message is one X.25 Data Packet.
+
+        The Data flags include the following bits which
+        correspond to X.25 Packet flags:
+
+                data qualifier bit.
+                delivery confirmation flag.
+                more data flag.
+
+    _C_l_e_a_r _i_n_d_i_c_a_t_i_o_n: Code (2 bytes), Clearing cause (1
+        byte), Clear diagnostic (1 byte).
+
+    _R_e_s_e_t _i_n_d_i_c_a_t_i_o_n: Code (2 bytes), Reset cause (1 byte),
+        Reset diagnostic (1 byte).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                           - 18  -
+
+
+
+
+
+
+
+
+
+
+
+The following list contains the hexadecimal codes assigned
+to the IIX messages:
+
+              ________________________________
+             |     Select dialect     |  8080|
+             |_________________________|_______|
+             | Select dialect response|  8081|
+             |_________________________|_______|
+             |      Turkey level      |  C093|
+             |_________________________|_______|
+             |     Called address     |  C087|
+             |_________________________|_______|
+             |     Calling address    |  C088|
+             |_________________________|_______|
+             |     Facility field     |  C08D|
+             |_________________________|_______|
+             |     Call user data     |  C089|
+             |_________________________|_______|
+             |   Reset confirmation   |  C091|
+             |_________________________|_______|
+             |      Call accepted     |  C092|
+             |_________________________|_______|
+             |          Data          |  C094|
+             |_________________________|_______|
+             |    Clear indication    |  C095|
+             |_________________________|_______|
+             |    Reset indication    |  C096|
+             |_________________________|_______|
+
+
+
+
+4.2  _C_i_r_c_u_i_t__P_r_o_c_e_d_u_r_e_s
+
+
+The main categories of procedures in which circuit
+management can be divided are:
+
+1.  Circuit set up;
+
+2.  Establishment of an IIX connection;
+
+3.  Data transfer;
+
+4.  Circuit clearing;
+
+5.  Reset and Restart procedures, Link down.
+
+What follows is a more detailed description of these groups
+of procedures.
+
+
+
+
+                           - 19  -
+
+
+
+
+
+
+
+
+
+
+
+4.2.1  _P_r_o_c_e_d_u_r_e_s__f_o_r__c_i_r_c_u_i_t__s_e_t__u_p
+
+This section outlines the general characteristics of a
+connection with an XCOM interface, lists the rules the
+connection between a CRDU TIF and an XCOM interface should
+comply with, and then specifies how a circuit between a CRDU
+TIF and an XCOM interface is set up.
+
+
+4.2.1.1  _I_n_t_r_o_d_u_c_t_i_o_n__t_o__c_i_r_c_u_i_t__s_e_t__u_p
+
+A TYMNET interface can request the network to build a
+circuit toward an X.25 interface. The request generally must
+include a username and may include a host number.
+
+The username identifies the originator of the circuit.  The
+host number, if used, identifies the terminating end of the
+circuit; otherwise the Supervisor will use the username to
+look up the user's "home" host number and thus route the
+circuit.
+
+In the XCOM TYM file, one or more host numbers are
+configured; each host number can be assigned to one link or
+to one group of links.  See _X._2_5/_X._7_5 _I_n_t_e_r_f_a_c_e _R_e_f_e_r_e_n_c_e
+_M_a_n_u_a_l.
+
+When an XCOM interface receives a circuit from another
+interface, it will assign that circuit to one of the links
+for the requested host number, which has a free channel.
+Then it will route all the traffic coming from that circuit
+to the assigned link and channel and vice-versa.
+
+Tymnet permits Usernames to be multitargeted.  This means
+the Validations file may include several host numbers for
+the username and the Supervisor will select the best one
+when it builds the circuit.
+
+Tymnet further provides Priority targetting: the Supervisor
+will select the first host number on the username's list
+which has ports available.
+
+
+4.2.1.2  _R_e_q_u_i_r_e_m_e_n_t_s _f_o_r _t_h_e _c_i_r_c_u_i_t_s _b_e_t_w_e_e_n _C_R_D_U _T_I_F _a_n_d
+         _X_C_O_M _I_n_t_e_r_f_a_c_e
+
+In the standard Tymnet X.25 interface, one TYMNET circuit
+corresponds to one X.25 call.
+
+In the CRDU TIF to XCOM connection, circuits will be
+originated from the CRDU TIF only. The XCOM interface will
+be configured to clear any call request from the DCPxx.
+
+
+
+                           - 20  -
+
+
+
+
+
+
+
+
+
+
+
+Air France requires that the CRDU TIF multiplex traffic
+belonging to a group of IRTs (lines) over the same circuit
+and toward a predefined link. If the predefined link is not
+operational, the CRDU TIF must try to rebuild the circuit
+toward links on the same DCPxx first and then on different
+DCPxxs.  A circuit can multiplex traffic coming from one
+CRDU TIF only.
+
+
+
+4.2.1.3  _C_R_D_U__T_I_F__t_o__X_._2_5__c_i_r_c_u_i_t__s_e_t__u_p
+
+When CRDU TIF begins execution, there are no circuits.
+
+As soon as one CRDU answers poll, the CRDU TIF issues a
+circuit request for the CRDU's group of lines.
+
+To build the circuit, the TIF will have a list of login
+strings, each string including a username and optionally a
+host number.  Operations personnel provide the strings in
+the TYM file.  The TIF will attempt to build the circuit
+using the first string on the list.
+
+If the connection cannot be completed using the first login
+string, the TIF will try again, using the next string on the
+list and so on until it succeeds.
+
+The TIF will try each string more than once before going to
+the next one.  The attempt is a failure if the connection
+does not proceed through the Call-Accepted message.
+
+Air France's requirements can be met by inserting first the
+login string for the prefered link, then for the other links
+on the same DCPxx, then for the links on other DCPxxs.
+
+Links related to lower priority usernames should not be
+retained forever.  If a link or a DCPxx fails, all the
+traffic that was primarily routed to them is rerouted to
+alternative DCPxxs. When the link or the DCPxx are up again,
+the original circuits should be regenerated. In order to
+perform circuit regeneration, the CRDU TIF keeps track of
+the activity of an IRT group that is connected to an
+alternative DCPxx. If no IRT is waiting for a response from
+the host for a substantial timeout period, then the CRDU TIF
+clears the current circuit and tries to regenerate the
+circuit toward the original DCPxx.
+
+
+
+
+
+
+
+
+                           - 21  -
+
+
+
+
+
+
+
+
+
+
+
+4.2.1.4  _C_a_l_l__R_e_q_u_e_s_t__r_e_q_u_i_r_e_m_e_n_t_s
+
+The Call request packets generated by the XCOM interface
+will have:
+
+1.  The same Called address for all the calls originated
+    toward the same link.
+
+2.  No Calling address.
+
+3.  No Facilities.
+
+The Call Request will not contain facility fields.  The CRDU
+TIF cannot negotiate the packet size.  The packet size may
+be defined in the Tymfiles of the XCOM interface and of the
+CRDU TIF.  Otherwise the packet size will be the default
+packet size defined in the X.25 recommendation: 128 bytes.
+The following are the values that will be accepted for the
+packet size in both CRDU TIF and XCOM:
+
+64, 128, 256, 512, 1024, 2048 and 4096.
+
+
+4.2.2  _E_s_t_a_b_l_i_s_h_m_e_n_t__o_f__t_h_e__I_I_X__c_o_n_n_e_c_t_i_o_n
+
+Once the network circuit is built, there is an exchange of
+IIX global messages to set up an IIX connection. This
+initial handshake is needed by the two interfaces to define
+what dialect will be used.
+
+The first IIX X.25 dialect message exchanged is the Dialect
+Level message, also called Turkey level, which selects the
+level of the IIX dialect.  There are several levels of X.25
+dialect, each level corresponds to a set of features
+utilized by the XCOM interface.  Levels are hierarchically
+organized and higher levels include the features of lower
+levels. The level chosen for the CRDU TIF includes all the
+messages defined in the "IIX protocol message formats"
+section and suits the CRDU TIF needs.
+
+When the Turkey level is defined, the CRDU TIF sends a call
+request sequence to the XCOM interface. The following IIX
+messages form the call request sequence:
+
+1.  Called address.
+
+2.  Calling address.
+
+3.  Facility field.
+
+
+
+
+
+                           - 22  -
+
+
+
+
+
+
+
+
+
+
+
+4.  Call user data field.
+
+The Call user data field must close the sequence.  An XCOM
+interface always expects this series of messages, therefore
+messages that carry information not needed for the
+connection X.25 to CRDU TIF, i.e. Facility and Call user
+data messages, will have empty fields. The XCOM interface
+responds to the Call request sequence either sending Call
+accepted or clearing the circuit.  When the CRDU TIF
+receives the Call accepted, the data transfer phase can
+start. If the circuit is cleared the CRDU TIF will try to
+build the circuit toward a different link.
+
+
+
+4.2.3  _D_a_t_a__t_r_a_n_s_f_e_r
+
+User data is transferred through the network by means of IIX
+Data messages.  As specified above, the data part of the
+message is preceded by a Data flag. The Data flag carries
+Data qualifier flag, Delivery confirmation flag, and More
+data flag which respectively match the X.25 Qualifier bit,
+Delivery confirmation bit, and More Data mark, see
+"_R_e_c_o_m_m_e_n_d_a_t_i_o_n _X._2_5"  CCITT, 1984.
+
+In the CRDU TIF to XCOM interface connection there is no
+support for the Qualifier bit and Delivery confirmation bit,
+therefore Data qualifier flag and Delivery confirmation flag
+are always set to zero.
+
+The More data flag is used to deliver X.25 packets with More
+Data mark set to one through the network.
+
+One data message can contain one CRDU INFO message to or
+from one terminal only. If the CRDU INFO message is bigger
+than the packet size, the M bit will be used.  (Note that
+when the CRDU TIF receives chained input from a CRDU, the
+TIF separates this into individual messages.)
+
+4.2.3.1  _I_R_T__l_i_s_t
+After Call Setup, the CRDU TIF sends, as first data packet,
+the list of IRTs whose traffic will be multiplexed on the
+circuit.  The list will have the following format:
+
+1.  Air France envelope with IRT, CRT set to one and Control
+    Message Bit set to one as well. The other envelope flags
+    and fields are unused.
+
+2.  Count of the number of IRTs in the list, two bytes.
+
+
+
+
+
+                           - 23  -
+
+
+
+
+
+
+
+
+
+
+
+3.  IRT list: two bytes per IRT with the IRT value in
+    binary.
+
+4.  End flag: FFFF hexadecimal, two bytes.
+
+Two-byte binary numbers are always arranged high-order byte
+first.
+
+The same IRT will never appear in the IRT list on more than
+one active circuit. While the circuit is active, the list of
+associated IRTs will never be changed by the network.
+
+If the CRDU TIF receives from a circuit a message for an IRT
+that does not belong to the IRT group that is associated to
+that circuit, the CRDU TIF will discard the message and
+notify the Supervisor.
+
+
+
+4.2.4  _C_i_r_c_u_i_t__c_l_e_a_r_i_n_g
+
+In order to clear a circuit one interface has to send the
+IIX Clear indication message to the other end. The Clear
+indication closes the IIX connection but the network circuit
+is still up.  Clearing the network circuit is responsibility
+of the receiver of the Clear indication message.  Both ends,
+CRDU TIF and XCOM interface, can start the clear procedure.
+The XCOM interface clears the circuit when it is required by
+events on the X.25 link, such as Clear Request received from
+the link or link down.  The CRDU TIF can clear a circuit for
+the following reasons:
+
+1.  If all the IRTs associated to the circuit have been in
+    slow poll for a timeout period defined in the Tymfile.
+    (As soon as one of the IRTs answers to the polling
+    again, the CRDU TIF will rebuild the circuit.)
+
+2.  If the circuit is built toward an alternative DCPxx and
+    all the IRTs associated to the circuit have been in
+    inactive for a timeout period defined in the Tymfile.
+    An IRT is declared as inactive if it has not been
+    waiting for messages from the host for a timeout period
+    defined in the Tymfile. As explained before, this
+    mechanism is deemed necessary in order to avoid traffic
+    permanently rerouted toward alternative DCPxxs.  (After
+    the circuit has been cleared the CRDU TIF will
+    immediately try to rebuild the circuit toward the
+    initial DCPxx.)
+
+Note that while a circuit is restored, the IRT group can
+experience a momentary traffic disconnection.
+
+
+
+                           - 24  -
+
+
+
+
+
+
+
+
+
+
+
+4.2.5  _R_e_s_e_t__a_n_d__R_e_s_t_a_r_t__p_r_o_c_e_d_u_r_e_s_,__L_i_n_k__d_o_w_n
+
+The Reset procedure reinitializes conditions within one
+virtual call.  In a network environment, the reset procedure
+removes in each direction all data and interrupt packets
+that may be in the network, see "_R_e_c_o_m_m_e_n_d_a_t_i_o_n _X._2_5"
+CCITT,1984.
+
+On the link side, the XCOM interface handles the Reset
+procedure according to the CCITT recommendation.  On the
+network side, the XCOM interface notifies the CRDU TIF with
+an IIX Reset indication message.  When the CRDU TIF receives
+the IIX Reset indication message, it removes all the data
+buffered for the circuit related to the channel that was
+reset and responds with an IIX Reset confirmation message.
+
+The Restart procedure has an impact on all the channels
+belonging to the link. The restart procedure clears all the
+virtual calls on the link. Therefore as consequence of a
+restart, the CRDU TIF rebuilds all the circuits associated
+to that link following the rules stated in the previous
+sections. The link down situation is handled the same as the
+Restart procedure.
+
+
+4.2.6  _S_u_m_m_a_r_y__o_f__t_h_e__I_I_X__m_e_s_s_a_g_e_s
+The following table summarizes the used IIX messages and
+illustrates the message exchange directions. The symbol "--
+>" indicates that the message goes from the CRDU TIF to the
+XCOM interface; the symbol "<--" indicates that the message
+goes from the XCOM interface to the CRDU TIF.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                           - 25  -
+
+
+
+
+
+
+
+
+
+
+
+             __________________________________
+            |     Select dialect     |    --> |
+            |                        |        |
+            |_________________________|_________|
+            | Select dialect response|    <-- |
+            |                        |        |
+            |_________________________|_________|
+            |      Turkey level      |    --> |
+            |                        |        |
+            |_________________________|_________|
+            |     Called address     |    --> |
+            |                        |        |
+            |_________________________|_________|
+            |     Calling address    |    --> |
+            |                        |        |
+            |_________________________|_________|
+            |     Facility field     |    --> |
+            |                        |        |
+            |_________________________|_________|
+            |     Call user data     |    --> |
+            |                        |        |
+            |_________________________|_________|
+            |   Reset confirmation   |    --> |
+            |                        |    <-- |
+            |_________________________|_________|
+            |      Call accepted     |    <-- |
+            |                        |        |
+            |_________________________|_________|
+            |          Data          |    --> |
+            |                        |    <-- |
+            |_________________________|_________|
+            |    Clear indication    |    <-- |
+            |                        |    --> |
+            |_________________________|_________|
+            |    Reset indication    |    <-- |
+            |                        |    --> |
+            |_________________________|_________|
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                           - 26  -
+
+
+
+
+
+
+
+
+
+
+
+          5.  _M_E_N_U__M_A_N_A_G_E_M_E_N_T__A_N_D__U_S_E_R__S_E_L_E_C_T_I_O_N_S
+
+
+
+Every Display will get a menu displayed on it when its CRDU
+first becomes active, except for Displays which are
+configured for no automatic menu display and Displays
+configured with only one application.  With automatic menu
+display, the menu is also displayed if connection is lost,
+whether at the host end or in the network.
+
+Every Display is assigned to some Service, that is, a list
+of valid applications; and a menu is defined unless the
+Service is a single application.  Defining the Services and
+Menus is discussed in the Configuration section.
+
+A Display configured for no automatic menu will start out
+connected to a default application.  The user may still make
+Application Switch entries.  The Application Switch entry is
+forbidden only if the user (the Display) is configured with
+only one application.
+
+
+When a display is configured with only one application,
+there is no menu for it.  Whenever the TIF builds the
+circuit which this display uses, it considers the display
+"disconnected".  The first time the user enters a message,
+the TIF automatically sends the "//" message to select the
+application; when a good reply comes back from the host, the
+TIF then transmits what the user entered and considers the
+display "connected".
+
+If a message from the host to the display arrives with one
+of the diagnostic flags that means connection to the
+application is lost, the TIF will display the message for
+that flag and will consider the display "disconnected"
+again.  When the user enters another message, the TIF will
+go back to the procedure described above for a circuit just
+built.
+
+
+5.1  _M_e_n_u__C_o_n_t_e_n_t
+
+
+The menu will consist of a list of all the user's available
+choices, displaying what the user is to type to select each
+choice.  Information called "the banner" will be displayed
+above this list, and further information, called "the
+prompt", will be displayed below this list.
+
+Different menus may be configured, for different classes of
+
+
+
+                           - 27  -
+
+
+
+
+
+
+
+
+
+
+
+users.  Every individual terminal may be configured as
+assigned to any menu.
+
+The content of each Menu is entirely defined through the
+configuration, separately for every menu.  This includes the
+banner, the list items, and the prompt.  See the
+Configuration section for details.
+
+
+5.2  _T_h_e__A_p_p_l_i_c_a_t_i_o_n_-_S_w_i_t_c_h__U_s_e_r__E_n_t_r_y
+
+
+Any user may at any time make an "Application Switch entry",
+unless the user is configured with only a single
+application.  It is in the form:
+
+        <switching signal><application-name>
+
+for example,
+
+
+    //RESA
+
+
+The CRDU TIF recognizes the Application Switch Request by
+comparing the initial characters of a user's keyed entry to
+the configured "switching signal" string; the default string
+is "//" (two slashes).
+
+The user must type a valid application name after the
+switching-signal characters.  The CRDU TIF will check that
+the name is valid, that is, the name must be in the
+application list of the menu which this user is assigned to.
+If valid, the TIF will perform the application switch as
+described in the section on the Air France Envelope.  If
+invalid, the TIF will present the menu to the user, with a
+diagnostic that the selection was invalid and the user is
+now not connected to an application.
+
+(Note: when the user is thus disconnected, the TIF still
+remembers the previous application and transmits it as the
+old application in the Air France Envelope when the user
+succesfully connects.)
+
+
+5.3  _R_e_q_u_e_s_t_i_n_g__t_h_e__M_e_n_u
+
+
+Users may request the menu at any time by entering the Menu
+Request.  The default menu request is
+
+
+
+
+                           - 28  -
+
+
+
+
+
+
+
+
+
+
+
+
+    //menu
+
+
+Actually the TIF uses the switching-signal string to
+recognize the menu request, and instead of "menu" any other
+string may be configured.
+
+When the user requests the menu, the TIF considers the user
+disconnected from the previous application.
+
+
+5.4  _F_a_i_l_u_r_e__t_o__R_e_a_c_h__t_h_e__H_o_s_t__A_p_p_l_i_c_a_t_i_o_n
+
+
+The TIF may from time to time receive output from the DCPxx
+to the terminal which includes error flags indicating that
+the user's last input could not be sent to the desired host.
+
+The TIF will display the appropriate diagnostic message for
+the flag which it detected.  Then, unless the user is
+configured for one application only, the TIF will display
+the menu and will consider the user disconnected from the
+application.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                           - 29  -
+
+
+
+
+
+
+
+
+
+
+
+        6.  _S_E_S_S_I_O_N__P_R_O_T_O_C_O_L__A_N_D__A_I_R__F_R_A_N_C_E__E_N_V_E_L_O_P_E
+
+
+
+The CRDU TIF will manage the Air France Envelope (EAF,
+Envelope Air France); every message passed between the
+Tymnet Network and the Air France system through the X.25
+link, will be composed of an Air France Envelope section and
+a text section.
+
+The TIF will remove the Envelope in messages from the DCPxx
+to a CRDU.  It will add the Envelope to all messages which
+it sends toward the DCPxx.  In some cases the Envelope
+includes a TC1 Terminal Envelope which is retained and
+transmitted between the TIF and CRDU; this is discussed
+under "General Format".
+
+CRDU TIF makes the modifications in the message header
+required for the EAF format prescribed for CRDU traffic;
+details follow in the description of the text area.
+
+The Envelope includes "Current Application" information
+which the TIF manages, to make a connection and do
+application switching.  This is discussed under "Application
+Connection and Switching".
+
+
+6.1  _G_e_n_e_r_a_l__F_o_r_m_a_t__o_f__M_e_s_s_a_g_e_s_:__E_n_v_e_l_o_p_e_,__T_e_x_t
+
+
+Each X.25 Data Message consists of the Air France Envelope
+(EAF) followed by the Text area.  The Envelope contains a
+size field expressed as byte count/4 (the host-system word
+count), giving the total size of the EAF.  The envelope size
+is thus a multiple of four bytes.
+
+An X.25 Message may be split into several Packets by use of
+the X.25 More Data bit.
+
+For all terminal traffic, one Message consists of one
+terminal Message.  When the CRDU transmits chained messages,
+the CRDU TIF breaks the chain into individual terminal
+messages for forwarding to the X.25 Interface.
+
+The last byte in every message to or from a CRDU-protocol
+terminal is ETX (hex 03).
+
+Parity: for messages from CRDU devices, the TIF will set
+parity to zero on the text, when it combines the text with
+the envelope.
+
+
+
+
+                           - 30  -
+
+
+
+
+
+
+
+
+
+
+
+On messages from the DCPxx to terminals, CRDU TIF will
+ignore parity in the text area; it will regenerate correct
+parity for transmission to the terminal devices.
+
+
+6.2  _F_o_r_m_a_t__o_f__D_C_P_x_x__C_o_n_t_r_o_l__M_e_s_s_a_g_e_s
+
+
+The Control Messages exchanged between the CRDU TIF and
+DCPxx conform to the general format described above.  They
+include a correct envelope size field and data length field.
+But they do not have an ETX.  And there is no parity
+setting; these messages have 8-bit binary data, and all bit
+configurations of the bytes are possible.  These messages
+are distinguished by having IRT=1 and CRT=1.
+
+Presently the only Control Message is the IRT-List message
+which CRDU TIF sends right after Call Accepted.
+
+
+6.2.1  _T_e_r_m_i_n_a_l_-_s_p_e_c_i_f_i_c__A_r_e_a__a_n_d__T_C_1__E_n_v_e_l_o_p_e
+
+The two supported displays - the old TU and the newer TC1 -
+differ in that messages to and from the TC1 have a Terminal
+Envelope on the front of the text.  Several fields in the
+Terminal Envelope correspond to fields in the Air France
+Envelope.
+
+There is a section of the Air France Envelope called
+Terminal-Specific Area; it is used for devices other than
+TU, and the content is specific to the type of device.  Some
+fields of the TC1 Envelope correspond to fields in the
+Terminal-Specific Area.
+
+On input from a TC1, CRDU TIF will move the required fields
+from the Terminal Envelope into the corresponding fields in
+the EAF, including th Terminal-Specific Area; then it will
+eliminate the Terminal Envelope.
+
+On output toward the TC1, the EAF bit "Envelope in Text" may
+be set; the bit set means a TC1 Terminal Envelope is already
+present in the text section.  In this case the TIF will
+transmit the entire text section including the Terminal
+Envelope, to the CRDU.
+
+When output toward the TC1 has "Envelope in Text" zero, the
+TIF will manufacture the Terminal Envelope and add it at the
+front of the text for transmission to the CRDU.
+
+Details are given in following sections.
+
+
+
+
+                           - 31  -
+
+
+
+
+
+
+
+
+
+
+
+The following diagrams of an Air France Envelope illustrate
+these two cases of Terminal Envelope:
+
+
+1) Envelope in text:
+
+                Env-In-Txt=40                 Env-Len=06
+
+    (byte 0)    xxxxxx40  xxxxxxxx  xxxxxxxx  xxxx06xx
+    (byte 16)   tttttttt  tttttttt  1d2b etc.
+
+                tt: unused.         TC1 Envelope.
+
+
+In this example, Envelope-in-Text is set, so the TC1
+envelope is present after the end of the EAF.  Here the
+length is shown as being 6 words, i.e., 24 bytes.  This
+includes all the bytes tt as shown, which are the EAF
+Terminal-Specific Area.  These bytes are ignored.  The CRDU
+TIF will accept this format from the DCPxx but will not send
+this format to the DCPxx.
+
+2) Not Envelope in text:
+
+
+                (Env-In-Txt=40 is 00)         Env-Len=06
+
+    (byte 0)    xxxxxx00  xxxxxxxx  xxxxxxxx  xxxx06xx
+    (byte 16)   TePmA1A2  Tm000000  6162 etc.
+
+                Term Specs          data ...
+
+
+In this example, the TC1 envelope is not in the text; after
+the Air France Envelope there is display data (6162 etc.).
+The Envelope Length is 6, which is the smallest it may be in
+this format, to include the Terminal-Specific Area through
+"Tm000000".
+
+The CRDU TIF will always use this format to transmit to the
+DCPxx.
+
+
+6.2.2  _C_o_n_t_e_n_t__o_f__t_h_e__t_e_x_t__a_r_e_a__i_n__E_A_F
+
+For all actual terminal traffic, the EAF text area contains
+only "pure text" (besides the TC1 Envelope if present).
+Details follow for TU and TC1.
+
+
+
+
+
+
+                           - 32  -
+
+
+
+
+
+
+
+
+
+
+
+TU and TC1 INFO messages in CRDU protocol have the following
+structure (SYNs not shown):
+
+
+    TU input:
+        INFO dev+20h [SEP T1 T2] LAD text ETX
+    TU output:
+        INFO dev+20h LAD text ETX
+
+    TC1 (TU mode):
+        INFO dev+20h <T-Envelope> LAD text ETX
+    TC1 (as UTS):
+        INFO dev+20h <T-Envelope> <UTS stream> ETX
+
+    (SEP is a code hex 60 through 6f)
+
+
+(T1 T2 are the Response-Time bytes; some devices do not
+transmit SEP T1 T2.)
+
+For TU devices TIF removes the LAD when combining the text
+area with the EAF; it also removes the Response Time header
+if present.  TIF inserts the LAD and Response-Time values in
+fields LAD and T1/T2 in the EAF.
+
+Any TC1 device may at various times be in either TU mode or
+UTS presentation mode; this mode is indicated by the EAF
+Terminal Type field in each output; for details, see the
+section below on use of EAF fields by CRDU TIF.
+
+For TC1 devices in TU mode: LAD is again not included in the
+text area but in its EAF field.  The CRDU TIF must remove
+the LAD, which is between the Terminal Envelope and the
+text, when it receives messages from a TC1 device in TU
+mode, and insert it in the EAF LAD field (subtracting hex
+40).  Also when the TIF receives output destined for a TC1
+device, if the Terminal Type in the EAF is "TU mode", CRDU
+TIF must insert LAD between the Terminal Envelope and the
+text (adding hex 40).  CRDU TIF will not perform this
+insertion of LAD if the Envelope-in-Text bit is set.
+
+When a TC1 device is in UTS-presentation mode: all text
+which follows the Terminal Envelope in the message on the
+CRDU line, is included in the text area.
+
+
+6.2.3  _S_p_e_c_i_f_i_c__a_l_t_e_r_a_t_i_o_n__o_f__K_R_P_T__m_e_s_s_a_g_e_s
+
+CRDU TIF will transform a KRPT from the CRDU into a message
+for the host with the EAF KRPT flag = 1 and the text area
+containing only 07 03 (KRPT, ETX).  The Terminal
+
+
+
+                           - 33  -
+
+
+
+
+
+
+
+
+
+
+
+Envelope/Terminal Specific Area will still be handled in all
+respects as described above.
+
+
+
+6.3  _A_p_p_l_i_c_a_t_i_o_n__C_o_n_n_e_c_t_i_o_n__a_n_d__S_w_i_t_c_h_i_n_g
+
+
+The EAF provides a Destination Application field: for
+messages from terminals it tells which host application the
+message is to go to.  In order to connect a terminal to a
+new application, the CRDU TIF must send a text message in
+which it assures that:
+
+   o+ The application's number is in the Destination
+     Application field.  This is required by the DCPxx for
+     routing.
+
+   o+ The text area contains the data "//applname" where
+     "applname" is the name of the application.  This is
+     required by the host system.
+
+   o+ The EAF flag bit "Application Change" must be set.
+
+
+The CRDU TIF performs application selection in these cases:
+
+   o+ Menu: When the CRDU TIF is presenting a menu to the
+     user, upon the user's selection the TIF manufactures
+     the required Application Switch message and sends it to
+     the DCPxx.
+
+   o+ User enters an Application Switch (a "//" message other
+     than //MENU): the CRDU TIF detects all Application
+     Switch messages typed by a user.  It fills in the EAF
+     as described and assures the application name is one in
+     the user's valid list.
+
+   o+ Default Application Connection: for users who are
+     configured to begin their connection without a menu,
+     they are to be connected to a configured Default
+     Application.  The first time such a user transmits, the
+     CRDU retains the user's message while it manufactures
+     the Application Switch message for the default
+     application and sends it to the DCPxx.  If the reply
+     comes back without flags indicating failure to connect,
+     the CRDU TIF then transmits the user's message.
+
+
+
+
+
+
+
+                           - 34  -
+
+
+
+
+
+
+
+
+
+
+
+6.4  _U_s_e__o_f__E_A_F__F_i_e_l_d_s__b_y__C_R_D_U__T_I_F
+
+
+This describes how CRDU TIF handles each field of the Air
+France Envelope (each field's position is given as distance
+in bytes from the beginning of the message).
+
+
+    +0 - Application #1, Destination (1 byte)
+
+        CRDU TIF sets this field to the current connected
+        application for all messages from CRDU.
+
+        Ignored on output.  The output response may come
+        from an application other than the one which the
+        user sent the input to.  CRDU TIF takes no note of
+        this, and always sends the input to the application
+        which the user has selected.
+
+    +1 - Application #2, Origination (1 byte)
+
+        Input: CRDU TIF sets this field to the previously
+        connected application when it sends an application-
+        switch message.  After the application switch, this
+        field is the same as Destination Application.  If
+        this message is the first from this terminal, this
+        field has the default application number.
+
+        Ignored on output.  The output response may come
+        from an application other than the one which the
+        user sent the input to.  CRDU TIF takes no note of
+        this.
+
+    +2 - Flags (2 bytes)
+
+        First byte (shown as a mask in hex and right-
+        justified octal):
+
+
+            hex 80, oct 200: Printer Tag
+
+                0 is translated to hex 30, 1 to hex 31, to
+                form the Tag in messages to a printer.
+
+            hex 40, oct 100: Question/Response
+
+                Input: set to 1 to indicate "Question".
+
+                Output: ignored.
+
+            hex 20, oct 040: Application Change
+
+
+
+                           - 35  -
+
+
+
+
+
+
+
+
+
+
+
+                Input: CRDU TIF sets this to 1 in the first
+                message it sends upon connecting to each new
+                host application; the data content of these
+                messages is always the message "//applname".
+
+                Output: ignored.
+
+            hex 10, oct 20: Printer/Crt
+
+                Input: CRDU TIF will set this to 1 for
+                devices configured to be printers.
+
+                Output: ignored; CRDU TIF will rely on the
+                configuration to know the difference between
+                printers and CRTs.
+
+            hex 08, oct 10: First Question
+
+                Input: Always zero.
+
+                Output: ignored.
+
+            04: Control Message
+
+                Set to 1, indicates messages which are not
+                traffic to or from terminal lines but rather
+                information exchanged between communications
+                processors.
+
+                Input: CRDU TIF sets this to 1 in the IRT-
+                list message it sends to the DCPxx when a
+                circuit gets built.  It also sets IRT =1 and
+                CRT =1.
+
+                Output: CRDU TIF expects no control messages
+                presently; if it finds the bit set it will
+                discard the message and count in an error
+                counter.
+
+            02: Application Not Available
+
+                The application specified as Destination in
+                the last message, cannot presently be
+                reached.  CRDU TIF recognizes this bit =1 in
+                output messages addressed to CRTs; it puts
+                the addressed terminal in a disconnected
+                state, that is, it is as if the user were
+                starting out.  (But the previous application
+                number is remembered, to be sent as
+                Originating Application when the user
+                connects to something).
+
+
+
+                           - 36  -
+
+
+
+
+
+
+
+
+
+
+
+                CRDU TIF will display any data content from
+                this message on the terminal, then will
+                display a message of its own stating the
+                user is not connected to the application.
+                This message will be configurable and can be
+                varied with different menus.
+
+                If the terminal is configured with a menu
+                the menu will then get displayed.
+
+                Input: set to 0.
+
+            1: Use Transport IRT
+
+                Output: ignored.
+
+                Input: set to 0.
+
+        Second byte:
+
+
+            hex 80, oct 200: KRPT
+
+                CRDU TIF will set this to 1, and will send
+                only KRPT, ETX in the text area, when the
+                CRDU sends a KRPT message.
+
+            hex 40, oct 100: Envelope in Text
+
+                Indicates that the the Terminal-Specific
+                Area of the EAF is not to be used, but
+                rather a TC1 Terminal Envelope is the first
+                thing in the text area.
+
+                Output: CRDU TIF will pass the TC1 Envelope
+                unchanged to the CRDU.
+
+                Input: CRDU TIF will not set Envelope-in-
+                Text in input; for TC1 devices it will copy
+                the TC1 Envelope fields into corresponding
+                EAF fields.
+
+            hex 20, oct 40: Application Unreached
+
+                The DCPxx sends an output with this set to 1
+                if it does not know the application number
+                in Destination Application, that is, the
+                last input contained an illegal application
+                number.
+
+                The CRDU TIF will count an error and send a
+
+
+
+                           - 37  -
+
+
+
+
+
+
+
+
+
+
+
+                log message if it gets this bit in output;
+                this means the CRDU TIF has an incorrect
+                application entry in its configuration.
+
+                The CRDU will display the specific
+                diagnostic for this to the user.  Then it
+                will put the user into the same state as
+                after "Application Not Available".
+
+                Input: set to 0.
+
+            hex 10, oct 20: Traffic Appl. to Appl.
+
+                Output: ignored.
+
+                Input: set to 0.
+
+            hex 8, oct 10: Priority Message
+
+                Output: ignored.
+
+                Input: set to 0.
+
+            The three last bits
+
+                Output: ignored.
+
+                Input: set to 0.
+
+    +4 IRT, 2 bytes
+
+        IRT number, a logical value which identifies the
+        line or group of lines which the message comes from
+        or is addressed to.  The list giving correspondence
+        of IRTs to lines is configured in each CRDU TIF.
+
+        IRT =1, with CRT =1, is used for control messages
+        between the DCPxx and the network.
+
+    +6 CRT, 1 byte
+
+        Identifies which device on the line the message
+        comes from or is addressed to.  Contains the "pure"
+        CRT number, that is, a binary number from 1 to 63.
+        20 hex is added to produce the CRT byte used in
+        messages on the CRDU line.
+
+    +7 LAD or Network Type, 1 byte
+
+        For the CRDU TIF, this is always LAD, never Network
+        Type.
+
+
+
+                           - 38  -
+
+
+
+
+
+
+
+
+
+
+
+        For CRTs, LAD in the messages on the CRDU line is
+        equal to the LAD field of the EAF plus hex 40.
+
+        For TC1 devices, when the mode is TU: on output,
+        CRDU TIF must insert the LAD between the Terminal
+        Envelope and the text.  On input, the CRDU TIF must
+        remove the LAD byte from the text area and put it in
+        this field.
+
+        When the TC1 device's mode is UTS, LAD is not used;
+        in this case, the LAD field does not exist in
+        messages on the CRDU line.  CRDU TIF will set the
+        EAF LAD field to 00 on input and will ignore it on
+        output.
+
+        For printers, the LAD field is always 1 in the EAF
+        and hex 40 when the message is transmitted on the
+        CRDU line.
+
+    +8 Message length, 2 bytes
+
+        Number of bytes in the text area (high-order byte
+        first).
+
+    +10 Response Time, 1 byte
+
+        Input: the four low-order bits of each of the two
+        Response Time bytes from the CRDU are combined into
+        this field.  For TU devices, the two bytes are
+        introduced by the character SEP (hex 60 through 6F)
+        in the header; for TC1 devices, the bytes are in the
+        TC1 Terminal Envelope.
+
+    +11 Site, Tech Info  Input: the TIF inserts the CRDU's
+        site number into Site (the high-order four bits).
+        It sets Tech Info (the low-order four bits) to zero.
+
+        Output: ignored.
+
+    +12 Transport IRT, 2 bytes
+
+        Output: ignored.
+
+        Input: set to 0.
+
+    +14 Length of AF Envelope, 1 byte
+
+        Size of the Envelope, that is, how much of the
+        message is not text area; expressed in host-system
+        words, which is byte count/4.  Thus the Envelope
+        must be an even multiple of 4 bytes.
+
+
+
+                           - 39  -
+
+
+
+
+
+
+
+
+
+
+
+    +15 Terminal Type, 1 byte
+
+        Input: the value of Terminal Type for every terminal
+        will depend on the CRDU TIF configuration:
+
+           o+ TU devices: hex 0E.
+
+           o+ TC1 devices: hex 0F.
+
+        Output: ignored.
+
+    +16 Terminal-Specific Area
+
+        This group of fields must be present whenever the
+        device is not TU and the Envelope-in-Text bit is
+        zero.  Then the Length-of-EAF field must include all
+        the values defined for the type of terminal, and all
+        the defined fields must be correctly set.
+
+        When CRDU TIF makes an EAF it will always create a
+        Terminal Specific area, and always with size 8
+        bytes.  If the device is TU, the area will be all
+        zeroes.
+
+        CRDU TIF only uses fields in the Terminal Specific
+        area for TC1 devices.  It uses the following fields,
+        which it simply moves to and from the corresponding
+        TC1 Terminal Envelope fields:
+
+
+           o+ +0 TE
+
+           o+ +1 PM
+
+           o+ +2 AS1
+
+           o+ +3 AS2
+
+           o+ +4 TM
+
+
+
+6.5  _T_r_e_a_t_m_e_n_t__o_f__f_i_e_l_d_s__i_n__t_h_e__T_C_1__e_n_v_e_l_o_p_e
+
+
+The field ELG in a TC1 Envelope gives the length of the
+envelope, counting only the bytes after the ELG field (plus
+hex 20).  When CRDU TIF creates a TC1 envelope to send to
+the CRDU, the length will always be 11 (ELG = hex 2B).
+
+The CRDU TIF will always use ELG to determine the size of
+
+
+
+                           - 40  -
+
+
+
+
+
+
+
+
+
+
+
+the envelope in messages it receives with a TC1 envelope.
+ELG must always be 11 bytes or more.  This will be so for
+messages from the CRDU, or from the DCPxx with bit Envelope
+in Text.
+
+The CRDU TIF copies the fields TE, PM, AS1, AS2, and TM
+between the Terminal Envelope used on the CRDU line and the
+Terminal Specific Area in the EAF.  On input, it copies the
+response time data from the Terminal Envelope fields TR1,
+TR2 used on the CRDU line (four low order bits) to the
+Response Time field of the EAF.
+
+The CRDU TIF copies between the EAF Site field and the low-
+order 4 bits of the Terminal Envelope PT field.  On output
+it adds hex 20 to site to create PT.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                           - 41  -
+
+
+
+
+
+
+
+
+
+
+
+                  7.  _S_Y_S_T_E_M__C_O_N_F_I_G_U_R_A_T_I_O_N
+
+
+Operations personnel configure each individual CRDU TIF by
+creating and modifying its "TYMfile" in the code-maintenance
+system.
+
+Certain elements of configuration are achieved by
+configuring the ISIS System, most particularly the
+assignment of the physical lines to slot "Logical Units" and
+storage reserved for each individual TIF.  These elements
+are covered in the standard Tymnet documents which discuss
+configuring ISIS.
+
+A Tymfile is made up of a set of statements which are Macro
+calls in NAD Assembler Language.  TIF configuration requires
+statements which fall into different classes:
+
+   o+ Statements which configure the whole slot.
+
+   o+ Statements which configure a line.
+
+   o+ Statements which configure a CRDU.
+
+   o+ Statements which configure one terminal.
+
+   o+ Group value settings.  These set a value to be used for
+     all following devices until another group setting
+     changes the value.
+
+   o+ Statements which define the Tymnet circuits to be
+     built.
+
+     Using the usernames and host numbers defined here, the
+     Supervisor will route each circuit to the correct X.25
+     Interface and the correct line.  These statements will
+     define the order in which backup lines should be tried
+     if first-choice routes are not functional.
+
+     (Note: line-configuration statements will declare how
+     traffic from lines is directed to circuits.)
+
+   o+ Statements which define a "Service".   A "Service"
+     includes a list of valid applications, and the content
+     of the Menu if any.  There is a Menu defined for each
+     Service if the Service is not a single application.
+
+
+
+
+
+
+
+
+                           - 42  -
+
+
+
+
+
+
+
+
+
+
+
+7.1  _G_e_n_e_r_a_l__S_l_o_t__C_o_n_f_i_g_u_r_a_t_i_o_n
+
+
+These statements define configuration for the whole slot.
+
+
+    Host Number (number)
+
+        A host number is required for the TIF.  The TIF does
+        not receive any circuits, but the host number is
+        still required for net-management and validation
+        purposes.
+
+    Poll Timeout (value in milliseconds)
+
+        (Default 200.)
+
+        If this timeout expires after a Poll, the TIF counts
+        a non-Response for the CRDU and for the line.  This
+        timeout also applies after RTS and RPT.
+
+    Transmit Timeout (value in milliseconds)
+
+        (Default 100.)
+
+        Timeout for insertion of output in the polling
+        cycle.  If this timeout expires after a Poll, the
+        TIF may transmit output on the line.  Note that this
+        default value is shorter than the Poll Timeout;
+        since the lines are four-wire, the TIF will still
+        recognize a poll response which arrives before the
+        Poll Timeout expires.
+
+    Maximum Message Size
+
+        The maximum block which the CRDU TIF will transmit
+        on or accept from the remote line.
+
+        The maximum block permitted between the TIF and the
+        DCPxx is computed from this value, presuming an EAF
+        of 24 bytes plus a TC1 envelope of 13 bytes.
+
+    Buffering Space to Lines (n bytes) and
+    Buffering Space to Circuits (n bytes)
+
+        (Defaults computed as a function of the line and
+        circuit configuration.)
+
+        Operations may supply the number of bytes total
+        buffering space they want available for traffic in
+        each direction: going toward the line (from the
+
+
+
+                           - 43  -
+
+
+
+
+
+
+
+
+
+
+
+        host) and going toward the circuits (toward the
+        host).
+
+        The default values are engineered to provide enough
+        buffering under peak load.
+
+        The buffering space is shared among all the lines
+        driven by one TIF.
+
+        An assembly diagnostic will be printed if these
+        parameters are set too small for normal operation.
+
+    Thresholds for Reporting
+
+        A set of slot configuration statements define the
+        startup settings for various thresholds to report
+        operating exceptions.  These statements are required
+        only where operations does not want the default.
+
+
+            CRDU No-Response Threshold(number)
+
+                (Default 2.)  If an operational CRDU fails
+                to respond on a poll, RTS, or RPT this many
+                times in a row, it is declared "non-
+                operational".  It is put on the Slow Poll
+                list and this event is logged.
+
+            Line No-Response Threshold(number)
+
+                (Default per Air France requirements)
+
+                If on any one line no CRDU responds to a
+                poll, RTS, or RPT this many times in a row,
+                the line is declared "non-operational".
+                This event is logged.
+
+            Net Buffer Threshold (lower, upper) and
+            Line Buffer Threshold (lower, upper)
+
+                (Defaults are computed by formula from the
+                Buffering Space).
+
+                Define buffering thresholds.  There is one
+                buffer pool for messages arriving on the
+                Line, from the CRDU, and another pool for
+                messages arriving through the Net, from the
+                host.
+
+                "lower value": If the free buffer space goes
+                below this many bytes, the TIF will log an
+
+
+
+                           - 44  -
+
+
+
+
+
+
+
+
+
+
+
+                Under Buffer Threshold event and will
+                display an Under Buffer Threshold status if
+                the operator queries the slot's status.
+
+                "upper value": When buffer space is under
+                threshold and the space goes above this
+                value, the TIF will log a Buffers no Longer
+                Under Threshold event and will clear the
+                abnormal status.
+
+                When Net Buffer Space is below threshold,
+                TIF will backpressure all circuits.
+
+                When Line Buffer Space is below threshold,
+                TIF will send no CTS messages.
+
+            Excessive Response Time (resp-time
+
+                value,times,period)  TIF will monitor the
+                Response Time values in the input messages
+                and count occurences when this time exceeds
+                "resp-time value".  If the count exceeds
+                "times" during a time "period", it will log
+                the event.
+
+            Period for Averages(period)
+
+                Defines how long a time period should be
+                used to compute various average values.
+
+            Parity Errors Threshold(number,period)
+
+                How many parity errors during a time
+                "period" are needed to cause logging the
+                event for a device.  The count for input
+                (RPT) and output (KRPT) are both  logged.
+
+            Printer NAKs Threshold(number,period)
+
+                How many NAKs during a time "period" are
+                needed to cause logging the event for the
+                printer.
+
+            Circuit-Build Fault Threshold(number)
+
+                How many time an attempt to build a circuit
+                must fail to cause logging the event.  The
+                log entry includes the final reason and the
+                circuit's ordinal in the configuration.
+
+
+
+
+
+                           - 45  -
+
+
+
+
+
+
+
+
+
+
+
+7.2  _L_i_n_e__C_o_n_f_i_g_u_r_a_t_i_o_n
+
+
+This set of Configuration Statements define values specific
+to each line.
+
+
+    Line Definition(Unit, IRT, Up/Down, circuit name)
+
+        Parameters are:
+
+           o+ Unit (number): ISIS Logical Unit number for
+             this line.
+
+           o+ IRT (number): The TOP System IRT number for
+             this line.
+
+           o+ Up/Down: "down" means the TIF should not
+             currently try to use the line.  Operator may
+             alter this.
+
+           o+ circuit name: Names the circuit which is to
+             carry the line's traffic.  "circuit name" is
+             the name used in the desired circuit-definition
+             statement.
+
+
+7.3  _C_o_n_f_i_g_u_r_a_t_i_o_n__o_f__C_R_D_U_s
+
+
+CRDU Definition (site number)
+
+Defines one of the CRDUs on the previously defined line.
+
+Terminal Configuration statements follow this for all the
+terminals attached to this CRDU.
+
+
+7.4  _C_o_n_f_i_g_u_r_a_t_i_o_n__o_f__I_n_d_i_v_i_d_u_a_l__T_e_r_m_i_n_a_l_s
+
+
+Device Definitions define terminal devices.  They follow the
+CRDU Definition for their CRDU.
+
+Each device has a number of characteristics which one sets
+by using the various Group Setting statements, for example,
+SET Service (name) or SET Default Application.  One places
+Group Setting statements before the group of Device
+Definitions which they apply to.
+
+Each Group Setting applies to every following Device
+
+
+
+                           - 46  -
+
+
+
+
+
+
+
+
+
+
+
+Definition until its Group Setting appears again.  These
+statements may appear anywhere after the first Line
+Definition.
+
+There must be a SET TC1 or SET TU, a SET Service, and a Set
+Printer App statement before the first Device Definition.
+
+
+    Device Definition (device address, display/printer)
+
+        Defines one printer or display.
+
+    SET TC1 and SET TU - Group Setting
+
+        Defines that the following devices are TC1 or TU
+        type.
+
+    SET Service (Service name) - Group Setting
+
+        Names a Service which all the displays belong to
+        whose definitions follow.  Thus it defines what menu
+        is displayed (if the Service has one).  Does not
+        apply to printers.
+
+    SET Default App(symbolic name) - Group Setting
+
+        Defines the default application for the Display
+        devices which follow.  One SET Default App must
+        appear before the first Device Definition in the
+        configuration.
+
+    SET Printer App(symbolic name[,number]) or
+    SET Printer App(,number) - Group Setting
+
+        Defines the application number for printers which
+        follow.  This defines the value which CRDU TIF will
+        insert in the Application field of the Air France
+        Envelope for the printers.
+
+        "symbolic name" may be the "symbol" in an
+        Application statement in a Service Definition, or it
+        may be a unique name.  If it is unique, "number" is
+        required.
+
+        "number" should be given here only if the
+        application does not appear in an Application
+        statement for any Service Definition, that is, if
+        the printer application is not addressed by any
+        displays.  "number" is the TOP System Application
+        Number, used in the Air France Envelope.
+
+
+
+
+                           - 47  -
+
+
+
+
+
+
+
+
+
+
+
+        If "number" is supplied, "symbolic name" may be
+        omitted.
+
+    Initial-Menu(yes/no) - Group Setting
+
+        If the parameter is "no", the following displays
+        will not get a menu displayed automatically when
+        their connection gets established.  Note, though,
+        the user may enter a Menu Request if the Service is
+        not single application.
+
+
+7.5  _C_o_n_f_i_g_u_r_a_t_i_o_n__o_f__C_i_r_c_u_i_t_s
+
+
+These statements provide the information required to build
+each Tymnet Virtual Circuit to an X.25 interface.
+
+Each circuit has a name given to it in the Circuit
+Definition statement.  The lines are related to a circuit by
+giving the circuit name in the Line Definition statement.
+
+Every circuit may have a list of alternative usernames and
+host numbers.  This list defines the primary target line and
+the backups in the order they are to be tried.
+
+
+    Circuit Definition(name)
+
+        Defines a circuit to be built.  "name" is the name
+        of the circuit; it is used in the Line Definition
+        statements to direct traffic between lines and
+        circuits.
+
+        The series of Login Spec statements which follow a
+        Circuit Definition give alternative usernames and
+        host numbers for building the circuit.  The first is
+        the normal target.  Subsequent statements are tried
+        in order if earlier ones result in a failure to
+        build.
+
+    Login Spec(username,host number,password)
+
+        Defines the username, host number, and password
+        which the TIF will use to build this circuit.
+
+
+
+
+
+
+
+
+
+                           - 48  -
+
+
+
+
+
+
+
+
+
+
+
+7.6  _M_e_n_u__a_n_d__A_p_p_l_i_c_a_t_i_o_n__D_e_f_i_n_i_t_i_o_n_s
+
+
+Operations defines one or more "Menu Services" in each TIF.
+A Service is essentially a list of valid applications.  Each
+Service is given a name; every display terminal is assigned
+to one Service by the SET Service statement, described above
+under Configuration of Individual Terminals.
+
+Either a Service is one fixed application, or it has an
+associated menu.  It is not necessary to display the menu
+automatically to all users; the "Initial Menu(no)" setting
+may be used to disable automatically displaying the menu on
+specific terminals.  Users at these terminals will get a
+menu only when they enter a Menu Request.
+
+The menu content must be defined for every Service which
+does not consist of only one application.
+
+
+    Service Definition (name)
+
+        Begins the definition of a Service and gives it a
+        name.
+
+        The name is used in the Device statement for each
+        CRT device, to assign a service to the terminal.
+
+        A series of Application statements will follow, to
+        define the applications users may select at
+        terminals assigned this service.  Other statements
+        will define the content of the menu.  The menu
+        definition must be present unless the Service is
+        just one application.
+
+        The Printer App statements, used with the device
+        configuration, may name applications defined here.
+
+    Application (symbol,number,host name,key entry)
+
+        "symbol" is a symbolic name used in other
+        configuration statements to name this application.
+
+        "number" is the TOP System Application Number, used
+        in the Air France Envelope to address this
+        application.
+
+        "host name" is the name actually sent to the DCPxx
+        in the message which switches applications.  If "key
+        entry" is not specified, the user who types an
+        Application Switch entry actually types "//host
+
+
+
+                           - 49  -
+
+
+
+
+
+
+
+
+
+
+
+        name".
+
+        "key entry" specifies the name the user is to type
+        in an Application Switch entry, if the user is to
+        type something other than "host name".
+
+    Menu Banner (text)
+
+        Defines initial text for the menu.  More than one
+        Menu Banner statement may appear together to supply
+        a large amount of text.
+
+    Menu Select (entry,appl. name,text) and
+    Menu Select Continued (text)
+
+        These define one selection in the menu.
+
+        "text" is what appears on the display for this
+        selection.
+
+        "appl. name" is the symbolic name in an Application
+        statement.
+
+        "entry" is the string the user must enter to select
+        this.
+
+    Menu Prompt (text)
+
+        Defines final text for the menu, including a prompt.
+        More than one Menu Prompt statement may appear
+        together to supply a large amount of text.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                           - 50  -
+
+
+
+
+
+
+
+
+
+
+
+                        8.  _M_O_N_I_T_O_R
+
+
+The CRDU TIF includes an Operations Monitor; an operations
+person accesses this Monitor by logging into the DDT for the
+TIF slot.  The CRDU TIF records significant events by
+sending coded messages to the network Supervisor Log; this
+log can be monitored in real time and reviewed, through
+standard Tymnet facilities, by the operations personnel.
+
+
+8.1  _A_c_c_e_s_s__t_o__t_h_e__O_p_e_r_a_t_i_o_n_s__M_o_n_i_t_o_r
+
+
+Here is a general summary of the access mechanism to the
+Monitor.
+
+The CRDU TIF is assigned a slot of a TYMNET Engine. Each
+slot has three associated processes: background, foreground
+and DDT. The DDT process is used to support monitoring
+commands. In order to use the DDT monitor, an Operations
+person with an asynchronous terminal has to build a circuit
+(that is, log in) to the node, and then must connect to the
+DDT process of the TIF's slot.  Only one user can be logged
+into the slot DDT at a time.
+
+Net Management personnel control who accesses the node and
+slot.  They validate the usernames allowed to log in to the
+node, and they include in the node's Tymfile the "Good-Guy
+List".  The Good-Guy List must include all usernames allowed
+to connect to each slot's DDT.
+
+
+8.2  _O_p_e_r_a_t_i_o_n_s__M_o_n_i_t_o_r__C_o_m_m_a_n_d_s
+
+
+The following categories of commands are supported by the
+CRDU TIF DDT monitor:
+
+   o+ Help Command;
+
+   o+ Configuration Commands;
+
+   o+ Current status Commands;
+
+   o+ Regular Statistics Commands;
+
+   o+ Commands for Changing Parameters;
+
+   o+ Test Commands.
+
+
+
+
+                           - 51  -
+
+
+
+
+
+
+
+
+
+
+
+   o+ Trace Commands.
+
+Commands shown here do not represent actual syntax but only
+the function.
+
+
+8.2.1  _H_e_l_p__C_o_m_m_a_n_d
+
+The Help command displays a list of all valid Monitor
+commands and a one line explanation of what the command
+does.
+
+
+8.2.2  _C_o_n_f_i_g_u_r_a_t_i_o_n__C_o_m_m_a_n_d_s
+
+The following commands can be issued to display the CRDU TIF
+configuration:
+
+CONFIGURATION- This command displays: the slot host numbers,
+the lines with their logical number, IRT number, and related
+circuit number, the CRDUs assigned to each line, and the
+devices assigned to each CRDU.
+
+CIRCUIT IRT LIST [circuit number]- This command displays:
+each circuit's number; the IRTs belonging to its list; the
+priority list of login strings (username/host number pairs)
+that are used to build the circuit toward the DCPxx's; and
+the circuit's current status - up, down, or building.  If
+the user gives a circuit number, that circuit's information
+is displayed.
+
+
+8.2.3  _C_u_r_r_e_n_t__S_t_a_t_u_s__C_o_m_m_a_n_d_s
+
+The following commands can be issued to display the current
+status of the CRDU TIF and of the connected lines.
+
+SLOT NET STATUS- This command displays: the status of the
+slot (whether it is running or not and whether it has
+announced itself to the network); the list of the circuits
+that are up/down; and the host numbers they are targeted to.
+
+LINE STATUS [line]- This command it is used to display: the
+status of the lines (up or down, see UP LINE and DOWN LINE
+commands), the IRT number, the status of the CRDUs connected
+to the line (whether they are in slow or in fast poll), the
+circuit number, and whether the circuit is up.  The user may
+optionally enter a line number to receive information for
+one line.
+
+
+
+
+
+                           - 52  -
+
+
+
+
+
+
+
+
+
+
+
+8.2.4  _S_t_a_t_i_s_t_i_c_s__C_o_m_m_a_n_d_s
+
+The following commands display statistic information
+gathered by the CRDU TIF.
+
+Many statistical commands display for "the most recent
+period".  The size of the period is a configuration
+parameter.  Furthermore, the statistics which use a period
+combine the last complete period and the present
+(incomplete) period.
+
+MESSAGE COUNTER(IRT/site) - This command displays: the
+current total number of input and output messages for every
+device - CRT or printer - on the CRDU, for the most recent
+period, and the average input and output message size.
+
+POLL COUNTER(IRT/site) - This command displays the total
+number of polling messages for the CRDU for the most recent
+period.
+
+NEGATIVE POLL COUNTER(IRT/site) - Displays the total number
+of polling messages that were answered with the "No Data"
+message during the most recent period.
+
+TRAFFIC RATE(IRT/site) - This command displays the maximum
+and average value of the ratio (number N of poll messages/
+number of data messages received as response to N), for the
+most recent period.
+
+LINE LOAD(IRT) - Displays the average and maximum value of
+the ratio: number of characters / time period (input and
+output).  The length of the time period will be defined in
+the Tymfile.
+
+CRDU TIF LOAD- Displays the total of the line loads, that
+is, it adds the number of characters from all the Line Loads
+and computes the TIF overall average.
+
+BUFFER SPACE- Displays for each major buffer pool: the
+configured size, the currently used amount of memory, and
+the maximum amount of memory used since the TIF was started.
+
+The buffer pools are the pool of buffers toward the network
+and the pool of buffers toward the lines.
+
+RESPONSE TIME(IRT/site) - Displays some statistics related
+to the response time extracted from the information message
+sent by the CRDU. The displayed values are per terminal(CRT
+and printer) and overall for the CRDU: the maximum response
+time, the average response time, the last extracted response
+time.  Maximum and average are for the most recent period.
+
+
+
+                           - 53  -
+
+
+
+
+
+
+
+
+
+
+
+BUFFER THRESHOLD- Displays how many times a predefined
+buffer occupancy threshold was exceeded since the TIF was
+started.
+
+THRESHOLD COUNTERS [IRT/site] - Displays for every CRDU the
+configured threshold values and how many times these values
+have been reached during the most recently completed period.
+Operator may optionally specify one CRDU by IRT/site.
+
+The following are the defined thresholds:
+
+   o+ Response Timeout Threshold: the Response Timeout
+     defines the lapse of time that can intervene between a
+     polling signal and the CRDU response; the Response
+     Timeout Threshold defines how many times the Response
+     Timeout must be reached before a report is sent to the
+     NCC.
+
+   o+ KRPT Threshold: defines the number of KRPT messages
+     that must be exchanged in order to send a report to the
+     NCC.
+
+   o+ RPT Threshold: defines the number of RPT messages that
+     must be exchanged in order to send a report to the NCC.
+
+   o+ NAK Threshold: defines the number of NAK messages that
+     must be exchanged in order to send a report to the NCC.
+
+ERROR COUNTERS [IRT/site] - Displays for each CRDU: the
+current total number of RPTs exchanged, the current total
+number of KRPTs exchanged, the current total number of NAKs
+exchanged, the current total number of occurrences of
+Message-Too-Long and Chain-Too-Long received from the CRDU
+(SN FAI CRDU 2).  Operator may optionally specify one CRDU
+by IRT/site.
+
+CRASH RECORD - Displays the crash counter for the CRDU TIF
+since the last code download. It also displays information
+about the last N crashes (N is configurable).
+
+
+
+8.2.4.1  _C_o_u_n_t_e_r__R_e_s_e_t__C_o_m_m_a_n_d_s
+
+These commands are provided to reset to zero the various
+statistical counters.
+
+When the command has an IRT/site parameter, the operator may
+use "TOUT" instead of an IRT/site to clear the counter for
+all CRDUs.
+
+
+
+
+                           - 54  -
+
+
+
+
+
+
+
+
+
+
+
+RESET KRPT COUNTER(IRT/site)
+
+RESET RPT COUNTER
+
+RESET NAK COUNTER
+
+RESET MESSAGE COUNTER
+
+RESET POLL COUNTER
+
+RESET NEGATIVE POLL COUNTER
+
+RESET BUFFER THRESHOLD
+
+RESET ALL COUNTERS- Resets all the counters which can be
+reset.
+
+
+8.2.5  _C_o_m_m_a_n_d_s__f_o_r__C_h_a_n_g_i_n_g__P_a_r_a_m_e_t_e_r_s
+
+The following commands allow the operator to change
+operational characteristics of the CRDU TIF.
+
+DOWN LINE(IRT) - Set a line DOWN.  When this command is
+issued the TIF stops using the line entirely.  It does not
+poll and it will discard output from the host.  The Test
+command may be used on a DOWN line.  Note: the configuration
+may specify that a line is DOWN at TIF startup.
+
+UP LINE(IRT) - Set a line UP.  When this command is issued
+the TIF begins using the line.  It begins polling and will
+send output from the host to the line.
+
+DOWN CRDU(IRT/site) - When this command is issued the CRDU
+is no longer polled.
+
+UP CRDU(IRT/site) - When this command is issued the CRDU is
+polled again.  It will be put on the Fast Poll list to
+start.
+
+CHANGE RESPONSE TIMEOUT THRESHOLD- This command allows the
+operator to change the configured value of the Response
+Timeout Threshold.  Note that there is one value of the
+Response Timeout Threshold for the whole CRDU TIF.
+
+CHANGE KRPT THRESHOLD- This command allows the operator to
+change the configured value of the KRPT Threshold.  Note
+that there is one value of the KRPT Threshold for the whole
+CRDU TIF.
+
+CHANGE RPT THRESHOLD- This command allows the operator to
+
+
+
+                           - 55  -
+
+
+
+
+
+
+
+
+
+
+
+change the configured value of the RPT Threshold.  Note that
+there is one value of the RPT Threshold for the whole CRDU
+TIF.
+
+CHANGE NAK THRESHOLD- This command allows the operator to
+change the configured value of the NAK Threshold.  Note that
+there is one value of the NAK Threshold for the whole CRDU
+TIF.
+
+CHANGE NET BUFFER THRESHOLD and CHANGE LINE BUFFER THRESHOLD
+- These commands allow the operator to change the configured
+values of the buffer thresholds.
+
+
+8.2.6  _T_E_S_T_(_I_R_T_)
+
+The test command allows the operator to send a configured
+test message to a terminal address (entered as command
+parameter).  The TIF will compare any message which comes
+back on the line to a configured Test-Reply.  The Operations
+Monitor will display a message indicating good reply or bad
+reply when the reply arrives.
+
+This command must be used on a DOWN line.
+
+
+8.2.7  _T_r_a_c_e__c_o_m_m_a_n_d_s
+
+The following Trace commands are available in the CRDU TIF:
+
+TRACE TERMINAL(IRT,dev_address,trace_type) - Trace traffic
+for a terminal.  The type of trace can be full or short.
+When the full trace is selected, the monitor displays
+complete protocol messages up to a length of N bytes. N is a
+parameter fixed at assembly time. When the short trace is
+selected, the monitor displays all the exchanged types of
+protocol messages.
+
+TRACE CRDU(IRT,site,trace_type)- Trace traffic for a CRDU.
+The type of trace can be full or short. When the full trace
+is selected, the monitor displays all the protocol messages
+up to a length of N bytes. N is a parameter fixed at
+assembly time. When the short trace is selected, the monitor
+displays all the exchanged types of protocol messages.
+
+TRACE LINE(IRT,trace_type)- Trace all traffic on a line.
+The type of trace can be full or short. When the full trace
+is selected, the monitor displays all the protocol messages
+up to a length of N bytes. N is a parameter fixed at
+assembly time. When the short trace is selected, the monitor
+displays all the exchanged types of protocol messages.
+
+
+
+                           - 56  -
+
+
+
+
+
+
+
+
+
+
+
+DISPLAY NET INPUT - Displays a trace of messages passing
+through the network input buffer ("IRING"), showing
+everything in hex, plus mnemonics for the Tymnet protocol
+messages and ASCII for the data.  This display consists of a
+series of messages preceded by internal circuit number.
+Data, that is, everything except Tymnet protocol messages,
+appears in segmented messages no larger than 153 characters.
+
+Note: the XCOM interface is capable of tracing the X.25
+packets with interpretation.
+
+DISPLAY NET OUTPUT- Displays a trace of messages passing
+through the network output buffer ("ORING"), showing
+everything in hex, plus mnemonics for the Tymnet protocol
+messages and ASCII for the data.  This display consists of a
+series of messages preceded by internal circuit number.
+Data, that is, everything except Tymnet protocol messages,
+appears in segmented messages no larger than 153 characters.
+
+Note: the XCOM interface is capable of tracing the X.25
+packets with interpretation.
+
+
+
+8.3  _E_v_e_n_t_s__R_e_c_o_r_d_e_d__i_n__S_u_p_e_r_v_i_s_o_r__L_o_g
+
+
+CRDU TIF will send reports to the Supervisor Log for various
+reasons.
+
+
+8.3.1  _P_e_r_i_o_d_i_c__S_t_a_t_i_s_t_i_c_s
+
+CRDU TIF will send the following statistics periodically.
+The time period is set by configuration.
+
+
+   o+ Response time per CRDU and per terminal.
+
+   o+ Number of characters transmitted, for input and for
+     output, per terminal - display and printer.
+
+
+8.3.2  _O_p_e_r_a_t_i_o_n_a_l__E_x_c_e_p_t_i_o_n_s
+
+CRDU TIF will send a log message for various events it
+detects which merit operation attention.  These include the
+following:
+
+
+
+
+
+
+                           - 57  -
+
+
+
+
+
+
+
+
+
+
+
+   o+ TIF startup (every unexpected TIF startup generally
+     represents a failure of the TIF or node).
+
+   o+ Terminal exceeding response time threshold.
+
+   o+ Buffer below threshold, and buffer returned to normal,
+     above threshold.
+
+   o+ Unable to build a circuit (retries exhausted).
+
+   o+ Line errors exceed threshold.  Distinct messages for:
+
+    o+ exceeding RPT threshold.
+
+    o+ KRPT threshold.
+
+    o+ message or chain too long.
+
+    o+ detection of a CRDU responding badly to protocol.
+
+    o+ too many printer NAKs.
+
+     This does not include a CRDU which ceases to answer
+     poll.
+
+   o+ Line failing: too many CRDUs non-operational, that is,
+     not answering poll.  The threshold number for this is
+     configured per line.  All the non-responding site
+     numbers are logged.
+
+   o+
+
+
+8.3.3  _C_i_r_c_u_i_t__A_c_c_o_u_n_t_i_n_g
+
+The CRDU TIF will rely on Tymnet standard logging of the
+circuit establishment and disconnection.  This provides a
+record of the time of every circuit's connection and
+disconnection invoiced to the username.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                           - 58 -
+
+
+
+
+
+
+
+
+
+
+
+                          CONTENTS
+
+
+1.  SCOPE  2
+
+2.  INTRODUCTION  3
+    2.1  References  3
+    2.2  System Background And Functional Overview  4
+    2.3  Air France Loop Network  4
+    2.4  Air France New Network  4
+         2.4.1  CRDU TIF Functionalities  4
+         2.4.2  Operating Environment  5
+
+3.  LINE CONTROL PROCEDURES IN CRDU TIF  6
+    3.1  Character Set  6
+    3.2  Summary of Link-Level Message Formats  7
+         3.2.1  Output: CRDU TIF to CRDU  7
+         3.2.2  Input: CRDU to CRDU TIF  8
+    3.3  Addressing - Site, Device, and IRT  9
+         3.3.1  Use of Site number and Device Address CRT)  10
+         3.3.2  Use of IRT  10
+    3.4  Polling and Input Procedures  10
+         3.4.1  Normal Poll and Input  11
+         3.4.2  Timeout for Input  12
+         3.4.3  Timeout for Output Insertion  12
+         3.4.4  Parity Errors on Input - Text from a Device  13
+         3.4.5  Input Parity Errors - Headers and Control Messages  13
+         3.4.6  KRPT - site demands Repeat  14
+    3.5  The Polling Cycle and Slow Poll  15
+    3.6  Output Procedures  15
+    3.7  Physical Layer  15
+
+4.  INTRANETWORK PROCEDURES  16
+    4.1  Intranetwork protocols  16
+         4.1.1  IIX protocol  16
+         4.1.2  IIX Protocol message structure  17
+         4.1.3  IIX Protocol message formats  17
+    4.2  Circuit Procedures  19
+         4.2.1  Procedures for circuit set up  20
+                4.2.1.1  Introduction to circuit set up  20
+                4.2.1.2  Requirements for the circuits between
+			 CRDU TIF and XCOM Interface  20
+                4.2.1.3  CRDU TIF to X.25 circuit set up  21
+                4.2.1.4  Call Request requirements  22
+         4.2.2  Establishment of the IIX connection  22
+         4.2.3  Data transfer  23
+                4.2.3.1  IRT list  23
+         4.2.4  Circuit clearing  24
+         4.2.5  Reset and Restart procedures, Link down  25
+         4.2.6  Summary of the IIX messages  25
+
+
+
+
+			   - i -
+
+
+
+
+
+
+
+
+
+
+
+5.  MENU MANAGEMENT AND USER SELECTIONS  27
+    5.1  Menu Content  27
+    5.2  The Application-Switch User Entry  28
+    5.3  Requesting the Menu  28
+    5.4  Failure to Reach the Host Application  29
+
+6.  SESSION PROTOCOL AND AIR FRANCE ENVELOPE  30
+    6.1  General Format of Messages: Envelope, Text  30
+    6.2  Format of DCPxx Control Messages  31
+         6.2.1  Terminal-specific Area and TC1 Envelope  31
+         6.2.2  Content of the text area in EAF  32
+         6.2.3  Specific alteration of KRPT messages  33
+    6.3  Application Connection and Switching  34
+    6.4  Use of EAF Fields by CRDU TIF  35
+    6.5  Treatment of fields in the TC1 envelope  40
+
+7.  SYSTEM CONFIGURATION  42
+    7.1  General Slot Configuration  43
+    7.2  Line Configuration  46
+    7.3  Configuration of CRDUs  46
+    7.4  Configuration of Individual Terminals  46
+    7.5  Configuration of Circuits  48
+    7.6  Menu and Application Definitions  49
+
+8.  MONITOR  51
+    8.1  Access to the Operations Monitor  51
+    8.2  Operations Monitor Commands  51
+         8.2.1  Help Command  52
+         8.2.2  Configuration Commands  52
+         8.2.3  Current Status Commands  52
+         8.2.4  Statistics Commands  53
+                8.2.4.1  Counter Reset Commands  54
+         8.2.5  Commands for Changing Parameters  55
+         8.2.6  TEST(IRT)  56
+         8.2.7  Trace commands  56
+    8.3  Events Recorded in Supervisor Log  57
+         8.3.1  Periodic Statistics  57
+         8.3.2  Operational Exceptions  57
+         8.3.3  Circuit Accounting  58
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+			   - ii -
+
+
+
+#CØ
