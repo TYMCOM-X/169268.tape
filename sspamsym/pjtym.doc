@@ -1,0 +1,637 @@
+
+
+
+
+
+TYMNET PJ - 5/31/79
+
+
+       PJ is a user name that should always be  logged  in  on  the  DEC
+  systems.   It stands for Phantom Job.  The supervisor tries to login a
+  job under the user name PJ whenever a system goes from a shut state to
+  an  up  state.   PJ  is set up with an initialization file, PAM, which
+  automatically runs whenever PJ is logged in.  The first thing PAM does
+  is  to  see  if there are any other jobs logged in under PJ.  If there
+  are, the job logs itself out.  If there  are  no  other  jobs  running
+  under  PJ,  PAM  then  reads  the  file  (PJ)JOBS.DAT.   The following
+  information is included in the file:
+
+            the logged in system number
+            a list of jobs to be run (numbered 1 through 10)
+            time interval to run each job in the list
+            a table of systems and their attributes (system table)
+
+  PAM sets up tables in core so it can determine the next job to be run,
+  and  when  it should be run, according to the information in JOBS.DAT.
+  It computes how much time should elapse before the next job is  to  be
+  executed and goes to sleep for that amount of time.  When it wakes up,
+  it tries to run the job described in the job table.  It looks for  the
+  file  (PJ)JOB00x.HGH, where x = the job number to run next.  When that
+  job has been completed PJ computes when the job should be  run  again,
+  saves that information, and looks for the next job to run.
+
+
+
+  JOBS.DAT
+
+       The format of (PJ)JOBS.DAT is as follows:
+
+  WORD 0       525252000101     control word to identify the file
+  WORD 1       system number
+  WORD 2       job control word
+               bits 1 through 10 determine which jobs to run
+  WORDS 3-12   time interval in minutes for each job in word 2
+  WORDS 13-    system number in right half
+               description bits in left half
+               last word in list = -1
+
+  DESCRIPTION BITS:
+
+  BIT 0   CUD system
+  BIT 1   MUD system
+  BIT 5   DEC accounting system
+  BIT 6   master password system
+  BIT 7   IMS system
+  BIT 8   DEC system
+  BIT 9   TYMUSE system
+
+                                                    PAGE   2
+
+
+
+       See documentation on MAKJOB for information on how to create  and
+  update JOBS.DAT.
+
+
+
+       PJ writes errors to a file called (PJ)PAM.ERR.  The following  is
+  recorded for each error:
+
+  WORD 0    error number in left half
+            job number in right half
+  WORD 1    system number
+  WORD 2    time of error in left half
+            date of error in right half
+
+  See documentation on RDERR for information on how to type out errors.
+
+                                                    PAGE   3
+
+
+
+                  TYMNET MAKJOB - 5/30/79
+
+       The MAKJOB program is used  to  set  up  and  maintain  the  file
+  (PJ)JOBS.DAT.  There are 4 commands:
+
+       R  (READ)       types all information from JOBS.DAT
+       S  (SET)        sets the system number
+       M  (MODIFY)     modifies various information in JOBS.DAT
+       Q  (QUIT)       exits to system
+
+       The command level prompt is:
+
+  READ, SET OR MODIFY?
+
+  Control-a may be used to  delete  the  last  character  input,  and  a
+  question mark may be entered to return to command level.
+
+
+
+  READ
+
+       The READ command will output all information in JOBS.DAT  to  the
+  terminal.  An example of the output follows:
+
+  SYSTEM 38                        (logged in system number)
+
+  DOES JOB 1                       (job list)
+  FREQ. IN MINS: 17
+
+  DOES JOB 3
+  FREQ. IN MINS: 5
+
+
+  SYSTEM MAP:                      (system map)
+
+  33
+  MASTER PASSWORD SYSTEM
+  DEC SYSTEM
+
+  36
+  DEC ACCTG. SYSTEM
+  DEC SYSTEM
+
+
+
+  SET
+
+       The SET command is used to change the system number  recorded  in
+  JOBS.DAT.  The user is prompted:
+
+  ENTER LOGGED IN
+  SYSTEM NO:
+
+                                                    PAGE   4
+
+
+
+  The user must input the new system number for the system he is  logged
+  in to.
+
+
+
+  MODIFY
+
+       The MODIFY command is used to alter the job list or system map in
+  JOBS.DAT.  The user is asked:
+
+  MODIFY JOBS OR SYSTEM MAP?
+
+  The responses are:
+
+       J  (JOBS)          user wishes to change the job list
+       S  (SYSTEM MAP)    user wishes to change the system map
+
+       If the user chooses to change  the  job  list,  he  is  asked  to
+  describe  each  job  to  enter  into  JOBS.DAT.   He  must  answer the
+  following questions for jobs 1 through 10:
+
+  JOB 1?               type 'Y' if job is to be included, otherwise, 'N'
+
+  FREQ. IN MINS:       enter frequency that job is to be run
+
+
+       If the user chooses to change the system map, he is  first  asked
+  what kind of change he wants to make:
+
+  ADD, DELETE OR CHANGE?
+
+  Valid responses are:
+
+       A  (ADD)        user wants to add new system(s)
+       D  (DELETE)     user wants to remove system(s)
+       C  (CHANGE)     user wants to alter system(s) already entered
+
+
+       ADD
+
+       If the user wishes to add a system to the map, he is first  asked
+  for the system number and then asked the following questions about the
+  system:
+
+  CUD SYSTEM?
+
+  MUD SYSTEM?
+
+  DEC ACCTG. SYSTEM?
+
+  MASTER PASSWORD SYSTEM?
+
+                                                    PAGE   5
+
+
+
+  IMS SYSTEM?
+
+  DEC SYSTEM?
+
+  TYMUSE SYSTEM?
+
+  The user is then asked:
+
+  ANOTHER SYSTEM?
+
+  If there are additional systems to be added to the list,  answer  'Y',
+  if  no more additions are to be made, answer 'N'.  After all additions
+  are made, the user is asked:
+
+  ADDITIONAL MODIFICATIONS?
+
+  If the user wishes to add, change or delete any systems,  answer  'Y',
+  and MAKJOB will re-prompt:
+
+  ADD, DELETE OR CHANGE?
+
+  If no more changes are to be made, the  user  should  answer  'N'  and
+  MAKJOB will return to the command level prompt.
+
+
+       DELETE
+
+       If the user wishes to delete a system from the map, he is  merely
+  prompted for the system number:
+
+  SYSTEM NO:
+
+  Enter the system number that is to be deleted from the  map.   If  the
+  system  number  entered  is  illegal,  MAKJOB  will ask for the system
+  number again.  Valid system numbers are less than 130.   The  user  is
+  then allowed additional deletions, as in the ADD command.
+
+
+       CHANGE
+
+       If the user wishes to alter a system already entered in the  map,
+  he  is  first  asked  for  the  system  number and then asked the same
+  questions as in the ADD command.  (see above)
+
+  NOTE: additions, deletions and changes are not  recorded  in  JOBS.DAT
+  until control is returned to the command level prompt.
+
+
+
+  QUIT
+
+       The QUIT command exits MAKJOB and returns the user to the EXEC.
+
+                                                    PAGE   6
+
+
+
+       If (PJ)JOBS.DAT does not exist, MAKJOB will prompt the  user  for
+  the  appropriate  information  to  create  it,  and  the  user will be
+  notified:
+
+  JOBS.DAT NEEDS TO BE CREATED.
+
+  The user will be prompted for the job list, the system number and  the
+  system map as described above.
+
+                                                    PAGE   7
+
+
+
+                      RDERR - 5/31/79
+
+       The RDERR program is used to read (PJ)PAM.ERR, and interpret  the
+  errors  for  the  user.   If (PJ)PAM.ERR does not exist, the following
+  message is output:
+
+  NO ERRORS TO REPORT
+
+  and the program exits to the exec.  If the error file does exist,  the
+  user is asked to enter the desired output file name by the prompt:
+
+  OUTPUT TO:
+
+  The user should enter a file name or 'T' to signify  that  the  output
+  should  go  to  the  user's terminal.  For each error in the file, the
+  date, time, job number, system number and error message is output.  If
+  there  is  no error message assigned to an error number, the following
+  is output:
+
+  ERROR n
+
+  where n is the error number.  The current errors defined are:
+
+            1   UUO ERROR
+            2   INIT ERROR
+            3   LOOKUP ON JOBS.DAT FAILED
+            4   JOBS.DAT BAD
+            5   GETSEG ERROR
+            6   CIRCUIT ZAP
+            7   TIMEOUT ON CIRCUIT
+            8   LOOKUP OR ENTER ERROR
+            9   INPUT OR OUTPUT ERROR
+            10  CHECKSUM ERROR
+            11  SYSTEM NOT NOTIFIED
+            12  CONTROL FILE ERROR
+            13  RENAME ERROR
+            14  CANNOT ZERO HIGH SEGMENT
+            15  HIBER ERROR
+            16  ERROR IN TRANSFER OF DRWSPR.EPO
+            17  LTCURT.DAT BAD
+            18  GETTAB ERROR
+            19  FILE BUSY
+            20  NO UFD
+            21  REQUEST NOT FOUND IN SPOOLING ACCTG.
+            22  ERROR IN COPYING SPOOLING ACCTG.
+            23  ERROR IN COPYING REMCNT
+            24  MUDCHG FILE ERROR
+            25  ERROR IN BUILDING CIRCUIT
+            26  ERROR FROM SLAVE
+
+                                                    PAGE   8
+
+
+
+                 PJ'S MUD UPDATER - 6/1/79
+
+       The MUD updater job is designed to keep all the  supervisor  MUDs
+  up-to-date  with  the  CUD.   When  a  change  is made to the CUD, the
+  validaton program records the  change  in  a  file,  (PJ)MUDCHG.   The
+  format of the file follows:
+
+  WORD 0        525252000106      control word to identify the file
+  WORDS 1-9     file address of next update for sups 1 through 9
+  WORDS 10-     change data
+
+  Change data is in the format:
+
+  WORD 0        CUD block number of change in left half
+                index into block of change in right half
+  WORD 1        number of words in change in left half
+                zero in right half
+  WORDS 2-      CUD words to change
+
+  PJ first checks to see if all supervisors have been  notified  of  all
+  changes  in MUDCHG.  PJ uses the system map from JOBS.DAT to determine
+  which supervisors exist  in  the  network.   If  all  supervisors  are
+  up-to-date, PJ deletes MUDCHG.
+
+       Next, the job determines if the consistency check  has  been  run
+  for  the day for each supervisor.  The file (UN1)MUDUPD.DAT contains 1
+  record for each supervisor as follows:
+
+  WORD 0     supervisor number
+  WORD 1     date of last consistency check for sup
+  WORDS 2-3  spare
+
+  If the consistency check has not been run, and the time is before 6:00
+  A.M., PJ will build a circuit back to the same system and start up the
+  program MDCONS for each supervisor necessary.   PJ  sends  MDCONS  the
+  supervisor  number  for  which  it  is  supposed to perform the check.
+  MDCONS detaches itself so that PJ may process other jobs.
+
+       See documentation on MDCONS for a more detailed discussion of how
+  the consistency check is performed.
+
+       Next, the UFD for UN1 is  read  and  for  each  filename  of  the
+  format:
+
+                      MUP12n.SAV
+
+  (where n = 1 through 9), a circuit is built back to the system to  the
+  username UN1 and that file is started up.  PJ first checks to see if a
+  job with that program name is already running, and  if  so,  does  not
+  start  up  another  job.   The  last  three  digits  of  the file name
+  represent a supervisor system.  The MUP12n  job  detaches  itself,  so
+  that  PJ  may  go  on  to  process other jobs while the MUDS are being
+  updated.
+
+                                                    PAGE   9
+
+
+
+       See documentation on MUP for a detailed description  of  the  Mud
+  updater.
+
+                                                    PAGE  10
+
+
+
+                      MDCONS - 6/1/79
+
+       The MDCONS program builds a circuit to the user name UN2  on  the
+  appropriate   supervisor   system   and  performs  a  block  by  block
+  consistency check.  The sup slave is started up automatically,  and  a
+  handshake  is  traded.  The slave reads the first block on the disk of
+  the MUD and sends the checksum to MDCONS.  If the checksum matches the
+  CUD block, MDCONS tells the slave that block is ok, and the slave goes
+  on to checksum the next block.  If the checksum does not match, MDCONS
+  notifies  the  slave, and sends the entire block of data to be written
+  to the MUD.  The data is transmitted as follows:
+
+            data (2044 bytes)
+            checksum (3 bytes)
+
+  This process continues until the entire MUD has been checked.   MDCONS
+  then  updates  the  file (UN1)MUDUPD.DAT with the information that the
+  consistency check has been performed for that day.
+
+                                                    PAGE  11
+
+
+
+                        MUP - 6/1/79
+
+       The MUP program (saved as MUP121, MUP122, MUP123, etc.)  notifies
+  the  supervisor systems of changes made to the CUD.  It first builds a
+  circuit to the user name UN2 on  the  appropriate  supervisor  system,
+  performs a handshake, and determines the next change to be sent in the
+  MUDCHG file.  Next it sends changes to the supervisor  system  in  the
+  following order:
+
+            virtual block number (2 bytes)
+            word position in block of first word of change (2 bytes)
+            the number of 32 bit words in change (2 bytes)
+            data (as many words as specified previously)
+            checksum (3 bytes)
+
+  If the slave's checksum of the data matches  the  one  sent  with  the
+  data,  the information is written to the MUD, and MUP is notified that
+  the change was completed successfully.  If not,  the  change  will  be
+  re-transmitted.   This  process  continues until all changes have been
+  successfully sent.
+
+                                                    PAGE  12
+
+
+
+        PJ'S NETWORK ACCOUNTING COLLECTOR - 5/31/79
+
+       The network collection job is designed to collect accounting from
+  supervisor  systems  for  the  NETWORK  ACCOUNTING  MERGER to process.
+  Whenever the job runs, the UFD for the user name COLLECTR is read, and
+  for each filename of the format:
+
+                      CPN12n.SAV
+
+  (where n = 1 through 9), a circuit is built back to the system to  the
+  username COLLECTR and that file started up.  PJ first checks to see if
+  a job with that program name is already running, and if so,  does  not
+  start  up  another  job.   The  last  three  digits  of  the file name
+  represent a supervisor system.  The CPN12n  job  detaches  itself,  so
+  that  PJ may go on to process other jobs while the accounting is being
+  collected.  See documentation on COPNET for a detailed description  of
+  the collector.
+
+                                                    PAGE  13
+
+
+
+                      COPNET - 5/31/79
+
+       The COPNET  program  (saved  as  CPN121,  CPN122,  CPN123,  etc.)
+  determines  whether  or  not  there  is  accounting  to collect from a
+  supervisor, collects it if necessary, and updates control files.   The
+  main  control  file  is  (PJ)NETACC.DAT,  which  has  1 entry for each
+  supervisor as follows:
+
+  WORD 0     supervisor number
+  WORD 1     block number of last block transmitted successfully
+  WORD 2     checksum of last block transmitted successfully
+             =-1 to start transferring at block 0
+             =-2 to ignore checksum of last block
+  WORD 3     date last data was transmitted in left half
+             time last data was transmitted in right half
+  WORD 4     zero if sup is not through a gateway
+             or gateway host number
+
+       COPNET builds a circuit to the appropriate supervisor  system  to
+  the  user  name ACCOUNT and the account slave starts up automatically.
+  COPNET and ACCOUNT perform  a  handshake  to  be  sure  that  each  is
+  communicating  with  the  correct  program.   ACCOUNT sends COPNET the
+  number of the block into which the supervisor will write next  (called
+  'current  block  number').   COPNET  then requests that the last block
+  that it collected be re-transmitted, along with that block's checksum.
+  If  the  checksum matches the one saved in NETACC.DAT, and the current
+  block number is 1 more than the last block collected, all the data has
+  been  collected  from this supervisor, and COPNET zaps the circuit and
+  logs itself out.
+
+       If the checksum matches, and the current block number  is  not  1
+  more  than  the  last  block  collected, COPNET tells ACCOUNT to start
+  sending data beginning with the block following  the  the  last  block
+  transmitted.   If the checksum does NOT match, COPNET tells ACCOUNT to
+  start sending data beginning with the current block number plus 1.
+
+       For each block transmitted, the checksum must match, or  it  will
+  be  re-transmitted.   After  5  re-transmissions,  COPNET gives up and
+  records an error (see NETERR.LOG).
+
+       When ACCOUNT has transmitted all blocks up to the  current  block
+  number,  ACCOUNT  notifies  COPNET  that  it  has  caught  up, and the
+  collection is over.
+
+       When COPNET has collected 200 disk pages, or  has  been  notified
+  that it has caught up, COPNET closes the data file it has been writing
+  into, and updates a list of filenames, (COLLECTR)NETACC.DIR.
+
+       The data files are named in the format:
+
+            SSHHMM.DAY
+
+                                                    PAGE  14
+
+
+
+  where SS = last 2 digits of supervisor, HH = hour of the  day  of  the
+  collection  in GMT, MM = minute of the hour of the collection, and DAY
+  = julian day of the year of the collection.
+
+       The format of the symbolic file NETACC.DIR is as follows:
+
+  COLUMNS 1 - 10     file name (ex.  251712.150)
+  COLUMNS 11 - 14    first supervisor block number in file
+  COLUMNS 15 - 18    last supervisor block number in file
+  COLUMNS 19 - 28    first block time of data
+  COLUMNS 29 - 38    zero
+  COLUMNS 39 - 40    carriage return and line feed
+
+       COPNET updates NETACC.DAT when each run is completed.
+
+       Errors are written to (COLLECTR)NETERR.LOG, which has entries  of
+  the following format:
+
+  WORD 0     date of error
+  WORD 1     time of day in minutes of error
+  WORD 2     error number
+  WORD 3     supervisor number
+
+  See documentation of RDNERR for  a  discussion  of  how  tpe  out
+  errors, and a complete description of error messages.
+
+                                                    PAGE  15
+
+
+
+                      RDNERR - 5/31/79
+
+       The RDNERR program is  used  to  read  (COLLECTR)NETERR.LOG,  and
+  interpret  the  errors for the user.  If (COLLECTR)NETERR.LOG does not
+  exist, the following message is output:
+
+  NO ERRORS TO REPORT
+
+  and the program exits to the exec.  If the error file does exist,  the
+  user is asked to enter the desired output file name by the prompt:
+
+  OUTPUT TO:
+
+  The user should enter a file name or 'T' to signify  that  the  output
+  should  go  to  the  user's terminal.  For each error in the file, the
+  date, time, supervisor number and error message is output.   If  there
+  is  no  error  message  assigned  to an error number, the following is
+  output:
+
+  ERROR n
+
+  where n is the error number.  The current errors defined are:
+
+            1   ERROR IN (PJ)NETACC.DAT
+            2   ERROR IN BIO
+            3   TRIED A BLOCK 5 TIMES WITH NO SUCCESS
+            4   TIMED OUT
+            5   CIRCUIT ZAP
+            6   CANNOT BUILD CIRCUIT
+            7   ERROR IN OUTPUT FILE
+            8   ERROR IN DIRECTORY FILE
+            9   OUT OF SYNC WITH SLAVE
+
+                                                    PAGE  16
+
+
+
+                      RPTNET - 5/31/79
+
+       RPTNET is a program used to determine the status of  the  network
+  collectors.   It builds a circuit to each supervisor in (PJ)NETACC.DAT
+  and types out the last block collected and the  current  block  number
+  for that supervisor.  An example of the output follows:
+
+
+   SUPNO  PDP  SUP
+          BLK  BLK
+
+    0121 0699 0700
+    0122 0971 NO CIRCUIT BUILT.
+    0123 3250 3251
+    0125 1517 1581
+    0126 0024 CIRCUIT ZAPPED.
+
+  In the above example, supervisors 121 and 123 are 'caught up.'  System
+  122  is  either  unavailable  or  the  collector is collecting on that
+  supervisor.  Supervisor 125 is 63 blocks behind in its collection, and
+  126 is inaccessable.
+
+                                                    PAGE  17
+
+
+
+                PJ'S CLEAR DWNMSG - 6/24/79
+
+       The clear dwnmsg job is designed to clear all old host and remote
+  messages  from  all  supervisors that have been set up with the DWNMSG
+  program.  The file (PJ)CLRDWN.DAT contains the last date that this job
+  had  been  run.   PJ  first reads the file to determine whether or not
+  CLRDWN has been run today.  If it has not been run, PJ checks  to  see
+  if  a  job  with that program name is already running, and if so, does
+  not start up another job.  If no other job is  running,  PJ  builds  a
+  circuit to the user name SSPAMBIN on the same system and starts up the
+  job CLRDWN.  CLRDWN detaches itself, so that PJ may go on  to  process
+  other  jobs  while  it  is  running.   CLRDWN builds a circuit to each
+  supervisor and deletes all messages with an expiration date  prior  to
+  the  current  date and time.  After all supervisors have been updated,
+  CLRDWN stores the current date in the file (PJ)CLRDWN.DAT.
+
+                                                    PAGE  18
+
+
+
+                 PJ'S COPY CLASS - 6/24/79
+
+       The copy class job is designed to be  sure  that  the  class  and
+  group  tables  are  up-to-date  on  all network supervisors.  The file
+  (PJ)COPCLS.DAT contains the last date that this job had been run.   PJ
+  first  reads  the file to determine whether or not COPCLS has been run
+  today.  If it has not been run, PJ checks to see if a  job  with  that
+  program  name is already running, and if so, does not start up another
+  job.  If no other job is running, PJ builds a circuit to the user name
+  SSPAMBIN  on  the  same  system  and starts up the job COPCLS.  COPCLS
+  detaches itself, so that PJ may go on to process other jobs  while  it
+  is  running.  COPCLS builds a circuit to each supervisor and transmits
+  the class and group table.  After all supervisors have  been  updated,
+  COPCLS stores the current date in the file (PJ)COPCLS.DAT.
+    6@
