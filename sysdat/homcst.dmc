@@ -1,0 +1,91 @@
+!            PROGRAM:       HOMPRC.DMC
+!            AUTHOR         Rob Nielsen
+!            DATE:          November 19, 1986
+! 
+!            PURPOSE:       To create two LLTA input files of all customers
+!                 rehomed by the program REHOME.DMC. The first file,
+!                 OldHom.Out will give the data for the present homing while
+!                 the second file, NewHom.DMC will give the data for the best
+!                 alternative.
+! 
+!            DESCRIPTION:   The program works like this
+! 
+!                 Find all records in HomCst.DMS
+!                 For each record
+!                      First for the old connection, then for the new one
+!                           Take the end and start sites
+!                                Map to CKTS via SITE1 and SITE2
+!                                Take the first active circuit
+!                                Print NPA, NNX at both ends and line speed
+! 
+!            NOTATION:
+!                 ALL CAPS: File names, attribute names, & DPL reserved words
+!                 Mixed:    Variables, labels, and subroutines.
+
+             OPEN (SYSDAT)HOMCST (NETSTAT)CKTS.
+             INIT 1 (SYSDAT)OLDHOM.OUT.
+             INIT 2 (SYSDAT)NEWHOM.OUT.
+             INIT 3 (SYSDAT)NOTFND.OUT.
+
+             DPL START.
+             DBSET CKTS.
+             LET SYSCASE EQ 1.
+
+             DEFINE INTEGER I Enpa Ennx.
+             DEFINE TEXT 4 Speed.
+
+             DBSET HOMCST.
+             FIND SITE0 GT 0 AND SITE1 GT 0 AND SITE2 GT 0.
+NextRec:     DBSET HOMCST.
+             GETREC LastRec.
+                  LET I EQ 1.
+                  MAP TO CKTS VIA SITE0 TO SITE1 AND SITE1 TO SITE2.
+                      IF SYSNREC EQ 0 GOTO NotFound.
+                  CALL GetData.
+                  LET Enpa EQ NPA1.
+                  LET Ennx EQ NXX1.
+ 
+                  DBSET HOMCST.
+                  LET I EQ 2.
+                  MAP TO CKTS VIA SITE2 TO SITE2.
+                      IF SYSNREC EQ 0 GOTO NotFound.
+                  CALL GetData.
+             GOTO NextRec.
+
+NotFound:            DBSET HOMCST. 
+                     PRINT ON 3 SITE0 SITE1 SITE2 &
+                     FORMAT  I5 1X I5 1X I5 END.
+                     TYPE SITE0 SITE1 SITE2.
+             GOTO NextRec.
+
+LastRec:     GOTO TheEnd.
+
+
+
+!            ***************  SUBROUTINE GETDATA *********************
+
+GetData:     DBSET CKTS.
+
+             GETREC EndGetdata.
+WhichPrint:       IF I EQ 1 GOTO PrintOld.
+                  IF I EQ 2 GOTO PrintNew.
+
+                  GOTO EndGetdata.
+
+PrintOld:    PRINT ON 1 NPA1 NXX1 NPA2 NXX2 &
+             FORMAT I3 1X I3 1X I3 1X I3 1X " 9.6" 1X "ANA" 2X "D1" END.
+             GOTO EndGetdata.
+
+PrintNew:    PRINT ON 2 Enpa Ennx NPA2 NXX2 &
+             FORMAT I3 1X I3 1X I3 1X I3 1X " 9.6" 1X "ANA" 2X "D1" END.
+             GOTO EndGetdata.
+
+EndGetdata:  RETURN.
+
+
+TheEnd:      RELEASE 1.
+             RELEASE 2.
+             RELEASE 3.
+             DPL STOP.
+             DPL END.
+
