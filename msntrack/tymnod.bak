@@ -1,0 +1,109 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+! Program:	(MSNTRACK)TYMNOD.DPL
+! Author:	Jason L. Ma
+! Date:		December 18, 1986
+!
+! Purpose:	To incorporate into the Trend Analysis system a report
+!		that gives according to CKTS the following node counts:
+!		(A) International, (B) MDC-internal, (C) Tymnet-domestic,
+!	 	(D) Customer premise, and (E) Network.  The main point
+!		is to track D = E - (A+B+C), the nodes we sold to
+!		customers (revenue source).  This incorporation was
+!		requested by Raja.
+!
+! Output Report:(MSNTRACK)TYMNOD.RPT.
+!
+! References:	(MSNTRACK)HWSW.PCM
+!		(MSNTRACK)HWSW.DPL
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+	o (netstat)ckts.bak (perstats)supmap.tym hwsw.
+	init 1 tymnod.rpt.
+	dpl start.
+	define integer net intl mdc tym cus dat supnet.
+	define real pnet pint pmdc ptym pcus.
+
+	dbs 2.
+	f all.
+	getr dummy.
+dummy:	let dat eq Wd.
+
+	dbs 3.
+	f cdate eq dat and hw ct 'NET'.
+	getr dummy2.
+dummy2:	let supnet eq hwtot.
+
+	p on 1 dat format //// 30x 'TYMNET NODE COUNTS' / &
+	29x 'DATA SOURCE:  PROFILE' / &
+	33x 'DATE:  ' i6 /// end.
+
+	dbs 1.
+	f status neq P and neq D.
+	sea pty1 nct 'HOST'.
+	sor pt1.
+	let net 0 intl 0 mdc 0 tym 0 cus 0.
+	let node 99999.
+	
+start:	getr end.
+	if node eq pt1 then start.
+	let node pt1.
+	let net eq net + 1.
+	if region1 ct 'INTL' then intl.
+	if cmp1 ct 'MCDONNEL' then mdc.
+	if cmp1 ct 'MD-' then mdc.
+	if cmp1 ct 'MDC' then mdc.
+	if cmp1 ct 'MD/' then mdc.
+	if cmp1 ct 'MC D' then mdc.
+	if cmp1 ct 'PSC' then mdc.
+	if class1 eq 1 then tym.
+	if class1 eq 2 then tym.
+	if class1 eq 3 then tym.
+	if class1 eq 4 then tym.
+	if class1 eq 5 then tym.
+	if class1 eq 11 then tym.
+	if class1 eq 12 then tym.
+	if class1 eq 13 then tym.
+	if class1 eq 14 then tym.
+	if class1 eq 15 then tym.
+	if cmp1 ct 'TYM' then tym.
+	if cmp1 ct 'Tym' then tym.
+	if cmp1 ct 'TYN' then tym.
+	goto cus.
+
+intl:	let intl eq intl + 1.
+	goto start.
+
+mdc:	let mdc eq mdc + 1.
+	goto start.
+
+tym:	let tym eq tym + 1.
+	goto start.
+
+cus:	let cus eq cus + 1.
+	goto start.
+
+end:	let pnet eq 100.
+	let pint eq 100.*intl/net.
+	let pmdc eq 100.*mdc/net.
+	let ptym eq 100.*tym/net.
+	let pcus eq 100.*cus/net.
+
+	p on 1 intl pint mdc pmdc tym ptym cus pcus net pnet format &
+	// 23x 'International:   ' i5 3x f3.1 '%' &
+	// 23x 'MDC-internal:    ' i5 3x f3.1 '%' &
+	// 23x 'Tymnet-domestic: ' i5 3x f3.1 '%' &
+	// 23x 'Customer premise:' i5 3x f3.1 '%' &
+	/ 41x '----' 3x '------' &
+	// 23x 'Network:         ' i5 3x f3.1 '%' end.
+
+	p on 1 supnet format //// &
+	/ 15x 'Note: The actual number of nodes in the network' &
+	/ 15x 'as reported by the Supervisor is' i5 '.  The above' &
+	/ 15x 'numbers are based on the PROFILE database.' end.
+
+	release 1.
+	dpl stop.
+	dpl end.
