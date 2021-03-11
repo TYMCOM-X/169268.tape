@@ -1,0 +1,101 @@
+*       ** CONVERT THE DATE-ENTERED AND DATE-CHANGED VALUES FROM
+*          INTERNAL 1022 FORMAT
+
+        IEMO=0
+        IEDAY=0
+        IEYR=0
+        IF(IDE.EQ.0) GO TO 6045
+        CALL DBNDAT(IDE,IEMO,IEDAY,IEYR)
+        IEYR=IEYR-1900
+
+6045    ICMO=0
+        ICDAY=0
+        ICYR=0
+        IF (IDC.EQ.0) GO TO 6047
+        CALL DBNDAT(IDC,ICMO,ICDAY,ICYR)
+        ICYR=ICYR-1900
+
+*       ** CHECK IF HOST HAS CHANGED. IF SO, OUTPUT HOST INFO AND
+*          PORT HEADINGS
+
+6047    IF (IHOST.EQ.CURHST) GO TO 6080
+        CURHST=IHOST
+        TYPE 6050,IHOST,NHCOD,IBILL,(CITY(J),J=1,4),ISTATE,IZONE,NDAT
+6050    FORMAT (/////,7X,'HOST',2X,'NHCODE',2X,'BILL',3X,'CITY',18X,
+     X'STATE',2X,'ZONE',2X,'EFF.DATE',/6X,66('-'),/,6X,I5,4X,I2,4X,
+     XA5,2X,4A5,2X,A3,5X,A2,4X,I6)
+
+*       ** OUTPUT PROPER PORT HEADER DEPENDING ON LENGTH-OF-LINE AND TYPE OF LISTING
+        IF (ILOL.EQ.71.AND.LSTTYP.EQ.'B') TYPE 6054
+        IF (ILOL.EQ.71.AND.LSTTYP.EQ.'V') TYPE 6055
+        IF (ILOL.NE.71) TYPE 6057
+6054    FORMAT  (//,7X,'PORT',1X,'PCODE',1X,'MODEM',1X,'PHONE',10X,
+     X  'COMMENT',11X,'CITY',3X,'EFF.DATE',/)
+6055    FORMAT (//,7X,'PORT',1X,'PCODE',1X,'MODEM',1X,'PHONE',10X,
+     X'COMMENT',12X,'CITY',5X,'EFF.DATE',/,18X,'=====',1X,'=====',
+     X10X,8('='),10X,7('='),3X,8('='),/,18X,'HUNT',2X,'PILOT',10X,
+     X'CUSTOMER',12X,'MAP',7X,'MAP',/,57X,'ENTERED',3X,'CHANGED',/)
+6057    FORMAT (//,7X,'PORT',1X,'PCODE',1X,'MODEM',1X,'HUNT',1X,
+     X  'PILOT',11X,'PHONE',11X,'COMMENT',11X,'CUSTOMER',4X,'CITY',
+     X  7X,'EFF.DATE',4X,'MAP',7X,'MAP',/,112X,'ENTERED',3X,
+     X  'CHANGED',/,7X,122('-'),/)
+
+*       ** OUTPUT PORT INFO
+
+
+*       ** PORT IS OCTAL. GET THE EQUIVALENT DECIMAL PORT NUMBER
+6080    CALL OCTDEC(PORTS(I,1),IDEC)
+
+*       ** IF LENGTH OF LINE = 71, STAY HERE
+6090    IF (ILOL.NE.71) GO TO 6095
+        IF (LSTTYP.EQ.'V') TYPE 6092,IDEC,PORTS(I,1),IPC,IMODM,IPHON,
+     X  (COMENT(J),J=1,4),(PCITY(J),J=1,2),PDAT,IHUNT,
+     X  (PILOT(J),J=1,3),(ICUST(J),J=1,2),IEMO,IEDAY,IEYR,ICMO,ICDAY,
+     X  ICYR
+        IF (LSTTYP.EQ.'B') TYPE 6093,IDEC,PORTS(I,1),IPC,IMODM,IPHON,
+     X  COMENT,PCITY,PDAT
+6092    FORMAT  (1X,'(',I3,')',2X,I3,3X,I2,2X,A5,1X,2A5,A4,1X,3A5,A1,
+     X2X,A5,A1,5X,I6,/,18X,57('='),/,18X,I3,3X,2A5,A4,1X,2A5,7X,I2,
+     X'/',I2,'/',I2,3X,I2,'/',I2,'/',I2,/)
+6093    FORMAT  (1X,'(',I3,')',2X,I3,3X,I2,2X,A5,1X,2A5,A4,1X,3A5,A1,
+     X  2X,A5,A1,2X,I6)
+        GO TO 6150
+
+*       ** LENGTH-OF-LINE NE 71
+6095    TYPE 6097,IDEC,PORTS(I,1),IPC,IMODM,IHUNT,PILOT,IPHON,
+     X  COMENT,ICUST,PCITY,PDAT,IEMO,IEDAY,IEYR,ICMO,ICDAY,ICYR
+6097    FORMAT (1X,'(',I3,')',2X,I3,3X,I2,2X,A5,1X,I3,2X,2A5,A4,2X,
+     X  2A5,A4,2X,3A5,A1,2X,2A5,2X,A5,A1,6X,I6,2(2X,I2,'/',I2,'/',I2))
+        GO TO 6150
+
+*       ** NO INFORMATION EXISTS FOR THIS PORT
+6120    IF (I.EQ.1) TYPE 6055
+        CALL OCTDEC(PORTS(I,1),IDEC)
+        
+        TYPE 6125,IDEC,PORTS(I,1)
+6125    FORMAT (1X,'(',I3,')',2X,I3,10X,10('-'),1X,'NO ENTRY',1X,
+     X  10('-'))
+        IF (ILOL.EQ.71.AND.LSTTYP.EQ.'V') TYPE 6126
+6126    FORMAT (/)
+
+6150    CONTINUE
+
+        GO TO 6025
+
+
+
+***********************************************************************
+*                                                                     *
+*                         SUBROUTINE: TYPES                           *
+*                                                                     *
+*       THIS COMMAND DISPLAYS TO THE TERMINAL A LIST OF ALL           *
+*       VALID NODE-HOST CODES, PORT CODES, MACHINE TYPES, NODE-       *
+*       HOST TYPES, AND MODEM TYPES.                                  *
+*                                                                     *
+***********************************************************************
+
+6500    CALL MINFO('!NCOD',DOC)
+        CALL MINFO('!PCOD',DOC)
+        CALL MINFO('!MACH',DOC)
+        CALL MINFO('!TYPE',DOC)
+        CALL MINFO('!MODM',DOC)
