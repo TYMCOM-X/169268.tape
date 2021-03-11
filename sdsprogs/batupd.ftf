@@ -1,0 +1,105 @@
+* BATUPD.FTF
+* DENNIS COFFEY
+* 6 AUG 84
+*
+* This program updates the command file 'BATCH.370'.  The command file
+* runs 'BATCH', to request restoring the contents of tapes from system
+* 40 (an IBM system) to files in username (NETSTAT).  These files are
+* the '.DMI' input files for the program  'LOADDB', which loads the
+* daily 'NETSTATS' data base and updates the 'SIZE' report file.
+*
+* This program gets the number of '.DMI' tapes/files from the user,
+* increments the date for the names of the '.DMI' files to be created,
+* and writes to the command file, the tape slot numbers and the names
+* of the '.DMI' to be created from each tape.
+*
+* This program requires that the number of characters preceding the
+* tape slot numbers and filenames not be changed.  If they are changed,
+* the random-access position references in the READ and WRITE statements
+* must be adjusted.
+***********************************************************************
+
+
+      OPEN (21, 'BATCH.370', RANDIO)
+
+* Read and increment the date part of the filenames in the command file.
+
+      READ (21 #540, 5000) IDATE
+ 5000 FORMAT (I5)
+
+      CALL NEWDAY (IDATE)
+
+* Get the number of tapes/files for the day being processed.
+
+   10 TYPE 5010, IDATE
+ 5010 FORMAT (1X, 'TYPE THE NUMBER OF TAPES FOR 8', I5, ':  ', $)
+
+      ACCEPT 5020, NFILES
+ 5020 FORMAT (I1)
+
+      IF (NFILES .GT. 2) TYPE 5025
+ 5025 FORMAT (/1X, 'THIS PROGRAM HAS ONLY 2 TAPE NUMBERS.  PLEASE',
+     +         1X, 'INSERT OTHER TAPE NUMBER(S)' /
+     +         1X, 'IN FILE ''BATCH.370'' BEFORE RUNNING ''COM''.' //
+     +         1X, 'PLEASE NOTIFY TYMNET O.S.S. OF NEED FOR UPDATE.' /)
+
+* Write, in the command file, the numbers of the tapes to expect and the
+* names (with the new date incorporated) of the files to create.
+  
+      WRITE (21 #514, 5030) IDATE
+ 5030 FORMAT (2X, 'S001109', 6X, '(NETSTAT2) ', I5, 'A.DMI')
+
+      IF (NFILES .GE. 2) WRITE (21 #552, 5035) IDATE
+ 5035 FORMAT (2X, 'S001515', 6X, '(NETSTAT2) ', I5, 'B.DMI')
+      IF (NFILES .LT. 2) WRITE (21 #552, 5037)
+ 5037 FORMAT (36X)
+
+      IF (NFILES .GE. 3) WRITE (21 #590, 5040) IDATE
+ 5040 FORMAT (2X, 'S------', 6X, '(NETSTAT2) ', I5, 'C.DMI')
+      IF (NFILES .LT. 3) WRITE (21 #590, 5037)
+
+      IF (NFILES .GE. 4) WRITE (21 #628, 5045) IDATE
+ 5045 FORMAT (2X, 'S------', 6X, '(NETSTAT2) ', I5, 'D.DMI')
+      IF (NFILES .LT. 4) WRITE (21 #628, 5037)
+
+      IF (NFILES .GE. 5) WRITE (21 #666, 5050) IDATE
+ 5050 FORMAT (2X, 'S------', 6X, '(NETSTAT2) ', I5, 'E.DMI')
+      IF (NFILES .LT. 5) WRITE (21 #666, 5037)
+
+      IF (NFILES .GE. 6) WRITE (21 #704, 5055) IDATE
+ 5055 FORMAT (2X, 'S------', 6X, '(NETSTAT2) ', I5, 'F.DMI')
+      IF (NFILES .LT. 6) WRITE (21 #704, 5037)
+
+
+      STOP 
+      END
+
+
+
+      SUBROUTINE NEWDAY (IDATE)
+
+* Increment the date (in format YMMDD).
+
+      DIMENSION MONSIZ(12)
+
+      DATA MONSIZ /31,28,31,30,31,30,31,31,30,31,30,31/
+
+      IYY = IDATE / 10000
+      IMM = MOD (IDATE,10000) / 100
+      IDD = MOD (IDATE,100) + 1
+
+      LEAPYR = MOD (IYY, 4)
+      IF (LEAPYR .EQ. 0) MONSIZ(2) = 29
+
+      LST = MONSIZ(IMM)
+
+      IF (IDD .GT.LST) IDD = 1
+      IF (IDD .EQ.  1) IMM = IMM + 1
+      IF (IMM .GE. 13) IYY = IYY + 1
+      IF (IMM .GE. 13) IMM = 1
+
+      IDATE = MOD ((IYY * 10000 + IMM * 100 + IDD), 100000)
+
+      RETURN
+      END
+
