@@ -1,0 +1,585 @@
+AVAILS.FTF	F40	V27U(26)	19-JUL-94	16:51	PAGE 1
+
+
+  		      CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+AVAILS.FTF	F40	V27U(26)	19-JUL-94	16:51	PAGE 2
+
+
+  		      C
+  		      C PROGRAM: AVAIL.FTF
+  		      C AUTHOR: JO ANN JOELS
+  		      C DATE: AUGUST, 1991
+  		      C
+  		      C THIS PROGRAM WAS WRITTEN FOR GARY WALKER TO COMPUTE STATISTICS
+  		      C ON NETWORK AVAILIBILITY FOR ANY ONE GIVEN MONTH.
+  		      C
+  		      CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+COCPRODCNAMWORSTCWORSTPWORSTOIDATEWORSTDRANGEOUTNAMWORSTTRECNOTOTNODONEPCCNODEHSTCMDHSTNAMCURDBDUPCMDMONTBLAVHRSNUMDAYNUMHSTSYEARSMONTHEDATESDATENUMRECDBASENUMDBLASTINITTMAXAVMINAVPCRECPCTILERCOUNT  		              INTEGER RCOUNT(23),PCTILE(3),
+  		           +          PCREC(3),MINAV,MAXAV,INITT,LAST,NUMDB,
+  		           +          DBASE(50,5),NUMREC,SDATE(2),EDATE(2),SMONTH,SYEAR,
+  		           +          NUMHST,NUMDAY,AVHRS,MONTBL(12),DUPCMD(14),CURDB(5),
+  		           +          HSTNAM(5),HSTCMD(10),CNODE,ONEPC,TOTNOD,RECNO,
+  		           +          WORSTT(10),OUTNAM(3),RANGE,WORSTD(10,5),IDATE(2),
+  		           +          WORSTO(10,2),WORSTP,WORSTC(10,3),CNAM(3),PROD,COC(2)
+AVNHRSRAVAILDEVSQSDSUMDEVDEVTAVAILUPTIMERANGESPCAVALWORSTERMEANRFREQ  		              REAL RFREQ(23),RMEAN(23),WORSTE(10),PCAVAL(3),RANGES(23,2),
+  		           +       UPTIME,TAVAIL,DEV,SUMDEV,SD,DEVSQ,RAVAIL(23),AVNHRS
+RANGES  		              DATA RANGES/0.,72.01,240.01,408.01,576.01,600.01,624.01,648.01,
+  		           +              672.01,720.01,731.01,732.01,733.01,734.01,735.01,
+  		           +              736.01,737.01,738.01,739.01,740.01,741.01,742.01,
+  		           +              743.01,72.,240.,408.,576.,600.,624.,648.,672.,720.,
+  		           +              731.,732.,733.,734.,735.,736.,737.,738.,739.,
+  		           +              740.,741.,742.,743.,744./
+MONTBL  		              DATA MONTBL/31,28,31,30,31,30,31,31,30,31,30,31/
+DBSTRT  		              CALL DBSTRT(1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
+  		           +          1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
+  		           +          1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
+  		           +          1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
+  		           +          1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0)
+NUMRNG  		              NUMRNG = 23
+NUMDB  		              NUMDB = 0
+AVGAV  		              AVGAV = 0
+COMFRQ  		              COMFRQ = 0
+INITT  		              INITT = 0
+LAST  		              LAST = 0
+NUMREC  		              NUMREC = 0
+  		      C INIT THE ARRAYS
+NUMRNGI00100P  		              DO 100 I = 1,NUMRNG
+IRCOUNT  		              RCOUNT(I) = 0
+IRAVAIL  		              RAVAIL(I) = 0
+IRFREQ  		              RFREQ(I) = 0
+IRMEAN  		              RMEAN(I) = 0
+00100P  		      100     CONTINUE
+PCTILE  		              PCTILE(1) = 90
+PCTILE  		              PCTILE(2) = 95
+PCTILE  		              PCTILE(3) = 99
+  		      C       CCCCC
+  		      C       C OPEN THE DATA BASE LIST FILE AND READ ALL OF THE
+  		      C       C DATA BASE NAMES THAT WILL BE SEARCHED FOR THE
+  		      C       C TICKET INFORMATION
+  		      C       CCCCC
+00910P  		              OPEN(21,'AVAIL.DBS',INPUT, ERR = 910)
+AVAILS.FTF	F40	V27U(26)	19-JUL-94	16:51	PAGE 3
+
+
+I00150P  		              DO 150 I=1,50
+JJIDBASE00155P00120P  		                      READ(21,120,END = 155)(DBASE(I,J),J=1,5)
+00120P  		      120             FORMAT(5A5)
+NUMDBNUMDB  		                      NUMDB = NUMDB+1
+00150P  		      150     CONTINUE
+00155P  		      155     CLOSE(21)
+  		      C       CCCCC
+  		      C       C OPEN THE 1022 DATA BASE CONTAINING
+  		      C       C THE NUMBER OF NODES IN THE NETWORK FOR EACH MONTH
+  		      C       CCCCC
+DBOPEN  		              CALL DBOPEN('HSTMNT')
+  		      C       CCCCC
+  		      C       C PROMPT FOR THE START DATE AND END DATE
+  		      C       CCCCC
+00165P00160P  		      160     TYPE 165
+00165P  		      165     FORMAT(1X,'ENTER START DATE(MM/DD/YYYY): ',$)
+SDATE00170P  		              ACCEPT 170,SDATE
+00170P  		      170     FORMAT(2A5)
+00175P  		              TYPE 175
+00175P  		      175     FORMAT(1X,'ENTER ENDDATE(MM/DD/YYYY): ',$)
+EDATE00170P  		              ACCEPT 170,EDATE
+  		      C       CCCCC
+  		      C       C GET A LIST OF HOST NUMBERS TO SELECT FOR
+  		      C       CCCCC
+  		      C176     TYPE 177
+  		      C177     FORMAT (1X,'ENTER HOST FILENAME: ',$)
+  		      C        ACCEPT 178,HSTNAM
+00178P  		      178     FORMAT(5A5)
+  		      C       CCCCC
+  		      C       C FROM THE START DATE, DETERMINE THE MONTH AND
+  		      C       C YEAR. THIS INFORMATION WILL BE USED TO DETERMINE
+  		      C       C THE NUMBER OF NODES AND DAYS IN A MONTH.
+  		      C       CCCCC
+SYEARSMONTHSDATE00185P00180P  		      180     DECODE(10,185,SDATE)SMONTH,SYEAR
+00185P  		      185     FORMAT(I2,4X,I4)
+  		      C       CCCC
+  		      C       C FIND THE NUMBER OF NODES FOR THIS MONTH
+  		      C       CCCCC
+SMONTHSYEARDBFIND00190P  		      190     CALL DBFIND('YEAR','EQ',SYEAR,'AND','MONTH','EQ',SMONTH)
+00900PDBGREC  		              CALL DBGREC($900)
+TOTNODDBVAL  		              CALL DBVAL('NODES',TOTNOD)
+DBCLOS  		              CALL DBCLOSE
+  		      C       CCCCC
+  		      C       C DETERMINE THE NUMBER OF DAYS IN THE MONTH
+  		      C       CCCCC
+SMONTHMONTBLNUMDAY00200P  		      200     NUMDAY = MONTBL(SMONTH)
+  		      C       CCCCC
+  		      C       C NOW COMPUTE THE TOTAL NUMBER OF AVAILABLE HOURS
+  		      C       C IN THE MONTH
+  		      C       CCCCC
+TOTNODNUMDAYAVHRS00210P  		      210     AVHRS = NUMDAY*24*TOTNOD
+NUMDAYAVNHRS  		              AVNHRS = NUMDAY*24.0
+  		      C       CCCCC
+AVAILS.FTF	F40	V27U(26)	19-JUL-94	16:51	PAGE 4
+
+
+  		      C       C OPEN A FLAT FILE WHICH WILL CONTAIN ALL RECORDS FOR
+  		      C       C THE SPECIFIED MONTH.  RECORDS FROM EACH
+  		      C       C DATA BASE WILL BE APPENDED TO THIS FILE (IF THERE
+  		      C       C ARE ANY IN THE DATABASE FOR THE SPECIFIED MONTH).
+  		      C       CCCCC
+00920P00220P  		      220     OPEN(22,'AVAIL.DMI',OUTPUT,ERR=920)
+  		      C       CCCCC
+  		      C       C LOOP THROUGH ALL OF THE DATA BASE FILES
+  		      C       CCCCC
+NUMDBI00310P00250P  		      250     DO 310 I = 1, NUMDB
+  		      C       CCCCC
+  		      C       C OPEN THE CURRENT DATA BASE
+  		      C       CCCCC
+II00260P  		              DO 260 II = 1,5
+IIIDBASEIICURDB  		                      CURDB(II)=DBASE(I,II)
+00260P  		      260     CONTINUE
+CURDBDBOPEN  		              CALL DBOPEN(CURDB)
+IICURDB00262P  		              TYPE 262,(CURDB(I),I=1,5)
+00262P  		      262     FORMAT (1X,'CURRENT DATA BASE: ',5A5)
+  		      C       CCCCC
+  		      C       C SELECT ONLY THOSE RECORDS IN THE TYMNET NETWORK,
+  		      C       C WITH SEVERITY OF ONE AND WHOSE CLOSE OUT CODE
+  		      C       C DOES NOT CONTAIN "PROJ" OR "CUST. IND."
+  		      C       CCCCC
+DBFIND00265P  		      265     CALL DBFIND('ALL')
+DBEXEC  		              CALL DBEXEC('LET SYSCASE = 1')
+DBSRCH  		              CALL DBSRCH('NET','CT','TYMNET','AND','SVER','EQ',1,'AND',
+  		           +          'COC','NCT','PROJ','AND','COC','NCT','CUST. IND.')
+EDATESDATEDUPCMD00270P  		              ENCODE(66,270,DUPCMD)SDATE,EDATE
+00270P  		      270     FORMAT('SEARCH LAST AND DUP BETWEEN INT("',2A5,'") INT("',
+  		           +          2A5,'")')
+DUPCMDDBEXEC  		              CALL DBEXEC(DUPCMD)
+  		      C       CCCCC
+  		      C       C IF THERE WAS A HOST FILE SPECIFIED, THEN SELECT
+  		      C       C RECORDS FOR JUST THE HOSTS IN THE FILE.
+  		      C       CCCCC
+00275P  		              GOTO 275
+00275PHSTNAM  		              IF ( HSTNAM(1) .EQ. '     ' ) GOTO 275
+HSTNAMHSTCMD00271P  		              ENCODE(50,271,HSTCMD)HSTNAM
+00271P  		      271     FORMAT('SEARCH LAST AND HOST EQ @',5A5)
+HSTCMDDBEXEC  		              CALL DBEXEC(HSTCMD)
+DBSRCH00275P  		      275     CALL DBSRCH('LAST','AND','ELM','GE',0)
+IRECDBNREC  		              CALL DBNREC(IREC)
+IRECIIIICURDB00276P  		              TYPE 276,(CURDB(II),II=1,5),IREC
+00276P  		      276     FORMAT(/,1X,'DATABASE: ',5A5,1X,'RECORDS SELECTED: ',I6,/)
+  		      C       CCCCC
+  		      C       C LOOP THROUGH ALL RECORDS SELECTED
+  		      C       CCCCC
+00300PDBGREC00280P  		      280     CALL DBGREC($300)
+COCPRODCNAMINODEITCKTELMDBVAL  		              CALL DBVAL('ELM',ELM,'TNUM',ITCKT,'NODE',INODE,'CNAM',CNAM,
+  		           +          'PROD',PROD,'COC',COC)
+  		      C       CCCCC
+  		      C       C DETERMINE THE DOWN TIME IN HOURS FOR THIS RECORD.
+AVAILS.FTF	F40	V27U(26)	19-JUL-94	16:51	PAGE 5
+
+
+  		      C       CCCCC
+ELH00285P  		      285     ELH = 0.0
+00290PELM  		              IF ( ELM.EQ.0 ) GOTO 290
+ELMELH  		              ELH = ELM/60.
+  		      C       CCCCC
+  		      C       C  WRITE THE RECORD TO A FLAT FILE.
+  		      C       CCCCC
+COCPRODCNAMCURDBELHINODEITCKT00295P00290P  		      290     WRITE(22,295)ITCKT,INODE,ELH,CURDB,CNAM,PROD,COC
+00295P  		      295     FORMAT(I8,1X,I6,1X,F10.3,1X,5A5,1X,3A5,1X,A5,1X,2A5)
+  		      C       CCCCC
+  		      C       C READ THE NEXT RECORD.
+  		      C       CCCCC
+00280P  		              GOTO 280
+  		      C       CCCCC
+  		      C       C CLOSE THIS DATA BASE AND GO PROCESS THE NEXT
+  		      C       CCCCC
+DBCLOS00300P  		      300     CALL DBCLOSE
+00310P  		      310     CONTINUE
+  		      C       CCCCC
+  		      C       C FINISHED WITH ALL OF THE DATA BASES.  CLOSE THE
+  		      C       C FLAT FILE AND LOAD IT INTO 1022.
+  		      C       CCCCC
+00320P  		      320     CLOSE(22)
+DBEXEC  		              CALL DBEXEC('LOAD AVAIL')
+  		      C       CCCCC
+  		      C       C SORT THE MONTHLY DATA BASE BY NODE NUMBER
+  		      C       C THEN LOOP THROUGH THE DATA BASE CREATING A NEW
+  		      C       C FLAT FILE WHICH CONTAINS ONLY ONE RECORD
+  		      C       C PER NODE.
+  		      C       CCCCC
+DBOPEN  		              CALL DBOPEN('AVAIL')
+DBFIND  		              CALL DBFIND('ALL')
+DBEXEC  		              CALL DBEXEC('SORT KEY NODE')
+  		      C       CCCCC
+  		      C       C OPEN THE FLAT FILE TO CONTAIN ONE RECORD PER NODE.
+  		      C       CCCCC
+00930P  		              OPEN(22,'AVAILN.DMI',OUTPUT,ERR=930)
+TOTELH  		              TOTELH = 0
+FIRST  		              FIRST = 0
+00350PDBGREC00330P  		      330     CALL DBGREC($350)
+ELHINODEDBVAL  		              CALL DBVAL('NODE',INODE,'ELH',ELH)
+00335PFIRST  		              IF ( FIRST .NE. 0 ) GOTO 335
+INODECNODE  		                      CNODE = INODE
+FIRST  		                      FIRST = 1
+00340PCNODEINODE00335P  		      335     IF ( INODE.NE.CNODE ) GOTO 340
+ELHTOTELHTOTELH  		                      TOTELH = TOTELH + ELH
+00330P  		                      GOTO 330
+  		      C       CCCCC
+  		      C       C THE NODE HAS CHANGED. OUTPUT A RECORD TO THE FLAT FILE.
+  		      C       CCCCC
+TOTELHCNODE00341P00340P  		      340     WRITE(22,341)CNODE,TOTELH
+00341P  		      341     FORMAT(I8,1X,F20.3)
+INODECNODE  		              CNODE = INODE
+AVAILS.FTF	F40	V27U(26)	19-JUL-94	16:51	PAGE 6
+
+
+ELHTOTELH  		              TOTELH = ELH
+NUMNODNUMNOD  		              NUMNOD = NUMNOD+1
+00330P  		              GOTO 330
+DBCLOS00350P  		      350     CALL DBCLOSE
+  		              CLOSE(22)
+DBEXEC  		              CALL DBEXEC('LOAD AVAILN')
+DBOPEN  		              CALL DBOPEN('AVAILN')
+DBFIND  		              CALL DBFIND('ALL')
+DBEXEC  		              CALL DBEXEC('SORT KEY ELH')
+  		      C       CCCC
+  		      C       C DETERMINE HOW MANY NODES ARE IN 1 PERCENT OF
+  		      C       C ALL NODES
+  		      C       CCCCC
+TOTNODONEPC00355P  		      355     ONEPC = TOTNOD/100
+ONEPCPCTILEPCREC  		              PCREC(1) = PCTILE(1)*ONEPC
+ONEPCPCTILEPCREC  		              PCREC(2) = PCTILE(2)*ONEPC
+ONEPCPCTILEPCREC  		              PCREC(3) = PCTILE(3)*ONEPC
+NUMNODTOTNODNOOUT  		              NOOUT = TOTNOD - NUMNOD
+I00360P  		              DO 360 I = 1,3
+NOOUTIPCRECRECNO  		              RECNO = PCREC(I) - NOOUT
+00357PRECNO  		              IF ( RECNO.LT.0 ) GOTO 357
+RECNO00362PDBGREC  		              CALL DBGREC($362,RECNO)
+ELHDBVAL  		              CALL DBVAL('ELH',ELH)
+AVNHRSELHIPCAVAL  		              PCAVAL(I) = (1.0 - ELH/AVNHRS)*100.0
+00360P  		              GOTO 360
+IPCAVAL00357P  		      357     PCAVAL(I) = 100.0
+00360P  		      360     CONTINUE
+00365P  		              GOTO 365
+RECNO00364P00362P  		      362     TYPE 364,RECNO
+00364P  		      364     FORMAT(1X,'ERROR. UNABLE TO FIND RECORD NUMBER: ',I6)
+00999P  		              GOTO 999
+  		      C       CCCCC
+  		      C       C LOOP THROUGH THE RECORDS IN THIS DATA BASE
+  		      C       C PUTTING THEM INTO THE APPROPRIATE RANGES FOR
+  		      C       C THE AVAILABILITY DISTRIBUTION
+  		      C       CCCCC
+DBEXEC00365P  		      365     CALL DBEXEC('STARTREC')
+00390PDBGREC00366P  		      366     CALL DBGREC($390)
+ELHDBVAL  		              CALL DBVAL('ELH',ELH)
+ELHAVNHRSUPTIME  		              UPTIME = AVNHRS - ELH
+UPTIMEROUND2  		              CALL ROUND2(UPTIME)
+  		      C       CCCCC
+  		      C       C IF THE UPTIME IS NEGATIVE THEN THIS MEANS THE NODE
+  		      C       C HAS BEEN DOWN OVER A MONTH.  PLACE IT INTO THE 0
+  		      C       C AVAILABILITY RANGE, BUT KEEP TRACK OF HOW MANY
+  		      C       C HOURS DOWN TIME IT REALLY HAD.
+  		      C       CCCCC
+00369PUPTIME  		              IF ( UPTIME.GE.0 ) GOTO 369
+ELHNEGELHNEGELH  		                      NEGELH = NEGELH+ELH
+NEGCNTNEGCNT  		                      NEGCNT = NEGCNT+1
+UPTIME  		                      UPTIME = 0
+NUMRNGRANGE00367P00369P  		      369             DO 367 RANGE = 1,NUMRNG
+00370PRANGERANGESUPTIMERANGERANGESUPTIME  		                              IF ( UPTIME.GE.RANGES(RANGE,1).AND.
+AVAILS.FTF	F40	V27U(26)	19-JUL-94	16:51	PAGE 7
+
+
+  		           +                       UPTIME.LE.RANGES(RANGE,2) ) GOTO 370
+00367P  		      367             CONTINUE
+  		      C       CCCCC
+  		      C       C ERROR. DID NOT FIND A RANGE.
+  		      C       CCCCC
+UPTIME00368P  		              TYPE 368,UPTIME
+00368P  		      368     FORMAT (1X,'ERROR. UNABLE TO FIND RANGE FOR HOURS: ',F8.2)
+00999P  		              GOTO 999
+  		      C       CCCCC
+  		      C       C FOUND THE RANGE. INCREMENT THE APPROPRIATE VARIABLES.
+  		      C       CCCCC
+RANGERCOUNTRANGERCOUNT00370P  		      370     RCOUNT(RANGE) = RCOUNT(RANGE)+1
+UPTIMERANGERAVAILRANGERAVAIL  		              RAVAIL(RANGE) = RAVAIL(RANGE)+UPTIME
+UPTIMETAVAILTAVAIL  		              TAVAIL = TAVAIL + UPTIME
+00366P  		              GOTO 366
+DBCLOS00390P  		      390     CALL DBCLOSE
+  		      C       CCCCC
+  		      C       C PLACE ALL NODES WITH NO DOWNTIME INTO THE 100% AVAILABILITY
+  		      C       C RANGE.  THIS IS DETERMINED BY THE MAX NUMBER OF POSSIBLE
+  		      C       C UP HOURS IN THE MONTH.
+  		      C       CCCCC
+NUMRNGRANGE00400P00395P  		      395     DO 400 RANGE = 1,NUMRNG
+00410PRANGERANGESAVNHRSRANGERANGESAVNHRS  		                      IF (AVNHRS.GE.RANGES(RANGE,1).AND.
+  		           +                  AVNHRS.LE.RANGES(RANGE,2)) GOTO 410
+00400P  		      400     CONTINUE
+  		      C       CCCCC
+  		      C       ERROR. DID NOT FIND A RANGE
+  		      C       CCCCC
+AVNHRS00405P  		              TYPE 405,AVNHRS
+00405P  		      405     FORMAT (1X,'ERROR. UNABLE TO FIND RANGE FOR HOURS: ',F8.2)
+00999P  		              GOTO 999
+  		      C       CCCCC
+  		      C       C FOUND THE RANGE. INCREMENT THE APPROPRIATE VARIABLES.
+  		      C       CCCCC
+NOOUTRANGERCOUNTRANGERCOUNT00410P  		      410     RCOUNT(RANGE) = RCOUNT(RANGE)+NOOUT
+AVNHRSNOOUTRANGERAVAILRANGERAVAIL  		              RAVAIL(RANGE) = RAVAIL(RANGE)+(NOOUT*AVNHRS)
+AVNHRSNOOUTTAVAILTAVAIL  		              TAVAIL = TAVAIL + (NOOUT*AVNHRS)
+  		      C       CCCCC
+  		      C       C CALCULATE THE FREQUENCY THAT EACH RANGE OCURRED AND THE
+  		      C       C MEAN AVAILABLE HOURS FOR EACH RANGE.
+  		      C       CCCCC
+NUMRNGRANGE00430P00420P  		      420     DO 430 RANGE = 1,NUMRNG
+00422PRANGERCOUNT  		                IF (RCOUNT(RANGE).EQ.0) GOTO 422
+TAVAILRANGERAVAILCOMFRQRANGERFREQ  		                      RFREQ(RANGE) = COMFRQ + (100. *
+  		           +            ((1.*RAVAIL(RANGE)) / (1.*TAVAIL)))
+RANGERFREQCOMFRQ  		                      COMFRQ = RFREQ(RANGE)
+00425P  		                      GOTO 425
+  		      C       CCCCC
+  		      C       C THERE WERE NO NODES IN THIS RANGE.  THEREFORE, THE
+  		      C       C FREQUENCY WILL BE THE SAME AS FOR THE PREVIOUS
+  		      C       C RANGE, UNLESS THIS IS THE FIRST RANGE.  IF THIS IS THE
+  		      C       C FIRST RANGE, THE CUMULATEIVE FREQ WILL BE ZERO.
+  		      C       CCCCC
+AVAILS.FTF	F40	V27U(26)	19-JUL-94	16:51	PAGE 8
+
+
+RANGERFREQRANGERFREQRANGE00422P  		      422     IF ( RANGE.NE.1)
+  		           +       RFREQ(RANGE) = RFREQ(RANGE-1)
+  		      C       CCCCC
+  		      C       C DETERMINE THE MEAN HOURS OF AVAILABILTY FOR THE RANGE.
+  		      C       CCCCC
+RANGOUNTRANGERAVAILRANGERMEANRANGERAVAIL00425P  		      425     IF (RAVAIL(RANGE).NE.0)
+  		           +          RMEAN(RANGE) = RAVAIL(RANGE) / ( 1.*RCOUNT(RANGE) )
+00430P  		      430     CONTINUE
+  		      C       CCCCC
+  		      C        CALCULATE THE MEAN AVAILABLE HOURS
+  		      C       CCCCC
+TOTNODTAVAILAVGAV00435P  		      435     AVGAV = ( (1.*TAVAIL) / (1.*TOTNOD) )
+AVNHRSAVGAVAVGPC  		              AVGPC = (AVGAV/AVNHRS)*100.
+  		      C       CCCCC
+  		      C       C NOW IT IS TIME TO COMPUTE THE STANDARD DEVIATION.  TO
+  		      C       C TO THIS IT IS NECESSAYR TO GO THROUGH THE NODE
+  		      C       C INFORMATION ONE MORE TIME.
+  		      C       CCCCC
+DBOPEN00500P  		      500     CALL DBOPEN('AVAILN')
+DBFIND  		              CALL DBFIND('ALL')
+00600PDBGREC00505P  		      505     CALL DBGREC($600)
+ELHDBVAL  		                      CALL DBVAL('ELH',ELH)
+ELHAVNHRSUPTIME  		                      UPTIME = AVNHRS - ELH
+  		      C               CCCCC
+  		      C               C DETERMINE THE DEVIATION OF THIS AVAILABLE HOURS
+  		      C               C FROM THE MEAN AVAILABLE HOURS.
+  		      C               CCCCC
+UPTIMEAVGAVDEV  		                      DEV = AVGAV - UPTIME
+  		      C               CCCCC
+  		      C               C NOW SQUARE THIS DEVIATION TO NULLIFY THE EFFECT OF
+  		      C               C A POSSIBLE NEGATIVE DEVIATION.
+  		      C               CCCCC
+DEVDEVSQ  		                      DEVSQ = DEV**2
+  		      C               CCCCC
+  		      C               C SUM ALL OF THE DEVIATIONS
+  		      C               CCCCC
+DEVSQSUMDEVSUMDEV  		                      SUMDEV = SUMDEV + DEVSQ
+00505P  		              GOTO 505
+  		      C       CCCCC
+  		      C       C FINISHED WITH THE DEVIATIONS.  CLOSE THE DATA BASE.
+  		      C       C THEN DIVIDE THE SUM OF THE DEVIATIONS BY THE NUMBER OF
+  		      C       C NODES IN THE NETWORK TO GET THE MEAN DEVIATION.
+  		      C       CCCCC
+TOTNODSUMDEVSUMDEV00600P  		      600     SUMDEV = SUMDEV/TOTNOD
+  		      C       CCCCC
+  		      C       C FINALLY, TAKE THE SQUARE ROOT OF THE ABOVE NUMBER TO GET
+  		      C       C THE STANDARD DEVIATION.
+  		      C       CCCCC
+SUMDEVSQRTSD  		              SD = SQRT(SUMDEV)
+  		      C       CCCCC
+  		      C       C FIND THE WORST 10 ELM'S FROM THE AVAIL DATA BASE.
+  		      C       CCCCC
+DBOPEN00700P  		      700     CALL DBOPEN('AVAIL')
+AVAILS.FTF	F40	V27U(26)	19-JUL-94	16:51	PAGE 9
+
+
+DBFIND  		              CALL DBFIND('ALL')
+DBEXEC  		              CALL DBEXEC('SORT ELH DESC')
+ICOUNT  		              ICOUNT = 1
+00999PDBGREC00710P  		      710     CALL DBGREC($999)
+COCPRODCNAMCURDBELHITCKTDBVAL  		              CALL DBVAL('TCKT',ITCKT,'ELH',ELH,'DB',CURDB,'CNAM',CNAM,
+  		           +                  'PROD',PROD,'COC',COC)
+ITCKTICOUNTWORSTT  		              WORSTT(ICOUNT) = ITCKT
+ELHICOUNTWORSTE  		              WORSTE(ICOUNT)= ELH
+J00715P  		              DO 715 J = 1,5
+JCURDBJICOUNTWORSTD  		                      WORSTD(ICOUNT,J) = CURDB(J)
+00715P  		      715     CONTINUE
+J00716P  		              DO 716 J = 1,3
+JCNAMJICOUNTWORSTC  		                      WORSTC(ICOUNT,J) = CNAM(J)
+00716P  		      716     CONTINUE
+J00717P  		              DO 717 J = 1,2
+JCOCJICOUNTWORSTO  		                      WORSTO(ICOUNT,J) = COC(J)
+00717P  		      717     CONTINUE
+PRODWORSTP  		              WORSTP = PROD
+ICOUNTICOUNT  		              ICOUNT = ICOUNT +1
+00720PICOUNT  		              IF (ICOUNT .GT. 10 ) GOTO 720
+00710P  		              GOTO 710
+DBCLOS00720P  		      720     CALL DBCLOSE
+  		      C       CCCCC
+  		      C       C OUTPUT THE REPORT
+  		      C       CCCCC
+00803PSMONTH00800P  		      800     IF ( SMONTH.GT.9 ) GOTO 803
+SMONTHSYEAROUTNAM00802P  		                      ENCODE(9,802,OUTNAM)SYEAR,SMONTH
+00802P  		      802     FORMAT('AV',I4,'.',I1)
+00805P  		              GOTO 805
+SMONTHSYEAROUTNAM00804P00803P  		      803     ENCODE(10,804,OUTNAM)SYEAR,SMONTH
+00804P  		      804     FORMAT('AV',I4,'.',I2)
+IDATEDATE00805P  		      805     CALL DATE(IDATE)
+00940POUTNAM  		              OPEN(22,OUTNAM,OUTPUT,ERR=940)
+EDATESDATE00801P  		              WRITE(22,801)SDATE,EDATE
+00801P  		      801     FORMAT(////,30X,'NETWORK AVAILABILITY',/,29X,2A5,' - ',2A5)
+IIIDATE00811P  		              WRITE(22,811)(IDATE(I),I=1,2)
+00811P  		      811     FORMAT(/,30X,'REPORT DATE: ',2A5)
+TOTNOD00810P  		              WRITE(22,810)TOTNOD
+00810P  		      810     FORMAT(/,20X,'TOTAL NUMBER OF NODES IN NETWORK: ',I6)
+PCAVAL00808P  		              WRITE(22,808)PCAVAL(1)
+00808P  		      808     FORMAT(//,22X,'90TH PERCENTILE: ',F8.2,' % AVAILABILITY')
+PCAVAL00806P  		              WRITE(22,806)PCAVAL(2)
+00806P  		      806     FORMAT(/,22X,'95TH PERCENTILE: ',F8.2,' % AVAILABILITY')
+PCAVAL00807P  		              WRITE(22,807)PCAVAL(3)
+00807P  		      807     FORMAT(/,22X,'99TH PERCENTILE: ',F8.2,' % AVAILABILITY')
+AVNHRS00812P  		              WRITE(22,812)AVNHRS
+00812P  		      812     FORMAT(/,15X,'NUMBER OF POSSIBLE AVAILABLE ',
+  		           +     'HOURS PER NODE: ',F7.0)
+AVGPCAVGAV00814P  		              WRITE(22,814)AVGAV,AVGPC
+00814P  		      814     FORMAT(/,13X,'AVERAGE AVAILABLE HOURS PER NODE: ',F8.2,
+  		           +        '   = ',F6.2,' %')
+SD00816P  		              WRITE(22,816)SD
+00816P  		      816     FORMAT(/,23X,'STANDARD DEVIATION: ',F8.2,' HOURS')
+AVAILS.FTF	F40	V27U(26)	19-JUL-94	16:51	PAGE 10
+
+
+00818P  		              WRITE(22,818)
+00818P  		      818     FORMAT(//,15X,'DISTRIBUTION BY HOURS OF AVAILABILITY',
+  		           +     ' DURING MONTH',
+  		           +     /,15X,'--------------------------------------------------',
+  		           +     //,37X,'CUMULATIVE % OF ALL',13X,'MEAN',/,
+  		           +     2X,'RANGE OF HOURS',2X,'# NODES IN RANGE',
+  		           +     3X,'OBSERVED AVAILABLE HOURS',2X,
+  		           +     'HOURS AVAILABLE',/,1X,16('-'),2X,16('-'),2X,24('-'),
+  		           +     2X,15('-'),/)
+NUMRNGI00830P  		              DO 830 I = 1,NUMRNG
+IRMEANIRFREQIRCOUNTIRANGESIRANGES00825P  		              WRITE(22,825)RANGES(I,1),RANGES(I,2),RCOUNT(I),RFREQ(I),
+  		           +          RMEAN(I)
+00825P  		      825     FORMAT(1X,F6.2,' - ',F6.2,9X,I6,16X,F6.2,12X,F10.2)
+00830P  		      830     CONTINUE
+TOTNOD00832P  		              WRITE(22,832)TOTNOD
+00832P  		      832     FORMAT(19X,'------------',/,
+  		           +         25X,I6)
+00850P  		              WRITE(22,850)
+00850P  		      850     FORMAT(///,23X,'10 WORST TICKETS BY ELASPED HOURS',/)
+00852P  		              WRITE(22,852)
+00852P  		      852     FORMAT(2X,'TICKET',1X,'ELASPED HRS',1X,'DATA BASE',
+  		           +          17X,'CUSTOMER NAME',3X,'CLOSE OUT',2X,'PROD',/,
+  		           +          '--------',1X,11('-'),1X,25('-'),
+  		           +          1X,15('-'),1X,10('-'),1X,5('-'),/)
+I00860P  		              DO 860 I = 1,10
+WORSTPJJIWORSTOJJIWORSTCJJIWORSTDIWORSTEIWORSTT00855P  		              WRITE(22,855)WORSTT(I),WORSTE(I),(WORSTD(I,J),J=1,5),
+  		           +          (WORSTC(I,J),J=1,3),(WORSTO(I,J),J=1,2),WORSTP
+00855P  		      855     FORMAT(I8,2X,F10.2,1X,5A5,1X,3A5,1X,2A5,1X,A5)
+00860P  		      860     CONTINUE
+  		              CLOSE(22)
+00999P  		              GOTO 999
+SYEARSMONTH00905P00900P  		      900     TYPE 905,SMONTH,SYEAR
+00905P  		      905     FORMAT(1X,'ERROR NO REC IN HSTMNT FOR: ',I2,1X,I4)
+00999P  		              GOTO 999
+00915P00910P  		      910     TYPE 915
+00915P  		      915     FORMAT(1X,'ERROR. UNABLE TO OPEN FILE: AVAIL.DBS')
+00999P  		              GOTO 999
+00925P00920P  		      920     TYPE 925
+00925P  		      925     FORMAT(1X,'ERROR. UNABLE TO OPEN FILE: AVAIL.DMI')
+00999P  		              GOTO 999
+00935P00930P  		      930     TYPE 935
+00935P  		      935     FORMAT(1X,'ERROR. UNABLE TO OPEN FILE: AVAILN.DMI')
+00999P  		              GOTO 999
+OUTNAM00945P00940P  		      940     TYPE 945,OUTNAM
+00945P  		      945     FORMAT(1X,'ERROR. UNABLE TO OPEN FILE: ',2A5,/)
+00999P  		              GOTO 999
+DBEND00999P  		      999     CALL DBEND
+  		              END
+
+CONSTANTS
+
+0	000000000001	1	000000000000	2	406550144630	3	272110251500	4	000000000000
+5	442472446634	6	521004020100	7	000000000000	10	546130151100	11	000000000000
+AVAILS.FTF	F40	V27U(26)	19-JUL-94	16:51	PAGE 11
+
+
+12	426424020100	13	000000000000	14	406350420100	15	000000000000	16	466371652220
+17	000000000000	20	472370442646	21	000000000000	22	406550144630	23	272111544500
+24	000000000000	25	406311420100	26	000000000000	27	462132420246	30	546470340646
+31	425007520142	32	000000000000	33	472132420100	34	000000000000	35	416504020100
+36	000000000000	37	522631547212	40	521004020100	41	000000000000	42	516550551100
+43	000000000000	44	416370320100	45	000000000000	46	472072420100	47	000000000000
+50	502451745100	51	000000000000	52	416532352134	53	202231642134	54	000000000000
+55	201004020100	56	201004020100	57	462032352100	60	000000000000	61	426311520100
+62	000000000000	63	436124020100	64	000000000000	65	522352546500	66	000000000000
+67	472370442500	70	000000000000	71	416350146500	72	000000000000	73	502451742100
+74	000000000000	75	206740000000	76	462370142100	77	406550144630	100	000000000000
+101	516372252100	102	456133120234	103	476110520100	104	000000000000	105	406550144630
+106	471350446622	107	000000000000	110	426311020100	111	000000000000	112	462370142100
+113	406550144630	114	471004020100	115	000000000000	116	516372252100	117	456133120212
+120	462204020100	121	000000000000	122	516510151250	123	512130320100	124	000000000000
+125	516372252100	126	426311020210	127	426470320100	130	000000000000	131	522071352100
+132	000000000000	133	422044020100	134	000000000000	
+
+SUBPROGRAMS
+
+FORSE.	JOBFF 	DBSTRT	RLEN. 	ERR.  	END.  	ALPHO.	ALPHI.	DBOPEN	VADDR.	INTO. 	INTI. 	DBFIND	DBGREC	DBVAL 
+DBCLOS	FLOAT 	DBEXEC	DBSRCH	DBNREC	FLOUT.	FLIRT.	ROUND2	.INT. 	SQRT  	DATE  	DBEND 	EXIT  	
+
+SCALARS
+
+NUMRNG	2537		NUMDB 	2540		AVGAV 	2541		COMFRQ	2542		INITT 	2543	
+LAST  	2544		NUMREC	2545		I     	2546		J     	2547		SMONTH	2550	
+SYEAR 	2551		TOTNOD	2552		NUMDAY	2553		AVHRS 	2554		AVNHRS	2555	
+II    	2556		IREC  	2557		ELM   	2560		ITCKT 	2561		INODE 	2562	
+PROD  	2563		ELH   	2564		TOTELH	2565		FIRST 	2566		CNODE 	2567	
+NUMNOD	2570		ONEPC 	2571		NOOUT 	2572		RECNO 	2573		UPTIME	2574	
+NEGELH	2575		NEGCNT	2576		RANGE 	2577		TAVAIL	2600		AVGPC 	2601	
+DEV   	2602		DEVSQ 	2603		SUMDEV	2604		SD    	2605		ICOUNT	2606	
+WORSTP	2607		
+
+ARRAYS
+
+RCOUNT	2610		PCTILE	2637		PCREC 	2642		DBASE 	2645		SDATE 	3237	
+EDATE 	3241		MONTBL	3243		DUPCMD	3257		CURDB 	3275		HSTNAM	3302	
+HSTCMD	3307		WORSTT	3321		OUTNAM	3333		WORSTD	3336		IDATE 	3420	
+WORSTO	3422		WORSTC	3446		CNAM  	3504		COC   	3507		RFREQ 	3511	
+RMEAN 	3540		WORSTE	3567		PCAVAL	3601		RANGES	3604		RAVAIL	3662	
+
+ MAIN.
+AVAILS.FTF	F40	V27U(26)	19-JUL-94	16:51	PAGE 12
+
+
+NUMBERROUND2  		              SUBROUTINE ROUND2(NUMBER)
+NUMBER  		              REAL NUMBER
+NUMBERINUM  		              INUM = NUMBER*1000
+NUMBERINUM2  		              INUM2 = NUMBER*100
+INUMMODXMNUM  		              XMNUM = MOD(INUM,10)
+INUM2INUM2XMNUM  		              IF (XMNUM.GE.5) INUM2 = INUM2 + 1
+INUM2NUMBER  		              NUMBER = INUM2/100.
+  		              RETURN
+
+CONSTANTS
+
+0	000000000012	1	207620000000	
+
+GLOBAL DUMMIES
+
+NUMBER	53		
+
+SUBPROGRAMS
+
+.INT. 	MOD   	FLOAT 	
+
+SCALARS
+
+ROUND2	55		INUM  	56		NUMBER	53		INUM2 	57		XMNUM 	60	
+
+ ROUND2
+ ` 0³
