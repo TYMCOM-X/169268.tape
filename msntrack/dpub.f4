@@ -1,0 +1,1774 @@
+******************************************************************************
+*                                                                            *
+*		PROGRAM : DELAY (Network Delay Measurement)                  *
+*                                                                            *
+*		Source File   :   (perstats:28)dpub.f4                       *
+*		Created       :   January 1984                               *
+*		Author        :   Shrikant Garde (446-6309)                  *
+*		Last Updated  :   August 1, 1985                             *
+*                                                                            *
+*				VERSION 1.0                                  *
+*                                                                            *
+*	The DELAY program measures round trip network delay (in milli-       *
+*	seconds) for all circuits originating on a given list of Tymsats.    *
+*	In addition, the program traces the path of the circuit              *
+*	through the network. Both the delay measurement and the circuit      *
+*	path  are obtained over only the T-II segment of the circuit.        *
+*                                                                            *
+*	Consider a circuit originating on Tymsat 3360 and having the foll-   *
+*	owing path 3360-4133-3543-3132-202. The round-trip delay measure-    *
+*	ment is the time taken by a character originating in Tymsat 3360     *
+*	to traverse the nodes 4133,3543 and 3132 via the links connect-      *
+*	ing them and retrace its path back to 3360 . The delay includes node *
+*	processing, queuing and transmission time at each T-II node along    *
+*	the path. Note that it does not include the final hop 3132-202       *
+*	because 202 is a T-I node.                                           *
+*                                                                            *
+*	The program obtains the round trip delay by building an auxiliary    *
+*	circuit to the XRAY process of the specified Tymsat and executing    *
+*	the 'pm' command for each active circuit. The circuit path is        *
+*	obtained by building an auxiliary circuit to PROBE via TMCS          *
+*	and executing the 'trace' command.                                   *
+*                                                                            *
+*	The DELAY program asks the user for an input file name. This         *
+*	file should contain the node and kernel host numbers of the          *
+*	Tymsats whose circuit performance is to be evaluated. Following      *
+*	the kernel host number, the user may specify a 20 character          *
+*	descriptive label for the Tymsat (e.g. location of Tymsat). The      *
+*	format used for reading the input file is (2i,4a5).                  *
+*                                                                            *
+*	The DELAY program also asks the user for an output file name in      *
+*	which all measurements and circuit paths are stored. In              *
+*	addition, the program includes run time diagnostic information       *
+*	in the file 'delay.log'.                                             *
+*                                                                            *
+*	Output file field descriptions :                                     *
+*                                                                            *
+*	PRT	:	port # (in octal) of circuit origination. This       *
+*			information will occasionally be out-dated.          *
+*                                                                            *
+*	HOP 	:	# of T-II links in circuit path.                     *
+*                                                                            *
+*	CKT.TIME:	# of seconds (in hex) the circuit has been active.   *
+*                                                                            *
+*	DLAY	: 	round trip delay (in milliseconds) over T-II         *
+*			segment of circuit path.                             *
+*                                                                            *
+*	T	:	= 0 indicates an all T-II path.                      *
+*			= 1 indicates hybrid circuit. The first T-I          *
+*			    node number is shown in the circuit path.        *
+*                                                                            *
+*	T-II                                                                 *
+*	CIRCUIT                                                              *
+*	PATH	:	node numbers  tracing T-II circuit path              *
+*			through network.                                     *
+*                                                                            *
+******************************************************************************	
+
+	integer nodes(101),hosts(101),name1(2),port,mtrpos,prompt,errckt,
+     x          logpos,outfil,oflnam(2),active,comand(13),logfil(2)
+	integer aports(80),channl(80),nlinks(80),htime(2),ochanl,rspons
+	integer idate(2),circ,aport,routes(17),t1,pchanl,name2(2)
+	integer star,exit(5),quit(6),loc1(101),loc2(101),loc3(101)
+	integer versn(101),mengin,kern(101),loc4(101),digit(10),dtime
+
+	common /aux/ port
+	common /outpos/ mtrpos
+	data prompt/62/,star/42/ 
+	data active/4has u/
+	data exit/4,69,88,73,13/,quit/5,81,85,73,84,13/
+
+*	accept name of file defining nodes and hosts
+	type 5
+5	format(1x,'enter name of file defining access nodes: ',$)
+	accept 10,name1
+10	format(2a5)
+
+*	accept name of file for output
+	type 12
+12	format(1x,'enter name of file for storage of output: ',$)
+	accept 13,name2
+13	format(2a5)
+
+*	initialise node and host arrays
+	do 15 j=1,101
+	nodes(j) = -1
+	hosts(j) = -1
+	versn(j) = -1
+15	continue
+
+*	read file containing node and host numbers
+	inum = 0
+	open(10,name1,input,err=1000)
+	read(10,20,end=22,err=1100)(nodes(i),kern(i),hosts(i),versn(i),
+     x   loc1(i),loc2(i),loc3(i),loc4(i),i=1,101)
+20	format(4i,4a5)
+
+*	open data output and monitor log file
+22	close(10)
+	open(23,name2,output,err=1110)
+	open(22,'dlay.log',randout,err=1120)
+  	open(24,'dlay.grf',output,err=1110)
+	mtrpos = size(22) + 1
+	if (mtrpos .eq. 0) mtrpos = mtrpos + 1
+
+*	build circuit to probe through tmcs
+	call xprobe(circ,err)
+	if (err .eq. 0) goto 27
+	write(23,26,err=1190)err
+	type 26,err
+26	format(1x,'unable to establish circuit to probe through tmcs.',
+     x' status ',i4)
+	goto 1200
+
+27	type 28
+	write(23,28,err=1190)
+28	format(/,1x,75(1h-),//)
+
+*	now go into a loop for each node/host in the inputted data file
+*	establish a circuit to xray
+30	inum = inum + 1
+	if (nodes(inum) .eq. -1) goto 400
+	errckt = 0
+	nerr = 0
+	izap = 0
+	kernel = kern(inum)
+	nversn = versn(inum)
+40	call xrcir(kernel,errckt,nversn)
+	if (errckt .ne. 0) goto 200
+*	get date and time and prepare banner
+	call date(idate)
+	call time(itime)
+	write(23,50,err=1190)nodes(inum),hosts(inum),nversn,idate,itime,
+     xloc1(inum),loc2(inum),loc3(inum),loc4(inum)
+	type 50,nodes(inum),hosts(inum),nversn,idate,itime,loc1(inum),
+     xloc2(inum),loc3(inum),loc4(inum)
+50	format(' node ',i5,'  host ',i5,'  vrsn ',i5,'  date ',2a5,1x,
+     xa5,2x,4a5,/)
+	goto 210
+
+200	type 205,nodes(inum)
+	write(23,205,err=1190)nodes(inum)
+205	format(1x,'trouble building xray circuit to  node :  ',i10)
+	goto 325
+	
+*	get active port numbers 
+210	call pstat(circ,nodes(inum),hosts(inum),aports)
+      	if (circ .eq. -1) goto 1150
+	
+	if (aports(1) .ne. -1) type 300
+	if (aports(1) .ne. -1) write(23,300,err=1190)
+*254	DO 3335 J=1,80
+*	TYPE 3333, APORTS(J)
+*3333	FORMAT(I)
+*3335	CONTINUE
+	goto 308
+
+300	format(//,1x,' por hop ckt.time dlay t ',5x,'t-ii circuit path',
+     x/,13x,'sec',5x,'ms',//)
+
+308	nver= nversn/10000
+	nsolo = nversn - (nver*10000)
+	if (nsolo .lt. 506) goto 3082
+3081	call gpower(kernel,nerr)
+	if (nerr .ne. 0) goto 30
+
+3082	do 321 i=1,80
+
+*	loop through each active port . ignore ports with number of
+*	t-ii segments equal to 0 . obtain delay measurement for each 
+*	active circuit(one per active port).
+
+309	if (aports(i) .le. -1) goto 320
+	call ischan(aports(i),ochanl,nversn)
+*	type 4444,aports(i),ochanl
+*4444	format(' port: ',i3,'  chanl: ',a5)
+ 
+311	call gtpm(ochanl,rspons)
+	if (rspons .eq. 0) goto 320
+	if (rspons .eq. -1) goto 322
+
+  	call trace(circ,nodes(inum),hosts(inum),aports(i),routes,t1)
+	if (t1 .eq. -1) goto 320
+	if (circ .eq. -1) goto 1150
+
+	call gtchan(ochanl,pchanl,htime)
+	call hexdec(htime,dtime)
+
+313	type 315,aports(i),routes(17),dtime,rspons,t1,(routes(j),j=1,11)
+	write(23,315,err=1190)aports(i),routes(17),dtime,rspons,t1,
+     x  (routes(j),j=1,11)
+315	format(i5,i3,i9,1x,i5,i2,11a5)
+	write(24,316,err=1190) nodes(inum),routes(17),rspons,t1
+316	format(i5,i3,i5,i2)
+	goto 320
+
+320	izap = 0
+321	continue
+
+322	call zap(port)
+325	type 355
+	write(23,355,err=1190)
+355	format(/,1x,75(1h-),//)
+*	goto the top of the loop to process another node.
+	goto 30
+
+*	zap circuit to probe and tmcs.
+400	port = circ
+	call send(exit)
+	call scan(star,irslt)
+	if (irslt .ne. 1) goto 500
+	call send(quit)
+*	type 450
+450	format(/,1x,'circuit to probe and tmcs zapped',/)
+500	call zap(port)
+	close(22)
+	close(23)
+	goto 1200
+
+1150	type 1155
+1155	format(1x,'lost probe circuit.unable to re-build connection.')
+	close(22)
+	close(23)
+	goto 1200
+
+1000	type 1005
+1005	format(1x,'unable to open node-host file for reading',/)
+1100	type 1105
+1105	format(1x,'unable to complete read operation',/)
+	goto 1200
+
+1110	type 1115
+1115	format(1x,'unable to open output file',/)
+	goto 1200
+
+1120	type 1125
+1125	format(1x,'unable to open program monitor file',/) 
+	close(23)
+	goto 1200
+
+1190	type 1195
+1195    format(1x,'unable to write on output file',/)
+	close(22)
+	close(23)
+
+1200	end
+C                     (MSREPORT) XRLIB.FTF
+C    A LIBRARY FILE OF ROUTINES FOR EXTRACTING DATA FROM XRAY WITH AUX.
+C    CKTS. AND WRITING THE XRAY OUTPUT TO A LOG FILE OR (IN THE CASE OF
+C    A 'KS' COMMAND) TO A 1022 DATA BASE.
+C
+C    SUBROUTINES:
+C        XRCIR -- BUILDS THE AUX. CKT. TO XRAY;
+C        XRFOUT -- WRITES THE XRAY OUTPUT TO A FILE;
+C        XRGLIN -- GETS ONE LINE OF XRAY OUTPUT, PASSES IT TO XRFOUT;
+C        KSDBLD -- LOADS THE DATA FROM A 'KS' COMMAND INTO A 1022 D/B.
+C
+C  IN ORDER TO RUN THE MAIN PROGRAM IN DETACHED MODE, ALL TERMINAL-TYPE
+C  OUTPUT IS WRITTEN TO A MONITOR LOG FILE (DEVICE NO. 22).  THIS FILE
+C  MUST BE IN RANDOM-ACCESS OUTPUT MODE.
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                    C
+C                       SUBROUTINE: XRCIR                            C
+C                                                                    C
+C    BUILDS AN AUX CKT TO XRAY.  PLACES PORT NUMBER IN COMMON:       C
+C                   /AUX/PORT                                        C
+C                                                                    C
+C       FORMAT:     CALL XRCIR(KERNEL,IERR,NVERSN)                   C
+C       ARGUMENTS:                                                   C
+C          KERNEL : VARIABLE CONTAINING THE KERNEL NUMBER TO         C
+C                   LOGIN TO.                                        C
+C          IERR   : ERROR FLAG.                                      C
+C                   IERR =  0:  NO ERROR. CIRCUIT BUILT.             C
+C                   IERR >  0:  UNABLE TO BUILD CIRCUIT.  VALUE =    C
+C                               CREAUX ERROR CODE:  < 10 = SUP ERROR C
+C                               CODE; > 10 = XEXEC ERROR CODE + 50   C
+C                   IERR = -1:  BAD RESPONSE FROM XRAY DURING LOGIN  C
+C                   NVERSN   :  DISTINGUISH VERSION NUMBER           C
+C                                                                    C 
+C                                                                    C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        SUBROUTINE XRCIR(KERNEL,IERR,NVERSN)
+
+        INTEGER KERNEL, IERR, XRAY(3), NOECHO(4), PORT, PROMPT, IERR2,
+     +    RESLT1, RESLT2, NERR
+	INTEGER NVERSN
+
+C PLACE THE PORT NUMBER INTO COMMON.  INITIALIZE 'PROMPT' AS A
+C RIGHT-ARROW.  INITIALIZE 'NOECHO' AS 'LE', FOR XRAY COMMAND.
+C INITIALIZE 'IERR' AND 'IERR2' AS 0 FOR EACH CALL TO THIS SUBROUTINE.
+
+        COMMON /AUX/ PORT
+        DATA PROMPT /62/
+        DATA NOECHO/3,76,69,13/
+	NERR = 0
+        IERR = 0
+        IERR2 = 0
+
+C BUILD THE XRAY LOGIN STRING USING THE KERNEL NUMBER FROM THE CALLER.1
+C BUILD THE AUXILIARY CIRCUIT TO XRAY.  IF ERROR RETURN IS NON ZERO, 
+C SKIP TO ERROR PROCESSING.
+
+*	NSOLO = MOD(NVERSN,10000)
+	NVER = NVERSN/10000
+	NSOLO = NVERSN - (NVER*10000)
+	IF (NSOLO .GE. 506) GOTO 100
+
+	ENCODE (12,4000,XRAY)KERNEL
+ 4000	   FORMAT ('XRAY:', I4, ';')
+	GOTO 110 
+
+100     ENCODE (12,5000,XRAY)KERNEL
+ 5000      FORMAT ('XRTECH:', I4, ';')
+
+110     CALL FBCIR(XRAY,PORT,IERR2)
+
+        IF (IERR2 .NE. 0) GOTO 200
+
+C XRAY SHOULD GIVE THE NODE AND KERNEL NUMBER, THE DATE AND THEN
+C THE PROMPT.  IF NO PROMPT, PROBABLY WRONG HOST:  RETURN ERROR TO
+C CALLER.   RESULT1:  1 = FOUND; 2 = NOT FOUND.
+
+        CALL SCAN(PROMPT,RESLT1)   
+	IF (RESLT1 .NE. 1) GOTO 150
+
+
+C TURN OFF ECHO, THEN LOOK FOR THE PROMPT.  IF PROMPT IS THERE, DO A
+C SIMPLE RETURN.
+
+        CALL SEND(NOECHO)
+        CALL SCAN(PROMPT,RESLT2)
+        IF (RESLT2.EQ.1) RETURN         
+
+C ERROR. BAD RESPONSE FROM HOST (RIGHT-ARROW NOT FOUND); PROBABLY NOT
+C XRAY, OR HOST DOWN.
+
+  150   IERR = -1
+        RETURN
+
+C ERROR.  NO LOGIN.  RETURN TO CALLER A CODED VERSION OF THE ERROR
+C NUMBER RECEIVED FROM XEXEC:  IF ERROR CODE IS IN THE RIGHT HALF-WORD,
+C MASK OUT THE LEFT HALF-WORD.  IF ERROR CODE IS IN LEFT HALF-WORD, EXTRACT
+C ERROR VALUE AND ADD 50 TO IT, TO DISTINGUISH FROM ERROR CODES FROM
+C RIGHT HALF-WORD.
+
+  200   IF (IERR2 .LT. "777777) IERR = IAND (IERR2, "777777)
+        IF (IERR2 .GT. "777777) IERR = (IERR2 / (2**18)) + 50
+
+        RETURN
+        END
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                    C
+C                       SUBROUTINE: XRFOUT                           C
+C                                                                    C
+C       WRITES THE OUTPUT FROM AN AUXILIARY CIRCUIT ONTO THE         C
+C        SPECIFIED FILE.                                             C
+C                                                                    C
+C       FORMAT:     CALL XRFOUT(PROMPT,FILNUM,LOGPOS)                C
+C       ARGUMENTS:                                                   C
+C          PROMPT : VARIABLE CONTAINING PROMPT CHARACTER, FLAGGING   C
+C                   END OF XRAY OUTPUT.                              C
+C          FILNUM : THE VARIABLE CONTAINING THE DISC DEVICE NUMBER   C
+C                   TO WHICH THE OUTPUT IS TO BE WRITTEN.            C
+C          LOGPOS : VARIABLE CONTAINING THE NUMBER OF THE LAST LINE  C
+C                   ALREADY IN THE OUTPUT LOG FILE.                  C
+C                                                                    C
+C       ACCESSES:  COMMON /AUX/ PORT, /OUTPOS/ MTRPOS                C
+C                                                                    C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        SUBROUTINE XRFOUT(PROMPT, FILNUM, LOGPOS)
+
+        INTEGER PROMPT, FILNUM, LOGPOS, PORT, MTRPOS, ARRAY(50,80),
+     +    LARRAY(80), ERR, LINCNT, LINNO
+
+C GET AUX. CKT'S. PORT NUMBER AND LINE ON MONITOR FILE TO WRITE ON.
+C INITIALIZE 'ARRAY' TO BLANKS, 'LINCNT' TO 0, AND 'LINNO' TO THE
+C NUMBER OF THE FIRST LINE ON THE OUTPUT FILE FOR WRITING ON:  IF THE
+C OUTPUT FILE IS THE RANDOM-ACCESS UNIVERSAL FILE, 'LINNO' IS SET TO
+C THE NUMBER OF THE LAST LINE OF THE FILE, PLUS 1; IF THE OUTPUT FILE
+C IS A SEQUENTIAL FILE THAT IS LOADED INTO A 1022 DATA-BASE BY THIS
+C PROGRAM, 'LINNO' IS SET TO 1.
+
+        COMMON /AUX/ PORT
+        COMMON /OUTPOS/ MTRPOS
+
+        DATA ARRAY /4000*'     '/
+        LINCNT = 0
+
+        LINNO = LOGPOS
+        IF (FILNUM .EQ. 23) LINNO = 1
+C RESET 'LARRAY' TO BLANKS, READ EACH LINE OF OUTPUT FROM XRAY INTO 'LARRAY'.
+C WRITE IT TO 'ARRAY' (FOR WRITING TO OUTPUT LOG FILE).
+C*******************************************************
+
+        DO 100 I = 1,50
+
+C RE-INITIALIZE 'LARRAY' TO BLANKS.
+
+        DO 30 J = 1,80
+        LARRAY(J) = '     '
+   30   CONTINUE
+
+C GET ONE LINE OF XRAY OUTPUT.
+
+        CALL XRGLIN (PROMPT, LARRAY, ERR)
+
+
+C ERROR:  0 = NORMAL, LOAD INTO 'ARRAY';  1 = TRUNCATED LINE, PRINT
+C WARNING ON MONITOR FILE AND LOAD INTO 'ARRAY';  2 = XRAY FINISHED,
+C WRITE OUTPUT TO LOG FILE;  3 = CKT. ZAPPED OR 60 SEC. TIMEOUT,
+C RETURN WITHOUT WRITING TO FILE.
+
+        IF (ERR .EQ. 0) GOTO  50
+        IF (ERR .EQ. 2) GOTO 200
+        IF (ERR .EQ. 3) RETURN
+
+        WRITE (22#MTRPOS, 5000) LINNO
+ 5000      FORMAT ('BAD LINE.  #', I5, ' TOO LONG!  TRUNCATED.  ', 
+     +     'POSSIBLE DATA LOSS!')
+        MTRPOS = SIZE (22) +1
+
+C INCREMENT LINE COUNTERS: NUMBER OF LINES TO WRITE TO LOG FILE, AND
+C THE NUMBER OF THE LOG FILE LINE WHERE TRUNCATION OCCURRED.
+C LOAD LINE INTO OUTPUT ARRAY.
+
+   50   LINCNT = LINCNT + 1
+        LINNO = LINNO + I
+
+        DO 100 J = 1,80
+        ARRAY (I,J) = LARRAY (J)
+  100   CONTINUE
+
+C END LOOP.
+C*******************************************************
+
+C TRUNCATED OUTPUT.  PRINT WARNING ON MONITOR FILE.
+
+        WRITE (22#MTRPOS, 5005) LINNO
+ 5005      FORMAT ('BAD OUTPUT FROM XRAY.  .GE. 50 LINES, ',
+     +     'AT LINE', I6, '.  POSSIBLE LINES LOST!')
+
+C WRITE OUTPUT TO LOG FILE.
+C**********************
+
+  200   DO 300 I = 1, LINCNT
+        IF(FILNUM.EQ.21) WRITE(FILNUM#LOGPOS,5010)(ARRAY(I,J),J=1,80)
+        IF (FILNUM.NE.21) WRITE (FILNUM,5010) (ARRAY(I,J),J=1,80)
+ 5010      FORMAT (80A1)
+        IF (FILNUM .EQ. 21) LOGPOS = LOGPOS + 1
+  300   CONTINUE
+
+
+  900   RETURN
+        END
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                    C
+C                       SUBROUTIRGLIN                           C
+C                                                                    C
+C   GETS ONE LINE (MAX 78 CHARS) OF OUTPUT FROM AN AUX CKT TO XRAY.  C
+C                                                                    C
+C       FORMAT:     CALL XRGLIN (PROMPT, LARRAY, ERR)                C
+C       ARGUMENTS:                                                   C
+C          PROMPT : VARIABLE WITH THE PROMPT CHARACTER FOR TESTING   C
+C                   FOR END OF OUTPUT.                               C
+C          LARRAY : ARRAY CONTAINING THE OUTPUT LINE FROM XRAY       C
+C          ERR    : VARIABLE CONTAINING ERROR FLAG.                  C
+C                   O = NO ERROR.                                    C
+C                   1 = OVER-LONG LINE ( > 79 CHARACTERS).           C
+C                   2 = END OF OUTPUT FROM XRAY.                     C
+C                   3 = ERROR:  CKT ZAPPED OR 30 sec. TIMEOUT.       C
+C                                                                    C
+C       ACCESSES:   COMMON/AUX/PORT                                  C
+C                                                                    C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        SUBROUTINE XRGLIN (PROMPT, LARRAY, ERR)
+
+        INTEGER PROMPT, LARRAY (79), ERR, PORT, CHAR, WTCNT, CR, LF,wait
+
+C GET THE AUX. CKT'S. PORT NUMBER FOR EXTRACTING DATA, AND INITIALIZE
+C CONSTANTS FOR TESTING FOR END OF LINE, AND INITIALIZE ERROR CODE.
+
+        COMMON /AUX/ PORT
+        DATA CR /13/, LF /10/
+        ERR = 0
+	wtcnt = 0
+
+C READ EACH CHAR. IN LINE OF XRAY OUTPUT, AND LOAD THEM INTO AN ARRAY
+C FOR PASSING BACK TO THE CALLING SUBROUTINE (XRFOUT).
+C*******************************************************
+
+        DO 100 I = 1,80
+   25   CALL GTCHAR (PORT, CHAR)
+
+C TEST FOR ERROR RETURNS: -1 = NO CHAR; -2 = AUX. CKT. ZAPPED.
+
+        IF (CHAR.EQ.-1) GOTO  50
+        IF (CHAR.EQ.-2) GOTO 600
+
+C MASK FOR ONLY THE LAST 7 BITS.
+
+        CHAR=IAND(CHAR,"177)
+
+C TEST FOR END OF LINE AND FOR END OF OUTPUT FROM HOST.  IGNORE
+C CARRIAGE RETURN THEN END READING DATA AT LINE FEED, AND SEND LINE OF
+C DATA (WITHOUT CR/LF PAIR) TO CALLING ROUTINE AND RETURN TO CALLER.
+C DO NOT SEND THE PROMPT AT END OF OUTPUT, BUT SET END-OF-OUTPUT FLAG
+C AND RETURN TO CALLER.
+
+        IF (CHAR .EQ. CR) GOTO 25
+        IF (CHAR .EQ. LF) RETURN
+        IF (CHAR .EQ. PROMPT) GOTO 500
+
+C MOVE THE CHAR TO THE LEFTMOST 8 BITS AND PAD THE WORD WITH BLANKS.
+C LOAD THE CHARACTER INTO THE PROPER ARRAY ELEMENT.
+
+        CHAR=LSH(CHAR,29)
+        CHAR=IOR(CHAR,"1004020100)
+
+        LARRAY(I)=CHAR
+        GOTO 100
+
+C TIMEOUT HAS OCCURRED.  IF 60 SEC. WITH NO CHAR., DO ERROR RETURN.
+
+50	CALL WAIT(1.0)
+	WTCNT = WTCNT + 1
+        IF (WTCNT .GE. 30) GOTO 600
+	goto 25
+
+  100   CONTINUE
+
+C END OF LOOP.
+C*******************************************************
+
+C MORE THAN 80 CHARS. IN LINE.
+
+        ERR = 1
+        RETURN
+
+C END OF OUTPUT FROM XRAY:  PROMPT WAS RECEIVED.
+
+  500   ERR = 2
+        RETURN
+
+C CKT. ZAPPED OR 30 SEC. TIMEOUT.
+
+  600   ERR = 3
+        RETURN
+
+        END
+
+
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c                                                                   c
+c			subroutine : gtport                         c  	
+c                                                                   c
+c	obtains all active ports,opposite channel numbers and       c
+c	number of t-ii segments of circuits                         c
+c                                                                   c
+c	format:	   call gtport(aports,nlinks,channl,nversn)         c
+c	arguments:                                                  c
+c	aports:  array of size 50, returned by subroutine filled    c
+c		 with active port numbers.                          c
+c	nlinks:	 array containing number of t-ii segments           c
+c	  	 in each active circuit. returned by subroutine     c
+c	channl:	 array containing number of opposite channel        c
+c		 in hex. returned by subroutine                     c
+c                                                                   c
+c    	error returns:  in the event of circuit zap or bad data     c
+c			aports(i) is set to -2.initial value=-1.    c 
+c                                                                   c
+c       nversn:  distinguish version number                         c
+c                                                                   c
+c  	accesses:   common /aux/ port, /outpos/ mtrpos              c
+c                                                                   c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
+	subroutine gtport(aports,nlinks,channl,nversn)
+*	type 999
+999	format(1x,'gtport')
+
+	integer prompt,logpos,port,mtrpos,larray(80),aports(80),nlinks(80)
+	integer channl(80),err,linno,line(13),active(5),nversn
+
+	data prompt /62/
+	data active/4,65,83,32,85/
+
+	common /aux/port
+	common /outpos/mtrpos
+
+*	initialise  all arrays. unused array elements are set to -1
+
+	do 30 j=1,80
+	larray(j) = '     '
+	aports(j) = -1
+	nlinks(j) = -1
+	channl(j) = '     '
+30	continue
+
+	linno = 1
+	ipnt = 1
+
+*	issue active circuits command to xray
+	call send(active)
+	
+
+*	re-initialise larray to blanks
+35	do 40 j=1,80
+	larray(j) = '     '
+40	continue	
+
+*	get one line of xray output
+	call xrglin(prompt,larray,err)
+
+	if (err .eq. 0) goto 51
+	if (err .eq. 1) goto 75
+	if (err .eq. 2) goto 100
+	if (err .eq. 3) goto 200
+	
+51	if (ipnt .gt. 80) goto 35
+	nsolo = mod(nversn,10000)
+*	nver = nversn/10000
+*	nsolo = nversn - (nver*10000)
+	if (nsolo .eq. 507) goto 49
+	ngap=0
+	encode(65,42,line)(larray(i),i=1,48),(larray(i),i=51,54)
+42	format(13(1x,4a1))
+	if (line(13) .eq. '     ' .or. line(13) .eq. ' chan') goto 70
+	goto 53
+	
+49	ngap=2
+	encode(55,52,line)(larray(i),i=1,40),(larray(i),i=43,46)
+52	format(11(1x,4a1))
+
+*	neglect banner. then read port #,# of links and channel #
+	if (line(11) .eq. '     ' .or. line(11) .eq. ' chan')  goto 70
+
+*	perform sanity check on characters representing port number
+53	iblnk = 0
+	ok = 0
+	do 520 k=1,5
+		call rtc(ichar,line(1),k)
+		ichar = lsh(ichar,-29)
+		if (ichar .eq. 32 .and. iblnk .eq. 0) goto 520
+		iblnk = 1
+		if (ichar .ge. 48 .and. ichar .le. 57) goto 520
+		ok = 1
+		aports(ipnt) = -2
+520	continue
+	if (ok .ne. 0) goto 70
+
+*	perform sanity check on characters representing no. of links
+	iblnk = 0
+	ok = 0
+	do 540 k=1,5
+		call rtc(ichar,line(12-ngap),k)
+		ichar = lsh(ichar,-29)
+		if (ichar .eq. 32 .and. iblnk .eq. 0) goto 540
+		iblnk = 1
+		if (ichar .ge. 48 .and. ichar .le. 57) goto 540
+		ok = 1
+		nlinks(ipnt) = -2
+540	continue
+	if (ok .ne. 0) goto 70
+
+		decode(5,54,line(1))aports(ipnt)
+54		format(i5)
+		decode(5,55,line(12-ngap))nlinks(ipnt)
+55		format(i5)
+		channl(ipnt) = line(13-ngap)
+
+*	perform sanity check on accepted values.
+	if (aports(ipnt) .lt. 0 .or. aports(ipnt) .gt. 500)
+     x  aports(ipnt) = - 2
+	if (nlinks(ipnt) .lt. 0 .or. nlinks(ipnt) .gt. 20)
+     x	nlinks(ipnt) = - 2
+	if (aports(ipnt) .ne. -2 .and. nlinks(ipnt) .ne. -2)
+     x	ipnt = ipnt + 1
+
+70	linno = linno + 1
+	goto 35
+
+*	xray line too long. write error message
+75	write(22#mtrpos,5000)linno
+5000	format('bad line. #',i5,' too long. truncated!')
+	mtrpos = size(22) + 1
+	goto 51
+
+*	xray  output finished. exit
+100	goto 300
+
+*	xray ckt zapped. write error message
+200	call time(itime)
+	write(22#mtrpos,5005)linno,itime
+5005	format('line',i5,2x,'xray circuit zapped or 30 sec. timeout!',
+     x' from gtport',2x,a5)
+	mtrpos = size(22) + 1
+	do 250 j=1,80
+	aports(j) = - 2
+250	continue
+*	type 255
+255	format(1x,'zapped or timeout from gtport')
+
+300	return
+	end
+
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c                                                                      c
+c                    subroutine : pstat                                c
+c                                                                      c
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+	
+	subroutine pstat(circ,node,host,aports)
+	integer node,host,star,aports(80),circ,comm(4),comand(20)
+	integer save,colon,larray(80),comptr,blank,cr,err,idate(2)
+	integer probe(7),prlost,char,port,pot
+	
+	data probe/6,80,82,79,66,69,13/
+	data star/42/,cr/13/,colon/58/,blank/32/
+	common /aux/ port
+	common /outpos/mtrpos
+
+*	type 1
+1	format(' pstat')
+	pot = 0
+	save = port
+	port = circ
+	ncnt = 0
+
+*	build pstat circuit command
+	encode(18,50,comm)node,host,pot
+50	format('pstat ',i4,' h',i4,1x,i1)
+	
+	do 60 i=2,19
+	call rtc(char,comm,i-1)
+	char = lsh(char,-29)
+	comand(i) = char
+	comptr = i
+60	continue
+	
+	comptr = comptr + 1
+	comand(comptr) = cr
+	comand(1) = comptr - 1
+	
+*	the 'pstat' command requires a character string having no more
+*	than 1 blank (' ') separating the arguments.
+
+	do 80 k=20,1,-1
+	  if ((k.ne.14).and.(k.ne.15).and.(k.ne.16))goto 80
+	  if (comand(k) .ne. blank) goto 80 
+	  do 70 j=k,20
+70	     comand(j) = comand(j+1)
+	  comand(1) = comand(1) - 1
+80	continue
+
+	icnt = 0
+	
+*	initialize array of active ports
+90	do 100 j=1,80
+	aports(j) = -1
+100	continue
+	
+	nfin = 0
+*	send 'pstat ' command down probe
+*	TYPE 2222, (COMAND(J),J=1,20)
+*2222	FORMAT(' COMMAND IN ASCII : ',20i2)
+110	call send(comand)
+
+*	initialize larray to blanks
+111	do 120 j=1,80
+	larray(j) = '     '
+120	continue
+	
+	call xrglin(colon,larray,err)
+*	TYPE 3333, (LARRAY(I),I=1,78)
+*3333	FORMAT(' ',78A1)
+	iflag = 0
+	
+	if (err .eq. 0 .or. err .eq. 1) goto 200
+	if (err .eq. 2) goto 600
+	if (err .eq. 3) goto 900
+	
+200	encode(5,210,line)(larray(j),j=1,5)
+210	format(5a1)
+	
+	if (line .eq. '     ' .and. nfin .eq. 0) goto 111
+ 	
+*	if line is blank or an echo, then get another line.
+*	if probe circuit has been lost, then re-establish it.
+*	otherwise, extract port number
+	if (line.eq.'pstat' .or. line.eq.'     ' .or. line.eq.'busy ')
+     x   	goto 111
+	if (line .eq. prlost) goto 800
+	if (line .eq. 'host ') goto 250
+	if (line .eq. '  hos') goto 250
+	if (line .eq. ' host') goto 250
+	if (line .eq. '?    ') goto 999
+	goto 260
+
+250	m=22
+	goto 270
+260	m=1
+	
+*	if nword is blank or cr then extract one port number
+270	ncbeg = m
+271	encode(1,275,nword)larray(m)
+275	format(a1)
+	call rtc(ichar,nword,1)
+	ichar = lsh(ichar,-29)
+	if (ichar .eq. 32) goto 300
+	if (ichar .ge. 48 .and. ichar .le. 57) goto 280
+	goto 295
+280	m = m + 1
+	goto 271
+295	iflag = 1
+300	ncend = m - 1
+	nlen = ncend - ncbeg + 1
+	if (nlen .ne. 0) goto 330
+	if (iflag .eq. 1) goto 111
+	m = m + 1
+	if (m .ge. 80) go to 111
+	goto 270
+330	ncnt = ncnt + 1
+	if (ncnt .gt. 80) goto 390
+	goto (350, 360, 370, 380, 390), nlen
+	
+350	encode(1,351,itemp)(larray(j),j=ncbeg,ncend)
+351	format(a1)
+	decode(1,352,itemp)aports(ncnt)
+352	format(1i1)
+	goto 395
+360	encode(2,361,itemp)(larray(j),j=ncbeg,ncend)
+361	format(2a1)
+	decode(2,362,itemp)aports(ncnt)
+362	format(i2)
+	goto 395
+370	encode(3,371,itemp)(larray(j),j=ncbeg,ncend)
+371	format(3a1)
+	decode(3,372,itemp)aports(ncnt)
+372	format(i3)
+	goto 395
+380	encode(4,381,itemp)(larray(j),j=ncbeg,ncend)
+381	format(4a1)
+	decode(4,382,itemp)aports(ncnt)
+382	format(i4)
+	goto 395
+390	goto 111
+cc395	TYPE 5555,NCNT,APORTS(NCNT)
+cc3340	FORMAT(' ',I5,' PORTARRAY : ',I5)
+395	if (iflag .eq. 1) goto 111
+	m = m + 1
+	if (m .ge. 80) goto 111
+	goto 270
+	
+*	probe output finished. exit.
+600	nfin = 1
+	goto 999
+	
+*	probe circuit lost but tmcs circuit active. re-issue probe cmnd.
+800	call scan(star,iresul)
+	if (iresul .ne. 1) goto 900
+	call date(idate)
+	call time(itime)
+	write(22#mtrpos,810)idate,itime
+810	format(' tmcs lost probe circuit',18x,2a5,5x,a5)
+	mtrpos = size(22) + 1
+	call wait(5.0)
+	call send(probe)
+	call scan(colon,iresul)
+	if (iresul .ne. 1) goto 900
+	call date(idate)
+	call time(itime)
+	write(22#mtrpos,820)idate,itime
+820	format(' tmcs got back probe circuit',14x,2a5,5x,a5)
+	mtrpos = size(22) + 1
+	goto 999
+	
+*	probe circuit zapped or 30 sec. timeout.
+900	call date(idate)
+	call time(itime)
+	write(22#mtrpos,910)idate,itime
+910	format(' tmcs circuit zapped or 30 sec. timeout',3x,2a5,5x,a5)
+	mtrpos = size(22) + 1
+	
+*	re-establish probe circuit
+920	call zap(circ)
+	call xprobe(circ,err)
+	if (err .ne. 0) goto 950
+	call date(idate)
+	call time(itime)
+	write(22#mtrpos,930)idate,itime
+930	format(' tmcs circuit re-established',14x,2a5,5x,a5)
+	mtrpos = size(22) + 1
+	goto 999
+	
+*	try to establish tmcs 3 times. if fail, exit.
+950	icnt = icnt + 1
+	call wait(5.0)
+	if (icnt .le. 2) goto 920
+	circ = -1
+	
+999	port = save
+	return
+	end
+
+**********************************************************************
+*                                                                    *
+*                     SUBROUTINE  :   ISCHAN                         *
+*                                                                    *
+*             CONVERT ISIS OCTAL PORT NUMBER TO HEX                  *
+*                                                                    *
+*                                                                    *
+**********************************************************************
+
+   
+
+	subroutine ischan(aport,chanl,nversn)
+	integer digit(8),hexnum,aport,chanl
+
+	common /aux/ port
+	common /outpos/ mtrpos
+	if (nversn .gt. 20000) number = aport + 64
+	if (nversn .lt. 20000) number = aport + 96
+	ilen = 0
+	iflag = 1
+10	ilen = ilen + 1
+	mnd = mod(number,16)
+	nqo = number/16
+	if (mnd .gt. 9) goto 50
+	if (mnd .ne. 0) goto 55
+	digit(ilen) = '0'
+	goto 500
+50	itemp = mnd
+	goto 600
+55	itemp = mnd
+	goto 700
+	
+200	if (nqo .le. 15) goto 210
+	number = nqo
+	goto 10
+	
+210	iflag = 2
+	ilen = ilen + 1
+	if (nqo .gt. 9) goto 250
+	if (nqo .ne. 0) goto 255
+	digit(ilen) = '0'
+	goto 500
+250	itemp = nqo
+	goto 600
+255	itemp = nqo
+	goto 700
+	
+500	if (iflag .eq. 1) goto 200
+	if (iflag .eq. 2) goto 999
+	
+600	nn = itemp-9
+	goto (610,611,612,613,614,615), nn
+	
+601	digit(ilen) = '1'
+	goto 500
+602	digit(ilen) = '2'
+	goto 500
+603 	digit(ilen) = '3'
+	goto 500
+604	digit(ilen) = '4'
+	goto 500
+605	digit(ilen) = '5'
+	goto 500
+606	digit(ilen) = '6'
+	goto 500
+607	digit(ilen) = '7'
+	goto 500
+608	digit(ilen) = '8'
+	goto 500
+609	digit(ilen) = '9'
+	goto 500
+610	digit(ilen) = 'a'
+	goto 500
+611	digit(ilen) = 'b'
+	goto 500
+612	digit(ilen) = 'c'
+	goto 500
+613	digit(ilen) = 'd'
+	goto 500
+614	digit(ilen) = 'e'
+	goto 500
+615	digit(ilen) = 'f'
+	goto 500
+	   
+700	goto (601,602,603,604,605,606,607,608,609), itemp
+	
+999	encode(5,1000,chanl)(digit(k),k=ilen,1,-1)
+1000	format(1x,4a1)
+c	decode(5,1100,hexnum)chanl
+c1100	format(a5)
+	return
+	end
+
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c                                                                      c
+c                    subroutine : gtchan                               c
+c                                                                      c
+c	given a channel number obtain  the opposite channel number     c 
+c	and the number of seconds(in hex) the circuit between          c   
+c	the two channel numbers has been active. If no circuit exists  c
+c	the opposite channel number returned will be ' '. Ignore the   c
+c	the seconds parameter in this case.                            c    
+c                                                                      c    
+c	format :  call gtchan(chanl,ochanl,htime)                      c
+c                                                                      c
+c	arguments :                                                    c
+c	chanl : four hex characters(right justified) representing      c
+c		channel number passed to gtchan.                       c
+c	ochanl:  opposite channel number . four hex characters         c
+c		(right justified) returned by gtchan.                  c
+c	htime:  array of size 2 containing 8 hex characters (right     c
+c		justified) returned by gtchan. represents circuit      c
+c		lifetime in seconds.                                   c 
+c                                                                      c
+c	error returns: in case of circuit zap,ochanl = 'fffff'         c   
+c                                                                      c
+c	accesses:  common /aux/port , /outpos/mtrpos                   c
+c                                                                      c
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
+	subroutine gtchan(chanl,ochanl,htime)
+*	type 999
+999	format(1x,'gtchan')
+
+	integer comm(2),comand(10),chanl,ochanl,htime(2),comptr,err,char
+	integer line(3),larray(80),cr,test,verjun,done,msg(2)
+
+	data prompt /62/
+	data cr/13/
+	data msg(1)/'  una'/, msg(2)/'vail.'/
+
+	common /aux/ port
+	common /outpos/ mtrpos
+
+*	build 'query channel' command string
+	encode(8,10,comm)chanl
+10	format('qc ',a5)
+
+	do 20 i=2,9
+	call rtc(char,comm,i-1)
+	char = lsh(char,-29)
+	comand(i) = char
+	comptr = i
+20	continue
+
+	comptr = comptr + 1
+	comand(comptr) = cr
+	comand(1) = comptr - 1
+
+*	initialise subroutine counters
+	linno = 1
+	verjun = 0
+	ochanl = '     '
+	htime(1) = '     '
+	htime(2) = '     '
+	done = 0
+
+*	send 'query channel ' command on xray circuit
+	call send(comand)
+*	re-initialise larray to blanks
+
+30	do 35 j=1,80
+	larray(j) = '     '
+35	continue
+
+	call xrglin(prompt,larray,err)
+*	TYPE 3333, (LARRAY(I),I=1,78)
+*3333	FORMAT(' ',78A1)
+
+	if (err .eq. 0) goto 50
+	if (err .eq. 1) goto 100
+	if (err .eq. 2) goto 150
+	if (err .eq. 3) goto 200
+
+*	if successful line obtained from xray, parse line and branch 
+*	according to the version of the x-ray code
+50	if (verjun .eq. 404) goto 404
+	if (verjun .eq. 405) goto 405
+	encode(5,52,test)(larray(i),i=1,4)
+52	format(1x,4a1)
+
+*	if test contains 'link' --> version 404; if test = 'chan' version 405
+	if (test .eq. ' chan') verjun = 405
+	if (test .eq. ' link')  verjun = 404
+	goto 70
+ 
+405	encode(15,62,line)(larray(i),i=17,20),(larray(i),i=69,76)
+62	format(1x,4a1,2x,8a1)
+	goto 67
+
+404	encode(15,66,line)(larray(i),i=11,14),(larray(i),i=63,70)
+66	format(1x,4a1,2x,8a1)
+
+67	if (done .eq. 1) goto 70 
+	if (line(2) .eq. '     ' .or. line(3).eq. '     ') goto 75
+
+	ochanl = line(1)
+	htime(1) = line(2)
+	htime(2) = line(3)
+	done = 1
+70	linno = linno + 1
+	goto 30
+
+75	htime(1) = msg(1)
+	htime(2) = msg(2)
+	linno = linno + 1
+	goto 30
+
+*	xray line too long; write error message
+100	write(22#mtrpos,5000)linno
+5000	format('bad line. #',i5,'  too long. truncated!')
+	mtrpos = size(22) + 1
+	goto 30
+
+*	xray output finished. exit
+150	goto 300
+
+*	xray circuit zapped. write error message
+200	call time(itime)
+	write(22#mtrpos,5005)linno,itime
+5005	format('line',i5,2x,'xray circuit zapped or 30 sec. timeout!',
+     x' from gtchan',2x,a5)
+	mtrpos = size(22) + 1
+	ochanl = 'fffff'
+*	type 250
+250	format(1x,'zapped or timeout from gtchan')
+
+300	return
+	end
+
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c                                                                      c
+c                       subroutine : gpower                            c
+c                                                                      c
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+	subroutine gpower(kernel,nerr)
+*	type 999
+*999	format(' gpower :')	
+	integer kernel,comm(2),comand(10),comptr,cr,char,result
+	integer larray(80)
+	data prompt /62/
+	data cr /13/
+	
+	common /aux/ port
+	common /outpos/ mtrpos
+  
+	nerr=0
+*	acquire privilege
+	encode (8,10,comm)kernel	
+10	format('gp0 ',i4)	
+	
+	do 20 i=2,9
+	call rtc(char,comm,i-1)
+	char = lsh(char,-29)
+	comand(i) = char
+	comptr = i
+20	continue
+	
+	comptr = comptr + 1
+	comand(comptr) = cr
+	comand(1) = comptr - 1
+*	send 'get power to acquire privilege' on xray circuit
+*	do 23 k=1,9
+*	type 22, comand(k)
+*22	format(' get power',i)
+*23	continue
+
+	call send(comand)
+
+	call scan(prompt,result)
+	if (result .eq. 1) goto 300
+	nerr=1
+
+300	return
+	end
+
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c                                                                      c
+c			subroutine : gtpm                              c
+c                                                                      c
+c	obtain round trip delay of the t-ii segment of the circuit     c
+c	currently originating on specified channel.                    c
+c                                                                      c  
+c	format :  call gtpm(chanl,rspons)                              c
+c                                                                      c
+c	arguments :                                                    c
+c	chanl : four hex characters,right justified,representing       c
+c		channel number on which delay measurement is           c
+c		to be performed.                                       c
+c	rspons: integer variable in which round trip delay             c
+c		measurement (in milliseconds) is returned.             c
+c                                                                      c
+c	error returns : circuit zap indicated by rspons = -1.          c
+c			bad or no input indicated by rspons = 0        c
+c                                                                      c
+c	accesses :  common /aux/ port ,  /outpos/ mtrpos               c
+c                                                                      c
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
+	subroutine gtpm(chanl,rspons)
+*	type 999
+999	format(1x,'gtpm')
+
+	integer rspons,chanl,comm(2),comand(10),comptr,err,char,larray(80)
+	integer cr
+
+	data prompt /62/
+	data cr /13/
+
+	common /aux/ port
+	common /outpos/ mtrpos
+
+*	build 'performance measurement' command
+	encode (8,10,comm)chanl
+10	format('pm ',a5)
+	do 20 i=2,9
+	call rtc(char,comm,i-1)
+	char = lsh(char,-29)
+	comand(i) = char
+	comptr = i
+20	continue
+
+	comptr = comptr + 1
+	comand(comptr) = cr
+	comand(1) = comptr - 1
+	
+	linno = 1
+	rspons = 0
+	iflag = 0
+
+*	send 'performance measurement' command on xray circuit
+	call send(comand)
+
+*	this is the top of the loop for parsing xray response.re-initialise
+30	do 35 j=1,80
+	larray(j) = '     '
+35	continue
+
+	call xrglin(prompt,larray,err)
+*	type 3333,(LARRAY(I),I=1,78)
+*3333	FORMAT(' ',78A1)
+
+	if (err .eq. 0) goto 50
+	if (err .eq. 1) goto 75
+	if (err .eq. 2) goto 100
+	if (err .eq. 3) goto 200
+
+*	if successful, parse line and extract round trip delay  
+50	encode(5,52,itemp)(larray(i),i=32,36)
+52	format(5a1)
+
+*	perform sanity check on characters representing delay in msec.
+	if (itemp .eq. '     ') goto 70
+	iblnk = 0
+	ok = 0
+	do 520 k=1,5
+		call rtc(char,itemp,k)
+		char = lsh(char,-29)
+		if (char .eq. 32 .and. iblnk .eq. 0) goto 520
+		iblnk = 1
+		if (char .ge. 48  .and. char .le. 57) goto 520
+		ok = 1
+520	continue
+	if (ok .ne. 0) goto 70
+	decode(5,54,itemp)rspons
+54	format(i5)
+*	perform sanity check on accepted value of rspons
+	if (rspons .lt. 0 .or. rspons .gt. 9999) rspons = 0
+
+70	linno = linno + 1
+	goto 30
+
+*	xray line too long; write error message
+75	write(22#mtrpos,5000)linno
+5000	format('bad line. #',i5,' too long. truncated!')
+	mtrpos = size(22) + 1
+	goto 30
+
+*	xray output finished. exit
+100	goto 300
+
+*	xray circuit zapped. write error message
+200	call time(itime)
+	write(22#mtrpos,5005)linno,itime
+5005	format('line',i5,2x,'xray circuit zapped or 30 sec. timeout!',
+     x' from gtpm',4x,a5)
+*	if no response in 30 sec. give it another 30  sec.
+	iflag = iflag + 1
+	mtrpos = size(22) + 1
+	if (iflag .le. 4) goto 30
+	rspons = -1    
+*	type 250
+250	format(1x,'zapped or timeout from gtpm')
+
+300	return
+	end
+
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c                                                                      c
+c		subroutine : xprobe                                    c
+c                                                                      c
+c   establishes an auxiliary circuit to probe and returns port #.      c
+c                                                                      c
+c	format : call xprobe(circ,err)                                 c
+c	arguments:                                                     c
+c		circ : integer in which auxiliary circuit number is    c
+c		        returned to calling routine.                   c
+c		err : error code                                       c
+c			0 = no error                                   c
+c			1 = unable to establish circuit to tmcs        c
+c			2 = username not valid on tmcs                 c 
+c			3 = password not valid on tmcs                 c
+c			4 = probe circuit not established              c
+c                                                                      c
+c	accesses :  common /aux/ port (used in scan subroutine)        c
+c                                                                      c
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
+	subroutine xprobe(circ,err)
+*	type 999
+999	format(1x,'xprobe')
+
+	integer tmcs(3),circ,probe(7),star,colon,result,passwd(10)
+	integer cr,lf,err,save,port,larray(80),userna(8),privat(9)
+
+	data colon/58/,star/42/,cr/13/,lf/10/
+	data userna/7,83,72,65,82,77,65,13/
+	data passwd/9,80,76,65,78,78,73,78,71,13/
+	data privat/8,80,82,73,86,65,84,69,13/
+	data probe/6,80,82,79,66,69,13/
+	common /aux/port
+
+*	build tmcs command string
+	itmcs = 1
+77	goto (1,2,3,4,5), itmcs
+1	encode(12,11,tmcs)
+11	format('sharma:1819;')
+	goto 10
+2	encode(12,12,tmcs)
+12	format('sharma:4783;')
+	goto 10
+3	encode(12,13,tmcs)
+13	format('sharma:5325;')
+	goto 10
+4	encode(12,14,tmcs)
+14	format('sharma:1400;')
+	goto 10
+5	encode(12,15,tmcs)
+15	format('sharma:7334;')
+	itmcs = 0
+
+*	build circuit to the tmcs host
+10	ier = 0
+	call fbcir(tmcs,circ,ier)
+	if (ier .eq. 0) goto 50
+	if (ier .ne. 4) goto 20
+	type 19
+19	format(1x,'tmcs host out of ports. trying again!')
+	call zap(circ)
+	call wait(5.0)
+	itmcs = itmcs + 1
+	goto 77
+20	err = -1
+	if (ier .eq. 524288)type 25
+25	format(1x,'no auxiliary circuit license.',/)
+	goto 150
+
+*	swap values of port and circ. reswap at end of routine.
+50	save = port
+	port = circ
+
+*	scan for a colon, the appropriate tmcs response
+	call scan(colon,result)
+	if(result .eq. 1) goto 100
+	err = 1
+	goto 150
+
+*	issue username and scan for colon again
+100	call send(userna)
+	call scan(colon,result)
+	if (result .eq. 1) goto 109
+	err = 2
+	goto 150
+
+*	issue password and scan for asterisk this time
+109	call send(passwd)
+	call scan(star,result)
+	if (result .eq. 1) goto 112
+	err = 3
+	goto 150
+
+*	issue probe command within tmcs and scan for colon again
+112	call send(probe)
+	call scan(colon,result)
+	if (result .eq. 1) goto 120
+	err = 4
+	goto 150
+
+120	err = 0
+	goto 155
+
+150	call zap(circ)
+155	port = save
+	return
+	end	
+
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c                                                                      c
+c			subroutine  : trace                            c
+c                                                                      c
+c	given the node host and port numbers, obtain the circuit       c
+c	path fron the active supervisor. communicate the the active    c
+c	supervisor using auxiliary circuit stored in 'circ'            c
+c                                                                      c
+c	format :  call trace(circ,node,host,aport,routes,t1,engin)     c
+c	arguments :                                                    c
+c	circ : integer variable containing aux. circuit port           c
+c	       number to be used for communicating with the sup.       c
+c	node : integer variable containing node number of circuit      c
+c	       origination.                                            c
+c	host : integer variable containing kernel host number of       c
+c	       circuit origination.                                    c
+c	aport: integer variable containing port number (in octal)      c
+c	       of circuit origination.                                 c
+c	routes: integer array of length 17, in which the circuit       c
+c		path containing upto 16 node numbers is returned.      c
+c		routes(17) contains the number of TII links.           c
+c	t1 :   integer variable returned by subroutine indicating      c
+c	       whether circuit path is hybrid,t-i and t-ii nodes       c
+c	        (t1= 1) or fully t-ii (t1 = 0)                         c
+c                                                                      c
+c	error returns : aux circuit to probe zapped and cannot         c
+c			be re-built (circ = -1)                        c
+c			bad data from probe (t1 = -1)                  c
+c                                                                      c
+c	accesses : common /aux/ port , /outpos/ mtrpos                 c
+c		   'aux' used by subroutine xrglin.                    c
+c                                                                      c
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
+	subroutine trace(circ,node,host,aport,routes,t1)
+*	type 999
+999	format(1x,'trace')
+
+	integer node,host,star,aport,circ,dport,comm(4),comand(22),comptr
+	integer save,colon,larray(80),port,blank,cr,err,t1,idate(2)
+	integer routes(17),char,probe(7),tline(160),prlost,engin,bones(2)
+
+	data probe/6,80,82,79,66,69,13/
+	data star/42/,cr/13/,colon/58/,blank/32/
+	common /aux/ port
+	common /outpos/mtrpos
+
+*	save port number and substitute circ for port. capture symbolic node #
+	save = port
+	port = circ
+	encode(5,10,inode)node
+10	format(i5)
+
+*	save the following integer in prlost. in characters this corresponds
+*	to prlost = '***pr' (note : p & r are lower case) . used to interpret
+*	a specific tmcs error message
+	prlost = 22726144228
+
+*	build trace circuit command
+40	encode(20,50,comm)node,host,aport
+50	format('trace ',i4,' h',i4,1x,i3)
+
+	do 60 i=2,21
+	call rtc(char,comm,i-1)
+	char = lsh(char,-29)
+	comand(i) = char
+	comptr = i
+60	continue
+
+	comptr = comptr + 1
+	comand(comptr) = cr
+	comand(1) = comptr - 1
+
+*	the 'trace' command requires a character string having no more than 1
+*	' ' (blank) separating the arguments. accomplish this!
+*	if blanks exist in positions 14,15,16,19 or 20 remove them.
+
+	do 72 k=22,1,-1
+	   if ((k.ne.14).and.(k.ne.15).and.(k.ne.16).and.(k.ne.19)
+     x        .and.(k.ne.20))  goto 72
+	   if (comand(k) .ne. blank) goto 72
+	   do 70 j=k,22
+70	     comand(j) = comand(j+1)
+	   comand(1) = comand(1) - 1
+72	continue
+
+75	ifinis = 0
+	icnt = 0
+	iflag = 0
+	ileng5 = 0
+
+*	send 'trace  circuit ' command down probe circuit
+	call send(comand)
+
+76	do 77 j=1,16
+	routes(j) = '     '
+77	continue
+	routes(17) = -1
+	t1 = -1
+
+*	initialise tline (double line) array
+	do 78 j=1,160
+	tline(j) = '     '
+78	continue
+
+*	re-initialise larray to blanks
+80	do 100 j=1,80
+	larray(j) = '     '
+100	continue
+	if (ifinis .eq. 1) goto 300
+
+	call xrglin(colon,larray,err)
+c	TYPE 3333,(LARRAY(J),J=1,78)
+c3333	FORMAT('  ',78A1)
+
+	if (err .eq. 0 .or. err .eq. 1) goto 102
+	if (err .eq. 2) goto 160
+	if (err .eq. 3) goto 180
+
+102	encode(5,103,line)(larray(j),j=1,5)
+103	format(5a1)
+
+	if (line .eq. '     ' .and. ifinis .eq. 0)goto 80
+
+*	shift old line into first half of 'tline' array. include
+*	new line into second half of 'tline' array.
+105	do 110 j=1,72
+		tline(j) = tline(j+72)
+		tline(j+72) = larray(j)
+110	continue
+
+*	parse string returned from probe.
+	encode(5,125,line)(tline(j),j=1,5)
+125	format(5a1)
+*	if line is blank or an echo,get another line. if probe circuit
+*	has been lost, re-establish it. otherwise extract node numbers.
+	if (line .eq. 'trace' .or. line .eq. '     ' .or. 
+     x      line .eq. 'busy ')goto 80
+	if (line .eq. prlost) goto 170
+	if (line .eq. 'host ') goto 130
+
+1250	call date(idate)
+	call time(itime)
+	if (t1 .ne. -1) iflag = iflag + 1
+	if (iflag .ne. 1)write(22#mtrpos,126)idate,itime,tline
+126	format('unexpected response from probe',2x,2a5,5x,a5,/,80a1,
+     x/,80a1)
+	mtrpos = size(22) + 3
+	if (ifinis .eq. 1) goto 300
+	goto 80
+
+130	istrt = 0
+	do 127 j=1,156
+	j1 = j+ 4
+	encode(5,1270,itest)(tline(k),k=j,j1)
+1270	format(5a1)
+	if (itest .eq. inode) goto 1271
+127	continue
+	goto 1250
+
+1271	istrt = j
+	do 1272 j = istrt,156
+	j1 = j + 4
+	encode(5,1273,itest)(tline(k),k=j,j1)
+1273	format(5a1)
+	if (itest .eq. ' host' .or. itest .eq. ' tyms') goto 1274
+	if (itest .eq. ' node') goto 12733
+1272	continue
+	goto 1250
+
+*	no circuit or circuit too long.
+12731   j1 = istrt + 5
+	j2 = istrt + 45
+	encode(41,12732,routes)(tline(k),k=j1,j2)
+12732	format(41a1)
+	if (ifinis .eq. 1) goto 300
+	goto 80
+
+*	possible hybrid circuit. may includes tymnet 1 links.
+12733	t1 = 1
+	goto 12741
+
+*	extract node numbers
+1274	t1 = 0
+12741	iend = j-1
+	ileng = iend - istrt + 1
+	ileng5 = ileng/5
+	do 1276	k=1,ileng5
+	j = istrt + (k-1)*5
+	j1 = j + 4
+	encode(5,1275,routes(k))(tline(l),l=j,j1)
+1275	format(5a1)
+	routes(17) = routes(17) + 1
+1276	continue
+	if (t1 .eq. 1) goto 12760
+	if (ifinis .eq. 1) goto 300
+	goto 80
+
+*	extract tymnet 1 node number.
+12760	j1 = iend + 7
+	do 1277 j=j1,156
+	if (tline(j) .eq. '     ') goto 1279
+	if (tline(j) .eq. 'c    ') goto 1279 
+1277	continue
+	goto 1250
+
+1279	ileng = j - j1
+	if (ileng .le. 4) goto 12790
+*	if 5 digit it is a terminal, then ignore as a node
+*	j= j1 + 3
+*	ileng = 4
+	t1=0
+	goto 13001
+
+12790	ileng2 = 5-ileng
+	encode(8,12791,bones)ileng2,ileng
+12791	format('(',i1,'x,',i1,'a1)')
+	j2 = j-1
+	encode(5,bones,routes(ileng5+1))(tline(k),k=j1,j2)
+
+*	A T1 node is defined as node number < 2000
+
+	decode(5,12792,routes(ileng5+1))itemp
+12792	format(i5)
+	if (itemp .lt. 2000) goto 13001
+  	t1=0
+	routes(17) = routes(17) + 1
+13001	if (ifins .eq. 1) goto 300
+	goto 80
+
+*	probe output finished. exit
+160	ifinis = 1
+	goto 102
+
+*	probe circuit lost but tmcs circuit active. re-issue probe cmnd.
+170	call scan(star,irslt)
+	if (irslt .ne. 1) goto 180
+	call date(idate)
+	call time(itime)
+	write(22#mtrpos,175)idate,itime
+175	format('tmcs lost probe circuit',18x,2a5,5x,a5)
+	mtrpos = size(22) + 1
+	call wait(5.0)
+	call send(probe)
+	call scan(colon,irslt)
+	if (irslt .ne. 1) goto 180
+	call date(idate)
+	call time(itime)
+	write(22#mtrpos,178)idate,itime
+178	format('tmcs got back probe circuit',14x,2a5,5x,a5)
+	mtrpos = size(22) + 1
+	goto 300
+
+*	probe circuit zapped or 30 sec. timeout
+180	call date(idate)
+	call time(itime)
+	write(22#mtrpos,5005)idate,itime
+5005	format('tmcs circuit zapped or 30 sec. timeout',3x,2a5,5x,a5)
+	mtrpos = size(22) + 1
+
+*	re-establish probe circuit
+5002	call zap(circ)
+	call xprobe(circ,err)
+	if (err .ne. 0) goto 200
+	call date(idate)
+	call time(itime)
+	write(22#mtrpos,5010)idate,itime
+5010	format('tmcs circuit re-established',14x,2a5,5x,a5)
+	mtrpos = size(22) + 1
+	goto 300
+
+*	try to establish tmcs circuit 3 times. if unsuccessful,exit
+200	icnt = icnt + 1
+	call wait(5.0)
+	if (icnt .le. 2) goto 5002
+	circ = -1
+
+*	replace value of port and exit.
+300	port = save
+	return
+	end
+
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c                                                                   c
+c                 subroutine : convert hex to decimal               c
+c                                                                   c  
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ 
+	subroutine hexdec(htime,dtime)
+	integer htime(2),digit(10),dtime
+	decode(10,101,htime)digit
+101	format(10a1)
+*
+	dtime = 0
+	do 500 m = 3,10
+	if (digit(m) .eq. ' ') goto 300
+	if (digit(m) .eq. '0') goto 300
+	if (digit(m) .eq. '1') goto 301
+	if (digit(m) .eq. '2') goto 302
+	if (digit(m) .eq. '3') goto 303
+	if (digit(m) .eq. '4') goto 304
+	if (digit(m) .eq. '5') goto 305
+	if (digit(m) .eq. '6') goto 306
+	if (digit(m) .eq. '7') goto 307
+	if (digit(m) .eq. '8') goto 308
+	if (digit(m) .eq. '9') goto 309
+	if (digit(m) .eq. 'a') goto 310
+	if (digit(m) .eq. 'b') goto 311
+	if (digit(m) .eq. 'c') goto 312
+	if (digit(m) .eq. 'd') goto 313
+	if (digit(m) .eq. 'e') goto 314
+	if (digit(m) .eq. 'f') goto 315
+300	num = 0
+	goto 350
+301	num = 1
+	goto 350
+302	num = 2  
+	goto 350
+303	num = 3
+	goto 350	
+304	num = 4
+	goto 350
+305	num = 5
+	goto 350
+306	num = 6
+	goto 350
+307	num = 7
+	goto 350
+308	num = 8
+	goto 350
+309	num = 9
+	goto 350
+310	num = 10
+	goto 350
+311	num = 11
+	goto 350
+312	num = 12
+	goto 350
+313	num = 13
+	goto 350
+314	num = 14
+	goto 350
+315	num = 15
+*
+350	dtime = dtime + num*(16**(10-m))
+500	continue
+	return
+	end	eº
