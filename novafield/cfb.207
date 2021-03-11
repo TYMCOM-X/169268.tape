@@ -1,0 +1,297 @@
+
+CFB NO.:  207                                        DATE:  JANUARY  9, 1992  
+
+REV LEVEL:  0                                DATE CHANGED:  JANUARY  9, 1992  
+
+TYPE:  HARDWARE
+HARDWARE:  MEMOTEC SERIES
+SUBJECT:  MEMOTEC SERIES II STRAPPING FOR QUOTRON ASYNC LEASED LINE
+************************************************************************
+
+   Before any modem optioning is performed the slot code for this
+   PAP must be modified with the following parameters or the modems 
+   will not operate correctly causing many problems with the
+   customer application.
+
+   The following  must be added to the async slot t01 file and regenned :
+
+   PVCRNG(n)	
+   PVCEX(n,TID43,AID,NOHNG)
+
+   "n"  being the DEC port the customer is on.
+   ===
+   TID43 sets the port to 2400 baud ASCII with space parity.
+
+   AID sets automatic terminal identification.
+
+   NOHNG allows an infinite TID timer and prevents the consat from
+         hanging a port.
+
+*NOTE*
+MNP will be forced on for all PAP lease lines.
+
+========================================================================
+
+                INTERNAL SWITCH FUNCTIONS
+                =========================
+
+SW1 switch is a 8 position switch pack located on the Top PCBD at
+location U-34 , just behind front panel.
+--------------------------------------------------------------------------
+DTE PORT BIT RATE       1    2    3    4    5    6    7    8
+--------------------------------------------------------------------------
+
+Autobaud                Off  Off  Off
+300                      On  Off  Off
+600                     Off   On  Off
+1200                     On   On  Off
+2400                    Off  Off   On
+4800                     On  Off   On
+9600                    Off   On   On
+DIRECT SYNCHRONOUS       On   On   On
+
+--------------------------------------------------------------------------
+COMMAND MODE            1    2    3    4    5    6    7    8
+--------------------------------------------------------------------------
+Disable                                On
+Enable                                Off
+--------------------------------------------------------------------------
+CONTROL SIGNALS         1    2    3    4    5    6    7    8
+--------------------------------------------------------------------------
+DSR,DCD,CTS follow
+modem;hang-up on falling DTR                On
+DSR,DCD,CTS allways On;
+DTR ignored                                 Off
+--------------------------------------------------------------------------
+FRONT PANEL SWITCHES    1    2    3    4    5    6    7    8
+--------------------------------------------------------------------------
+Disabled                                         On
+Enabled                                          Off
+--------------------------------------------------------------------------
+WRITE PROTECT           1    2    3    4    5    6    7    8
+--------------------------------------------------------------------------
+Enabled                                              On
+Disabled                                             Off
+--------------------------------------------------------------------------
+COMMAND SET             1    2    3    4    5    6    7    8
+--------------------------------------------------------------------------
+AT                                                         On
+Series II                                                 Off
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+
+SW1 and SW2 ; two four position switch packs, are all OFF.
+
+                BOTTOM PCBD SERIES II MODEM
+                ---------------------------
+
+   SW4 LEASED LINE TRANSMITT LEVEL ADJUST FOR 2-WR/4-WR LEASED LINES
+        SWITCH SETTING                  TRANSMITT LEVEL
+--------------------------------------------------------------------------
+        All OFF                         -16 db (factory setting)
+        1    ON                         -14 db
+        2    ON                         -12 db
+        3    ON                         -10 db
+        4    ON                          -8 db
+        5    ON                          -6 db
+        6    ON                          -4 db
+        7    ON                          -2 db
+        8    ON                          -0 db
+
+========================================================================
+
+SW3 ;If installed, is a 8 position switch pack used to set the transmitt
+level on the dial line.
+
+=========================================================================
+
+The Series II Memotec/Concord modem will be used for a point-to-
+point 4-wire and 2-wire leased line in the Async MNP mode. The 
+Tymnet side will be the Answer modem and the customer will be the 
+Originate side. 
+
+=====================================================================
+
+			MODEM SET UP PROCEDURE
+			++++++++++++++++++++++
+1) With the modem powered OFF;
+   Take the top off the modem and set the following switches:
+   SW1 is loacated at position U-34 on top board.
+        SW1-3   ON  (2400 bps)
+        SW1-5   ON  (DSR,DCD,CTS follow modem;hang-up on falling DTR)
+   SW4 is located on the bottom board left side , set the following switch:
+        SW4-8   ON  (X-mitt level on leased -0dbm)
+
+   *Power UP the modem.
+	
+2) Reset the modem via the front panel by pushing the ERR and the TP at the
+   same time for at least 2 seconds.
+	>>>Use TERMITE If you can not get PROCOMM to work<<<
+   Hook a terminal to the RS-232 (DTE) port and set the terminal 
+   speed to 2400 bps.
+
+   Type Return and you should get the CDS> prompt. At this time you
+   want to type RESET. The modem wil resopnd with are you sure? ,
+   type "Y" and return.
+
+   At the CDS> prompt you want to enter the following commands each
+   command terminated with a carriage return.
+
+        TYMNET SIDE
+        ===========
+        STI0		Disable line inactivity timer
+        SMF0		Disable Modem flow control
+	SPF1		Unilateral XON/XOFF flow control/Passthrough
+        SMD3		MNP mode only
+        SPD5		DATA set to 8 1 N.
+        SBK3		Send Break to remote modem ahead of queued data.
+   	SLCD4		INIT on falling DTR signal and wait for rising DTR
+        SAVE	
+        INIT
+
+        QUOTRON SIDE 
+        ============
+        STI0
+        SMF0
+        SPF1
+        SMD3
+        SPD5
+        SBK3
+        SLCD4
+        SAVE
+        INIT
+
+   At the CDS> prompt, type RSF <cr> and check to see the straps you
+   have entered are on the list.
+
+TYMNET SIDE CONFIGURATION:
+
+        SERIES II - REV 7.011
+        
+        BLK :256        SMT :3
+        MON :1          SPB :2400
+        RLB :1          SPD :5
+        RSS :0          SPE :0
+        SBA :0          SPF :1
+        SBK :3          SRD :1
+        SCC :0          SRG :001
+        SCM :0          SRI :0
+        SCP :1          SRM :0   
+        SDL :2          SSD :1
+        SDM :0          SST :0
+        SE  :001        STA :005
+        SFP :0          STB :007
+        SLCA:0          STC :030
+        SLCB:1          STD :000
+        SLCC:1          STE :025
+        SLCD:4          STI :000
+        SLCF:1          STP :002
+        SLT :0          STR :000
+        SMB :2400       STW :002
+        SMD :3          STX :000
+        SMF :0          SV  :1
+        
+
+CUSTOMER SIDE CONFIGURATION:
+
+        SERIES II - REV 7.011
+        
+        BLK :256        SMT :3
+        MON :1          SPB :2400
+        RLB :1          SPD :5
+        RSS :0          SPE :0
+        SBA :0          SPF :1
+        SBK :3          SRD :1
+        SCC :0          SRG :001
+        SCM :0          SRI :0
+        SCP :1          SRM :2
+        SDL :1          SSD :1
+        SDM :0          SST :0
+        SE  :001        STA :005
+        SFP :0          STB :007
+        SLCA:0          STC :030
+        SLCB:1          STD :000
+        SLCC:1          STE :025
+        SLCD:4          STI :000
+        SLCF:1          STP :002
+        SLT :0          STR :000
+        SMB :2400       STW :002
+        SMD :3          STX :000
+        SMF :0          SV  :1
+        
+		SET LEASE LINE MODE CUSTOMER SIDE:
+		=================================
+   For the Customer site enter the following string and terminate with
+   a carriage return:
+
+        SLOSAVEINIT<CR>     (set Originate mode leased)
+
+
+		SET LEASE LINE MODEM TYMNET SIDE :
+		=================================
+   The next command is for the TYMNET site modem only, this will turn
+   off the response from the modem. You will see nothing after the SRM2
+   is entered so enter it carefully.
+
+   Enter the following terminating each command with a carriage return:
+        SRM2
+        SAVE
+        INIT
+   The save and init will not be seen.
+   (To get back to the response mode type SRM0 and return.)
+
+   ENTER THE FOLLOWING COMMAND TO PLACE THE TYMNET MODEM IN THE
+   LEASE LINE MODE:
+
+        SLASAVEINIT<CR> (set answer mode leased)
+   (remeber you will not see what you have entered so do it carefully)
+
+   **NOTE**
+   Once the modems are in the Lease mode you will not be able to 
+   set any soft straps, you will need to press the Lease button 
+   and take the modem out of the Lease mode .
+
+		DISABLE COMMAND MODE TYMNET SIDE
+		================================
+  For the Tymnet site you will need to disable the command mode after all
+  the straps are set using SW1-4  ON. This is so the modem will not report
+  for outdial use.
+
+  Put the top back on the modem and set the rear panel switch marked
+  4W/2W to the 4W or 2W  position.
+
+
+
+   The modem(s) are ready for the install. Hook up the RS-232 cable to the
+   DTE port and the four-wire leased line to the  Lease jack in the rear
+   panel of the modem.
+
+   On the front panel you will notice the data light flashing durning
+   training mode. When the DATA LED is solid ,the PROT and the SYN LED
+   will also be solid. The SQ LED will be solid after the handshake.
+   The SYN LED and the PROT LED indicates the modem is in the MNP mode. 
+
+   DTR must be present at BOTH SIDES of the circuit in order for the
+   ===                    ==========
+   leased line to come up and answered. Make sure DTR is showing on the
+   front of the modem when the Async cable is attached. 
+
+=======================================================================
+
+			QUOTRON PC1000
+			=============
+ 
+ To exit and drop the lease line from the Quotron PC1000 package
+use the ALT "q" , this will drop the DTR signal on the pc comm
+port . The modem will follow this signal and drop carrier. 
+The modem will re-establish the lease line when the PC1000 package
+is executed. When the modem sees DTR it will put the modem back 
+into the LEASE mode and hand shake with the answer modem. It is not
+unusual for the modem to retrain twice the first time it comes up.
+
+Any problems call :
+August Cattaneo/NTS
+408-922-7466
+
+    
