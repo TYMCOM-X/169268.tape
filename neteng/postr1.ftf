@@ -1,0 +1,845 @@
+C	PROGRAM:POSTRA.FTF
+C	AUTHOR:EDSEL GARCIAMENDEZ BUDAR
+C	DATE:JULY 15, 1985 (MODIFIED X/4/85)
+C	PURPOSE:To obtain a summary of ports to add or delete in each
+C		rotary in the network, except (E)800 rotaries. New traffic
+C		can be added to specific rotaries, and/or a general growth
+C		rate can be applied to have an idea of how to upgrade/
+C		downgrade each rotary.
+
+C		This program has been created by putting together several
+C		other programs as subroutines. Please report any changes,
+C		errors, or comments to Management Sciences.
+
+
+	CALL CONHRS
+	CALL DROPER
+	CALL ASIGNA(NDEC)
+	CALL MERGIN(NDEC)
+
+
+	STOP
+	END
+
+
+
+	SUBROUTINE CONHRS
+
+C	PROGRAM:CONHRS.FTF
+C	AUTHOR:	Edsel Garciamendez Budar
+C	DATE:	May 25, 1984. (Modified II/19/85).
+C	PURPOSE:To compute the average peak connect hours in all the Tymnet
+C		rotaries.
+C	METHOD:	It uses the monthly DAILY.INF report created under the set of
+C		PGRADE reports. For each of the rotaries to consider, it takes
+C		the highest "N" peak connect hours, and averages them.
+C		The number "N" of highest observations to consider is 
+C		determined by the user, as well as the threshold to point out
+C		small rotaries for which special considerations apply.
+
+
+	DIMENSION CH(65), PGRAD(65), BEST(20), PGRBST(20), WATCH(5)
+	DIMENSION INFILE(4), OUFIL1(4)
+	DOUBLEPRECISION PLACE, PLACE1, PLACE2, DATE1, DATE2
+	INTEGER PKHR(65), HIGHPK(20), TRUEPK
+
+
+	TYPE 10
+10	FORMAT (////,2X,50('+'),//,4X,'WELCOME TO THE PROGRAM ',
+     1		'CONHRS !!!!'//,4X,'BEFORE CONTINUING, MAKE SURE ',
+     2		'YOU',/,4X,'HAVE CREATED THE REPORT (NETENG)',
+     3		'DAILY.INF.',//,4X,'PLEASE TYPE IN THE NEXT ',
+     4		'INFORMATION (OR ESCAPE):',//,2X,50('*'),///)
+
+	INFILE(1) = '(NETE'
+	INFILE(2) = 'NG)DA'
+	INFILE(3) = 'ILY.I'
+	INFILE(4) = 'NF   '
+	OUFIL1(1) = 'CNHRS'
+	OUFIL1(2) = '1.AVE'
+	OUFIL1(3) = '     '
+	OUFIL1(4) = '     '
+	NDAY = 32
+	N = 5
+	LUI = 1
+	WATCH(LUI)='CNCRD'
+	LOOK = '_FX'
+
+11	TYPE 12,NDAY,N,WATCH(LUI),LOOK,INFILE(1),INFILE(2),
+     1		INFILE(3),INFILE(4),OUFIL1(1),OUFIL1(2),
+     2		OUFIL1(3),OUFIL1(4)
+12	FORMAT (//,5X,'THE DEFAULT VALUES ARE:',/,5X,'NUM',
+     1		'BER OF DAYS = ',I3,/,5X,'NUMBER OF PEAK OBSERVA',
+     2		'TIONS = ',I2,/,5X,'SPECIAL MODEMS',
+     3		' = ',A5,/,5X,'SPECIAL ROTARY TYPE (LOW/MEDIUM FOREIGN',
+     4		' EXCHANGE) = ',A3,/,5X,'INPUT FILE = ',4A5,/,5X,'OU',
+     5		'TPUT FILE = ',4A5,//,5X,'DO YOU WANT TO CHANGE ',
+     6		'THE DEFAULT VALUES? (Y/N): ',$)
+	READ (5,13,ERR=11)CONTE
+13	FORMAT (A1)
+	IF (CONTE.EQ.'Y')GO TO 14
+	IF (CONTE.EQ.'N')GO TO 55
+	GO TO 11
+
+14	TYPE 15
+15	FORMAT (//,8X,'TYPE INPUT FILE NAME :',$)
+	READ (5,16,ERR=14)INFILE	
+16	FORMAT (4A5)
+17	TYPE 18
+18	FORMAT (/,8X,'TYPE OUTPUT FILE NAME :',$)
+	READ (5,16,ERR=17)OUFIL1
+
+	TYPE 20
+20	FORMAT (/,8X,'NUMBER OF DAYS FOR WHICH DATA ',
+     1		'IS ',/,8X,'AVAILABLE (LESS THAN 999) = ',$)
+
+	ACCEPT 22, NDAY
+22	FORMAT (I3)
+
+	TYPE 25
+25	FORMAT (/,8X,'NUMBER OF HIGHEST PEAK CONNECT-HOURS ',
+     1		'OBSERVATIONS',/,8X,'TO CONSIDER FOR ',
+     2		'AVERAGE (LESS THAN 99) = ', $)
+	ACCEPT 30, N
+30	FORMAT(I2)
+
+	TYPE 32
+32	FORMAT (/,8X,'NUMBER OF SPECIAL MODEM TYPES(<5)= ',$)
+	ACCEPT 33,MDM
+33	FORMAT (I1)
+
+	DO 39 LUI = 1,MDM
+		TYPE 35,LUI
+35		FORMAT (//,8X,'MODEM TYPE ',I1,' TO CONSIDER AS ',
+     1		'SPECIAL CASES',/,8X,'+DISPLAYS WARNING 1+',
+     2		' (5 CHARACTERS) = ', $)
+
+		ACCEPT 38,WATCH(LUI)
+38		FORMAT (A5)
+39	CONTINUE
+
+40	TYPE 45
+45	FORMAT (//,5X,'DOU YOU WANT TO CONSIDER FX ROTARIES ',
+     1		'WITH',/,5X,'FX GUIDELINES (NOT AT P-GRADE OF ',
+     2	        '1%) ? (Y/N) :',$)
+	READ (5,50,ERR=40)MIRA
+50	FORMAT (A1)
+	IF (MIRA.EQ.'Y'.OR.MIRA.EQ.'N')GO TO 55
+	GO TO 40
+
+55	TYPE 60
+60	FORMAT (//,1X,'GOOD LUCK FOLKS. GENIUS WORKING!!..')
+
+	OPEN (10, INFILE, INPUT)
+	OPEN (20, OUFIL1, OUTPUT)
+	OPEN (25, 'PKHANA.DAT', OUTPUT)
+
+
+	WRITE (25,66)
+66	FORMAT (//,8X,'PILOT',10X,'MEAN',8X,'VARI',7X,'ACHP',
+     1		'BD',5X,'TOPACH',5X,'# DAYS',//)
+
+
+	I = 1
+C		Reading first line of report.
+
+70	READ (10,80, END = 1000)DAILY, DATE1, DATE2
+80	FORMAT (14X,A5,24X,A8,6X,A8)
+
+C		Checking that the line read is the first line of report.
+
+	IF (DAILY.NE.'DAILY')GO TO 70
+
+	IF (I.GT.1) GO TO 100
+
+C		The dates of the report are typed only once.
+
+	TYPE 90, DATE1, DATE2
+90	FORMAT (//,5X,'PERIOD CONSIDERED :',A10,'THROUGH ',A10)
+
+C		Reading second line of report.
+
+100	READ (10,110)PLACE1,STATE1,NODE,AREA,PREFI,PHON
+110	FORMAT (11X,A10,A3,14X,I4,26X,3A4)
+	READ (10,115)PLACE2,STATE2,DENSI
+115	FORMAT (11X,A10,A3,47X,A3)
+
+	PLACE = PLACE1
+	STATE = STATE1
+	IF (DENSI.EQ.'PUB') GO TO 118
+	PLACE = PLACE2
+	STATE = STATE2
+
+C		Skipping 5 lines of report.
+
+118	DO 130 J = 1,5
+		READ (10,120)
+120		FORMAT(80X)
+130	CONTINUE
+
+C		We initialize the arrays used.
+
+	DO 140 JENNY = 1,NDAY
+		PGRAD (JENNY) = 0.0
+140	CONTINUE
+
+	DO 145 JSC = 1,N
+		PGRBST(JSC) = 0.0
+145	CONTINUE
+
+
+C		Now the program goes into the body of the report. It checks
+C		that the Modem type and number of total ports do not make
+C		that rotary to fall into the "special case" cathegory.
+C		It also accummulates in arrays the peak connect-hours, to
+C		sort them later.
+
+	IKPU = NDAY
+	WARN3 = '     '
+	CMPKHR = 0.0
+	CMPKSQ = 0.0
+	DO 165 K = 1, NDAY
+		READ (10,150)ATYPE,IPORT,PKHR(K),CH(K), PGRAD(K)
+150		FORMAT(10X,A5,3X,I3,26X,I2,4X,F6.2,12X,F5.1)
+		IF (K.NE.1)GO TO 155
+			TMODEM = ATYPE
+			NPORT = IPORT
+155		IF (ATYPE.NE.'     ') GO TO 160
+			IKPU = K-1
+			K = NDAY
+			WARN3 = 'INCMP'
+			GO TO 165
+160		CMPKHR = CMPKHR + CH(K)
+		CMPKSQ = CMPKSQ + CH(K)**2
+165	CONTINUE
+	CHMEAN = CMPKHR/FLOAT(IKPU)
+	CHVARI = CMPKSQ/FLOAT(IKPU) - (CHMEAN)**2
+
+C			***The variables CMPKHR AND CMPKSQ are used to*****
+C			***compute the mean CHMEAN and variance CHVARI*****
+C			***for analysis purposes.      II/19/85       *****
+
+C		Now we need to read the average connect-hours per business
+C		day. Therefore we have to skip one (or two)  line, and then
+C		read the next line in the report.
+
+	READ (10,170)TOCOHR, ACHPBD
+	IF (IKPU.EQ.NDAY) READ (10,170) TOCOHR, ACHPBD
+	READ (10,170)TOCOHR, ACHPBD
+170	FORMAT(37X,F7.2,8X,F7.2)
+
+C		At this point we know if we have to issue the warnings:
+
+	WARN1 = '     '
+	WARN2 = '     '
+	DO 175 KUK = 1,MDM
+		IF (TMODEM.EQ.WATCH(KUK)) WARN1 = 'W 1 !'
+175	CONTINUE
+	IF (MIRA.EQ.'N') GO TO 176
+
+	IF (DENSI.EQ.'LFX'.OR.DENSI.EQ.'MFX') WARN2 = 'W 2 ?'
+
+C		Now we are ready to compute the N highest peak connect-
+C		hours, among the NDAY different values. First we sort them
+C		by descending order, and then we take the N highest and find
+C		their mean value. We use "pointers" to accomplish this.
+
+C		Let us first sort the data:
+
+176	DO 190 II=1,N
+		BEST(II) = CH(1)
+		NPOINT = 1
+		PGRBST(II) = PGRAD(1)
+		HIGHPK(II) = PKHR(1)
+		MININ = MIN0(IKPU,NDAY)
+		DO 180 JJ = 1,MININ
+			IF (CH(JJ).LE.BEST(II)) GO TO 180
+			BEST(II) = CH(JJ)
+			NPOINT = JJ
+			PGRBST(II) = PGRAD(JJ)
+			HIGHPK(II) = PKHR(JJ)
+180		CONTINUE
+		CH(NPOINT) = 0.0
+190	CONTINUE
+
+	TRUEPK = HIGHPK(1)
+
+C		In the above statement, we used the peak-hour (GMT) that 
+C		corresponds to the highest connect-hours at peak.
+
+C		Now we compute the mean value:
+
+	CUMCH = 0.0
+	CUMPG = 0.0
+
+	DO 200 LL = 1,N
+		CUMCH = CUMCH + BEST(LL)
+		CUMPG = CUMPG + PGRBST(LL)
+200	CONTINUE
+
+	AVGCHR = CUMCH/FLOAT(N)
+	AVGPGR = CUMPG/FLOAT(N)
+
+	WRITE (25,202)AREA,PREFI,PHON,CHMEAN,CHVARI,ACHPBD,AVGCHR,IKPU
+202	FORMAT (5X,3A4,3X,F10.3,3(2X,F10.3),4X, I3)
+C				*****We wrote the above results to*****
+C				*****make an analysis on peak hour*****
+
+	NPRTR = NPORT
+	IF (WARN3.NE.'INCMP') GO TO 205
+		CALL INCOMP(AVGCHR,AVGPGR,BEST,PGRBST,IKPU,N)
+
+C		And finally we write the results for the rotary to
+C		a disk file.
+
+205	WRITE (20,210)AREA,PREFI,PHON,PLACE,STATE,NODE,DENSI,TMODEM,
+     1			NPORT,TRUEPK,TOCOHR,AVGCHR,AVGPGR,WARN1,WARN2,
+     2			WARN3
+210	FORMAT (3A4,2X,A10,A2,4X,I4,2X,A3,2X,A5,2X,I3,3X,I2,3X,
+     1		F7.2,3X,F6.2,3X,F5.1,5X,A5,2X,A5,2X,A5)
+
+	TYPE 220,I
+220	FORMAT (3X,'I = ',I4)
+	I = I + 1
+
+C	IF(I.GE.16)GO TO 1000
+
+	GO TO 70
+
+
+1000	CLOSE (10)
+	CLOSE (20)
+	CLOSE (25)
+
+	RETURN
+	END
+
+C	******************************************************************
+C		Subroutine INCOMP
+C	******************************************************************
+
+		SUBROUTINE INCOMP (AVGCHR,AVGPGR,BEST,PGRBST,
+     1					IKPU,N)
+
+	DIMENSION BEST(20),PGRBST(20)
+
+	CUMCH = 0.0
+	CUMPG = 0.0
+	MINS = MIN0(IKPU,N)
+	DO 10 L = 1,MINS
+		CUMCH = CUMCH + BEST(L)
+		CUMPG = CUMPG + PGRBST(L)
+10	CONTINUE
+
+	AVGCHR = CUMCH/FLOAT (MINS)
+	AVGPGR = CUMPG/FLOAT (MINS)
+
+	RETURN
+	END
+
+
+
+	SUBROUTINE DROPER
+
+
+
+C	PROGRAM:(MSEDSEL)DROPER.FTF
+C	AUTHOR:	EDSEL GARCIAMENDEZ BUDAR
+C	DATE:	OCTOBER 2, 1984. [Updated June 24, 1985]
+C	PURPOSE:This program simply writes back the rotaries of interest
+C		(FX, Public, WATS, all). It access the file (MSBIG)CONHRS.AVE,
+C		which has been created by the program (MSEDSEL)CONHRS.FTF.
+C		It dumps the chosen information in the file CNHRS1.AVE.
+C		(I have to interrename both files).
+
+	DOUBLEPRECISION PLACE
+	DIMENSION INFILE(4), OUTFIL(4)
+	INTEGER PKHR, PEAKHR
+
+	I = 0
+	INFILE(1) = 'CNHRS'
+	INFILE(2) = '1.AVE'
+	INFILE(3) = '     '
+	INFILE(4) = '     '
+	OUTFIL(1) = 'CONHR'
+	OUTFIL(2) = 'S.AVE'
+	OUTFIL(3) = '     '
+	OUTFIL(4) = '     '
+
+1	TYPE 3,INFILE(1),INFILE(2),INFILE(3),INFILE(4),OUTFIL(1),
+     1		OUTFIL(2),OUTFIL(3),OUTFIL(4)
+3	FORMAT(//,10X,'THE DEFAULT INPUT FILE NAME IS ',4A5,/,10X,'A',
+     1		'ND THE OUTPUT FILE NAME IS ',4A5,/,10X,'DO YOU ',
+     2		'WANT TO CHANGE THE NAMES? (Y/N):',$)
+	READ (5,4,ERR=1)QUE
+4	FORMAT (A1)
+	IF (QUE.EQ.'Y') GO TO 5
+	IF (QUE.EQ.'N') GO TO 10
+	GO TO 1
+
+5	TYPE 6
+6	FORMAT (//,8X,'TYPE INPUT FILE NAME :',$)
+	READ (5,7,ERR=5)INFILE	
+7	FORMAT (4A5)
+8	TYPE 9
+9	FORMAT (/,8X,'TYPE OUTPUT FILE NAME :',$)
+	READ (5,7,ERR=8)OUTFIL
+
+10	OPEN (10, INFILE, INPUT)
+	OPEN (20, OUTFIL, OUTPUT)
+
+11	TYPE 20
+20	FORMAT (///,10X,'HI THERE! PLEASE ENTER FX IF YOU ',
+     1		'WANT TO',/,10X,'ANALYZE ONLY FOREIGN ',
+     2		'EXCHANGE ROTARIES;',/,10X,'ENTER UB IF YOU ',
+     3		'WANT TO CONSIDER PUBLIC ROTARIES;',/,10X,'ENTER ',
+     4		'AT IF YOU ONLY NEED WATS ROTARIES;',/,10x,'ENTER ',
+     5		'AL IF YOU WANT TO CONSIDER ALL: ',$)
+	READ (5,30,ERR=11)LEVEL
+30	FORMAT (A2)
+	IF (LEVEL.EQ.'FX'.OR.LEVEL.EQ.'UB'.OR.LEVEL.EQ.'AT'.OR.LEVEL.
+     1		EQ.'AL') GO TO 40
+
+	GO TO 11
+
+40	READ (10,50,END=100)AREA,PREFI,PHON,PLACE,STATE,NODE,
+     1		GAR,DENSI,TMODEM,NPORT,PEAKHR,TOCOHR,AVGCHR,AVGPGR,
+     2		WARN1,WARN2,WARN3
+50	FORMAT (3A4,2X,A10,A2,4X,I4,2X,A1,A2,2X,A5,2X,I3,3X,I2,
+     1		3X,F7.2,3X,F6.2,3X,F5.1,5X,A5,2X,A5,2X,A5)
+	IF (LEVEL.EQ.'AL') GO TO 58
+
+	IF (DENSI.EQ.LEVEL) GO TO 58
+
+	GO TO 40
+
+58	I = I + 1
+	TYPE 60,I
+60	FORMAT (' I= ',I3)
+
+	WRITE (20,50) AREA,PREFI,PHON,PLACE,STATE,NODE,
+     1		GAR,DENSI,TMODEM,NPORT,PEAKHR,TOCOHR,AVGCHR,AVGPGR,
+     2		WARN1,WARN2,WARN3
+
+	GO TO 40
+
+100	CLOSE (10)
+	CLOSE (20)
+
+	RETURN
+	END
+
+
+
+	SUBROUTINE ASIGNA(NDEC)
+
+
+C	PROGRAM:ASIGNA.FTF
+C	AUTHOR:	EDSEL GARCIAMENDEZ BUDAR
+C	DATE:	MAY 31, 1984.
+C	PURPOSE:To determine the daily traffic that corresponds
+C		to the number of POS terminals to be added.
+C		It access the file (MSEDSEL)MASTER.CRD, and writes
+C		the results in two fIles: (MSEDSEL)MASTER.TRA, and
+C		(MSEDSEL)IN.DDD. The first one will be used to compte
+C		the additional number of ports required in each rotary, and
+C		the second file is simply the "traffic input" file for the
+C		program (ANALYSIS)DDD.FTF.
+
+	DIMENSION INFIL(4), OUFIL1(4)
+	INTEGER AREA,PREF,TERM
+
+3	TYPE 5
+5	FORMAT (///,5X,'TYPE 1 IF YOU JUST WANT TO CHECK THE NUMBER OF ',
+     1		'PORTS IN ALL ROTARIES.',/,5X,'TYPE 2 IF YOU WANT TO ',
+     2		'ASSESS THE IMPACT OF NEW ',/,5X,'TRAFFIC IN SOME ',
+     3		'ROTARIES.  : ',$)
+	READ (5,7,ERR=3)NDEC
+7	FORMAT (I1)
+	IF (NDEC.GT.2.OR.NDEC.LT.1)GO TO 3
+	IF (NDEC.EQ.1) GO TO 1100
+
+	INFIL(1) = 'DDDPO'
+	INFIL(2) = 'S.ALL'
+	INFIL(3) = '     '
+	INFIL(4) = '     '
+	OUFIL1(1) = 'MASTE'
+	OUFIL1(2) = 'R.TRA'
+	OUFIL1(3) = '     '
+	OUFIL1(4) = '     '
+	NSEST=275
+	CONHRT=0.008
+	GROW = 22.0
+	NBDAY = 22
+	
+	TYPE 10
+10	FORMAT (///,5X,50('*'),/,5X,'WELCOME TO THE PROGRAM ',
+     1		'ASIGNA.FTF',/,5X,'THAT COMPUTES THE TRAFFIC ',
+     2		'CORRESPONDING',/,5X,'TO A NUMBER OF TERMINALS ',
+     3		'LOCATED IN EACH AREA CODE/PREFIX.',/,5X,'PLEASE ',
+     4		'TYPE THE REQUIRED INFORMATION.',/,5X,50('='))
+
+13	TYPE 14,NSEST,CONHRT,GROW,INFIL(1),INFIL(2),INFIL(3),
+     1		INFIL(4),OUFIL1(1),OUFIL1(2),OUFIL1(3),OUFIL1(4),NBDAY
+14	FORMAT (///,5X,'THE DEFAULT VALUES ARE AS FOLLOWS:',/,5X,'NU',
+     1		'MBER OF SESSIONS/TERMINAL/MONTH = ',I4,/,5X,'NUM',
+     2		'BER OF CONNECT-HOURS/SESSION = ',F8.4,/,5X,'POS GRO',
+     3		'WTH TO CONSIDER = %',F6.2,/,5X,'INPUT FILE NAME:',
+     4		' ',4A5,/,5X,'OUTPUT FILE NAME: ',4A5,/,5X,'NUMBER ',
+     5		'OF DAYS PER MONTH = ',I2,//,5X,'DO',
+     5		' YOU WANT TO CHANGE THE INPUT VALUES? (Y/N): ',$)
+	READ (5,16,ERR=13)REP
+16	FORMAT (A1)
+	IF (REP.EQ.'Y') GO TO 17
+	IF (REP.EQ.'N') GO TO 59
+	GO TO 13
+
+17	TYPE 18
+18	FORMAT (//,5X,'INPUT FILE NAME: ',$)
+	READ (5,19,ERR=17)INFIL
+19	FORMAT (4A5)
+20	TYPE 21
+21	FORMAT (//,5X,'OUTPUT FILE NAME FOR ADTNL PORTS: ',$)
+	READ (5,19,ERR=20)OUFIL1
+	TYPE 25
+25	FORMAT (//,5X,'AVERAGE NUMBER OF SESSIONS PER ',
+     1		'TERMINAL PER MONTH (999): ',$)
+	ACCEPT 30,NSEST
+30	FORMAT (I3)
+
+35	TYPE 36
+36	FORMAT (//,5X,'NUMER OF DAYS PER MONTH (99): ',$)
+	READ (5,37,ERR=35)NBDAY
+37	FORMAT (I2)
+
+	TYPE 40
+40	FORMAT (//,5X,'AVERAGE CONNECT-HOURS PER ',
+     1		'TERMINAL (999.9999): ',$)
+	ACCEPT 50,CONHRT
+50	FORMAT (F8.0)
+
+	TYPE 55
+55	FORMAT (//,5X,'DESIRED TRAFFIC POS GROWTH TO INCLUDE ',
+     1		'(0-100.0000): % ',$)
+	ACCEPT 58,GROW
+58	FORMAT (F8.0)
+
+C		Now we read the number of terminals that are to be deployed
+C		in each area code/prefix.
+
+59	I = 0
+
+	OPEN (10, INFIL, INPUT)
+	OPEN (15, OUFIL1, OUTPUT)
+
+60	READ (10,70, END = 1000)AREA,PREF,NUMB,TERM
+70	FORMAT (I3,I3,A4,I5)
+
+C		We now create the file that contains the additional traffic.
+
+	DAYTRA = FLOAT(TERM)*FLOAT(NSEST)*CONHRT*(1.0+GROW/100.0)/
+     1			FLOAT(NBDAY)
+	WRITE (15,80)AREA,PREF,NUMB,DAYTRA
+80	FORMAT (I3,'/',I3,'-',A4,1X,F7.2)
+
+	I = I+1
+	TYPE 100,I
+100	FORMAT (' I= ',I5)
+
+	GO TO 60
+
+1000	CLOSE (10)
+	CLOSE (15)
+
+1100	RETURN
+	END
+
+
+	SUBROUTINE MERGIN(NDEC)
+
+
+C	PROGRAM:MERGIN.FTF
+C	AUTHOR:	EDSEL GARCIAMEMDEZ BUDAR
+C	DATE:	JUNE 1, 1984. [MODIFIED JUNE 24, 1985]
+C	PURPOSE:This program creates the total traffic requirements for each
+C		of the rotaries, and creates the input file for the program
+C		(ANALYSIS)PORTS. It accesses the files (MSBIG)CONHRS.AVE and
+C		(MSEDSEL)MSRCRD.TRA, adding the traffic together for each 
+C		corresponding rotary. The program hence updates CONHRS.AVE and
+C		creates the file (MSBIG)CONHRS.MCR that has both daily
+C		traffic and peak-hour traffic. The other file that will be
+C		an input for PORTS program is called (MSBIG)PORTS.IN.
+
+	INTEGER AREA,PREFI,PEAKHR,AREA1,PREFI1
+	DOUBLEPRECISION PLACE
+	DIMENSION INFIL1(4), INFIL2(4), OUFIL(4)
+
+
+	INFIL1(1) = 'CONHR'
+	INFIL1(2) = 'S.AVE'
+	INFIL1(3) = '     '
+	INFIL1(4) = '     '
+	INFIL2(1) = 'MASTE'
+	INFIL2(2) = 'R.TRA'
+	INFIL2(3) = '     '
+	INFIL2(4) = '     '
+	OUFIL(1) = 'CONHR'
+	OUFIL(2) = 'S.MCR'
+	OUFIL(3) = '     '
+	OUFIL(4) = '     '
+
+
+	TYPE 3
+3	FORMAT (///,5X,'THIS IS THE PROGRAM MERGIN.FTF GREETING YOU!')
+
+4	TYPE 5,INFIL1, INFIL2, OUFIL
+5	FORMAT (//,5X,'THE DEFAULT FILE NAMES ARE:',/,5X,'INPUT1=',
+     1		' ',4A5,/,5X,'INPUT2 = ',4A5,/,5X,'OUTPUT =',
+     2		' ',4A5,//,10X,'DO YOU WANT TO CHANGE THE FILE ',
+     3		'NAMES? (Y/N) : ',$)
+6	READ (5,7,ERR=4) JENNY
+7	FORMAT (A1)
+	IF (JENNY.EQ.'N') GO TO 18
+	IF (JENNY.EQ.'Y') GO TO 8
+	GO TO 5
+
+8	TYPE 9
+9	FORMAT (' ENTER INPUT FILE WITH ALL ROTARY INFORMATION: ',$)
+	READ (5,10,ERR=8)INFIL1
+10	FORMAT(4A5)
+	TYPE 11
+11	FORMAT (' ENTER INPUT FILE WITH ADDITIONAL POS TRAFFIC ',
+     1		'(IF ANY) : ',$)
+	READ (5,10,ERR=8)INFIL2
+	TYPE 12
+12	FORMAT (' ENTER OUTPUT FILE NAME WITH TOTAL TRAFFIC : ',$)
+	READ (5,10,ERR=8)OUFIL
+
+18	TYPE 19
+19	FORMAT (//,' PLEASE ENTER THE CURRENT ROTARY ',
+     1        'GROWTH PROJECTION: % ',$)
+	READ (5,1111,ERR=18)GROW
+1111	FORMAT (F6.0)
+
+	TYPE 1112,GROW
+1112	FORMAT ('GROW= ',F6.2)
+
+	GROWTH = 1.0 + (GROW/100.0)
+
+	TYPE 1113,GROWTH
+1113	FORMAT ('GROWTH = ',F6.2)
+
+	CLOSE (25)
+
+	M = 1
+
+	OPEN (10, INFIL1, INPUT)
+	OPEN (15, INFIL2,  INPUT)
+	OPEN (20, OUFIL, OUTPUT)
+	OPEN (25, 'PORTS.IN', OUTPUT)
+	OPEN (30, 'ERROR.MCR', OUTPUT)
+
+	WRITE (25,2)
+2	FORMAT (':TIME 4000',/,'GO (ANALYSIS)PORTS')
+
+
+C		Reading input data.
+
+20	READ (10,30,END=1000,ERR=980)AREA,PREFI,PHON,PLACE,STATE,NODE,
+     1	   DENSI,TMODEM,NPORT,PEAKHR,TOCOHR,AVGCHR,AVGPGR,WARN1,
+     2     WARN2,WARN3
+30	FORMAT (I3,1X,I3,1X,A4,2X,A10,A2,4X,I4,2X,A3,2X,A5,2X,I3,
+     1		3X,I2,3X,F7.2,3X,F6.2,3X,F5.1,5X,A5,2X,A5,2X,A5)
+
+	TOCOHR = GROWTH*TOCOHR
+	AVGCHR = GROWTH*AVGCHR
+	DAYTRA = 0.0
+	IF (NDEC.EQ.1) GO TO 80
+
+40	READ (15,50,END = 55)AREA1,PREFI1,NUM,DAYTRA
+50	FORMAT (I3,1X,I3,1X,A4,1X,F7.2)
+
+	GO TO 60
+
+55	M = M + 1
+	FLAG = '   '
+	WRITE (20,95)AREA,PREFI,PHON,PLACE,STATE,NODE,DENSI,TMODEM,
+     1	   NPORT,PEAKHR,TOCOHR,AVGCHR,AVGPGR,WARN1,WARN2,WARN3,FLAG
+	CALL PREPFI (AREA,PREFI,AVGCHR)
+
+	GO TO 20
+
+C		We need to check that both records of the above files
+C		correspond to the same pilot number.
+
+60	IF (AREA.EQ.AREA1.AND.PREFI.EQ.PREFI1)GO TO 80
+
+C                                      If rotary identified by DDD program
+C                                      does not exist, write error report:
+
+	IF (AREA.GT.AREA1) GO TO 900
+	IF (AREA.EQ.AREA1.AND.PREFI.GT.PREFI1) GO TO 950
+
+
+C		Even if the rotary was not modified, we rewrite this rotary:
+
+	FLAG = '   '
+	WRITE (20,95)AREA,PREFI,PHON,PLACE,STATE,NODE,DENSI,TMODEM,
+     1	   NPORT,PEAKHR,TOCOHR,AVGCHR,AVGPGR,WARN1,WARN2,WARN3,FLAG
+
+	CALL PREPFI (AREA,PREFI,AVGCHR)
+
+	IF (AREA.LT.AREA1)GO TO 70
+	IF (AREA.EQ.AREA1.AND.PREFI.LT.PREFI1) GO TO 70
+
+	GO TO 980
+
+70	READ (10,30,END,ERR=980)AREA,PREFI,PHON,PLACE,STATE,NODE,
+     1		DENSI,TMODEM,NPORT,PEAKHR,TOCOHR,AVGCHR,AVGPGR,WARN1,
+     2		WARN2,WARN3
+
+	TOCOHR = GROWTH*TOCOHR
+	AVGCHR = GROWTH*AVGCHR
+
+	M = M + 1
+	GO TO 60
+
+C		Now we add the daily traffic (connect-hours) together.
+
+80	ADDCHR = TOCOHR + DAYTRA
+
+	IF (NDEC.EQ.2) GO TO 85
+	ADDPHT = AVGCHR
+	GO TO 90
+
+C		To determine the corresponding peak-hour, we use a table
+C		obtained from past history, and apply the corresponding
+C		percentage of daily traffic to the peak hour traffic.
+
+85	CALL PKTRA(DAYTRA,AVGCHR,ADDPHT,PEAKHR)
+
+C		Now we update the file CONHRS with the traffic increase.
+
+90	FLAG = '+++'
+	WRITE (20,95)AREA,PREFI,PHON,PLACE,STATE,NODE,DENSI,TMODEM,
+     1	   NPORT,PEAKHR,ADDCHR,ADDPHT,AVGPGR,WARN1,WARN2,WARN3,FLAG
+95	FORMAT (I3,'/',I3,'-',A4,2X,A10,A2,4X,I4,2X,A3,2X,A5,2X,I3,
+     1		3X,I2,3X,F7.2,3X,F6.2,3X,F5.1,5X,A5,2X,A5,2X,A5,1X,A3)
+
+	CALL PREPFI (AREA,PREFI,ADDPHT)
+
+	TYPE 160,M
+160	FORMAT (2X,'M = ',I4)
+	M = M + 1
+
+	GO TO 20
+
+900	WRITE (30,910)AREA,PREFI,AREA1,PREFI1
+910	FORMAT ('NEIGHBOR ROTARY ',I3,'/',I3,2X,'FOR ',
+     1		'NONEXISTING ACCESS ',I3,'/',I3,'  AREA PROBLM')
+	GO TO 40
+
+950	WRITE (30,960)AREA,PREFI,AREA1,PREFI1
+960	FORMAT ('NEIGHBOR ROTARY ',I3,'/',I3,2X,'FOR ',
+     1		'NONEXISTING ACCESS ',I3,'/',I3,'  PREFIX PROBLM')
+	GO TO 40
+
+980	WRITE (30,990)AREA,PREFI,AREA1,PREFI1
+990	FORMAT (' SOME OTHER PROBLEM IDENTIFIED BETWEEN ',
+     1		'ROTARY ',I3,'/',I3,'  AND ACCESS ',I3,'/',I3)
+	GO TO 20
+
+1000	WRITE (25,1010)
+1010	FORMAT (//,'LOGOUT',/,'QUIT')
+
+	TYPE 1020
+1020	FORMAT (//,5X,'PLEASE CHECK THE FILE ERROR.MCR',
+     1	' FOR ILLEGAL ROTARY ENTRIES. MERCI.')
+
+	CLOSE (10)
+	CLOSE (15)
+	CLOSE (20)
+	CLOSE (25)
+	CLOSE (30)
+
+	RETURN
+	END
+
+C	**********************************************************************
+C			Subroutine PKTRA
+C	**********************************************************************
+
+		SUBROUTINE PKTRA (DAYTRA,AVGCHR,ADDPHT,PEAKHR)
+
+C		This subroutine computes the corresponding traffic to
+C		add to the peak hour traffic, depending on the peak-hour.
+C		The Peak-hour time is in Greenwich Meridian Time.
+
+	INTEGER PEAKHR
+
+	PERC = 100.000
+
+	IF (PEAKHR.GT.8.AND.PEAKHR.LE.14) PERC = 0.70
+	
+	IF (PEAKHR.GT.14.AND.PEAKHR.LE.16) PERC = 2.40
+	
+	IF (PEAKHR.GT.16.AND.PEAKHR.LE.18) PERC = 4.30
+	
+	IF (PEAKHR.GT.18.AND.PEAKHR.LT.20) PERC = 8.50
+	
+	IF (PEAKHR.GE.20.AND.PEAKHR.LE.23) PERC = 9.70
+	
+	IF (PEAKHR.EQ.0.OR.PEAKHR.EQ.24) PERC = 9.70
+	
+	IF (PEAKHR.GT.0.AND.PEAKHR.LE.2) PERC = 8.20
+	
+	IF (PEAKHR.GT.2.AND.PEAKHR.LE.4) PERC = 6.30
+	
+	IF (PEAKHR.GT.4.AND.PEAKHR.LE.6) PERC = 4.20
+	
+	IF (PEAKHR.GT.6.AND.PEAKHR.LE.8) PERC = 2.30
+
+C	PERC = 17.0
+C		Erase this line when POS sessions used.
+
+50	ADDPHT = (DAYTRA*PERC)/100.0 + AVGCHR
+
+
+	RETURN
+	END
+
+C	*********************************************************************
+C		SUBROUTINE PREPFI
+C	*********************************************************************
+
+
+		SUBROUTINE PREPFI (AREA,PREFI,ADDPHT)
+
+
+C		The following instructions are to create the input
+C		file for the program (ANALYSIS)PORTS, which will compute
+C		the number of required ports for each rotary.
+	INTEGER AREA,PREFI
+
+	WRITE (25,100)
+100	FORMAT ('1')
+C		To identify each rotary, the areacode and prefix will be 
+C		given as number of sessions.OJO!
+	IDUMB = AREA*1000 + PREFI
+	WRITE (25,110)IDUMB
+110	FORMAT (I6)
+	WRITE (25,120)ADDPHT
+120	FORMAT (F8.2)
+	WRITE (25,130)
+130	FORMAT ('Y')
+	WRITE (25,140)
+140	FORMAT ('100')
+	WRITE (25,150)
+150	FORMAT ('0')
+	WRITE (25,160)
+160	FORMAT ('1')
+
+	RETURN
+	END
+
+zk8Im
