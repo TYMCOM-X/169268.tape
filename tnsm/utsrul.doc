@@ -1,0 +1,305 @@
+
+        Host Processor Rules        ____________________
+
+        Host Processor Rule 1
+             Upon sending  a text message to  a station, the  host processor
+             must poll to verify proper receipt of the text.  This poll must
+             occur before any other text is sent to that poll group.
+
+        Host Processor Rule 2
+             The host processor  must send a poll with  acknowledgement to a
+             station that  has sent  an acknowledgable  response before  the
+             host processor can send a text message to that station.
+
+        Host Processor Rule 3
+             When using  general polls,  the host  processor must  expect an
+             acknowledgment (ACK  or WABT) from  one station to  be included
+             with a  response from another station  in the poll  group.  The
+             multiplexer function allows an acknowledgment to be passed from
+             one station to another station that  has traffic response pend-
+             ing.
+
+        Host Processor Rule 4
+             When using general polls,  the host processor must  expect suc-
+             cessive traffic  responses from stations  within a  poll group.
+             However, UTS4000 rule  3 still applies.  The  multiplexer func-
+             tion  allows a  station  with a  message  pending  to send  its
+             response to any poll whose address it recognizes.
+
+        Host Processor Rule 5
+             The host  processor can send  text to  any station in  the poll
+             group that  is not  owed an  acknowledgment, provided  the last
+             response from the poll group was not one of the following:
+
+           -  ACK only (SOH RID SID DID DLE 1 ETX BCC)
+
+           -  WABT only (SOH RID SID DID DLE ? ETX BCC)
+
+           -  ACK plus text available (SOH RID SID DID DLE 1 DLE O ETX BCC)
+
+           -  WABT plus text available (SOH RID SID DID DLE ? DLE O ETX BCC)
+
+        Host Processor Rule 6
+             When the host processor owes an  acknowledgment to a station in
+             a poll  group, the host processor  may send a specific  poll to
+             the poll  group only if the  specific poll is addressed  to the
+             station that is owed the acknowledgment.
+
+        Host Processor Rule 7
+             The host  processor must not  allow a  given poll group  to owe
+             more than one acknowledgment to the host processor at any time.
+
+        Host Processor Rule 8
+             The host processor  must treat any error in  a received message
+             as a no-response condition  and must repeat the  poll that pre-
+             ceded the  no-response condition.  However,  any acknowledgment
+             included with the original  poll must be eliminated  and a gen-
+             eral DID must be used when the poll is repeated.  If the no-re-
+             sponse condition results  from a  retransmission request  (DLE-
+             NAK), the host processor must repeat  the poll that created the
+             reply-request response.
+
+        Host Processor Rule 9
+             The host processor response to a reply request (DLE ENQ) from a
+             station must be a retransmission request  (DLE NAK) if the last
+             message correctly received  from the station sending  the reply
+             request was one  not containing text data.   The retransmission
+             request has the  same specific RID and specific  SID address as
+             that  contained  in  the  reply  request.   The  retransmission
+             request must contain a general DID.
+
+
+          Host Processor Rule 10
+             The host processor response to a reply request (DLE ENQ) from a
+             station must be a poll-with-acknowledgment  message if the last
+             message correctly  received from  a station  sending the  reply
+             request was a message whose traffic  was text.  The acknowledg-
+             ment is for the message that preceded the reply request and not
+             for the reply request message itself.
+
+        Host Processor Rule 11
+             The host processor response to a reply request (DLE ENQ) from a
+             station must be a retransmission request  (DLE NAK) if the sta-
+             tion sending  the reply request is  other than one to  which an
+             acknowledgment has just been sent.
+
+        Host Processor Rule 12
+             If the response  from a retransmission request  is identical to
+             the UTS4000  response sent just  previous to the  reply request
+             and is from the same station, then  the response to the retran-
+             smission request can be ignored except for sending the acknowl-
+             edgment that  the station expects.   However, the  same UTS4000
+             response is to be ignored only once.
+
+        Host Processor Rule 13
+             If a  no-response condition  exists on  a selection  poll, then
+             host processor  rule 6  (which requires  sending of  a specific
+             poll) must be followed.  If the  response to this specific poll
+             is a reply request, then a retransmission request must be sent.
+             If  the response  is no  traffic,  the selection  poll must  be
+             resent.
+
+        Host Processor Rule 14
+             A  selection poll  can contain  an acknowledgment  only if  the
+             selection is  being performed on the  station that is  owed the
+             acknowledgment.
+
+        Host Processor Rule 15
+             The host processor must maintain peripheral-operation timers at
+             the station level or at the UTS4000 to provide an indication of
+             excessive wait  time or of  a sustained busy  condition.  These
+             timers must take into  consideration the amount of  time a sta-
+             tion is on the PAQ prior  to performance of the operation (that
+             is, the wait time) and the  amount of time required to actually
+             perform  the operation.   Wait time  depends on  the number  of
+             host-processor-and operator-initiated operations already in the
+             PAQ and the type of operations being performed.
+
+             The station-level timer should be initiated for:
+
+             -  A delayed status response to a selection poll
+
+             -  An ACK plus delayed status response to the poll following a
+                 TEXT/SD message
+
+             -  An ACK plus message-queued response to the poll following a
+                 TEXT/SD/PI message
+
+             -  A WABT response to the poll following a TEXT/PI or
+                 TEXT/SD/PI message.
+             When general polls are being used, the station-level peripheral
+             timeouts can  be used  as a  timing mechanism  for periodically
+             sending specific polls to determine  when the peripheral opera-
+             tion is actually in progress (refer to UTS4000 rule 11).
+
+             The station-level timer should  be terminated upon notification
+             of  a peripheral  completion (the  THRU response  if the  first
+             response was WABT or ACK plus message queued, or the peripheral
+             device status if the first response was delayed status).
+
+        UTS4000 Rules        _____________
+
+        UTS4000 Rule 1
+             The station responds only to error-free polls.
+
+        UTS4000 Rule 2
+             The station expects  an acknowledgment to any  message it sends
+             in response to a poll except the no-traffic response.
+
+        UTS4000 Rule 3
+             When  the total  message  length from  a  station exceeds  4096
+             bytes, a  station will send  consecutive text blocks  until the
+             transmission limit of the screen is satisfied.  Thus, a station
+             responds with a text block to a poll that includes the acknowl-
+             edgment to  the previous textblock,  if the  previous textblock
+             exceeded  4096 bytes.   When  a message  does  not exceed  4096
+             bytes, a  station will respond with  a no-traffic message  to a
+             poll which includes the acknowledgment to the message.
+
+        UTS4000 Rule 4
+             The station acknowledges in  its next poll response  any error-
+             free host  processor message containing  an STX  (text message,
+             message wait command, or disconnection command).
+
+        UTS4000 Rule 5
+             If a station that is owed an acknowledgment does not receive an
+             acknowledgment in  the next good  poll that it  recognizes, the
+             station sends a reply request (DLE ENQ) message.
+
+        UTS4000 Rule 6
+             A station will not send an  acknowledgment (ACK or WABT) with a
+             reply request.  A station having  a reply request can be passed
+             an acknowledgment because  of the  multiplexer function.   How-
+             ever, that acknowledgment will not  be reported until the reply
+             request condition is satisfied.
+
+        UTS4000 Rule 7
+             The specific DID in any host  processor message causes a selec-
+             tion attempt only if the message is error free.
+
+
+          UTS4000 Rule 8
+             The UTS4000  will respond to a  selection poll or to  the first
+             poll following a TEXT/SD,TEXT/SD/PI, or  TEXT/PI message with a
+             peripheral status response.  These  peripheral status responses
+             are listed in Table A-1.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        UTS4000 Rule 9
+             The  UTS4000 will  not  respond to  a selection  poll  or to  a
+             TEXT/SD/PI message when an offline  peripheral buffering opera-
+             tion is in progress.   This condition appears to  the host pro-
+             cessor as  if an error occurred  on the poll or  response.  The
+             normal no-response error recovery should be invoked.
+
+        UTS4000 Rule 10
+             A selection poll  requiring access to the  peripheral interface
+             already in use (by either  the station or screen-bypass memory)
+             will solicit the peripheral-selection-delayed (DLE 5) response.
+             The station or  screen-bypass memory is then added  to the PAQ.
+             When the  station or  screen-bypass memory  waiting to  use the
+             peripheral  is placed  on the  top  of the  PAQ, the  selection
+             attempt is  made and  the next  general poll  or specific  poll
+             response from the station or screen-bypass memory will be DLE >
+             (peripheral ready), DLE<, DLE:, or DLE  = (no response from the
+             peripheral).
+
+
+          UTS4000 Rule 11
+             A TEXT/PI  message or a  TEXT/SD/PI message requires  access to
+             the  peripheral  interface.   If the  peripheral  interface  is
+             already in use the station response  is ACK plus message queued
+             (DLE  1 DLE  4).  The  station response  to subsequent  general
+             polls is  no traffic, and  the response to  subsequent specific
+             polls is message  queued (DLE 4) until the  message reaches the
+             top of  the PAQ.  When the  message is acted upon,  the station
+             responds to  subsequent specific polls  with a WABT  (DLE?)  as
+             long as the peripheral operation is in progress.  A THRU (DLE;)
+             status  is sent  as  a poll  response  upon  completion of  the
+             peripheral operation.
+
+        UTS4000 Rule 12
+             Upon completion of a data transfer to or from a peripheral, the
+             UTS4000 sends the THRU (DLE;) status  as a poll response.  When
+             automatic peripheral  retry is enabled  in a station,  the THRU
+             response means the peripheral operation  was completed success-
+             fully.
+
+        UTS4000 Rule 13
+             A  station   will  not  respond   with  a   message-waiting  or
+             program-attention-key  code message  to  a  poll containing  an
+             acknowledgment if that station is owed an acknowledgment.
+
+        UTS4000 Rule 14
+             If a UTS4000  station or cluster has more than  one response to
+             send, the following priority sequence will be observed.
+
+             1.  Any station or peripheral status responses are sent first.
+             These responses include:
+
+                 a.  Message-queued response (DLE 4) due to receipt of a
+                      TEXT/PI or message when another message was already in
+                      the PAQ
+
+                 b.  Peripheral-selection-delayed response (DLE 5) due to
+                      receipt of a selection poll  or a TEXt/SD message when
+                      another message was already in the PAQ
+
+                 c.  Peripheral-operation-THRU response (DLE ;) due to
+                      completion of the peripheral operation
+
+                 d.  Peripheral status response 1 (DLE>) due to receipt of
+                      TEXT/SD message or a selection poll when no other mes-
+                      sage was in the PAQ
+
+                 e.  Peripheral status response 2 (DLE<), 3(DLE:), or
+                      4(DLE=) due to receipt of  a selection poll, a TEXT/SD
+                      message, or a TEXT/SD/PI message when no other message
+                      was in the PAQ
+
+             2.  If no priority 1 conditions exist, then any text messages
+                 resulting from  the XMIT key being  pressed or from  a host
+                 processor transmit command are sent.
+
+             3.  If no priority 2 conditions exist, then any message-waiting
+                 or program-attention-key code message are sent.
+  
