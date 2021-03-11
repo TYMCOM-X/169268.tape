@@ -1,0 +1,3182 @@
+***********************************************************************
+*                                                                     *
+*                SUBROUTINE: INDOC                                    *
+*                                                                     *
+*       THIS SUBROUTINE LOOKS FOR A SPECIFIED LABEL IN THE (ACCG1)    *
+*       PORTS.DOC FILE. UPON FINDING THE CORRECT LABEL THE SUBROUTINE *
+*       READS IN ALL VALID TYPES (NODE,MACHINE,ETC) UNTIL IT REACHES  *
+*       THE NEXT LABEL. THE LABEL MUST BE IN FORMAT: !CCCC. (AN       *
+*       EXCLAIMATION POINT FOLLOWED BY 4 CHARS. I.E. !MACH )          *
+*                                                                     *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL INDOC(ILOOK,ILIMIT,IARRAY,INUM,IERR)                    *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                ILOOK = LABEL TO LOOK FOR                            *
+*                ILIMIT = MAXIMUM NUMBER OF WORDS IN 'IARRAY'         *
+*                IARRAY = NAME OF ARRAY THE TYPES ARE TO BE           *
+*                         PLACED IN.                                  *
+*       WHERE THE RETURNED VALUES ARE:                                *
+*                IARRAY = CONTAINS ALL VALID TYPES UNDER GIVEN LABEL  *
+*                INUM   = NUMBER OF TYPES PLACED IN 'IARRAY'          *
+*                IERR   = ERROR FLAG. SET IF ANY ERROR CONDITIONS     *
+*                         OCCURR.                                     *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE INDOC(ILOOK,ILIMIT,IARRAY,INUM,IERR)
+
+        INTEGER IARRAY(1)
+
+        INUM=1
+        OPEN (3,'(ACCG1)PORTS.DOC',INPUT,ERR=250)
+
+*       ** READ FIRST 5 CHARS OF EACH LINE LOOKING FOR CORRECT
+*         SECTION
+
+90      READ (3,100,END=200)IWORD
+100     FORMAT (A5)
+        IF (ILOOK.EQ.IWORD) GO TO 110
+        GO TO 90
+
+*       ** FOUND CORRECT SECTION. SKIP 3 LINES
+
+110     READ (3,115,END=200)IOUT
+115     FORMAT (//,A1)
+
+*       ** READ CHARS 18-22. INPUT TYPES INTO ARRAY: IARRAY UNTIL
+*          REACH LINE WITH '!!!' AS A TYPE.
+
+119     READ (3,120,END=200)IARRAY(INUM)
+120     FORMAT (17X,A5)
+        IF (IARRAY(INUM).EQ.'!!!') GO TO 150
+        IF (IARRAY(INUM).EQ.' ') GO TO 119
+        INUM=INUM+1
+
+*       **  CHECK TO SEE IF EXCEEDING SIZE OF ARRAY
+
+        IF (INUM.GT.ILIMIT) GO TO 125
+        GO TO 119
+
+125     TYPE 126,ILIMIT,IWORD
+126     FORMAT (5X,'LIMIT OF : ',I4,' EXCEEDED FOR ARRAY WHILE',
+     X' INPUTTING; ',2X,A5)
+        IERR=1
+        CLOSE (3)
+        RETURN
+
+*       ** FINISHED!! RETURN
+
+150     IARRAY(INUM)='     '
+        INUM=INUM-1
+        CLOSE(3)
+        RETURN
+
+*       ** ERROR
+
+200     TYPE 210
+210     FORMAT (5X,'REACHED END OF FILE. ERROR IN PORTS.DOC.')
+        IERR=1
+        CLOSE(3)
+        RETURN
+
+*       ** FILE ERROR
+
+250     TYPE 255
+255     FORMAT (5X,'UNABLE TO OPEN : PORTS.DOC')
+        IERR=1
+        CLOSE(3)
+        RETURN
+
+        END
+
+***********************************************************************
+*                                                                     *
+*                       SUBROUTINE:  GETCOM                           *
+*                                                                     *
+*      THIS SUBROUTINE INTERPRETS A 71 CHAR COMMAND STRING BY         *
+*      DIVIDING THE COMMAND STRING INTO TWO PARTS (IF AVAILABLE).     *
+*      THE FIRST PART WILL CONTAIN THE 1ST THREE (NON-BLANK)          *
+*      CHARACTERS.  THE 2ND PART WILL CONTAIN UP TO FIVE              *
+*      CHARACTERS FOUND AFTER THE END OF THE 1ST COMMAND PART.        *
+*                                                                     *
+*      THE CALLING SEQUENCE IS:                                       *
+*       CALL GETCOM(COMMND,IPART1,IPART2,IERR)                        *
+*      WHERE THE REQUIRED INPUTS ARE:                                 *
+*              COMMND = ARRAY CONTAINING 71 CHAR COMMAND STRING       *
+*      WHERE THE VALUES RETURNED ARE:                                 *
+*              IPART1 = 1ST PART OF COMMAND                           *
+*              IPART2 = 2ND PART OF COMMAND                           *
+*              IERR   = ERROR FLAG. SET IF 'COMMND' WAS ALL BLANKS    *
+*                                                                     *
+***********************************************************************
+
+       SUBROUTINE GETCOM(COMMND,IPART1,IPART2,IERR)
+
+       INTEGER COMMND(71)
+
+*      ** DETERMINE LENGTH OF COMMAND STRING
+       ICLGTH=71
+
+       DO 10 I=71,1,-1
+       IF (COMMND(I).NE.' ') GO TO 20
+10     CONTINUE
+
+*      ** COMMAND WAS ALL BLANKS. SET ERR FLAG, AND RETURN
+       IERR=1
+       RETURN
+
+*      ** FOUND LENGTH!
+20     ICLGTH=I
+
+*      ** INIT VARIABLES. 
+       IPART1='     '
+       IPART2='     '
+       IPOS=1
+
+*      ** GET 1ST PART OF COMMAND. GET THREE CHARACTERS ONLY.
+*         IGNORE LEADING BLANKS.
+
+       DO 50 I=1,ICLGTH
+       IF(COMMND(I).NE.' ') GO TO 40
+       IF (IPOS.EQ.1) GO TO 50
+       GO TO 60
+
+40     IF (IPOS.GE.4) GO TO 50
+       CALL STC(COMMND(I),IPART1,IPOS)
+       IPOS=IPOS+1
+50     CONTINUE
+
+*      ** 'I'  NOW CONTAINS THE POSITION OF THE 1ST BLANK
+*         AFTER THE 1ST PART OF THE COMMAND.
+*      ** GET 2ND PART OF COMMAND.  GET MAX OF 5 CHARACTERS
+*      ** IGNORE ANY BLANKS BETWEEN 1ST AND 2ND PARTS OF COMMAND
+
+60     IPOS=1
+       DO 80 J=I+1,ICLGTH
+       IF (COMMND(J).NE.' ') GO TO 70
+       IF (IPOS.EQ.1) GO TO 80
+       GO TO 90
+
+70     IF (IPOS.GE.6) GO TO 80
+       CALL STC(COMMND(J),IPART2,IPOS)
+       IPOS=IPOS+1
+80     CONTINUE
+
+*       ** FINISHED:  RETURN TO CALLING PROGRAM
+
+90     RETURN
+       END
+
+        SUBROUTINE CODE(NODE,PORT,COUNT)
+
+        COMMON/A1/PORTS
+        COMMON/A2/SCR2
+        INTEGER NODE,PORT,COUNT,PORTS(256,11),SCR2(4)
+        
+        IF (COUNT.NE.1) GO TO 200
+        ENCODE (1,110,LL)SCR2(1)
+        DECODE (1,111,LL)PORTS(NODE,PORT)
+110     FORMAT (A1)
+111     FORMAT (I1)
+        RETURN
+
+200     IF (COUNT.NE.2) GO TO 300
+        ENCODE(2,210,LL) (SCR2(J),J=1,2)
+        DECODE(2,211,LL) PORTS(NODE,PORT)
+210     FORMAT (2A1)
+211     FORMAT (I2)
+        RETURN
+
+300     IF (COUNT.NE.3) GO TO 400
+        ENCODE (3,310,LL) (SCR2(J),J=1,3)
+        DECODE (3,311,LL)PORTS(NODE,PORT)
+310     FORMAT(3A1)
+311     FORMAT(I3)
+        RETURN
+
+400     ENCODE (4,410,LL) (SCR2(J),J=1,4)
+        DECODE (4,411,LL)PORTS(NODE,PORT)
+410     FORMAT (4A1)
+411     FORMAT (I4)
+        RETURN
+        END
+
+***********************************************************************
+*                                                                     *
+*                SUBROUTINE: INDOC2                                   *
+*                                                                     *
+*       THIS SUBROUTINE LOOKS FOR A SPECIFIED LABEL IN THE (ACCG1)    *
+*       PORTS.DOC FILE. UPON FINDING THE CORRECT LABEL THE SUBROUTINE *
+*       READS IN ALL VALID TYPES (NODE,MACHINE,ETC) UNTIL IT REACHES  *
+*       THE NEXT LABEL. THE LABEL MUST BE IN FORMAT: !CCCC. (AN       *
+*       EXCLAIMATION POINT FOLLOWED BY 4 CHARS. I.E. !MACH )          *
+*                                                                     *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL INDOC2(ILOOK,ILIMIT,IARRAY,INUM,IERR)                   *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                ILOOK = LABEL TO LOOK FOR                            *
+*                ILIMIT = MAXIMUM NUMBER OF WORDS IN 'IARRAY'         *
+*                IARRAY = NAME OF ARRAY THE TYPES ARE TO BE           *
+*                         PLACED IN.                                  *
+*       WHERE THE RETURNED VALUES ARE:                                *
+*                IARRAY = CONTAINS ALL VALID TYPES UNDER GIVEN LABEL  *
+*                INUM   = NUMBER OF TYPES PLACED IN 'IARRAY'          *
+*                IERR   = ERROR FLAG. SET IF ANY ERROR CONDITIONS     *
+*                         OCCURR.                                     *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE INDOC2(ILOOK,ILIMIT,IARRAY,INUM,IERR)
+
+        INTEGER IARRAY
+
+        DIMENSION IARRAY(ILIMIT,2)
+
+        INUM=1
+        OPEN (3,'(ACCG1)PORTS.DOC',INPUT,ERR=250)
+
+*       ** READ FIRST 5 CHARS OF EACH LINE LOOKING FOR CORRECT
+*         SECTION
+
+90      READ (3,100,END=200)IWORD
+100     FORMAT (A5)
+        IF (ILOOK.EQ.IWORD) GO TO 110
+        GO TO 90
+
+*       ** FOUND CORRECT SECTION. SKIP 3 LINES
+
+110     READ (3,115,END=200)IOUT
+115     FORMAT (//,A1)
+
+*       ** READ CHARS 18-22. INPUT TYPES INTO ARRAY: IARRAY UNTIL
+*          REACH LINE WITH '!!!' AS A TYPE.
+
+119     READ (3,120,END=200)IARRAY(INUM,1),IARRAY(INUM,2)
+120     FORMAT (17X,A5,3X,I3)
+        IF (IARRAY(INUM,1).EQ.'!!!') GO TO 150
+        IF (IARRAY(INUM,1).EQ.' ') GO TO 119
+        INUM=INUM+1
+
+*       **  CHECK TO SEE IF EXCEEDING SIZE OF ARRAY
+
+        IF (INUM.GT.ILIMIT) GO TO 125
+        GO TO 119
+
+125     TYPE 126,ILIMIT,IWORD
+126     FORMAT (5X,'LIMIT OF : ',I4,' EXCEEDED FOR ARRAY WHILE',
+     X' INPUTTING; ',2X,A5)
+        IERR=1
+        CLOSE (3)
+        RETURN
+
+*       ** FINISHED!! RETURN
+
+150     IARRAY(INUM,1)='     '
+        IARRAY(INUM,2)=0
+        INUM=INUM-1
+        CLOSE(3)
+        RETURN
+
+*       ** ERROR
+
+200     TYPE 210
+210     FORMAT (5X,'REACHED END OF FILE. ERROR IN PORTS.DOC.')
+        IERR=1
+        CLOSE(3)
+        RETURN
+
+*       ** FILE ERROR
+
+250     TYPE 255
+255     FORMAT (5X,'UNABLE TO OPEN : PORTS.DOC')
+        IERR=1
+        CLOSE(3)
+        RETURN
+
+        END
+
+***********************************************************************
+*                                                                     *
+*                SUBROUTINE: INDOC3                                   *
+*                                                                     *
+*       THIS SUBROUTINE LOOKS FOR A SPECIFIED LABEL IN THE (ACCG1)    *
+*       PORTS.DOC FILE. UPON FINDING THE CORRECT LABEL THE SUBROUTINE *
+*       READS IN ALL VALID TYPES (NODE,MACHINE,ETC) UNTIL IT REACHES  *
+*       THE NEXT LABEL. THE LABEL MUST BE IN FORMAT: !CCCC. (AN       *
+*       EXCLAIMATION POINT FOLLOWED BY 4 CHARS. I.E. !MACH )          *
+*                                                                     *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL INDOC3(ILOOK,ILIMIT,IARRAY,INUM,IERR)                   *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                ILOOK = LABEL TO LOOK FOR                            *
+*                ILIMIT = MAXIMUM NUMBER OF WORDS IN 'IARRAY'         *
+*                IARRAY = NAME OF ARRAY THE TYPES ARE TO BE           *
+*                         PLACED IN.                                  *
+*       WHERE THE RETURNED VALUES ARE:                                *
+*                IARRAY = CONTAINS ALL VALID TYPES UNDER GIVEN LABEL  *
+*                INUM   = NUMBER OF TYPES PLACED IN 'IARRAY'          *
+*                IERR   = ERROR FLAG. SET IF ANY ERROR CONDITIONS     *
+*                         OCCUR.                                      *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE INDOC3(ILOOK,ILIMIT,IARRAY,INUM,IERR)
+
+        INTEGER IARRAY
+
+        DIMENSION IARRAY(ILIMIT)
+
+        INUM=1
+        OPEN (3,'(ACCG1)PORTS.DOC',INPUT,ERR=250)
+
+*       ** READ FIRST 5 CHARS OF EACH LINE LOOKING FOR CORRECT
+*         SECTION
+
+90      READ (3,100,END=200)IWORD
+100     FORMAT (A5)
+        IF (ILOOK.EQ.IWORD) GO TO 110
+        GO TO 90
+
+*       ** FOUND CORRECT SECTION. SKIP 3 LINES
+
+110     READ (3,115,END=200)IOUT
+115     FORMAT (//,A1)
+
+*       ** READ CHARS 18-20. INPUT TYPES INTO ARRAY: IARRAY UNTIL
+*          REACH LINE WITH '999' AS A TYPE.
+
+119     READ (3,120,END=200)IARRAY(INUM)
+120     FORMAT (17X,I3)
+        IF (IARRAY(INUM).EQ.999) GO TO 150
+        IF (IARRAY(INUM).EQ.0) GO TO 119
+        INUM=INUM+1
+
+*       **  CHECK TO SEE IF EXCEEDING SIZE OF ARRAY
+
+        IF (INUM.GT.ILIMIT) GO TO 125
+        GO TO 119
+
+125     TYPE 126,ILIMIT,IWORD
+126     FORMAT (5X,'LIMIT OF : ',I4,' EXCEEDED FOR ARRAY WHILE',
+     X' INPUTTING; ',2X,A5)
+        IERR=1
+        CLOSE (3)
+        RETURN
+
+*       ** FINISHED!! RETURN
+
+150     IARRAY(INUM)=0
+        INUM=INUM-1
+        CLOSE(3)
+        RETURN
+
+*       ** ERROR
+
+200     TYPE 210
+210     FORMAT (5X,'REACHED END OF FILE. ERROR IN PORTS.DOC.')
+        IERR=1
+        CLOSE(3)
+        RETURN
+
+*       ** FILE ERROR
+
+250     TYPE 255
+255     FORMAT (5X,'UNABLE TO OPEN : PORTS.DOC')
+        IERR=1
+        CLOSE(3)
+        RETURN
+
+        END
+
+***********************************************************************
+*                                                                     *
+*                SUBROUTINE: INDOC4                                   *
+*                                                                     *
+*       THIS SUBROUTINE LOOKS FOR A SPECIFIED LABEL IN THE (ACCG1)    *
+*        CITY.DOC FILE. UPON FINDING THE CORRECT LABEL THE SUBROUTINE *
+*       READS IN ALL VALID TYPES (NODE,MACHINE,ETC) UNTIL IT REACHES  *
+*       THE NEXT LABEL. THE LABEL MUST BE IN FORMAT: !CCCC. (AN       *
+*       EXCLAIMATION POINT FOLLOWED BY 4 CHARS. I.E. !MACH )          *
+*                                                                     *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL INDOC(ILOOK,ILIMIT,IARRAY,INUM,IERR)                    *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                ILOOK = LABEL TO LOOK FOR                            *
+*                ILIMIT = MAXIMUM NUMBER OF WORDS IN 'IARRAY'         *
+*                IARRAY = NAME OF ARRAY THE TYPES ARE TO BE           *
+*                         PLACED IN.                                  *
+*       WHERE THE RETURNED VALUES ARE:                                *
+*                IARRAY = CONTAINS ALL VALID TYPES UNDER GIVEN LABEL  *
+*                INUM   = NUMBER OF TYPES PLACED IN 'IARRAY'          *
+*                IERR   = ERROR FLAG. SET IF ANY ERROR CONDITIONS     *
+*                         OCCURR.                                     *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE INDOC4(ILOOK,ILIMIT,IARRAY,INUM,IERR)
+
+        INTEGER IARRAY
+        DIMENSION IARRAY(ILIMIT,4)
+
+        INUM=1
+        OPEN (3,'(ACCG1)CITY.DOC',INPUT,ERR=250)
+
+*       ** READ FIRST 5 CHARS OF EACH LINE LOOKING FOR CORRECT
+*         SECTION
+
+90      READ (3,100,END=200)IWORD
+100     FORMAT (A5)
+        IF (ILOOK.EQ.IWORD) GO TO 110
+        GO TO 90
+
+*       ** FOUND CORRECT SECTION. SKIP 3 LINES
+
+110     READ (3,115,END=200)IOUT
+115     FORMAT (//,A1)
+
+*       ** READ CHARS 18-37. INPUT TYPES INTO ARRAY: IARRAY UNTIL
+*          REACH LINE WITH '!!!' AS A TYPE.
+
+119     READ (3,120,END=200)(IARRAY(INUM,J),J=1,4)
+120     FORMAT (17X,4A5)
+        IF (IARRAY(INUM,1).EQ.'!!!') GO TO 150
+        IF (IARRAY(INUM,1).EQ.' ') GO TO 119
+        INUM=INUM+1
+
+*       **  CHECK TO SEE IF EXCEEDING SIZE OF ARRAY
+
+        IF (INUM.GT.ILIMIT) GO TO 125
+        GO TO 119
+
+125     TYPE 126,ILIMIT,IWORD
+126     FORMAT (5X,'LIMIT OF : ',I4,' EXCEEDED FOR ARRAY WHILE',
+     X' INPUTTING; ',2X,A5)
+        IERR=1
+        CLOSE (3)
+        RETURN
+
+*       ** FINISHED!! RETURN
+
+150     DO 152 I=1,4
+        IARRAY(INUM,I)='     '
+152     CONTINUE
+
+        INUM=INUM-1
+        CLOSE(3)
+        RETURN
+
+*       ** ERROR
+
+200     TYPE 210
+210     FORMAT (5X,'REACHED END OF FILE. ERROR IN CITY.DOC.')
+        IERR=1
+        CLOSE(3)
+        RETURN
+
+*       ** FILE ERROR
+
+250     TYPE 255
+255     FORMAT (5X,'UNABLE TO OPEN : PORTS.DOC')
+        IERR=1
+        CLOSE(3)
+        RETURN
+
+        END
+
+***********************************************************************
+*                                                                     *
+*                         SUBROUTINE: OCTCK                           *
+*                                                                     *
+*       THIS SUBROUTINE CHECKS IF A NUMBER IS OCTAL BY LOOKING FOR    *
+*       AN 8 OR 9 IN THE SPECIFIED NUMBER. IF AN 8 OR 9 IS LOCATED    *
+*       THE ERROR FLAG IS SET AS THOS NUMBER IS OBVIOUSLY NOT OCTAL.  *
+*                                                                     *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL OCTCK(INUM,IERR)                                        *
+*       WHERE THE REQUIRED INPUT IS:                                  *
+*                INUM  = NUMBER THAT IS TO BE CHECKED                 *
+*       WHERE THE RETURNED VALUE IS:                                  *
+*                IERR  = ERROR FLAG. SET IF AN 8 OR 9 IS FOUND IN     *
+*                         INUM.                                       *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE OCTCK(INUM,IERR)
+
+        INTEGER SCR(5)
+
+        IERR=0
+
+*       ** BREAK DOWN NODE NUMBER INTO 4 SEPARATE DIGITS
+
+        ENCODE (5,100,L)INUM
+        DECODE (5,110,L)(SCR(I),I=1,5)
+100     FORMAT (I5)
+110     FORMAT (5I1)
+
+*       ** LOOK FOR AN 8 OR 9
+
+   DO 150 I=1,5
+        IF (SCR(I).EQ.8.OR.SCR(I).EQ.9) GO TO 160
+150     CONTINUE
+
+*       ** NUMBER IS OCTAL
+
+        RETURN
+
+*       ** NUMBER IS NOT OCTAL
+
+160     IERR=1
+        RETURN
+        END
+
+*                                                                     *
+*                         SUBROUTINE: CKFON                           *
+*                                                                     *
+*       THIS SUBROUTINE CHECKS THE VALIDITY OF THE PHONE NUMBER       *
+*       IT CHECKS FOR EITHER OF THE FOLLOWING FORMATS:                *
+*                AAA/PPP-NNNN                                         *
+*               1AAA/PPP-NNNN                                         *
+*       WHERE AAA=AREA CODE, PPP=PREFIX, NNNN=NUMBER                  *
+*                                                                     *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL CKFON(IPHON,IERR)                                       *
+*       WHERE REQUIRED INPUT IS:                                      *
+*                IPHON = 3 WORD ARRAY CONTAINING PHONE NUMBER         *
+*       WHERE THE RETURNED VALUE IS:                                  *
+*                IERR  = ERROR FLAG. SET IF PHONE NUMBER NOT INONE    *
+*                         OF REQUIRED FORMATS.                        *
+*                                                                     *
+**********************************************************************
+
+        SUBROUTINE CKFON(IPHON,IERR)
+
+        INTEGER IPHON(3)
+
+        IERR=0
+
+*       ** CK THAT 4TH CHAR IS A '/' (SLASH)
+
+        CALL RTC (ICHAR,IPHON,4)
+        IF (ICHAR.EQ.'/') GO TO 100
+
+*       ** POSSIBLE FOR 1ST CHAR TO BE AN EXTRA '1' THUS MAKING THE
+*          5TH CHAR. THE SLACH.
+
+        CALL RTC(ICHAR2,IPHON,5)
+        IF (ICHAR2.NE.'/') GO TO 85
+        CALL RTC(ICHAR2,IPHON,1)
+        IF (ICHAR2.EQ.'1') RETURN
+
+85      TYPE 90
+90      FORMAT (5X,'CORRECT FORMAT FOR PHONE IS: ###/###-####')
+        IERR=1
+        RETURN
+
+*       ** CHECK THAT EIGHT CHAR IS A '-' (DASH)
+
+100     CALL RTC(ICHAR,IPHON,8)
+        IF (ICHAR.EQ.'-') RETURN
+        TYPE 90
+        IERR=1
+        RETURN
+        END
+
+**********************************************************************
+*                                                                     *
+*                         SUBROUTINE: INREST                          *
+*                                                                     *
+*       THIS SUBROUTINE INPUTS THE REST OF THE INFOR NEEDED OFR       *
+*       ADDING A PORT TO THE PORT-PRICING DATA BASE BESIDES           *
+*       THE PHONE NUMBER.                                             *
+*                                                                     *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL INREST(INDFLG,IPORT,MODM,MAXMOD,NUMMOD,PCOD,MAXPC,NUMPC,*
+*                    IOPT,IMODM,IPCOD,ICTY,ICUST)                     *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*               INDFLG = FLAG. SET TO 1 IF IN INDIVIDUAL RECORD MODE  *
+*               IPORT  = PORT NUMBER IF IN INDIVIDUAL RECORD MODE     *
+*               MODM   = ARRAY CONTAINING VALID MODEM TYPES           *
+*               MAXMOD = MAX. NUMBER OF MODEM TYPES PROGRAM ALLOWS    *
+*               NUMMOD = NUMBER OF VALID MODEM TYPES IN ARRAY: MODM   *
+*               PCOD   = ARRAY CONTAINING VALID PORT CODES            *
+*               MAXPC  = MAX. NUMBER OF PORT CODES PROGRAM ALLOWS     *
+*               NUMPC  = NUMBER OF VALID PORT CODES IN ARRAY: PCOD    *
+*               IOPT   = OPTION FLAG. TELLS PROGRAM WHICH ATTRIBUTE   *
+*                        TO INPUT.                                    *
+*       WHERE THE RETURNED VALUES ARE:                                *
+*                IMODM = MODEM                                        *
+*                IPCOD = PORT CODE                                    *
+*                ICTY  = PORT CITY (IF APPLICABLE)                    *
+*                ICUST = CUSTOMER (IF APPLICABLE)                     *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE INREST(INDFLG,IPORT,MODM,MAXMOD,NUMMOD,PCOD,MAXPC,
+     X  NUMPC,IOPT,IMODM,IPCOD,ICTY,ICUST)
+
+        INTEGER MODM,PCOD,DOC(4),ICTY(2),ICUST(2)
+        DIMENSION MODM(MAXMOD),PCOD(MAXPC),ITEMP(10)
+        COMMON/A3/DOC
+
+*       ** BRANCH TO APPROPRIATE CODE ON IOPT
+
+        IF (IOPT.EQ.'ALL'.OR.IOPT.EQ.'MOD') GO TO 95
+        IF (IOPT.EQ.'PCO') GO TO 142
+        IF (IOPT.EQ.'PCI') GO TO 207
+
+*       ** INPUT MODEM. IF IN INDIVIDUAL RECORD MODE PROMPT INCLUDES
+*          PORT NUMBER
+
+95      IF (INDFLG.EQ.0) TYPE 100
+        IF (INDFLG.NE.0) TYPE 105,IPORT
+100     FORMAT (/,1X,'* MODEM: ',$)
+105     FORMAT (/,1X,'* PORT ',I3,' MODEM: ',$)
+        ACCEPT 115,IMODM
+115     FORMAT (A5)
+
+*       ** CK FOR HELP
+
+        IF (IMODM.EQ.'?') GO TO 130
+
+        IF (IMODM.EQ.'OTHER') GO TO 135
+
+*       ** CHECK VALIDITY OF MODEM TYPE
+
+        DO 120 I=1,NUMMOD
+        IF (MODM(I).EQ.IMODM) GO TO 140
+120     CONTINUE
+
+*       ** ERROR
+
+122     TYPE 125
+125     FORMAT (5X,'ERROR!! TYPE "?" FOR HELP')
+        GO TO 95
+
+*       ** HELP
+
+130     CALL MINFO('!MODM',DOC)
+        GO TO 95
+
+*       ** INPUT 'OTHER' MODEM TYPE
+
+135     TYPE 136
+136     FORMAT (1X,'* MODEM: (MAX 5 CHARS): ',$)
+        ACCEPT 115,IMODM
+
+
+
+*       ** IF OPTION WAS 'MOD', RETURN
+
+140     IF (IOPT.EQ.'ALL') GO TO 142
+        RETURN
+
+*       ** INPUT PORT CODE. IF IN INDIVIDUAL RECORD MODE PROMPT INCLUDES
+*          PORT NUMBER.
+
+142     IF (INDFLG.EQ.0) TYPE 145
+        IF (INDFLG.NE.0) TYPE 146,IPORT
+145     FORMAT (/,1X,'* PORT CODE: ',$)
+146     FORMAT (/,1X,'* PORT ',I3,' PORT CODE: ',$)
+        ACCEPT 150,(ITEMP(I),I=1,10)
+150     FORMAT (10A1)
+
+        IF (ITEMP(1).EQ.'?') GO TO 190
+
+*       ** CONVERT VALUE JUST INPUT INTO AN INTEGER
+
+        CALL INTCK(ITEMP,2,IPCOD,IERR2)
+        IF (IERR2.NE.0) GO TO 142
+
+
+*       ** CHECK VALIDITY
+
+        DO 160 I=1,NUMPC
+        IF (PCOD(I).EQ.IPCOD) GO TO 200
+160     CONTINUE
+
+*       ** ERROR
+167     TYPE 170
+170     FORMAT (5X,'ERROR!! TYPE ? FOR HELP. ')
+        GO TO 142
+
+
+*       ** HELP
+
+190     CALL MINFO('!PCOD',DOC)
+        GO TO 142
+
+
+*       ** CHECK IF NEED TO INPUT PORT CITY
+
+200     IF (IPCOD.NE.1.AND.IPCOD.NE.2.AND.IPCOD.NE.3.AND.IPCOD.NE.10.
+     +  AND.IPCOD.NE.11) GO TO 225
+
+*       ** IF IN INDIVIDUAL RECORD MODE PROMPT INCLUDES PORT NUMBER.
+
+207     IF (INDFLG.EQ.0) TYPE 210
+        IF (INDFLG.NE.0) TYPE 211,IPORT
+210     FORMAT (/,1X,'* PORT CITY (MAX. 6 CHARS): ',$)
+211     FORMAT (/,1X,'* PORT ',I3,' PORT CITY (MAX. 6 CHARS.): ',$)
+        ACCEPT 215,(ICTY(I),I=1,2)
+215     FORMAT (A5,A1)
+        GO TO 230
+
+225     ICTY(1)='--'
+        ICTY(2)='     '
+
+*       ** CK IF NEED TO INPUT CUSTOMER
+
+230     IF (IPCOD.NE.1.AND.IPCOD.NE.6) GO TO 240
+
+*       ** INPUT CUSTOMER
+235     IF (INDFLG.EQ.0) TYPE 236
+        IF (INDFLG.NE.0) TYPE 237,IPORT
+236     FORMAT (/,1X,'* CUSTOMER (MAX. 10 CHARS): ',$)
+237     FORMAT (/,1X,'* PORT ',I3,' CUSTOMER (MAX. 10 CHARS): ',$)
+        ACCEPT 238,ICUST
+238     FORMAT (2A5)
+        RETURN
+
+*       ** BLANK OUT CUSTOMER
+240     ICUST(1)='     '
+        ICUST(2)='     '
+        RETURN
+
+
+        END
+
+***********************************************************************
+*                                                                     *
+*                         SUBROUTINE: INTYP                           *
+*                                                                     *
+*       THIS SUBROUTINE INPUT THE NODE TYPE AND CHECKS FOR            *
+*       VALIDITY.                                                               *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL INTYP(NTYP,NUMTYP,TYPE,MAXTYP,INODE)                    *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                NUMTYP = NUMBER OF VALID NODE TYPES IN ARRAY: TYPE   *
+*                TYPE   = ARRAY CONTAINING VALID NODE TYPES           *
+*                MAXTYP = MAX. NUMBER OF NODE TYPES PROGRAM ALLOWS    *
+*       WHERE THE RETURNED VALUE IS:                                  *
+*                NTYP   = VALID NODE TYPE OF CURRENT NODE             *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE INTYP(NTYP,NUMTYP,TYPE,MAXTYP,INODE)
+
+        INTEGER TYPE(MAXTYP,2),DOC(4)
+
+        COMMON/A3/DOC
+
+*       ** INPUT NODE TYPE
+
+1025    TYPE 1030
+1030    FORMAT (/,1X,'* NODE TYPE (REM,SRM,ETC.): ',$)
+        ACCEPT 1035,NTYP
+1035    FORMAT (A3)
+        IF (NTYP.EQ.'?') GO TO 1045
+
+*       ** CHECK FOR VALID NODE TYPE
+
+        DO 1040 I=1,NUMTYP
+        IF (NTYP.EQ.TYPE(I,1)) GO TO 1047
+1040    CONTINUE
+
+        TYPE 1041
+1041    FORMAT (5X,'TYPE "?" FOR HELP')
+        GO TO 1025
+
+*       ** HELP
+
+1045    CALL MINFO('!TYPE',DOC)
+        GO TO 1025
+
+*       ** IF NODE NUMBER IS GE 1000 AND LE 1777 DON'T ALLOW
+*          NODE TYPE OF 'ISI'.
+
+1047    IF (INODE.GE.1000.AND.INODE.LE.1777.AND.NTYP.EQ.'ISI')
+     X GO TO 1050
+        RETURN
+
+*       ** ERROR
+
+1050    TYPE 1055
+1055    FORMAT (5X,'ERROR!! NODE NUMBER OUT OF RANGE TO BE ISIS',
+     X' MACHINE')
+        GO TO 1025
+
+*       ** END OF ROUTINE
+
+        END
+
+***********************************************************************
+*                                                                     *
+*                         SUBROUTINE: INDAT                           *
+*                                                                     *
+*       THIS SUBROUTINE INPUTS A DATE IN FORMAT YYMMDD.               *
+*       WHERE YY = 2 DIGIY YEAR  NUMBER. MM = 2 DIGIT MONTH NUMBER,   *
+*       AND DD = 2 DIGIT DAY NUMBER.                                  *
+*       THE CALLING SEQUENCE IS:                                      *
+*      WHERE THE REQUIRED INPUTS ARE:                                 *
+*               INDFLG = FLAG. SET IF IN INDIVIDUAL RECORD MODE       *
+*               IPORT  = PORT NUMBER. USED IF IN INDIVIDUAL RECORD    *
+*                        MODE.                                        *
+*        CALL INDAT(INDFLG,IPORT,IDATE)                                *
+*       WHERE THE RETURNED VALUE IS:                                  *
+*                IDATE = VALID DATE                                   *
+*                                                                     *
+***************************************************************8*******
+
+        SUBROUTINE INDAT(INDFLG,IPORT,IDATE)
+
+        INTEGER DAYS(12),ITEMP(10)
+
+        COMMON/A4/DAYS
+*       ** INPUT DATE
+
+1080    IF (INDFLG.EQ.0) TYPE 1085
+       IF (INDFLG.NE.0) TYPE 1086,IPORT
+1085    FORMAT (/,1X,'* EFFECTIVE DATE (YYMMDD): ',$)
+1086   FORMAT (/,1X,'* PORT ',I3,' EFFECTIVE DATE (YYMMDD): ',$)
+        ACCEPT 1090,(ITEMP(I),I=1,10)
+1090    FORMAT (10A1)
+
+*       ** CONVERT VALUE JUST INPUT INTO AN INTEGER
+
+        CALL INTCK(ITEMP,6,IDATE,IERR)
+        IF (IERR.NE.0) GO TO 1080
+
+*       ** BREAK DATE INTO YEAR, MONTH, AND DAT
+
+        IYR=IDATE/10000
+        IMO=(MOD(IDATE,10000))/100
+        IDAY=MOD(IDATE,100)
+
+*       ** CHECK VALIDITY OF DATE
+
+        IF (IYR.GT.70) GO TO 1100
+        TYPE 1095
+1095    FORMAT (5X,'YEAR MUST BE AT LEAST 70')
+        GO TO 1080
+
+1100    IF (IMO.GE.1.AND.IMO.LE.12) GO TO 1110
+        TYPE 1105
+1105    FORMAT (5X,'INVALID MONTH')
+        GO TO 1080
+
+1110    IF (IDAY.GE.1.AND.IDAY.LE.DAYS(IMO)) GO TO 1120
+        TYPE 1115
+1115    FORMAT (5X,'INVALID DATE')
+        GO TO 1080
+
+
+*       ** DATE IS OK. RETURN
+
+1120    RETURN
+        END
+
+************************************************************************
+*                                                                     *
+*                         SUBROUTINE: INMACH                          *
+*                                                                     *
+*       THIS SUBROUTINE INPUTS THE MACHINE TYPE AND CHECKS FOR        *
+*       VALIDITY OF THE TYPE.                                         *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL INMACH(IMACH,NUMMAC,MACH,MAXMAC,INODE)                        *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                NUMMAC = NUMBER OF VALID MACHINE TYPES IN            *
+*                         ARRAY: MACH                                 *
+*                MACH    = ARRAY CONTAINING VALID MACHINE TYPES       *
+*                MAXMAC = MAX. NUMBER OF MACHINE TYPES PROGRAM        *
+*                         ALLOWS.                                     *
+*       WHERE RETURNED VALUE IS:                                      *
+*                IMACH  = VALID MACHINE TYPES FOR THIS NODE           *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE INMACH(IMACH,NUMMAC,MACH,MAXMAC,INODE)
+
+        INTEGER MACH(MAXMAC),DOC(4),DAYS(12)
+
+        COMMON/A4/DAYS
+        COMMON/A3/DOC
+
+*       ** INPUT MACHINE TYPE
+
+1125    TYPE 1130
+1130    FORMAT (/,1X,'* MACHINE TYPE (L100,V72,ETC.): ',$)
+        ACCEPT 1135,IMACH
+1135    FORMAT (A4)
+        IF (IMACH.EQ.'?') GO TO 1145
+
+*       ** IF NODE IS ISIS OR AN ENGINE CAN ONLY HAVE MACHINE TYPE OF
+*          732 OR TENG
+
+        IF (INODE.GE.1000.AND.INODE.LE.1777) GO TO 1139
+
+        IF (IMACH.EQ.'732'.OR.IMACH.EQ.'TENG') RETURN
+        TYPE 1137
+1137    FORMAT (5X,'ONLY 732 OR TENG ARE VALID MACHINE TYPES FOR',
+     X' THIS NODE')
+        GO TO 1125
+
+*       ** CHECK FOR VALID MACHINE TYPE
+
+1139    DO 1140 I=1,NUMMAC
+        IF (IMACH.EQ.MACH(I)) RETURN
+1140    CONTINUE
+
+        TYPE 1142
+1142    FORMAT (5X,'ERROR!! TYPE "?" FOR HELP')
+        GO TO 1125
+
+*       ** HELP
+
+1145    CALL MINFO('!MACH',DOC)
+        GO TO 1125
+        END
+
+*               ********** SUBROUTINE CONVERT ***********
+
+
+*       THIS ROUTINE CONVERTS A DECIMAL NUMBER (4-DIGITS OR LESS)
+*       INTO AN OCTAL NUMBER
+
+        SUBROUTINE CONVRT(DEC,OCT)
+
+        INTEGER DEC,OCT
+
+        IA=DEC
+        IB=IA/8
+        IB2=MOD(IA,8)
+        IC=IB/8
+        IC2=MOD(IB,8)
+        ID=IC/8
+        ID2=MOD(IC,8)
+        OCT=ID*1000+ID2*100+IC2*10+IB2
+        RETURN
+        END
+
+
+**********************************************************************
+*                                                                     *
+*                         SUBROUTINE: INNODE                          *
+*                                                                     *
+*       THIS SUBROUTINE INPUTS A NODE NUMBER,CHECKS FOR VALIDITY      *
+*       OF THAT NUMBER AND WHETER OR NOT THE NODE ALREADY EXISTS IN   *
+*       THE PORT PRICING DATA BASE, PORTS.DMS. IF NODE DOES EXIST     *
+*       SOME INFORMATION ON THE NODE IS RETURNED.                     *
+*                                                                     *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL INNODE(INODE,NHCOD,IBILL,CITY,ISTATE,IZONE,IPORT,IPC    *
+*                   IREC,IERR)                                        *
+*       WHERE THE RETURNED VALUES ARE:                                *
+*                INODE = NODE NUMBER INPUT                            *
+*                NHCOD = NODE-HOST CODE                               *
+*                IBILL = BILLING DESIGNATOR                           *
+*                CITY  = ARRAY CONTAINING THE NODE CITY               *
+*                ISTATE = 2 CHARACTER STATE ABBREVIATION              *
+*                IPC   = PORT CODE                                    *
+*                IZONE = TIME ZONE                                    *
+*                ITYP  = TYPE OF NODE                                 *
+*                IREC  = NUMBER OF RECORDS IN DATA BASE FOR INODE     *
+*                IERR  = ERROR FLAG. SET TO 1 IF NODE DOES NOT EXIST  *
+*                         IN DATA BASE. SET TO 2 IF NODE NUMBER IS    *
+*                         INVALID.                                    *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE INNODE(INODE,NHCOD,IBILL,CITY,ISTATE,IZONE,IPORT,
+     X  IPC,ITYP,IREC,IERR)
+
+        INTEGER CITY(4),ITEMP(10)
+
+        IERR=0
+        ITYP='     '
+
+*       ** INPUT NODE NUMBER
+
+100     TYPE 110
+110     FORMAT (/,1X,'* NODE: ',$)
+        ACCEPT 115,(ITEMP(I),I=1,10)
+115     FORMAT (10A1)
+
+*       ** CONVERT ALPHA VALUE JUST INPUT INTO NUMERIC
+
+        CALL INTCK(ITEMP,5,INODE,IERR2)
+        IF (IERR2.NE.0) GO TO 100
+
+*       ** CHECK IF NODE IS IN LEGAL RANGE
+
+        IF (INODE.GT.0.AND.INODE.LT.80000) GO TO 150
+        IERR=2
+        TYPE 120
+120     FORMAT (5X,'NODE NUMBER OUT OF RANGE')
+        RETURN
+
+*       ** CHECK THAT NUMBER  IS OCTAL
+150     CALL OCTCK(INODE,IERR2)
+        IF (IERR2.EQ.0) GO TO 160
+        IERR=2
+        TYPE 155
+155     FORMAT (5X,'NUMBER MUST BE OCTAL')
+        RETURN
+
+*       ** CHECK IF NODE ALREADY EXISTS IN DATA BASE
+
+160     CALL DBFIND('NODE','EQ',INODE)
+        CALL DBNREC(IREC)
+        IF (IREC.EQ.0) GO TO 170
+        CALL DBGREC($170)
+        CALL DBVAL ('NHCODE',NHCOD,'NCITY',CITY,'NSTATE',ISTATE
+     X,'PORT',IPORT,'PCODE',IPC,'ZONE',IZONE,'NTYPE',ITYP,'BILL'
+     X,IBILL)
+
+*       ** GO CK IF NODE IS ISIS
+
+        GO TO 180
+
+*       ** NODE DOES NOT EXIST IN DATA BASE
+
+170     IERR=1
+
+*       ** IF NODE TYPE IS NOT KNOWN AND NODE NUMBER IS  IN LEGAL
+*          RANGE FOR AN ISIS NODE CK IF NODE IS ISIS.
+
+180     IF ((ITYP.EQ.' ').AND.(INODE.LT.1000.OR.INODE.GT.1777))GO TO 185
+
+*       ** RETURN
+
+        GO TO 190
+
+185     TYPE 187
+187     FORMAT (1X,'* IS THIS AN ISIS NODE? ',$)
+        ACCEPT 188,IANS
+188     FORMAT (A1)
+        IF (IANS.NE.'Y'.AND.IANS.NE.'N') GO TO 185
+        IF (IANS.EQ.'Y') ITYP='ISI'
+
+*        FINISHED. RETURN
+
+190     RETURN
+        END
+
+***********************************************************************
+*                                                                     *
+*                         SUBROUTINE: INPRT                           *
+*                                                                     *
+*       THIS SUBROUTINE INPUTS A PORT OR PORT RANGE AND CHECKS        *
+*       THAT EACH PORT IS OCTAL. LIST OF PORTS ARE RETURNED IN ARRAY: *
+*       PORTS.                                                        *
+*                                                                     *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL INPRT(IPT1,IOPT,IMAXPT,IPT2,ITPCNT,IPCNT,INDFLG,ISTOP)  *
+*       WHERE REQUIRED INPUTS ARE:                                    *
+*                IPT1 = POINTER - POINTS TO FIRST EMPTY ELEMENT IN    *
+*                       ARRAY: PORTS.                                 *
+*                IOPT = INDICATES WHICH PROMPT TO USE TO INPUT PORTS  *
+*               IMAXPT = MAX. NUMBER OF PORTS ALLOWED ON THE NODE     *
+*       WHERE RETURNED VALUES ARE:                                    *
+*                IPT2  = POINTER - POINTS TO LAST ELEMENT IN PORTS    *
+*                         CONTAINING A PORT.                          *
+*                ITPCNT = TOTAL PORTS INPUT FOR THIS NODE SO FAR      *
+*                IPCNT  = NUMBER OF PORTS INPUT DURING THIS CALL      *
+*                         TO SUBROUTINE.                              *
+*               INDFLG  = FLAG.  SET TO 1 IF /I SWITCH IS IN CHAR.    *
+*                         STRING. THIS INDICATES USER WANTS TO GO INTO*
+*                         INDIVIDUAL RECORD MODE.                     *
+*                ISTOP  = STOP FLAG. SET IF 'X' INPUT AS PORT RANGE   *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE INPRT(IPT1,IOPT,IMAXPT,IPT2,ITPCNT,IPCNT,INDFLG,
+     X  ISTOP)
+
+        INTEGER PORTS(256,11),INPTS(20),COUNT,SCR2(4)
+
+        COMMON/A1/PORTS
+        COMMON/A2/SCR2
+
+        INDFLG=0
+
+*       ** CONVERT MAX. NUMBER OF PORTS TO AN OCTAL NUMBER
+
+        INUM=IMAXPT-1
+        CALL CONVRT(INUM,IOCTPT)
+
+
+1150    COUNT=1
+        IDASH=0
+        IFIELD=1
+        IPT2=IPT1
+        IPCNT=0
+
+
+*       ** INPUT PORT # OR PORT RANGE
+
+        IF (IOPT.EQ.1155) TYPE 1155
+        IF (IOPT.EQ.1156) TYPE 1156
+        IF (IOPT.EQ.1157) TYPE 1157
+        IF (IOPT.EQ.1158) TYPE 1158
+1155    FORMAT (/,1X,'* PORT OR PORT RANGE(PORT1-PORT2) ("X" TO STOP): '
+     X,$)
+1156    FORMAT (/,1X,'* PORT OR PORT RANGE(PORT1-PORT2): ',$)
+1157    FORMAT (/,1X,'* 1ST PORT OR PORT RANGE(PORT1-PORT2) TO SWAP: ',
+     X$)
+1158    FORMAT (/,1X,'* 2ND PORT OR PORT RANGE(PORT1-PORT2) TO SWAP: ',
+     X$)
+        ACCEPT 1160,(INPTS(I),I=1,20)
+1160    FORMAT (20A1)
+
+*       ** CHECK IF TIME TO STOP
+
+        IF (INPTS(1).NE.'X') GO TO 1165
+        ISTOP=1
+        RETURN
+
+*       SEARCH STRING AND BREAK OUT PORT NUMBERS
+
+1165    DO 1185 I=1,20
+
+*       ** IGNORE ALL BLANKS
+
+        IF (INPTS(I).EQ.' ') GO TO 1185
+        IF (INPTS(I).EQ.'-') GO TO 1180
+
+*       ** IF THE !I SWITCH IS ON, THEN THROW AWAY THE 'I'
+
+        IF (INDFLG.NE.0.AND.INPTS(I).EQ.'I') GO TO 1185
+        IF (INPTS(I).NE.'!') GO TO 1170
+
+*       ** CHAR. = '!' WHICH INDICATES PRESENCE OF A SWITCH. CHECK
+*          NEXT CHAR. FOR AN 'I'.
+
+        IF (INPTS(I+1).NE.'I') GO TO 1168
+
+*       ** SET INDIVIDUAL RECORD MODE FLAG AND GO CONTINUE SEARCHING
+*          STRING.
+
+        INDFLG=1
+        GO TO 1185
+
+*       ** UNRECOGNIZABLE SWITCH.
+
+1168    INDFLG=0
+        TYPE 1169
+1169    FORMAT (5X,'UNRECOGNIZABLE SWITCH. REENTER LAST SET OF PORTS')
+        GO TO 1150
+
+*       ** CHAR. IS A NON-DELIMENTER CHAR. CK IF IT IS AN INTEGER
+1170    IF (INPTS(I).EQ.'0'.OR.INPTS(I).EQ.'1'.OR.INPTS(I).EQ.'2'.OR.
+     X      INPTS(I).EQ.'3'.OR.INPTS(I).EQ.'4'.OR.INPTS(I).EQ.'5'.OR.
+     X      INPTS(I).EQ.'6'.OR.INPTS(I).EQ.'7'.OR.INPTS(I).EQ.'8'.OR.
+     X      INPTS(I).EQ.'9') GO TO 1175
+
+*       ** INVALID CHARACTER.
+
+        TYPE 1172,INPTS(I)
+1172    FORMAT (/,5X,'INVALID CHARACTER: ',A1,'. REENTER.',/)
+        GO TO 1150
+
+*       ** VALID CHARACTER. USE IT TO BUILD A PORT NUMBER INTO
+*          THE 'SCR2' ARRAY.
+
+1175     SCR2(COUNT)=INPTS(I)
+        COUNT=COUNT+1
+        GO TO 1185
+
+*       ** HAVE REACHED END OF 1ST PORT. DECREMENT DIGIT COUNTER TO 
+*          REFLECT ACTUAL NUMBER OF DIGITS IN THE PORT NUMBER.
+
+1180    COUNT=COUNT-1
+
+*       SET IDASH FLAG-THIS MEANS THAT THIS PORT IS 1ST OF A RANGE
+*       AND THAT THE NEXT PORT WILL BE THE LAST OF A RANGE
+
+        IDASH=1
+
+*       ** PUT PORT INTO PORTS ARRAY
+
+        CALL CODE(IPT2,IFIELD,COUNT)
+
+*       ** RESET DIGIT COUNTER AND CONTINUE SEARCHING STRING
+        COUNT=1
+1185    CONTINUE
+
+
+*       ** FINISHED SEARCHING CHAR. STRING. CHECK IF WE'RE DEALING
+*          WITH A SINGLE PORT OR A PORT RANGE. SINCE WE'RE AT END
+*          OF STRING WE'RE OBVIOUSLY REACHED END OF 2ND PORT. DECREMENT
+*          DIGIT COUNTER TO REFLECT ACTUAL NUMBER OF DIGITS IN THE
+*          PORT NUMBER.
+
+1190    COUNT=COUNT-1
+
+*       IF IDASH = 0, THEN THIS IS A SINGLE PORT AND NOT
+*       PART OF A RANGE.
+
+        IF (IDASH.NE.0) GO TO 1197
+
+*       ** PUT PORT INTO PORTS ARRAY
+
+        CALL CODE(IPT2,IFIELD,COUNT)
+
+*       ** MAKE SURE PORT IS OCTAL IF NOT GO AND REENTER WHOLE SET
+*          OF PORTS.
+
+        CALL OCTCK(PORTS(IPT2,1),IERR2)
+        IF (IERR2.EQ.0) GO TO 1192
+        TYPE 1203
+        GO TO 1150
+
+*       ** CHECK IF THIS PORT HAS ALREADY BEEN ENTERED
+
+1192    CALL DUPCK(IPT2,IERR2)
+        IF (IERR2.EQ.0) GO TO 1193
+        IERR2=0
+        GO TO 1150
+
+*       ** CHECK IF PORT EXCEEDS MAX
+
+1193    IF (PORTS(IPT2,1).LE.IOCTPT) GO TO 1195
+        TYPE 1194,PORTS(IPT2,1)
+1194    FORMAT (5X,'ERROR!! PORT ',I3,' EXCEEDS MAX. PORT NUMBER
+     X ALLOWED',/,5X,'REENTER LAST SET OF PORTS')
+        GO TO 1150
+
+*       ** CHECK THAT PORT IS POSITIVE
+
+1195    IF (PORTS(IPT2,1).GE.0) GO TO 1198
+        TYPE 1196
+1196    FORMAT (5X,'ERROR!! PORTS MUST BE POSITIVE')
+        GO TO 1150
+
+
+*       ** SET NUMBER OF PORTS INPUT TO 1 AND GO INCREMENT TOTAL PORT
+*          COUNTER.
+
+1198    IPCNT=1
+        GO TO 1225
+
+*       THIS PORT IS LAST OF A RANGE OF PORTS
+*       FIND 1ST OF RANGE AND FILL IN BETWEEN.
+*       I1=1ST PORT OF RANGE, I2=LAST PORT OF RANGE
+
+1197    I1=PORTS(IPT2,IFIELD)
+        L=IPT2+1
+        CALL CODE(L,IFIELD,COUNT)
+
+        ENCODE (3,1200,LL) I1
+        DECODE (3,1201,LL)(SCR2(J),J=1,3)
+1200    FORMAT (I3)
+1201    FORMAT(3I1)
+        I2=PORTS(L,IFIELD)-1
+
+*       ** MAKE SURE THAT I2 IS GREATER THAN I1
+
+        IF (I2.GE.I1) GO TO 1202
+        TYPE 1230
+1230    FORMAT (5X,'INVALID PORT RANGE')
+        GO TO 1150
+
+*       ** CHECK IF PORTS ARE OCTAL
+
+1202    CALL OCTCK(PORTS(IPT1,1),IERR2)
+        IF (IERR2.EQ.0) GO TO 1205
+        TYPE 1203
+1203    FORMAT (5X,'PORTS MUST BE OCTAL')
+        GO TO 1150
+
+1205    CALL OCTCK(PORTS(L,1),IERR2)
+        IF (IERR2.EQ.0) GO TO 1208
+        TYPE 1203
+        GO TO 1150
+
+*
+1208    DO 1215 K=I1,I2
+        IPT2=IPT2+1
+        IPCNT=IPCNT+1
+        SCR2(3)=SCR2(3)+1
+        IF (SCR2(3).NE.8) GO TO 1212
+ 
+        SCR2(2)=SCR2(2)+1
+        SCR2(3)=0
+
+1210    IF (SCR2(2).NE.8) GO TO 1212
+        SCR2(1)=SCR2(1)+1
+        SCR2(2)=0
+
+1212    ENCODE (3,1201,LL) (SCR2(J),J=1,3)
+        DECODE (3,1200,LL) PORTS(IPT2,IFIELD)
+
+        IF (PORTS(IPT2,IFIELD).EQ.I2+1) GO TO 1217
+1215    CONTINUE
+
+1217    IPCNT=IPCNT+1
+
+*       ** CHECK FOR DUPLICATE PORT ENTRIES
+
+        DO 1220 I=IPT1,IPT2
+        CALL DUPCK(I,IERR2)
+        IF (IERR2.EQ.0) GO TO 1218
+        IERR2=0
+        GO TO 1150
+
+*       ** CHECK IF EXCEEDING MAX.
+
+1218    IF (PORTS(I,1).LE.IOCTPT) GO TO 1219
+        TYPE 1194,PORTS(I,1)
+        GO TO 1150
+
+*       ** CHECK THAT PORT IS POSITIVE
+
+1219    IF (PORTS(I,1).GE.0) GO TO 1220
+        TYPE 1196
+        GO TO 1150
+
+1220    CONTINUE
+
+
+*       ** ADD THIS NUMBER OF PORTS TO TOTAL ENTERED FOR THIS NODE
+*          SO FAR.
+
+1225    ITPCNT=ITPCNT+IPCNT
+
+*       ** FINISHED. RETURN
+
+        RETURN
+        END
+
+*       ** INPUT PNONE NUM. FOR 1ST PORT OF RANGE
+
+***********************************************************8***********
+*                                                                     *
+*                         SUBROUTINE: SETPRT                           *
+*                                                                     *
+*       THIS SUBROUTINE INPUTS ALL NEEDED INFOR FOR A SET OF PORTS    *
+*       THEN STORES THIS INFORMATION INTO ARRAY PORTS.                *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL SETPRT(IPT1,IPT2,MODM,MAXMOD,NUMMOD,PCOD,MAXPC,NUMPC)
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                IPT1 = POINTER INTO ARRAY; PORTS. POINTS TO 1ST OF   *
+*                         CURRENT SET OF PORTS TO PROCESS.            *
+*                IPT2 = POINTER INTO ARRAY: PORTS. POINTS TO LAST OF  *
+*                         CURRNET SET OF PORTS TO PROCESS.            *
+*                                                                     *
+*********************************************************8*************
+
+        SUBROUTINE SETPRT(IPT1,IPT2,MODM,MAXMOD,NUMMOD,PCOD,MAXPC,NUMPC,
+     XIHOST)
+
+        INTEGER PORTS(256,11),IPHON(3),MODM,PCOD,ICTY(2),ITEMP(10)
+
+        DIMENSION MODM(MAXMOD),PCOD(MAXPC),DOC(4),ICUST(2)
+        COMMON/A1/PORTS
+        COMMON/A3/DOC
+
+        IZERO=0
+
+*       ** INPUT PHONE NUMBER FOR 1ST PORT IN CURRENT SET
+1300    TYPE 1305,PORTS(IPT1,1)
+1305    FORMAT (/,1X,'* PORT ',I3,2X,'PHONE: ',$)
+        ACCEPT 1310,(IPHON(I),I=1,3)
+1310    FORMAT(3A5)
+
+*       ** IF 1ST CHAR. OF NUMBER = '!' (SLASH) THIS IS
+*          A SWITCH. BRANCH
+
+        CALL RTC(ICHAR,IPHON,1)
+        IF (ICHAR.EQ.'!') GO TO 1350
+
+*       ** IF 1ST CHAR. = ?, OUTPUT INFO ON SWITCHES
+
+        IF (ICHAR.NE.'?') GO TO 1311
+        CALL MINFO('!PHON',DOC)
+        GO TO 1300
+
+*       ** CHECK FORMAT OF PHONE NUMBER
+
+1311    CALL CKFON(IPHON,IERR)
+        IF (IERR.NE.0) GO TO 1300
+
+*       ** INPUT REST OF INFO NEEDED FOR PORTS
+
+1312    IOPT='ALL'
+        INDFLG=0
+        CALL INREST(INDFLG,IPORT,MODM,MAXMOD,NUMMOD,PCOD,MAXPC,
+     X  NUMPC,IOPT,IMODM,IPCOD,ICTY,ICUST)
+
+*       ** MAKE ENTRIES IN PORTS ARRAY FOR THIS 1ST PORT
+
+1315    PORTS(IPT1,2)=IPCOD
+        PORTS(IPT1,3)=IHOST
+        PORTS(IPT1,4)=IMODM
+        PORTS(IPT1,5)=ICTY(1)
+        PORTS(IPT1,6)=ICTY(2)
+        PORTS(IPT1,7)=IPHON(1)
+        PORTS(IPT1,8)=IPHON(2)
+        PORTS(IPT1,9)=IPHON(3)
+        PORTS(IPT1,10)=ICUST(1)
+        PORTS(IPT1,11)=ICUST(2)
+
+*       ** IF ONLY ONE PORT IN THIS SET  FINISHED!!
+
+        IF (IPT1.EQ.IPT2) GO TO 1325
+
+*       ** INPUT PHONE NUM'S FOR REST OF PORTS. MAKE ENTRIES
+*          IN PORTS ARRAY FOR REST OF PORTS
+
+        DO 1320 I=IPT1+1,IPT2
+1318    TYPE 1305,PORTS(I,1)
+        ACCEPT 1310,(IPHON(J),J=1,3)
+
+*       ** CHECK FORMAT FOR PHONE NUM.
+
+        CALL CKFON(IPHON,IERR)
+        IF (IERR.NE.0) GO TO 1318
+        
+*       ** MAKE ENTRIES
+
+        PORTS(I,2)=IPCOD
+        PORTS(I,3)=IHOST
+        PORTS(I,4)=IMODM
+        PORTS(I,5)=ICTY(1)
+        PORTS(I,6)=ICTY(2)
+        PORTS(I,7)=IPHON(1)
+        PORTS(I,8)=IPHON(2)
+        PORTS(I,9)=IPHON(3)
+        PORTS(I,10)=ICUST(1)
+        PORTS(I,11)=ICUST(2)
+
+1320    CONTINUE
+
+*       ** SET IPT1 TO POINT TO BEGINNING OF NEXT SET OF PORTS
+*          AND RETURN
+
+1325    IPT1=IPT2+1
+        RETURN
+
+
+
+*       ** SWITCHES.... BRANCH TO CORRECT PORTION OF CODE
+
+1350    CALL RTC(ICHAR,IPHON,2)
+        IF (ICHAR.EQ.'H') GO TO 1360
+        IF (ICHAR.EQ.'X') GO TO 1370
+        IF (ICHAR.EQ.'S') GO TO 1380
+        IF (ICHAR.EQ.'P') GO TO 1390
+        IF (ICHAR.EQ.'D') GO TO 1400
+
+        TYPE 1355
+1355    FORMAT (5X,'VALID SWITCHES ARE: !H,!X,!S,!P,!D',/
+     X          5X,'TYPE "?" FOR HELP')
+        GO TO 1300
+
+*       ** !H SWITCH -- ALL PORTS ARE HARD-WIRED
+
+*       ** CHECK WHETHER PORT CODE IS PRIVATE OR DEDICATED
+
+1360    TYPE 1361
+1361    FORMAT (/,1X,'* PORT CODE (1 OR 6): ',$)
+        ACCEPT 1362,(ITEMP(I),I=1,10)
+1362    FORMAT (10A1)
+
+*       ** CONVERT VALUE JUST INPUT INTO AN INTEGER
+
+        CALL INTCK(ITEMP,2,IPC,IERR2)
+        IF (IERR2.NE.0) GO TO 1360
+
+*       ** CHECK VALIDTY OF PORT CODE
+
+        IF (IPC.EQ.1.OR.IPC.EQ.6) GO TO 1364
+        TYPE 1363
+1363    FORMAT (5X,'ONLY PORT CODES ALLOWED ON H/W LINES ARE:',/
+     X          5X,'1 = PRIVATE',/
+     X          5X,'6 = DEDICATED')
+        GO TO 1360
+
+*       ** INPUT CUSTOMER NAME
+1364    TYPE 1365
+1365    FORMAT (/,1X,'* CUSTOMER (MAX. 10 CHARS.): ',$)
+        ACCEPT 1366,ICUST
+1366    FORMAT (2A5)
+
+        DO 1367 I=IPT1,IPT2
+        PORTS(I,2)=IPC
+        PORTS(I,3)=IHOST
+        PORTS(I,4)='H/W'
+        PORTS(I,5)='--'
+        PORTS(I,6)='     '
+        PORTS(I,7)='H/W'
+        PORTS(I,8)='     '
+        PORTS(I,9)='     '
+        PORTS(I,10)=ICUST(1)
+        PORTS(I,11)=ICUST(2)
+1367    CONTINUE
+
+*       ** SET IPT1 TO POINT TO BEGINNING OF NEXT SET OF PORTS
+*          AND RETURN
+
+        IPT1=IPT2+1
+        RETURN
+
+*       ** !X SWITCH -- ALL PORTS ARE UNUSED
+
+1370    DO 1372 I=IPT1,IPT2
+        PORTS(I,2)=8
+        PORTS(I,3)=IHOST
+        PORTS(I,4)='--'
+        PORTS(I,5)='--'
+        PORTS(I,6)='     '
+        PORTS(I,7)='--'
+        PORTS(I,8)='     '
+        PORTS(I,9)='     '
+        PORTS(I,10)='     '
+        PORTS(I,11)='     '
+1372    CONTINUE
+
+*       ** SET IPT1 TO POINT TO BEGINNING OF NEXT SET OF PORTS
+*          AND RETURN
+
+        IPT1=IPT2+1
+        RETURN
+
+*       ** !S SWITCH - THIS SET OF PORTS BELONG TO SAME STATION
+
+1380    TYPE 1382
+1382    FORMAT (/,1X,'* TRUNK PHONE NUMBER: ',$)
+        ACCEPT 1310,(IPHON(I),I=1,3)
+
+*       ** CHECK FORMAT OF PHONE NUMBER
+
+        CALL CKFON(IPHON,IERR)
+        IF (IERR.NE.0) GO TO 1380
+
+*       ** INPUT REST OF INFO NEEDED
+
+1384    IOPT='ALL'
+        INDFLG=0
+        CALL INREST(INDFLG,IPORT,MODM,MAXMOD,NUMMOD,PCOD,MAXPC,
+     X  NUMPC,IOPT,IMODM,IPCOD,ICTY,ICUST)
+
+*       ** MAKE ENTRIES IN ARRAY PORTS
+
+1385    DO 1387 I=IPT1,IPT2
+        PORTS(I,2)=IPCOD
+        PORTS(I,3)=IHOST
+        PORTS(I,4)=IMODM
+        PORTS(I,5)=ICTY(1)
+        PORTS(I,6)=ICTY(2)
+        PORTS(I,7)=IPHON(1)
+        PORTS(I,8)=IPHON(2)
+        PORTS(I,9)=IPHON(3)
+        PORTS(I,10)=ICUST(1)
+        PORTS(I,11)=ICUST(2)
+1387    CONTINUE
+
+*       ** SET IPT1 TO POINT TO BEGINNING OF NEXT SET OF PORTS
+*          AND RETURN
+
+        IPT1=IPT2+1
+        RETURN
+
+*       ** !P SWITCH - ALL PORTS ARE PUBLIC
+
+1390    DO 1392 I=IPT1,IPT2
+        PORTS (I,2)=4
+        PORTS (I,3)=IHOST
+        PORTS (I,4)='--'
+        PORTS (I,5)='--'
+        PORTS (I,6)='     '
+        PORTS (I,7)='--'
+        PORTS (I,8)='     '
+        PORTS (I,9)='     '
+        PORTS (I,10)='     '
+        PORTS (I,11)='     '
+1392    CONTINUE
+
+*       **  SET IPT1 TO POINT TO BEGINNING OF NEXT SET OF PORTS
+*           AND RETURN.
+
+        IPT1=IPT2+1
+        RETURN
+
+
+*       ** !D SWITCH - ALL PORTS ARE DEDICATED
+
+*       ** GET CUSTOMER NAME
+
+1400    TYPE 1365
+        ACCEPT 1366,ICUST
+
+        DO 1410 I=IPT1,IPT2
+        PORTS(I,2)=6
+        PORTS(I,3)=IHOST
+        PORTS(I,4)='--'
+        PORTS(I,5)='--'
+        PORTS(I,6)='     '
+        PORTS(I,7)='--'
+        PORTS(I,8)='     '
+        PORTS(I,9)='     '
+        PORTS(I,10)=ICUST(1)
+        PORTS(I,11)=ICUST(2)
+1410    CONTINUE
+
+*       ** SET IPT1 TO POINT TO BEGINNING OF NEXT SET OF PORTS
+*          AND RETURN.
+
+        IPT1=IPT2+1
+        RETURN
+
+        END
+
+**********************************************************************
+*                                                                     *
+*                         SUBROUTINE: DUPCK                           *
+*       THIS SUBROUTINE CHECKS FOR DUPLICATE PORT ENTRIES IN          *
+*       ARRAY: PORTS.     *
+*                                                                     *
+*       THE CALLING SEQUENCT IS:                                      *
+*        CALL DUPCK(IPT2,IERR2)                                       *
+*       WHERE THE REQUIRED INPUT IS:                                  *
+*                IPT2 = POINTER TO LAST WORD IN ARRAY; PORTS . THIS   *
+*                         WORD SHOULD CONTAIN THE PORT THAT IS        *
+*                         BEING CHECKED FOR DUPLICATION.              *
+*       WHERE THE RETURNED VALUE IS:                                  *
+*                IERR2 = ERROR FLAG. SET IF A DUPLICATE IS FOUND      *
+*                         FOR THE PORT NUMBER CONTAINED IN            *
+*                         PORTS(IPT2,1).                              *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE DUPCK(IPT2,IERR2)
+
+        INTEGER PORTS(256,11)
+
+        COMMON/A1/PORTS
+
+        IERR2=0
+
+*       ** IF ONLY ONE PORT IN ARRAY RETURN
+
+        IF (IPT2.EQ.1) RETURN
+
+*       ** CHECK ARRAY PORTS FOR PORT NUMBER POINTED TO BY IPT2
+
+        INUM=PORTS(IPT2,1)
+
+        DO 100 I=1,IPT2-1
+        IF (INUM.EQ.PORTS(I,1)) GO TO 150
+100     CONTINUE
+
+        RETURN
+
+*       ** DUPLICATE PORT NUMBER!!
+
+150     IERR2=1
+        TYPE 155,INUM
+155     FORMAT (5X,'ERROR!! PORT: ',I3,' HAS ALREADY BEEN ENTERED.',/
+     X,         5X,'REENTER LAST SET OF PORTS')
+        RETURN
+
+        END
+
+***********************************************************************
+*                                                                     *
+*                         SUBROUTINE: ADDPRT                          *
+*                                                                     *
+*       THIS SUBROUTINE ADDS THE PORTS CONTAININED IN ARRAY; PORTS    *
+*       TO THE PORT PRICING DATA BASE (PORTS)                         *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL ADDPRT(JOBFLE,ISTART,ITPCNT,IERR)                       *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                JOBFLE = ARRAY CONTAINING NAME OF CHANGE RECORD FILE *
+*                         FOR THIS JOB.                               *
+*                ISTART = POINTER INTO ARRAY: PORTS FOR 1ST PORT TO   *
+*                         BE ADDED.                                   *
+*                ITPCNT = TOTAL NUMBER OF PORTS TO BE ADDED           *
+*       WHERE THE RETURNED VALUE IS:                                  *
+*                IERR   = ERROR FLAG. SET TO 1 IF UNABLE TO OPEN      *
+*                        JOBFLE. SET TO 2 IF NEED TO TERMINATE        *
+*                        COMMAND. SET TO 3 IF NO PORTS TO BE ADDED.   *
+*                        SET TO -1 IF NEED TO ABORT PROGRAM.          *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE ADDPRT(JOBFLE,ISTART,ITPCNT,IERR)
+
+        INTEGER IPHON(3),JOBFLE(4),PORTS(256,11),INAM(2),CITY(4),
+     X          PCTY(2),ERRCNT,ICUST(2)
+
+        COMMON/A1/PORTS
+        COMMON/ADD1/INODE,INHDAT,NTYP,IMACH,ISTATE,NHCOD,IPDAT,IZONE
+     +  ,IBILL,ICUST
+        COMMON/ADD2/INAM
+        COMMON/ADD3/CITY
+        COMMON/PASS/IPASS,ITOC
+
+        INOGO=0
+
+*       ** CHECK IF ANY PORTS TO ADD
+
+30      IF (ITPCNT.NE.0) GO TO 45
+        TYPE 35
+35      FORMAT (1X,'?? NO PORTS TO BE ADDED ??',/)
+        IERR=3
+        RETURN
+
+*       ** CHECK IF USER WANTS TO VIEW PORTS BEFORE THEY'RE ADDED
+
+45      TYPE 50
+50      FORMAT (/,1X,'* VIEW PORTS? (Y OR N): ',$)
+        ACCEPT 55,IANS
+55      FORMAT (A1)
+        IF (IANS.EQ.'N') GO TO 95
+        IF (IANS.NE.'Y') GO TO 45
+        CALL VIEW(ISTART,ITPCNT,INOGO)
+        IF (INOGO.EQ.0) GO TO 95
+        IERR=2
+        RETURN
+
+*       ** ADD PORTS TO DATA BASE
+
+95      TYPE 100
+100     FORMAT (/,5X,'----- ADDING PORTS -----')
+
+        CALL DBERR($200,IERT,IERC,0)
+        ERRCNT=0
+1400    CALL DBUPD(-1)
+        GO TO 1401
+
+
+200     CALL ERRMSG(ERRCNT,ISTOP)
+        IF (ISTOP.EQ.0) GO TO 1400
+        IERR=2
+        RETURN
+
+1401    IREC='NP'
+
+        OPEN (3,JOBFLE,RANDOUT,ERR=1420)
+        IPOS=SIZE(3)+3
+
+*       ** OPEN HPORTS FOR CHANGE RECORDS
+        CALL DBOPEN ('NOCLOSE','(ACCG1)HPORTS','PASSWORD',IPASS)
+        CALL DBSET(1)
+
+        DO 1410 I=ISTART,ITPCNT
+
+        PCTY(1)=PORTS(I,5)
+        PCTY(2)=PORTS(I,6)
+        IPHON(1)=PORTS(I,7)
+        IPHON(2)=PORTS(I,8)
+        IPHON(3)=PORTS(I,9)
+        ICUST(1)=PORTS(I,10)
+        ICUST(2)=PORTS(I,11)
+
+        CALL DBADD ('BILL',IBILL,'NODE',INODE,'NAME',INAM,'NHDAT',
+     XINHDAT,'NTYPE',NTYP,'MACHTYP',IMACH,'PORT',PORTS(I,1),'PCODE'
+     X,PORTS(I,2),'HOST',PORTS(I,3),'MODEM',PORTS(I,4),'PHONE',
+     XIPHON,'PCITY',PCTY,'PDAT',IPDAT,'NHCODE',NHCOD,
+     X'NCITY',CITY,'NSTATE',ISTATE,'ZONE',IZONE,'CUST',ICUST)
+
+1404    WRITE(3#IPOS,1405)IREC,INODE,PORTS(I,1),PORTS(I,2),IPDAT
+1405    FORMAT (A2,',',I5,',',I3,',',I2,',',I6)
+
+        IPOS=IPOS+29
+
+*       ** SET DATA BASE TO HPORTS AND ADD THE CHANGE RECORD
+        CALL DBSET(2)
+*       ** TURN ON SPECIAL 1022 ERROR HANDLING
+        CALL DBERR($1407,IERT,IERC,0)
+        ERRCNT=0
+
+*       ** ADD THE RECORD
+1406    CALL DBADD('BILL',IBILL,'NODE',INODE,'HOST',PORTS(I,3),
+     +  'NHDATE',INHDAT,'NHCODE',NHCOD,'CITY',CITY,'STATE',
+     +  ISTATE,'ZONE',IZONE,'PORT',PORTS(I,1),'PCODE',PORTS(I,2),
+     +  'PDATE',IPDAT,'TOC',ITOC)
+
+*       ** SET DATA BASE BACK TO PORTS AND GO GET NEXT RECORD
+        CALL DBSET(1)
+        GO TO 1410
+
+*       ** ADD WAS UNSUCCESSFUL. CK IF USER WANTS TO TRY AGAIN
+1407    CALL ERRMS2(IERT,IERC,ERRCNT,ISTOP)
+        IF (ISTOP.EQ.0) GO TO 1406
+
+*       ** TIME TO STOP. CLOSE HPORTS. AND SET ERROR FLAG.
+        IERR=-1
+        CALL DBCLOS
+        RETURN
+
+
+*       ** GO GET NEXT RECORD
+1410    CONTINUE
+
+        CALL DBUPD(0)
+
+        INUM=ITPCNT
+        IF (ISTART.NE.1)INUM=ITPCNT-ISTART+1
+        TYPE 1415,INUM
+1415    FORMAT (/,5X,'ADD COMPLETED. ',I4,' PORTS ADDED')
+
+*       ** CLOSE JOB FILE
+        CLOSE(3)
+
+*       ** CLOSE HPORTS
+        CALL DBSET(2)
+        CALL DBCLOS
+
+*       ** RETURN TO CALLING PROGRAM
+        RETURN
+
+*       ** UNABLE TO OPEN JOBFLE
+
+1420    TYPE 1425,(JOBFLE(I),I=1,4)
+1425    FORMAT (5X,'ERROR!! UNABLE TO OPEN ',4A5)
+        IERR=1
+        RETURN
+        END
+
+
+**********************************************************************
+*                                                                     *
+*                         SUBROUTINE: INHNUM                          *
+*                                                                     *
+*       THIS SUBROUTINE INPUTS A HOST NUMBER AND DOES A VALIDITY      *
+*       CHECK.                                                        *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL INHNUM(INODE,IHOST,NHCOD,IBILL,CITY,ISTATE,IZONE,IPORT, *
+*        IPC,IREC,IERR)                                               *
+*       WHERE THE REQUIRED INPUT IS:                                  *
+*               INODE = NODE NUMBER, SET TO 0 IF UNKNOWN              *
+*       WHERE THE RETURNED VALUES ARE:                                *
+*                IHOST = HOST NUMBER                                  *
+*                NHCOD = HOST CODE                                    *
+*                IBILL = BILLING DESIGNATOR                           *
+*                CITY  = ARRAY CONTAINING CITY NAME                   *
+*                ISTATE = 2 CHAR. STATE ABBREVIATION                  *
+*                IZONE = TIME ZONE                                    *
+*                IPORT = PORT NUMBER                                  *
+*                IPC  = PORT CODE FOR IPORT                           *
+*                IREC  = NUMBER OF RECORDS IN DATA BASE FOR THIS HOST *
+*                IERR  = ERROR FLAG. SET TO 1 IF HOST DOES NOT        *
+*                         EXIST IN DATA BASE. SET TO 2 IF HOST = 0.   *
+*                                                                     *
+***********************************************************************
+        SUBROUTINE INHNUM(INODE,IHOST,NHCOD,IBILL,CITY,ISTATE,IZONE,
+     X  IPORT,IPC,IREC,IERR)
+
+        INTEGER CITY(4),ITEMP(10)
+        IERR=0
+        IERR2=0
+
+*       ** CHECK IF NODE NUMBER IS KNOWN
+
+        IF (INODE.NE.0) GO TO 90
+
+*       ** INPUT NODE NUMBER
+
+80      IERR2=0
+        CALL INNODE(INODE,NHCOD,IBILL,CITY,ISTATE,IZONE,IPORT,IPC,
+     X  ITYP,IREC,IERR2)
+
+*       ** IF NODE NUMBER IS INVALID RE-ENTER
+
+        IF (IERR2.EQ.2) GO TO 80
+
+*       ** INPUT HOST NUMBER
+
+90      TYPE 100
+100     FORMAT (/,1X,'* ORIGHOST (C.R. TO STOP): ',$)
+        ACCEPT 115,(ITEMP(I),I=1,10)
+115     FORMAT (10A1)
+
+*       ** IF 1ST CHAR OF INPUT = 'T' ASSUME ENTRY = 'TYMSAT'
+
+        IF (ITEMP(1).NE.'T') GO TO 145
+
+*       ** INPUT SLOT NUMBER
+
+125     TYPE 126
+126     FORMAT (/,1X,'* SLOT: ',$)
+        ACCEPT 115,(ITEMP(I),I=1,10)
+
+*       ** CONVERT VALUE JUST INPUT INTO AN INTEGER
+
+        CALL INTCK(ITEMP,3,ISLOT,IERR2)
+        IF (IERR2.NE.0) GO TO 125
+
+*       ** CHECK VALIDITY OF SLOT NUMBER
+
+        IF (ISLOT.GT.0) GO TO 135
+        TYPE 130
+130     FORMAT (5X,'INVALID SLOT NUMBER')
+        GO TO 125
+
+*       ** CALCULATE HOST NUMBER FROM NODE NUMBER AND SLOT NUMBER
+
+135     IHOST=16000+(1000*ISLOT)+INODE
+
+*       ** PRINT HOST NUMBER TO TERMINAL
+
+        TYPE 140,IHOST
+140     FORMAT (/,5X,'HOST = ',I5,/)
+        GO TO 170
+
+*       ** CONVERT NON-TYMSAT HOST VALUE INTO AN INTEGER
+
+145     CALL INTCK(ITEMP,5,IHOST,IERR2)
+        IF (IERR2.NE.0) GO TO 90
+
+*       ** CHECK IF TIME TO STOP
+
+150     IF (IHOST.NE.0) GO TO 160
+        IERR=2
+        RETURN
+
+*       ** CHECK IF LEGAL HOST NUMBER
+
+160     IF (IHOST.GT.0) GO TO 170
+        TYPE 165
+165     FORMAT (5X,'ERROR!! INVALID HOST NUMBER')
+        GO TO 90
+
+*       ** CHECK IF HOST EXISTS IN DATA BASE
+
+170     CALL DBFIND('HOST','EQ',IHOST)
+        CALL DBNREC(IREC)
+        IF (IREC.EQ.0) GO TO 180
+
+*       ** NOW CK IF HOST IS ON CORRECT NODE
+
+        CALL DBFIND('NODE','EQ',INODE,'AND','HOST','EQ',IHOST)
+        CALL DBNREC(IREC)
+        CALL DBGREC($190)
+        CALL DBVAL('NHCODE',NHCOD,'NCITY',CITY,'NSTATE',ISTATE
+     X,'PORT',IPORT,'PCODE',IPC,'ZONE',IZONE,'BILL',IBILL)
+        RETURN
+
+*       ** HOST DOES NOT EXIST
+
+180     IERR=1
+        RETURN
+
+*       ** HOST IS NOT ON GIVEN NODE
+
+190     IERR=3
+        RETURN
+        END
+
+***********************************************************************
+*                                                                     *
+*                       SUBROUTINE: INHOST                            *
+*                                                                     *
+*       THIS SUBROUTINE INPUTS ALL INFORMATION FOR A HOST AND         *
+*       INFORMATION ON ALL ASSOCIATED PORTS.                          *
+*       THE CALLING SEQUENCE IS:                                      *
+*       CALL INHOST(IHOST,IHFLAG,MODM,MAXMOD,NUMMOD,PCOD,MAXPC,       *
+*                   NUMPC)                                            *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                IHFLAG = HOST FLAG. IF SET INDICATES THAT AT LEAST   *
+*                         ONE HOST HAS ALREADY BEEN INPUT FOR THIS    *
+*                         NODE.                                       *
+*                MODM   = ARRAY CONTAINING VALID MODEM TYPES          *
+*                MAXMOD = MAX. NUMBER OF MODEM PROGRAM ALLOWS         *
+*                NUMMOD = NUMBER OF VALID MODEM TYPES IN ARRAY: MODM  *
+*                PCOD   = ARRAY CONTAINING VALID PORT CODES           *
+*                MAXPC  = MAX. NUMBER OF PORT CODES PROGRAM ALLOWS    *
+*                NUMPC  = NUMBER OF VALID PORT CODES IN ARRAY: PCOD   *
+*       WHERE THE RETURNED VALUES ARE:                                *
+*                IHOST = VALID HOST NUMBER                            *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE INHOST(IHOST,IHFLAG,MODM,MAXMOD,NUMMOD,PCOD,
+     X  MAXPC,NUMPC,ITPCNT,IOPT,IOPT2,IMAXPT,IERR)
+
+        INTEGER PORTS(256,11),MODM(MAXMOD),PCOD(MAXPC),CITY(4),INAM(2),
+     X          ERRCNT
+
+        COMMON /A1/PORTS
+        COMMON/ADD1/INODE,INHDAT,NTYP,IMACH,ISTATE,NHCOD,IPDAT,IZONE
+     +  ,IBILL,ICUST
+        COMMON/ADD2/INAM
+        COMMON/ADD3/CITY
+        COMMON/INC1/IPT1,ISTOP
+
+*       ** BRANCH TO APPROPRIATE ENTRY POINT
+
+        IF (IOPT2.EQ.'I') GO TO 1270
+
+*       ** IF ADDING A HOST YOU DON'T KNOW THE NODE NUMBER SO SET 
+*          IT TO ZERO
+
+1200    IF (IOPT.EQ.'H') INODE=0
+
+*       ** INPUT HOST NUMBER
+
+        CALL INHNUM(INODE,IHOST,NHCOD,IBILL,CITY,ISTATE,IZONE,IPORT,
+     X  IPC,IREC,IERR2)
+        IF (IERR2.EQ.0) GO TO 1230
+        IF (IERR2.EQ.1.OR.IERR2.EQ.3) GO TO 1210
+        IF (IERR2.EQ.2) GO TO 1220
+        IERR2=0
+        GO TO 1200
+
+*       ** HOST DOESN'T EXIST (HAS NOT BEEN DECLARED)
+
+1210    TYPE 1215
+1215    FORMAT (5X,'HOST HAS NOT BEEN DECLARED!!',/
+     X,         5X,'CALL DATA BASE ADMINISTRATOR')
+        GO TO 1200
+
+*       ** STOP? IF ADDING ISIS NODE MUST HAVE AT LEAST ONE HOST
+
+1220    IF (IOPT.EQ.'N'.AND.IHFLAG.EQ.0) GO TO 1222
+        IERR=1
+        RETURN
+
+1222    TYPE 1225
+1225    FORMAT (5X,'MUST ENTER AT LEAST ONE ORIGHOST FOR THIS NODE')
+        GO TO 1200
+
+*       ** HOST MUST HAVE ONLY 1 RECORD IN DATA BASE
+
+1230    IF (IREC.EQ.1) GO TO 1240
+        TYPE 1235
+1235    FORMAT (5X,'ERROR!! HOST ALREADY EXISTS ON THIS NODE')
+        GO TO 1200
+
+*       ** CHECK THAT THIS ONE RECORD IS A DECLARE RECORD.
+
+1240    IF (IPORT.EQ.99.AND.IPC.EQ.99) GO TO 1255
+        IF (IPORT.EQ.88.AND.IPC.EQ.88) GO TO 1245
+        IF (IPORT.EQ.89) GO TO 1248
+        TYPE 1242,IPORT,IPC
+1242    FORMAT (5X,'ERROR!! BAD DECLARATION!!',/,
+     X          5X,'PORT = ',I3,5X,'PORT CODE = ',I2,/,
+     X          5X,'CALL DATA BASE ADMINISTRATOR')
+        GO TO 1200
+
+*       ** THIS HOST IS AN INTERFACE
+
+1245    TYPE 1247
+1247    FORMAT (5X,'THIS HOST HAS BEEN DECLARED AS AN INTERFACE',/,
+     X          5X,'NO FURTHER ACTION IS ALLOWED')
+        GO TO 1250
+
+*       ** THIS HOST IS AN SNI
+
+1248    TYPE 1249
+1249    FORMAT (5X,'THIS HOST HAS BEEN DECLARED AS A SNI.',/,
+     +          5X,'NO FURTHER ACTION IS ALLOWED.',/)
+
+
+*       ** IF THIS IS 1ST HOST TO BE ADDED ON THIS NODE THEN MUST
+*          PROVIDE NODE INFORMATION.
+
+1250    IF (IHFLAG.NE.0) GO TO 1200
+        CALL DBERR($1410,IERT,IERC,0)
+        ERRCNT=0
+1405    CALL DBCHNG('NAME',INAM,'NTYPE',NTYP,'MACHTYP',IMACH)
+        GO TO 1415
+
+1410    CALL ERRMSG(ERRCNT,ISTOP)
+        IF (ISTOP.EQ.0) GO TO 1405
+        IERR=1
+        RETURN
+
+1415    IHFLAG=1
+        GO TO 1200
+
+
+*       ** IF CALL CAME FROM ADD NODE COMMAND GET THE CITY AND STATE
+
+
+1255    IF (IOPT.EQ.'H') GO TO 1297
+        CALL DBVAL('NCITY',CITY,'NSTATE',ISTATE)
+        GO TO 1310
+
+*       ** CALL CAME FROM ADD HOST. GET THE NODE NAME,MACHINE TYPE,
+*          AND NODE TYPE
+
+1297    CALL DBVAL('NAME',INAM,'NTYPE',NTYP,'MACHTYP',IMACH)
+
+*       ** CHECK THAT NODE HAS BEEN ADDED
+
+        CALL DBFIND('NODE','EQ',INODE,'AND','PORT','NE',99)
+        CALL DBNREC(IREC)
+        IF (IREC.NE.0) GO TO 1310
+        TYPE 1298
+1298    FORMAT (5X,'NODE MUST BE ADDED FIRST!!.',/,
+     X          5X,'THE ADD-NODE COMMAND WILL PROMPT FOR HOSTS.')
+        IERR=1
+        RETURN
+
+*       ** INIT ARRAY: PORTS AND SOME VARIABLES
+
+1310    DO 1260 I=1,256
+        DO 1259 J=1,11
+        IF (J.NE.1) GO TO 1256
+        PORTS(I,J)=-1
+        GO TO 1259
+
+1256    IF (J.GE.4) GO TO 1257
+        PORTS(I,J)=0
+        GO TO 1259
+1257    PORTS(I,J)='     '
+1259    CONTINUE
+1260    CONTINUE
+
+        IPT1=1
+        ISTOP=0
+        ITPCNT=0
+        IMAXPT=256
+
+*       ** INPUT 1ST SET OF PORTS
+
+1270    IOPT3=1155
+        CALL INPRT(IPT1,IOPT3,IMAXPT,IPT2,ITPCNT,IPCNT,INDFLG,
+     X  ISTOP)
+
+*       ** CHECK TO SEE THAT EACH PORT INPUT IS UNIQUE ON THIS NODE
+
+        DO 1315 I=1,ITPCNT
+        CALL DBFIND('NODE','EQ',INODE,'AND','PORT','EQ',PORTS(I,1))
+        CALL DBGREC($1315)
+        CALL DBVAL('HOST',IHOST3)
+        TYPE 1314,PORTS(I,1),INODE,IHOST3
+1314    FORMAT (5X,'PORT ',I3,' HAS ALREADY BEEN DECLARED ON NODE ',I5,/
+     X,         5X,'IT IS ASSOCIATED WITH HOST ',I5,/
+     X,         5X,'PLEASE REENTER LAST SET OF PORTS')
+        GO TO 1320
+1315    CONTINUE
+
+*       ** CHECK IF MAX NUM. OF PORTS HAS BEEN EXCEEDED
+
+        IF (ITPCNT.LT.IMAXPT) GO TO 1275
+        IF (ITPCNT.EQ.IMAXPT) GO TO 1277
+
+*       ** MAX HAS BEEN EXCEEDED
+
+        TYPE 1272,ITPCNT,IMAXPT
+1272    FORMAT (5X,'ERROR!! ',I4,' PORTS HAVE BEEN ENTERED',/
+     X          12X,'ONLY ',I4,' ARE ALLOWED.',/
+     X          12X,'USE ADD PORT COMMAND IF NEED TO ADD MORE',/
+     X          12X,'PORTS TO THIS HOST.',/
+     X          12X,'REENTER LAST SET OF PORTS')
+
+*       ** ZERO OUT PORT NUMBER IN PORTS ARRAY FOR LAST SET.
+
+1320    DO 1273 I=IPT1,IPT2
+        PORTS(I,1)=-1
+1273    CONTINUE
+
+*       ** ADJUST TOTAL PORT COUNT
+
+        ITPCNT=ITPCNT-IPCNT
+        GO TO 1270
+
+*       ** CHECK IF TIME TO STOP. IF NOT GO INPUT ANOTHER SET OF 
+*          PORTS.
+
+1275    IF (ISTOP.NE.0) GO TO 1280
+
+        CALL SETPRT(IPT1,IPT2,MODM,MAXMOD,NUMMOD,PCOD,MAXPC,NUMPC,IHOST)
+        GO TO 1270
+
+*       ** GET INFO FOR LAST SET OF PORTS AND GO ADD ALL PORTS TO 
+*          DATA BASE.
+
+1277    CALL SETPRT(IPT1,IPT2,MODM,MAXMOD,NUMMOD,PCOD,MAXPC,NUMPC,IHOST)
+
+*       ** GET DECLARE RECORD FOR THIS NODE AND DELETE IT
+
+1280    RETURN
+        END
+
+
+***********************************************************************
+*                                                                     *
+*                         SUBROUTINE: INNCOD                          *
+*                                                                     *
+*       THIS SUBROUTINE INPUTS THE NODE-HOST CODE AND CHECKS          *
+*       FOR VALIDITY.                                                 *
+*                                                                     *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL INNCOD(NHCOD,NCOD,MAXNC,NUMNC)                          *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                NCOD  = ARRAY CONTAINING VALID NODE-HOST CODES       *
+*                MAXNC = MAX. NUMBER OF NODE-HOST CODES PROGRAM       *
+*                         ALLOWS.                                     *
+*                NUMNC = NUMBER OF VALID NODE-HOST CODES IN NCOD      *
+*       WHERE THE RETURNED VALUE IS:                                  *
+*                NHCOD = VALID NODE-HOST CODE                         *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE INNCOD(NHCOD,NCOD,MAXNC,NUMNC)
+
+        INTEGER DOC(4),NCOD(MAXNC),ITEMP(10)
+
+        COMMON/A3/DOC
+
+*       ** INPUT NODE-HOST CODE
+
+100     TYPE 105
+105     FORMAT (/,1X,'* NODE-HOST CODE: ',$)
+        ACCEPT 110,(ITEMP(I),I=1,10)
+110     FORMAT (10A1)
+
+        IF (ITEMP(1).EQ.'?') GO TO 175
+
+*       ** CONVERT VALUE JUST INPUT INTO AN INTEGER NUMBER
+
+        CALL INTCK(ITEMP,2,NHCOD,IERR)
+        IF (IERR.NE.0) GO TO 100
+
+*       ** CHECK FOR VALIDITY
+
+        DO 150 I=1,NUMNC
+        IF (NHCOD.EQ.NCOD(I))GO TO 180
+150     CONTINUE
+
+*       ** ERROR
+
+155     TYPE 170
+170     FORMAT (5X,'ERROR!! TYPE ? FOR HELP. ')
+        GO TO 100
+
+*       ** HELP
+
+175     CALL MINFO('!NCOD',DOC)
+        GO TO 100
+
+*       ** FINISHED RETURN
+
+180     RETURN
+        END
+
+***********************************************************************
+*                                                                     *
+*                         SUBROUTINE: OUTPUT                          *
+*                                                                     *
+*       THIS SUBROUTINE INPUTS AN OUTPUT FILE NAME. IF NAME IS 'T'    *
+*       OUTPUT IS TO THE TERMINAL.                                     *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL OUTPUT(OUTFLE,ITOUT)                                    *
+*       WHERE THE RETURNED VALUES ARE:                                *
+*                OUTFLE = ARRAY CONTAINING OUTPUT FILE NAME           *
+*                ITOUT = FLAG WHICH IS SET IF OUTPUT IS TO            *
+*                         THE TERMINAL.                               *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE OUTPUT(OUTFLE,ITOUT)
+
+        INTEGER OUTFLE(4)
+
+*       ** INPUT OUTPUT DEVICE
+
+7100    ITOUT=0
+        TYPE 7110
+7110    FORMAT (1X,'* OUTPUT TO: ',$)
+        ACCEPT 7115,(OUTFLE(I),I=1,4)
+7115    FORMAT (4A5)
+
+*       ** CHECK IF OUTPUT IS TO TERMINAL
+
+        IF (OUTFLE(1).EQ.' ') GO TO 7100
+        IF (OUTFLE(1).NE.'T') GO TO 7120
+        ITOUT=1
+7120    RETURN
+
+        END
+
+**********************************************************************
+*                                                                     *
+*                         SUBROUTINE: OUTLST                          *
+*                                                                     *
+*       THIS SUBROUTINE OUTPUTS THE NODE, HOST, AND PORT INFORMATION  *
+*       REQUESTED DURING THE 'LIST' COMMAND.                          *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL OUTLST(OUTFLE,ITOUT,ILOL,LSTTYP,IERR)                   *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                OUTFLE = ARRAY CONTAINING OUTPUT FILE NAME           *
+*                ITOUT  = FLAG WHICH IS SET IF OUTPUT IS TO THE       *
+*                         TERMINAL.                                   *
+*                ILOL   = LENGTH-OF-LINE                              *
+*                LSTTYP = LISTING TYPE                                *
+*                                                                     *
+*************************************************************************
+
+        SUBROUTINE OUTLST(OUTFLE,ITOUT,ILOL,LSTTYP,IERR)
+
+        INTEGER OUTFLE(4),CURNOD,CURHST,INAM(2),CITY(4),IPHON(3),
+     XCOMENT(4),ICITY(2),IDATE(2),ICUST(2),PILOT(3)
+
+        CALL ONINT($300)
+
+        CURHST=-1
+        CURNOD=0
+        IERR=0
+
+
+*       ** GET THE DATE AND TIME
+        CALL DATE(IDATE)
+        CALL TIME(ITIME)
+
+        IFLE=21
+        IF (ITOUT.EQ.0) GO TO 100
+        IFLE=5
+        GO TO 105
+
+100     OPEN (IFLE,OUTFLE,OUTPUT,ERR=250)
+        TYPE 101
+101     FORMAT (5X,'OUTPUT FILE MUST BE TYPED OR SPOOLED WITH THE /FOR',
+     X  ' OPTION')
+
+*       ** GET A RECORD
+
+105     CALL DBGREC($200)
+        CALL DBVAL('NODE',INODE,'NAME',INAM,'HOST',IHOST
+     X,'NHCODE',NHCOD,'NHDAT',NHDAT,'NCITY',CITY,'NSTATE',ISTATE,
+     X'NTYPE',NTYP,'MACHTYP',IMACH,'PORT',IPORT,'PCODE',IPC,'MODEM',
+     XIMODM,'PHONE',IPHON,'COMMENT',COMENT,'PCITY',ICITY,'PDAT'
+     X,IPDAT,'ZONE',IZONE,'BILL',IBILL,'BILL',IBILL,'CUST',ICUST
+     X,'HUNT',IHUNT,'PILOT',PILOT,'DE',IDE,'DC',IDC)
+
+*       ** CONVERT THE DATE-ENTERED AND DATE-CHANGED VALUES FROM
+*          INTERNAL 1022 FORMAT
+
+        IEMO=0
+        IEDAY=0
+        IEYR=0
+        IF(IDE.EQ.0) GO TO 110
+        CALL DBNDAT(IDE,IEMO,IEDAY,IEYR)
+        IEYR=IEYR-1900
+
+110     ICMO=0
+        ICDAY=0
+        ICYR=0
+        IF (IDC.EQ.0) GO TO 112
+        CALL DBNDAT(IDC,ICMO,ICDAY,ICYR)
+        ICYR=ICYR-1900
+
+*       ** CHECK IF NODE HAS CHANGED. IF SO OUTPUT NODE INFORMATION
+
+112     IF (INODE.EQ.CURNOD) GO TO 125
+        CURNOD=INODE
+        CURHST=-1
+        WRITE (IFLE,115)
+115     FORMAT ('1')
+
+*       ** OUTPUT DATE AND TIME
+        WRITE(IFLE,116)IDATE,ITIME
+116     FORMAT(25X,2A5,5X,A5,//)
+
+        WRITE(IFLE,120)INODE,(INAM(I),I=1,2),NTYP,IMACH
+120     FORMAT (1X,'NODE',3X,'NAME',6X
+     X,'TYPE',5X,'MACHINE',/,1X,71('-'),/,1X,I5,3X,A5,A1,4X
+     X,A3,6X,A5)
+
+*       ** CHECK IF HOST HAS CHANGED. IF SO OUTPUT HOST INFORMATION
+*          AND PORT HEADINGS.
+
+125     IF (IHOST.EQ.CURHST) GO TO 140
+        CURHST=IHOST
+        WRITE(IFLE,130)IHOST,NHCOD,IBILL,(CITY(I),I=1,4),ISTATE,IZONE,
+     +  NHDAT
+130     FORMAT (/////,7X,'HOST',2X,'NHCODE',2X,'BILL',3X,'CITY',19X,
+     X'STATE',2X,'ZONE',2X,'EFF.DATE',/,6X,66('-'),/,6X,I5,4X,I2,4X,
+     XA5,2X,4A5,3X,A3,5X,A2,4X,I6)
+
+*       ** OUTPUT PROPER PORT HEADER DEPENDING ON LENGTH-OF-LINE AND TYPE OF LISTING
+        IF (ILOL.EQ.71.AND.LSTTYP.EQ.'B') WRITE(IFLE,135)
+        IF (ILOL.EQ.71.AND.LSTTYP.EQ.'V') WRITE(IFLE,136)
+        IF (ILOL.NE.71)WRITE(IFLE,137)
+135     FORMAT  (//,7X,'PORT',1X,'PCODE',1X,'MODEM',1X,'PHONE',10X,
+     X  'COMMENT',11X,'CITY',3X,'EFF.DATE',/)
+136     FORMAT (//,7X,'PORT',1X,'PCODE',1X,'MODEM',1X,'PHONE',10X,
+     X'COMMENT',12X,'CITY',5X,'EFF.DATE',/,18X,'=====',1X,'=====',
+     X10X,8('='),10X,7('='),3X,8('='),/,18X,'HUNT',2X,'PILOT',10X,
+     X'CUSTOMER',12X,'MAP',7X,'MAP',/,57X,'ENTERED',3X,'CHANGED',/)
+137     FORMAT (//,7X,'PORT',1X,'PCODE',1X,'MODEM',1X,'HUNT',1X,
+     X  'PILOT',11X,'PHONE',11X,'COMMENT',11X,'CUSTOMER',4X,'CITY',
+     X  7X,'EFF.DATE',4X,'MAP',7X,'MAP',/,112X,'ENTERED',3X,
+     X  'CHANGED',/,7X,122('-'),/)
+
+*       ** OUTPUT PORT INFO
+
+140     CALL OCTCK(IPORT,IERR2)
+        IF (IERR2.NE.0) GO TO 170
+
+*       ** PORT IS OCTAL. GET THE EQUIVALENT DECIMAL PORT NUMBER
+145     CALL OCTDEC(IPORT,IDEC)
+
+*       ** IF LENGTH OF LINE = 71, STAY HERE
+150     IF (ILOL.NE.71) GO TO 155
+        IF (LSTTYP.EQ.'V') WRITE(IFLE,152)IDEC,IPORT,IPC,IMODM,
+     X  IPHON,(COMENT(J),J=1,4),(ICITY(J),J=1,2),IPDAT,IHUNT,
+     X  (PILOT(J),J=1,3),(ICUST(J),J=1,2),IEMO,IEDAY,IEYR,ICMO,ICDAY,
+     X  ICYR
+        IF (LSTTYP.EQ.'B') WRITE(IFLE,153)IDEC,IPORT,IPC,IMODM,
+     X  IPHON,COMENT,ICITY,IPDAT
+152     FORMAT  (1X,'(',I3,')',2X,I3,3X,I2,2X,A5,1X,2A5,A4,1X,3A5,A1,
+     X2X,A5,A1,5X,I6,/,18X,57('='),/,18X,I3,3X,2A5,A4,1X,2A5,7X,I2,
+     X'/',I2,'/',I2,3X,I2,'/',I2,'/',I2,/)
+153     FORMAT  (1X,'(',I3,')',2X,I3,3X,I2,2X,A5,1X,2A5,A4,1X,3A5,A1,
+     X  2X,A5,A1,2X,I6)
+
+*       ** PROCESS NEXT RECORD
+        GO TO 105
+
+*       ** LENGTH-OF-LINE NE 71
+155     WRITE(IFLE,157)IDEC,IPORT,IPC,IMODM,IHUNT,PILOT,IPHON,
+     X  COMENT,ICUST,ICITY,IPDAT,IEMO,IEDAY,IEYR,ICMO,ICDAY,ICYR
+157     FORMAT (1X,'(',I3,')',2X,I3,3X,I2,2X,A5,1X,I3,2X,2A5,A4,2X,
+     X  2A5,A4,2X,3A5,A1,2X,2A5,2X,A5,A1,6X,I6,2(2X,I2,'/',I2,'/',I2))
+
+*       ** GO PROCESS NEXT RECORD
+        GO TO 105
+
+
+*       **PORT IS NOT OCTAL. DON'T OUTPUT DECIAMAL EQUIVALENT
+170     IF (ILOL.EQ.71.AND.LSTTYP.EQ.'B') WRITE(IFLE,175)IPORT,IPC,
+     X  IMODM,IPHON,COMENT,ICITY,IPDAT
+        IF (ILOL.EQ.71.AND.LSTTYP.EQ.'V') WRITE(IFLE,176)IPORT,IPC,
+     X  IMODM,IPHON,COMENT,ICITY,IPDAT,IHUNT,PILOT,ICUST,IEMO,IEDAY,
+     X  IEYR,ICMO,ICDAY,ICYR
+        IF (ILOL.NE.71) WRITE(IFLE,177)IPORT,IPC,IMODM,IHUNT,PILOT,
+     X  IPHON,COMENT,ICUST,ICITY,IPDAT,IEMO,IEDAY,
+     X  IEYR,ICMO,ICDAY,ICYR
+176     FORMAT  (8X,I3,3X,I2,2X,A5,1X,2A5,A4,1X,3A5,A1,
+     X2X,A5,A1,5X,I6,/,18X,57('='),/,18X,I3,3X,2A5,A4,1X,2A5,7X,I2,
+     X'/',I2,'/',I2,3X,I2,'/',I2,'/',I2,/)
+175     FORMAT  (8X,I3,3X,I2,2X,A5,1X,2A5,A4,1X,3A5,A1,
+     X  2X,A5,A1,2X,I6)
+177     FORMAT (8X,I3,3X,I2,2X,A5,1X,I3,2X,2A5,A4,2X,
+     X  2A5,A4,2X,3A5,A1,2X,2A5,2X,A5,A1,6X,I6,2(2X,I2,'/',I2,'/',I2))
+        GO TO 105
+
+*       ** FINISHED. IF OUTPUT IS TO  A FILE , CLOSE FILE
+
+200     IF (ITOUT.EQ.0) CLOSE(21)
+        RETURN
+
+
+*       ** UNABLE TO OPEN OUTPUT FILE
+
+250     TYPE 255,(OUTFLE(I),I=1,4)
+255     FORMAT (5X,'UNABLE TO OPEN: ',4A5)
+        IERR=1
+        RETURN
+
+*       ** INTERRUPTED
+
+300     IERR=2
+        RETURN
+        END
+
+***********************************************************************
+*                                                                     *
+*                         SUBROUTINE: PRTNUM                          *
+*                                                                     *
+*       THIS SUBROUTINE FINDS THE MAXIMUM NUMBER OF PORTS ALLOWED     *
+*       ON A GIVEN NODE TYPE.                                         *
+*       THE CALLING SEQUENCE IS:                 *
+*        CALL PRTNUM(ITYPE,INUM,NUMTYP,TYPE,MAXTYP,IERR)              *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                ITYPE = NODE TYPE                                    *
+*                NUMTYP = NUMBER OF VALID NODE TYPES                  *
+*                TYPE  = ARRAY CONTAINING VALID NODE TYPES            *
+*                MAXTYP = MAX. NUMBER OF NODE TYPES PROGRAM ALLOWS    *
+*       WHERE THE RETURNED VALUES ARE:                                *
+*                INUM  = MAX. NUMBER OF PORTS ALLOWED ON 'ITYPE'      *
+*                IERR = ERROR FLAG. SET IF INVALID NODE TYPE          *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE PRTNUM(ITYPE,INUM,NUMTYP,TYPE,MAXTYP,IERR)
+
+        INTEGER TYPE(MAXTYP,2)
+
+        DO 100 I=1,NUMTYP
+        INUM=TYPE(I,2)
+        IF (ITYPE.EQ.TYPE(I,1)) RETURN
+100     CONTINUE
+
+*       ** ERROR. INVALID NODE TYPE
+
+        TYPE 110,ITYPE
+110     FORMAT (5X,'UNRECOGNIZABLE NODE TYPE')
+        IERR=1
+        RETURN
+        END
+
+***********************************************************************
+*                                                                     *
+*                         SUBROUTINE: GETPRT                          *
+*                                                                     *
+*       THIS SUBROUTINE GETS PORTS ALREADY EXISING ON A NODE OR HOST  *
+*       AND PUTS THE PORT NUMBERS INTO THE FIRST WORD OF EACH         *
+*       ELEMENT IN ARRAY: PORTS.                                       *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL GETPRT(INCRSE)                                          *
+*       WHERE THE RETURNED VALUE IS:             *
+*                INCRSE = TOTAL PORT COUNT (NUMBER OF PORTS PLACED    *
+*                         IN ARRAY: PORTS)                            *
+***********************************************************************
+
+        SUBROUTINE GETPRT(INCRSE)
+
+        INTEGER PORTS(256,11)
+
+        COMMON/A1/PORTS
+
+*       ** SORT THE SELECTED PORT RECORDS BY PORT
+
+        INCRSE=1
+        CALL DBEXEC('SORT KEY PORT')
+
+*       ** GET EACH PORT NUMBER AND PUT INTO ARRAY: PORTS
+
+100     CALL DBGREC($150)
+        CALL DBVAL('PORT',IPORT)
+        IF (IPORT.EQ.98) GO TO 100
+        PORTS(INCRSE,1)=IPORT
+        INCRSE=INCRSE+1
+        GO TO 100
+
+*       ** FINISHED. RETURN
+
+150     INCRSE=INCRSE-1
+        RETURN
+        END
+
+***********************************************************************
+*                                                                     *
+*                         SUBROUTINE: INIT                            *
+*                                                                     *
+*       THIS SUBROUTINE INITIALIZES ARRAY: PORTS                      *
+*                                                                     *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL INIT(IERR)                                              *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE INIT(IERR)
+
+        INTEGER PORTS(256,11)
+
+        COMMON/A1/PORTS
+
+*       ** INIT ARRAY: PORTS 
+
+1160    DO 1163 I=1,256
+        DO 1162 J=1,8
+        IF (J.NE.1) GO TO 1166
+        PORTS(I,J)=-1
+        GO TO 1162
+
+1166    IF (J.GE.4) GO TO 1161
+        PORTS(I,J)=0
+        GO TO 1162
+1161    PORTS(I,J)='     '
+1162    CONTINUE
+1163    CONTINUE
+
+        RETURN
+        END
+
+***********************************************************************
+*                                                                     *
+*                         SUBROUTINE: CKHST                           *
+*                                                                     *
+*       THIS SUBROUTINE CHECKS THROUG ALL PORTS CONTAINED IN THE      *
+*       ARRAYA: PORTS  (1) TO SEE THAT THEY EXIST IN THE DATA         *
+*       BASE AND (2) TO SEE THAT THEY ALL ARE ASSOCIATED WITH THE     *
+*       SAME HOST.                                                    *
+*                                                                     *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL CKHST(INODE,ITPCNT,IERR)                                *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                INODE = NODE PORTS ARE ON                            *
+*                ITPCNT = TOTAL NUMBER OF PORTS IN ARRAY: PORTS       *
+*       WHERE THE RETURNED VALUE IS:                                  *
+*                IERR = ERROR FALG. SET IF EITHER OF TWO CONDITIONS   *
+*                       ABOVE ARE NOT MET.                            *
+*                                                                     *
+****************************************************************8******
+
+        SUBROUTINE CKHST(INODE,ITPCNT,CURHST,IERR)
+
+        INTEGER PORTS(256,11),CURHST
+
+        COMMON/A1/PORTS
+        IERR=0
+
+
+*       ** GET HOST FOR FIRST PORT
+
+        I=1
+        CALL DBFIND('NODE','EQ',INODE,'AND','PORT','EQ',PORTS(1,1))
+        CALL DBGREC($110)
+        CALL DBVAL('HOST',CURHST)
+        IF (ITPCNT.EQ.1) RETURN
+
+*       ** CHECK REST OF PORTS
+
+        DO 100 I=2,ITPCNT
+        CALL DBFIND('NODE','EQ',INODE,'AND','PORT','EQ',PORTS(I,1))
+        CALL DBGREC($110)
+        CALL DBVAL('HOST',IHOST)
+        IF (CURHST.NE.IHOST) GO TO 120
+100     CONTINUE
+
+*       ** FINISHED.  RETURN
+
+        RETURN
+
+*       ** PORT NOT IN DATA BASE
+
+110     TYPE 111,PORTS(I,1)
+111     FORMAT (5X,'PORT ',I3,' NOT IN DATA BASE',/)
+        IERR=1
+        RETURN
+
+*       ** PORTS NOT ON SAME HOST
+
+120     TYPE 121
+121     FORMAT (5X,'PORTS INVOLVED IN SWAP MUST BE ASSOCIATED',/,
+     X          5X,'WITH SAME HOST',/)
+        IERR=1
+        RETURN
+        END
+
+************************************************************************
+*                                                                     *
+*                         SUBROUTINE: INSTAT                          *
+*                                                                     *
+*       THIS SUBROUTINE INPUTS THE STATE OR COUNTRY AND CHECKS FOR    *
+*       VALIDITY OF THE VALUES INPUT.                                 *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL INSTAT(ISTATE,NUMSTA,STAT,MAXSTA,NUMCTR,CTRY,MAXCTR,    *
+*                   INTFLG)                                           *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                NUMSTA = NUMBER OF VALID STATE ABBREVIATIONS IN      *
+*                         ARRAY: STAT                                 *
+*                STAT    = ARRAY CONTAINING VALID STATE ABBREVIATIONS *
+*                MAXSTA = MAX. NUMBER OF STATE ABBREVIATIONS PROGRAM  *
+*                         ALLOWS.                                     *
+*                NUMCTR = NUMBER OF VALID COUNTRY ABBREVIATIONS IN    *
+*                         ARRAY: CTRY.                                *
+*                CTRY   = ARRAY CONTAINING VALID COUNTRY ABBREVAITIONS*
+*                MAXCTR = MAX. NUMBER OF COUNTRY ABBREVAITIONS        *
+*                         PROGRAM WILL ALLOW.                         *
+*       WHERE RETURNED VALUES ARE:                                    *
+*                ISTATE  = VALID STATE OR COUNTRY FOR THIS NODE       *
+*                INTFLG = FLAG. SET TO 1 IF NODE IS INTERNATIONAL     *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE INSTAT(ISTATE,NUMSTA,STAT,MAXSTA,NUMCTR,CTRY,MAXCTR,
+     X  INTFLG)
+
+        INTEGER STAT(MAXSTA),DOC(4),CTRY(MAXCTR)
+
+        COMMON/A3/DOC
+
+        INTFLG=0
+
+*       ** CHECK IF THIS AN INTERNATIONAL NODE OR HOST
+
+80      TYPE 85
+85      FORMAT (/,1X,'* INTERNATIONAL ?',
+     X          /,1X,'  (ALASKA AND HAWAII ARE)',
+     X          /,1X,'  (MEXICO AND CANADA ARE)',
+     X          //,1X,'  YES OR NO? ',$)
+        ACCEPT 87,IANS
+87      FORMAT (A3)
+
+*       ** CHECK VALIDTIY OF RESPONSE
+
+        IF (IANS.EQ.'NO') GO TO 200
+        IF (IANS.EQ.'YES') GO TO 100
+
+        TYPE 90
+90      FORMAT (5X,'MUST ENTER EITHER A "YES" OR A "NO"')
+        GO TO 80
+
+*       ** INTERNATIONAL: INPUT A COUNTRY
+
+100     TYPE 110
+110     FORMAT (/,1X,'* COUNTRY ABBREVIATION: ',$)
+        ACCEPT 120,ISTATE
+120     FORMAT (A3)
+*       ** HAVE INPUT A COUNTRY.  CHECK FOR VALIDITY.
+
+        IF (ISTATE.EQ.'?') GO TO 140
+
+        DO 130 I=1,NUMCTR
+        IF (ISTATE.EQ.CTRY(I)) GO TO 137
+130     CONTINUE
+
+        TYPE 135
+135     FORMAT (5X,'ERROR!! TYPE "?" FOR HELP')
+        GO TO 100
+
+*       ** SET INTERNATIONAL FLAG
+
+137     INTFLG=1
+        RETURN
+
+*       ** HELP
+
+140     CALL MINFO('!CTRY',DOC)
+        GO TO 100
+
+
+*       ** NOT INTERNATIONAL: INPUT STATE
+
+200     TYPE 210
+210     FORMAT (/,1X,'* STATE ABBREVIATION: ',$)
+        ACCEPT 120,ISTATE
+
+*       ** HAVE INPUT A STATE.  CHECK FOR VALIDITY.
+
+        IF (ISTATE.EQ.'?') GO TO 240
+
+        DO 230 I=1,NUMSTA
+        IF (ISTATE.EQ.STAT(I)) RETURN
+230     CONTINUE
+
+        TYPE 135
+        GO TO 200
+
+
+*       ** HELP
+
+240     CALL MINFO('!STAT',DOC)
+        GO TO 200
+
+        END
+
+
+***********************************************************************
+*                                                                     *
+*                         SUBROUTINE: INCITY                          *
+*                                                                     *
+*       THIS SUBROUTINE INPUT THE NODE/HOST CITY NAME AND CHECKS FOR  *
+*       VALIDITY.                                                               *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL INTYP(CITY,NUMCIT,CITIES,MAXCIT)                        *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                NUMCIT = NUMBER OF VALID CITY NAMES IN ARRAY: CITIES *
+*                CITIES = ARRAY CONTAINING VALID CITY NAMES           *
+*                MAXCIT = MAX. NUMBER OF CITY NAMES PROGRAM ALLOWS    *
+*       WHERE THE RETURNED VALUE IS:                                  *
+*                CITY   = VALID CITY NAME                             *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE INCITY(CITY,NUMCIT,CITIES,MAXCIT)
+
+        INTEGER CITIES(MAXCIT,4),CITY(4),DOC(4)
+
+        COMMON/A3/DOC
+
+
+*       ** INPUT CITY NAME
+
+1025    TYPE 1030
+1030    FORMAT (/,1X,'* CITY  (MAX. 20 CHARS.): ',$)
+        ACCEPT 1035,CITY
+1035    FORMAT (4A5)
+        IF (CITY(1).EQ.'?') GO TO 1045
+
+*       ** CHECK FOR VALID CITY NAME
+
+        DO 1040 I=1,NUMCIT
+        IF (CITY(1).EQ.CITIES(I,1).AND.CITY(2).EQ.CITIES(I,2).AND.
+     +      CITY(3).EQ.CITIES(I,3).AND.CITY(4).EQ.CITIES(I,4)) 
+     +      GO TO 1050
+1040    CONTINUE
+
+        TYPE 1041
+1041    FORMAT (5X,'TYPE "?" FOR HELP')
+        GO TO 1025
+
+*       ** HELP
+
+1045    CALL MINFO('!CITY','(ACCG1)CITY.DOC')
+        GO TO 1025
+
+*       ** END OF ROUTINE
+
+1050    RETURN
+        END
+
+***********************************************************************
+*                                                                     *
+*                         SUBROUTINE: ZONE                            *
+*                                                                     *
+*       THIS SUBROUTINE INPUTS THE TIME ZONE AND CHECKS FOR           *
+**      VALIDITY OF THE TIME ZONE ENTERED.                            *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL INZONE(IZONE,NUMZON,ZONE,MAXZON)                        *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                NUMZON = NUMBER OF VALID TIME ZONES IN ARRAY: ZONE.  *
+*                ZONE   = ARRAY CONTAINING VALID TIME ZONES.          *
+*                MAXZON = MAX. NUMBER OF TIME ZONES PROGRAM WILL      *
+*                         ALLOW.                                      *
+*       WHERE THE RETURNED VALUE IS:                                  *
+*                IZONE  = VALID TIME ZONE.                            *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE INZONE(IZONE,NUMZON,ZONE,MAXZON)
+
+        INTEGER ZONE(MAXZON),DOC(4)
+
+        COMMON/A3/DOC
+
+*       ** INPUT TIME ZONE
+
+100     TYPE 110
+110     FORMAT (/,1X,'* TIME ZONE (PD,PS,ETC.): ',$)
+        ACCEPT 120,IZONE
+120     FORMAT (A2)
+
+        IF (IZONE.EQ.'?') GO TO 140
+
+*       ** CHECK FOR VALID ZONE
+
+        DO 130 I=1,NUMZON
+        IF (IZONE.EQ.ZONE(I)) RETURN
+130     CONTINUE
+
+        TYPE 135
+135     FORMAT (5X,'ERROR!! TYPE ? FOR HELP')
+        GO TO 100
+
+*       ** HELP
+
+140     CALL MINFO('!ZONE',DOC)
+        GO TO 100
+
+        END
+
+
+****************************************************************8****
+*                                                                     *
+*                         SUBROUTINE: INTCK                           *
+*                                                                     *
+*       THIS SUBROUTINE CHECKS THAT EACH ELEMENT IN AN ARRAY         *
+*       IS AN INTEGER. THEN COMBINES ALL EMEMENTS IN THE ARRAY INTO   *
+*       ONE INTEGER NUMBER.                                            *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL INTCK(IARR,MAXELM,INUM,IERR)                            *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                IARR   = ARRAY CONTAINING NUMBER TO BE CHECKED       *
+*                MAXELM = NUMBER OF ELEMENTS IN ARRAY: IARR           *
+*       WHERE THE RETURNED VALUES ARE:                                *
+*                INUM   = INTEGER CREATED FROM THE ELEMENTS OF IARR   *
+*                IERR   = ERROR FLAG.  SET IF ANY ELEMENT IS NOT AN   *
+*                         INTEGER.                                    *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE INTCK(IARR,MAXELM,INUM,IERR)
+
+        INTEGER IARR(10),ELEMNT
+
+        IERR=0
+
+*       ** FIND NUMBER OF NON-BLANK ELEMENTS IN ARRAY: IARR
+
+        ELEMNT=0
+        INUM=0
+
+        DO 50 I=1,MAXELM
+        IF (IARR(I).EQ.' ') GO TO 75
+        ELEMNT=I
+50      CONTINUE
+
+75      IF (ELEMNT.EQ.0) RETURN
+        IERR=0
+        IEXP=ELEMNT-1
+
+*       ** GO THROUGH THE ARRAY AND CHECK THAT EACH ELEMENT IS INTEGER.
+
+        DO 100 I=1,ELEMNT
+
+        IF (IARR(I).NE.'0'.AND.IARR(I).NE.'1'.AND.IARR(I).NE.'2'.AND.
+     X      IARR(I).NE.'3'.AND.IARR(I).NE.'4'.AND.IARR(I).NE.'5'.AND.
+     X      IARR(I).NE.'6'.AND.IARR(I).NE.'7'.AND.IARR(I).NE.'8'.AND.
+     X      IARR(I).NE.'9') GO TO 150
+
+*       ** NUMBER IS INTEGER, ADD IT TO THE NUMBER BEING CREATED
+
+        DECODE (1,80,IARR(I)) I1
+80      FORMAT (I1)
+        INUM=INUM+(I1*10**IEXP)
+        IEXP=IEXP-1
+
+100     CONTINUE
+
+*       ** NUMBER IS OK.  RETURN
+
+        RETURN
+
+*       ** NUMBER IS BAD.
+
+150     TYPE 155
+155     FORMAT (5X,'?')
+        IERR=1
+        RETURN
+
+        END
+
+************************************************************************
+*                                                                     *
+*                         SUBROUTINE: VIEW                            *
+*                                                                     *
+*       THIS SUBROUTINE ALLOWS THE USER TO VIEW ALL PORT INFORMATION  *
+*       BEFORE A GROUP OF PORTS IS ADDED TO THE DATA BASE.  THE USER  *
+*       IS ALSO GIVEN THE OPTION AT THIS TIME OF ABORTING THE ADD     *
+*       AND STARTING OVER.                                            *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL VIEW(ISTART,ITPCNT,INOGO)                               *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                ISTART = POINTER TO 1ST PORT (IN PORTS ARRAY) IN     *
+*                         RANGE TO BE ADDED.                          *
+*                ITPCNT = POINTER TO LAST PORT IN RANGE TO BE ADDED   *
+*       WHERE THE RETURNED VALUES ARE:                                *
+*                INOGO  = FLAG WHICH IF SET ABORTS THE ADD            *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE VIEW(ISTART,ITPCNT,INOGO)
+
+        INTEGER PORTS(256,11),INAM(2),CITY(4)
+
+        COMMON/A1/PORTS
+        COMMON/ADD1/INODE,INHDAT,NTYP,IMACH,ISTATE,NHCOD,IPDAT,IZONE
+     +  ,IBILL,ICUST
+        COMMON/ADD2/INAM
+        COMMON/ADD3/CITY
+
+        INOGO=0
+
+*       ** OUTPUT NODE HEADING
+
+        TYPE 100
+100     FORMAT (//,1X,'NODE',3X,'NAME',6X,'TYPE',5X,'MACHINE',/,
+     X  1X,71('-'))
+        TYPE 110,INODE,(INAM(I),I=1,2),NTYP,IMACH
+110     FORMAT(1X,I5,3X,A5,A1,4X,A3,6X,A5)
+
+*       ** OUTPUT HOST HEADINGS
+
+        TYPE 120,PORTS(1,3),NHCOD,IBILL,(CITY(J),J=1,4),ISTATE,IZONE,
+     +  INHDAT
+120     FORMAT (/////,7X,'HOST',2X,'NHCODE',2X,'BILL',3X,'CITY',19X,
+     X'STATE',2X,
+     X'ZONE',2X,'EFF.DATE',/,6X,66('-'),/,6X,I5,4X,I2,4X,A5,2X,4A5,3X,
+     XA3,5X,A2,4X,I6)
+
+*       ** OUTPUT PORT HEADING
+
+        TYPE 150
+150     FORMAT (//,6X,'PORT',2X,'PCODE',1X,'MODM',2X,'PHONE',10X,
+     X'CUSTOMER',10X,'CITY',3X,'EFF.DATE',/)
+
+
+*       ** OUTPUT PORT INFORMATION
+
+        DO 250 I=ISTART,ITPCNT
+        TYPE 200,PORTS(I,1),PORTS(I,2),PORTS(I,4),(PORTS(I,J),J=7,11),
+     XPORTS(I,5),PORTS(I,6),IPDAT
+200     FORMAT (6X,I3,5X,I2,2X,A5,1X,2A5,A4,1X,2A5,8X,A5,A1,
+     X2X,I6)
+250     CONTINUE
+
+
+*       ** ABORT?
+
+260     TYPE 275
+275     FORMAT (///,1X ,'* IF YOU ABORT ALL INFORMATION IS THROWN OUT!!'
+     X/,1X,'  ABORT OR CONTINUE? (A OR C): ',$)
+        ACCEPT 280,IANS
+280     FORMAT (A1)
+        IF (IANS.EQ.'C') RETURN
+        IF (IANS.NE.'A') GO TO 260
+        INOGO=1
+        RETURN
+
+        END
+
+***********************************************************************
+*                                                                     *
+*                       SUBROUTINE: OCTDEC                            *
+*                                                                     *
+*       THIS SUBROUTINE CONVERTS AN OCTAL NUMBER TO A DECIMAL NUMBER. *
+*       HOWEVER, THE OCTAL NUMBER MUST BE 4 DIGITS OR LESS.           *
+*                                                                     *
+*       CALLING SEQUENCE:                                             *
+*        CALL OCTDEC(IOCT,IDEC)                                       *
+*               ARGUMENT 1: INPUT :  OCTAL NUMBER TO BE CONVERTED     *
+*               ARGUMENT 2: OUTPUT:  DECIMAL EQUIVALENT TO ARG 1      *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE OCTDEC(IOCT,IDEC)
+
+        INTEGER SCR(4)
+        ENCODE (4,100,L)IOCT
+100     FORMAT (I4)
+        DECODE (4,110,L)(SCR(I),I=1,4)
+110     FORMAT (4I1)
+        IDEC=SCR(1)*8**3+SCR(2)*8**2+SCR(3)*8+SCR(4)
+
+        RETURN
+        END
+
+***********************************************************************
+*                                                                     *
+*                         SUBROUTINE: INBILL                          *
+*                                                                     *
+*       THIS SUBROUTINE INPUTS THE BILLING DESIGNATOR AND CHECKS FOR  *
+*       VALIDITY OF THE DESIGNATOR.                                   *
+*       THE CALLING SEQUENCE IS:                                      *
+*        CALL INBILL(IBILL,NUMBIL,BILL,MAXBIL)                        *
+*       WHERE THE REQUIRED INPUTS ARE:                                *
+*                NUMBIL = NUMBER OF VALID BILLING DESIGNATORS IN      *
+*                         ARRAY: BILL                                 *
+*                BILL    = ARRAY CONTAINING VALID BILLING DESIGNATORS *
+*                MAXMAC = MAX. NUMBER OF BILLING DESIGNATORS PROGRAM  *
+*                         ALLOWS.                                     *
+*       WHERE RETURNED VALUE IS:                                      *
+*                IBILL  = VALID BILLING DESIGNATORS FOR THIS NODE     *
+*                                                                     *
+***********************************************************************
+
+        SUBROUTINE INBILL(IBILL,NUMBIL,BILL,MAXBIL)
+
+        INTEGER BILL(MAXBIL),DOC(4)
+
+        COMMON/A3/DOC
+
+*       ** INPUT BILLING DESIGNATOR
+
+1125    TYPE 1130
+1130    FORMAT (/,1X,'* BILLING DESIGNATOR: ',$)
+        ACCEPT 1135,IBILL
+1135    FORMAT (A5)
+        IF (IBILL.EQ.'?') GO TO 1145
+
+*       ** CHECK FOR VALID BILLING DESIGNATOR
+
+1139    DO 1140 I=1,NUMBIL
+        IF (IBILL.EQ.BILL(I)) RETURN
+1140    CONTINUE
+
+        TYPE 1142
+1142    FORMAT (5X,'ERROR!! TYPE "?" FOR HELP')
+        GO TO 1125
+
+*       ** HELP
+
+1145    CALL MINFO('!BILL',DOC)
+        GO TO 1125
+        END
+
+
+        SUBROUTINE ERRMSG(IERT,IERC,ERRCNT,ISTOP)
+
+        INTEGER ERRCNT
+
+        ISTOP=0
+        SECONDS=10.
+
+*               CK IF ERROR INDICATES DATA BASE IS BUSY.
+
+100     IF (IERT.EQ.7.AND.IERC.EQ.1) GO TO 150
+
+*               CK IF PRROBLEM IS UNAUTHORIZED ACCESS
+
+        IF (IERT.EQ.14.AND.IERC.EQ.19) GO TO 120
+
+*               SOME OTHER 1022 ERROR HAS OCCURED
+
+        TYPE 110,IERT,IERC
+110     FORMAT (5X,'? 1022 ERROR: TYPE= ',I3,5X,'CODE = ',I3,/)
+        ISTOP=-1
+        ERRCNT=0
+        GO TO 500
+
+*       ** UNAUTHORIZED ACCESS
+
+120     TYPE 125
+125     FORMAT (//,1X,'YOU ARE NOT AUTHORIZED TO CHANGE THE PORTS',
+     +  ' DATA BASE.',//)
+        ISTOP=-1
+        ERRCNT=0
+        GO TO 500
+
+*       ** DATA BASE IS BUSY.  SEE IF WE'VE BEEN WAITING 5 MINUTES.
+150     IF (ERRCNT.GT.6) GO TO 175
+
+*       ** NO. WAIT 10 SECONDS AND TRY AGAIN.
+        IF (ERRCNT.EQ.0.AND.NUMCNT.EQ.0) TYPE 177
+        ERRCNT=ERRCNT+1
+        CALL WAIT(SECONDS)
+        GO TO 500
+
+*       ** AFTER 5 MINUTES OF TRYING TO ACCESS DATA BASE, OUTPUT MESSAGE
+175     TYPE 177
+177     FORMAT (//,1X,'PORTS DATA BASE BUSY. RETRYING.',/)
+        ERRCNT=0
+        NUMCNT=NUMCNT+1
+        IF (NUMCNT.EQ.3) GO TO 200
+        CALL WAIT(SECONDS)
+        GO TO 500
+
+*       ** AFTER 15 MINUTES GIVE USER CHANCE TO ABORT
+200     TYPE 210
+210     FORMAT (/,1X,'DATA BASE STILL BUSY. ABORT? ',$)
+        ACCEPT 212,IANS
+212     FORMAT (A1)
+
+        IF (IANS.EQ.'Y') GO TO 215
+        IF (IANS.EQ.'N') GO TO 225
+        GO TO 200
+
+*       ** ABORT
+215     TYPE 217
+217     FORMAT (1X,'IF YOU ABORT, NO CHANGES WILL BE MADE TO THE PORTS'
+     +  ,/,1X,'DATA BASE.',
+     +  //,1X,'DO YOU STILL WANT TO ABORT? ',$)
+        ACCEPT 212,IANS
+        IF (IANS.EQ.'Y') GO TO 218
+        IF (IANS.EQ.'N') GO TO 225
+        GO TO 215
+
+*       ** GO AHEAD WITH ABORT
+218     NUMCNT=0
+        ISTOP=1
+        GO TO 500
+
+*       ** USER WANTS TO CONTINUE
+225     NUMCNT=0
+        CALL WAIT(SECONDS)
+        GO TO 500
+
+500     RETURN
+
+        END
+O
+!
