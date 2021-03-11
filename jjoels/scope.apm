@@ -1,0 +1,93 @@
+
+                          ASYNC PORT MONITOR PROJECT
+                                     (APM)
+ 
+                               SCOPE OF PROJECT
+ 
+ 
+ 
+     The node code for Solo Consats has been modified to provide port usage 
+statistics.  These statistics consist of the maximum and minimum number of 
+async ports in use during each one minute interval over a 24 hour period.  
+These statistics are stored on the node in a 24 hour wrap around file.  Thus, 
+for example, every day at 10:00 the statistics for the previous day at 10:00 
+are overwritten.
+ 
+     The APM project consists of two parts, a data collection program (APMCOL) 
+and a data processor (APMPRO).  APMCOL resides on a PDP-10 and collects 
+APM statistics from a set of Solo Constas every day.  On the PDP-10 the 
+collection process is relatively slow, therefore, only about 80 (of the 
+approximately 400) Consats will be collected from each day.  Statistics 
+will be collected from each Consat on a weekday at least once a week.  The 
+weekday will be different each week.  Thus, every 5 week period, the 
+statistics for each node will include a sample collected from each 
+different weekday.  If a rotary is  split over more than one node, every 
+effort will be made to insure that the nodes involved in the "split" will 
+be collected from as closely together as possible.  The output from 
+this program will be in the form of a daily flat file with 1440 records 
+(one for each minute in a 24 hour period) for each Consat collected 
+from that day.  This file will be moved to the host system on which the 
+APM data processor resides. 
+ 
+     The APM data processor (APMPRO) will reside on the 370 which is the home 
+of the Daily Network Statistics data bases (NETSTATS) and the PGRADE  program.  
+APMPRO will be responsible for massaging the data collected by APMCOL and 
+producing a form of the data usable by the PGRADE program.  The actual 
+computations to be performed on the APM statistics are relatively simple, but, 
+the process is complicated by many factors.
+ 
+      . The statistics should cover only dial-up users.  This is not the 
+        case.  Therefore, the effects of all other types of users ( Hardwired 
+        or Private Access) must be erased from the statistics.
+ 
+      . Some nodes have more than one public rotary on them.  In these cases,
+        when computing the usage of one of the rotaries, the usage from the
+        other rotaries must be erased.
+        
+      . To accomplish the erasing of the effects of "other usage" on a node, the 
+        sessions must be located which 1) originated on all of the "other usage"
+        ports and 2) which lasted during any part of the 24 hour period over
+        which the APM statistics were generated.
+       
+        The complicated part of locating the necessary sessions is that 
+        the APM statistics are stored in a 24 hour wrap around file.  
+        Unless the statistics are gathered from every Consat 
+        simultaneously at midnight (something that will ever happen!), 
+        then the statistics collected will cover part of two different 
+        days.  From midnight until the time of collection. the 
+        statistics will be for the day of collection.  And from the 
+        time of collection until 2359 the statistics will be for the 
+        day prior to the day of collection.  Now consider the source of 
+        our network session information, the daily network statistic 
+        data bases (NETSTATS).  Session data is placed into these data 
+        bases based on the date the session ended.  Taking this into 
+        consideration, the sessions which lasted during any part of the 
+        24 hour APM period could be in any one of three different 
+        NETSTAT data bases depending upon the time that the APM data 
+        was collected. 
+ 
+                If the time of collection occurs before midnight GMT, 
+                then the sessions which cover the 24 hour APM period 
+                will either be in the NETSTAT data base for the day of 
+                collection or for the day PRIOR to the day of 
+                collection. 
+ 
+                If the time of collection occurs after midnight GMT, 
+                then the sessions which cover the 24 hour APM period 
+                will either be in the NETSTAT data base for the day of 
+                collection or for the day AFTER the day of collection. 
+ 
+        Thus, for any one rotary, two NETSTAT data base will be searched for 
+        sessions.  But, for any one collection day, since some rotaries APM 
+        data will be collected before midnight and some after, then three 
+        NETSTAT data bases must be available to be searched for sessions.  
+        These three data bases are those for 1) the day the APM data was 
+        collected, 2) the day before the APM data was collected, and 3) the day 
+        after the APM data was collected.
+ 
+        The situation is further complicated by the fact that there are some 
+        long sessions which lasted during some part of the APM period, but 
+        which will not be placed into a NETSTAT data base until many days 
+        after the APM data was collected.  In the current design of APMCOL, the 
+        effect of these long sessions will be ignored.
+ 
