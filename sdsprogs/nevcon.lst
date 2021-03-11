@@ -1,0 +1,4059 @@
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:31	PAGE 1
+
+
+     1  		      CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:31	PAGE 2
+
+
+     2  		      C                                                                     C
+     3  		      C       PROGRAM: NEVCON                                               C
+     4  		      C       AUTHOR:  BILL EUSKE                                           C
+     5  		      C       ADDITIONAL COMMENTS BY: JO ANN JOELS                          C
+     6  		      C       LAST UPDATE:                                                  C
+     7  		      C       UPDATED BY:                                                   C
+     8  		      C       VERSION: ??                                                   C
+     9  		      C       TABS: 9,12,15,18,21,60,71                                     C
+    10  		      C                                                                     C
+    11  		      C       THIS PROGRAM LOOKS AT THE NETWORK EVENTS COLLECTED BY THE     C
+    12  		      C       NETGET PROGRAM.  IT BUILDS THIS EVENTS INTO MORE MEANINGFUL   C
+    13  		      C       EVENT RECORDS (I.E. IT RECOGNIZES UNREPORTABLE CRASHES),      C
+    14  		      C       AND OUTPUTS THESE NEW EVENT RECORDS INTO THREE FILES. 1)      C
+    15  		      C       NEVLOY.MDD = LINE OUTAGE EVENTS. 2) NEVLSY.MDD = LINE STAT-   C
+    16  		      C       ISTICS EVENTS. 3) NEVCRY.MDD = CRASH EVENTS.                  C
+    17  		      C                                                                     C
+    18  		      CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+    19  		      CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+    20  		      C                                                                     C
+    21  		      C       DECLARATIONS:                                                 C
+    22  		      C                                                                     C
+    23  		      CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+    24  		            INTEGER FILE(5),HEX(16),IDATE(4),IW(128),JDATE(4)
+    25  		      C*****
+    26  		      C     TYPE 8 MESSAGES OF INTEREST
+    27  		      C       TYPE 8 = TYMNET II NODE REPORT. 'T8LO' AND 'T8HI' DEFINE
+    28  		      C       A RANGE OF TYPE 8 MESSAGES THAT WILL BE
+    29  		      C       CONSIDERED.  THEN T8SEL SPECIFIES THE ACTUAL MESSAGE NUMBERS
+    30  		      C       WITHIN THAT RANGE THAT ARE USED BY THE PROGRAM.
+    31  		      C*****
+    32  		            INTEGER T8LO,T8HI,T8SEL(16)
+    33  		            DATA T8LO,T8HI,T8SEL/128,139,1,1,0,0,1,0,0,0,0,0,1,1,0,0,0,0/
+    34  		      C*****
+    35  		      C     T-II LINE ERROR STATISTICS FOR CURRENT NODE OUTPUTING TO LOG
+    36  		      C       THE FOLLOWING VARIABLES ARE USED TO HOLD THE T-II LINE ERROR
+    37  		      C       STATISTICS FOR THE CURRENT NODE THAT IS OUTPUTING TO THE LOG
+    38  		      C
+    39  		      C          T2LNOD = CURRENT NODE NUMBER
+    40  		      C          T2LNTM = CURRENT TIME
+    41  		      C          T2LNER = AN ARRAY CONTAINING LINE ERROR STATISTICS. 3
+    42  		      C                   DIFFERENT FIELDS BY 32 LINES ON THE NODE
+    43  		      C          T2LNEI = A POINTER TO THE 1ST OF THE FIELDS IN T2LNER. THE
+    44  		      C                   1ST FIELD IN T2LNER CONTAINS THE NEIGHBOR NUMBER
+    45  		      C                   FOR EACH LINE IN THE ARRAY.
+    46  		      C          T2LNRE = A POINTER TO THE 2ND FIELD IN T2LNER. THE 2ND
+    47  		      C                   FIELD IN T2LNER CONTAINS THE NUMBER OF RECEIVE
+    48  		      C                   ERRORS ON EACH LINE IN THE ARRAY.
+    49  		      C          T2LNRP = A POINTER TO THE 3RD FIELD IN T2LNER. THIS FIELD
+    50  		      C                   IN T2LNER CONTAINS THE PACKET COUNT FOR EACH
+    51  		      C                   LINE IN THE ARRAY.
+    52  		      C          T2LINS = A 32 WORD ARRAY CONTAINING THE LINE NUMBERS FOR
+    53  		      C                   CURRENT NODE.
+    54  		      C          T2LINX = INDEX INTO THE T2LINS ARRAY.
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:31	PAGE 3
+
+
+    55  		      C*****
+    56  		            INTEGER T2LNOD,T2LNTM,T2LNER,T2LNEI,T2LNRE,T2LNRP,T2LINS,T2LINX
+    57  		            COMMON /T2LE/T2LNOD,T2LNTM,T2LNER(3,32),T2LNEI,T2LNRE,T2LNRP,
+    58  		           1             T2LINS(32),T2LINX
+    59  		            DATA T2LNOD,T2LNER,T2LINX/97*-1,0/
+    60  		            DATA T2LNEI/1/
+    61  		            DATA T2LNRE/2/
+    62  		            DATA T2LNRP/3/
+    63  		      C*****
+    64  		      C       THE NEVCON PROGRAM CAN ONLY HANDLE 100 SUP MOVES PER DAY.
+    65  		      C       THE FOLLOWING VARAIBLES ARE USED TO KEEP TRACK OF THESE MOVES.
+    66  		      C
+    67  		      C          SUPMOV = 100 WORD ARRAY CONTAINING THE TIME OF EACH SUP MOVE
+    68  		      C          SUPMVP = INDEX INTO SUPMOV ARRAY
+    69  		      C*****
+    70  		            INTEGER SUPMOV,SUPMVP
+    71  		            COMMON /SMOVES/SUPMOV(100),SUPMVP
+    72  		      C*****
+    73  		      C       THE FOLLOWING VARIABLES ARE USED IN HANDLING CRASHES
+    74  		      C
+    75  		      C          CRCNT = 2047 WORD ARRAY CONTAINING THE NUMBER OF CRASHES FOR
+    76  		      C                   THE DAY ON EACH NODE
+    77  		      C          CCSUPT = 7 WORD ARRAY CONTAINING  THE TIME THE SUP WAS
+    78  		      C                  LAST UPDATED.  THERE IS ROOM FOR 7 SUP'S IN
+    79  		      C                  THE ARRAY.  IF VALUE = 0 FOR A SUP THEN THE SUP WAS
+    80  		      C                  NOT USED.
+    81  		      C          CCBUF  = ARRAY THAT A BLOCK OF DATA (128 WORDS) IS READ
+    82  		      C                  INTO.
+    83  		      C*****
+    84  		            INTEGER CRCNT,CCSUPT,CCBUF
+    85  		            COMMON /CCOUNT/CRCNT(2047),CCSUPT(7),CCBUF(128)
+    86  		      C*****
+    87  		      C     EVENT RECORD FIELDS
+    88  		      C       THE NEVCON PROGRAM TAKES THE NETWORK EVENTS COLLECTED BY
+    89  		      C       NEVGET AND COMPOSES ITS OWN EVENT RECORDS.  THE FOLLOWING
+    90  		      C       VARIABLES ARE USED TO HOLD INFORMATION ABOUT THESE NEVCON EVENT
+    91  		      C       RECORDS.
+    92  		      C
+    93  		      C          R     = A 10 FIELD BY 4343 EVENT RECORD ARRAY.  THUS
+    94  		      C                   THERE ARE 10 FIELDS OF INFORMATION FOR EACH OF 4343
+    95  		      C                   POSSIBLE EVENT RECORDS IN THIS ARRAY.
+    96  		      C          RFREE = NUMBER OF FREE EVENT RECORDS
+    97  		      C          RSZ   = NUMBER OF FIELDS IN EACH EVENT RECORD
+    98  		      C          RCHAIN = POINTER TO FIRST FIELD IN 'R'.  THIS 1ST FIELD
+    99  		      C                   IS ITSELF A POINTER TO THE NEXT EVENT IN 'R' FOR
+   100  		      C                   THE NODE.
+   101  		      C          RSTIME = POINTER TO 2ND FIELD IN 'R'.  IF THE EVENT RECORD
+   102  		      C                   TYPE (RTY) = LINE OUTAGE, THEN THE 2ND FIELD IN
+   103  		      C                   'R' CONTAINS THE RECORD START TIME.
+   104  		      C          ROVTIM = POINTER TO 2ND FIELD IN 'R'.  IF THE EVENT RECORD
+   105  		      C                   TYPE (RTY) = CRASH OR LINE STATISTICS, THEN THE
+   106  		      C                   2ND FIELD IN 'R' CONTAINS THE OVERLOAD TIME.
+   107  		      C          RETIME = POINTER TO 3RD FIELD IN 'R'. IF THE EVENT RECORD
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:31	PAGE 4
+
+
+   108  		      C                   TYPE (RTY) = LINE OUTAGE, THEN THE 3RD FIELD IN
+   109  		      C                   'R' CONTAINS THE RECORD END TIME.
+   110  		      C          RLETIM = POINTER TO 3RD FIELD IN 'R'.  IF THE EVENT RECORD
+   111  		      C                   TYPE (RTY) = CRASH OR LINE STATISTICS, THEN THE
+   112  		      C                   3RD FIELD IN 'R' CONTAINS THE ERROR SECONDS.
+   113  		      C          RLINE  = POINTER TO 4TH FIELD IN 'R'.  IF THE EVENT RECORD
+   114  		      C                   TYPE (RTY) = LINE OUTAGE OR LINE STATISTICS, THEN
+   115  		      C                   THE 4TH FIELD IN 'R' CONTIANS THE LINE NUMBER
+   116  		      C          RCLOC  = POINTER TO 4TH FIELD IN 'R'.  IF THE EVENT RECORD
+   117  		      C                   TYPE (RTY) = CRASH, THE THE 4TH FIELD IN 'R'
+   118  		      C                   CONTAINS THE CRASH LOCATION.
+   119  		      C          RNEIGH = POINTER TO THE 5TH FIELD IN 'R'.  IF THE EVENT
+   120  		      C                   RECORD TYPE (RTY) = LINE OUTAGE OR LINE STATISTIC,
+   121  		      C                   THEN THE 5TH FIELD IN 'R' CONTAINS THE NEIGHBOR
+   122  		      C                   NUMBER.
+   123  		      C          RCCNT  = POINTER TO THE 5TH FIELD IN 'R'. IF THE EVENT RECORD
+   124  		      C                   TYPE (RTY) = CRASH, THE THE 5TH FIELD IN 'R'
+   125  		      C                   CONTAINS THE CRASH COUNT.
+   126  		      C          RMSG  = POINTER TO THE 6TH FIELD IN 'R'.  THE 6TH FIELD CONTAINS
+   127  		      C                   THE EVENT TYPE.  NOT THE NEVCON EVENT RECORD TYPE,
+   128  		      C                   BUT THE NEM EVENT TYPE. NEVCON MAY ALTER THE NEM
+   129  		      C                   EVENT TYPE BY ADDING THE SUB EVENT TYPE TO
+   130  		      C                   THE EVENT TYPE, THUS THE NEVCON EVENT TYPE FOR A
+   131  		      C                   NEM EVENT TYPE 19 - SUB EVENT TYPE 6- WOULD BE
+   132  		      C                   1906.
+   133  		      C          RPLI   = POINTER TO THE 7TH FIELD IN 'R'.  IF THE EVENT
+   134  		      C                   RECOD TYPE (RTY) = LINE OUTAGE, THEN THE 7TH FIELD
+   135  		      C                   FIELD IN 'R' CONTAINS THE NUMBER OF 'PLEASE LOG
+   136  		      C                   INS'.
+   137  		      C          ROVCNT = POINTER TO THE 7TH FIELD IN 'R'.  IF THE EVENT
+   138  		      C                   RECORD TYPE (RTY) = LINE STATISCTICS , THEN THE
+   139  		      C                   7TH FIELD IN 'R' CONTAINS THE LINE OVERLOAD COUNT.
+   140  		      C          RPLID  = POINTER TO THE 8TH FIELD IN 'R'.  IF THE EVENT
+   141  		      C                   RECORD TYPE (RTY) = LINE OUTAGE, THEN THE 8TH
+   142  		      C                   FIELD IN 'R' CONTAINS THE PLI DISTRIBUTION.
+   143  		      C          RCCODE  = POINTER TO THE 8TH FIELD IN 'R'.  IF THE EVENT
+   144  		      C                   RECORD TYPE (RTY)  = CRASH, THEN THE 8TH FIELD
+   145  		      C                   IN 'R' CONTAINS THE REASON FOR THE CRASH (THE
+   146  		      C                   CRASH CODE).
+   147  		      C          RTY    = POINTER TO THE 10TH FIELD IN 'R'. THE 10TH
+   148  		      C                   FIELD IN 'R' CONTAINS THE EVENT RECORD TYPE.
+   149  		      C                   RTYLO = LINE OUTAGE = 1
+   150  		      C                   RTYCR = CRASH       = 2
+   151  		      C                   RTYLS = LINE STATISTICS = 3
+   152  		      C*****
+   153  		            INTEGER                     R,     RFREE,       RSZ,    RCHAIN,
+   154  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+   155  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+   156  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+   157  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+   158  		            COMMON  NODE(2047),R(10,4343),     RFREE,       RSZ,    RCHAIN,
+   159  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+   160  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:31	PAGE 5
+
+
+   161  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+   162  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+   163  		      C*****
+   164  		      C       DEFINE SOME VARIABLES
+   165  		      C*****
+   166  		            DATA RSZ/10/
+   167  		            DATA RCHAIN/1/
+   168  		            DATA RSTIME,ROVTIM/2,2/
+   169  		            DATA RETIME,RLETIM/3,3/
+   170  		            DATA RLINE,RCLOC/4,4/
+   171  		            DATA RNEIGH,RCCNT/5,5/
+   172  		            DATA RMSG/6/
+   173  		            DATA RPLI,ROVCNT/7,7/
+   174  		            DATA RUCNT,RCVER,RLNERR/8,8,8/
+   175  		            DATA RPLID,RCCODE/9,9/
+   176  		            DATA RTY,RTYLO,RTYCR,RTYLS/10,1,2,3/
+   177  		            DATA HEX/1H0,1H1,1H2,1H3,1H4,1H5,1H6,1H7,1H8,1H9,
+   178  		           1         1HA,1HB,1HC,1HD,1HE,1HF/
+   179  		            DATA ISUP/-1/
+   180  		      C*****
+   181  		      C       DO SOME INITIALIZATION
+   182  		      C*****
+   183  		      C       C*****
+   184  		      C       C  ON INTERRUPTS, EXIT
+   185  		      C       C*****
+   186  		            CALL ONINT($999)
+   187  		      C       C*****
+   188  		      C       C SET NUMBER OF FREE EVENT RECORDS TO 1.
+   189  		      C       C SET UP THE EVENT RECORD TABLE SO THAT ALL EVENTS ARE CHAINED
+   190  		      C       C TOGETHER.
+   191  		      C       C*****
+   192  		      C     INITIALIZE
+   193  		            RFREE=1
+   194  		            DO 120 I=1,4343-1
+   195  		      120   R(RCHAIN,I)=I+1
+   196  		            R(RCHAIN,4343)=0
+   197  		      C*****
+   198  		      C OPEN THE TRACE OUTPUT FILE
+   199  		      C*****
+   200  		            OPEN(26,'NEVCON.TRC',OUTPUT,SYMBOLIC)
+   201  		      C*****
+   202  		      C THE NEXT PORTION OF THE CODE GETS THE USER DEFINED START AND STOP
+   203  		      C DATES.  THE FOLLOWING VARIABLES ARE USED TO CONTAIN DATES.
+   204  		      C       JMB = BEGINNING MONTH
+   205  		      C       JDB = BEGINNING DAY
+   206  		      C       JYB = BEGINNING YEAR
+   207  		      C       JME = ENDING MONTH
+   208  		      C       JDE = ENDING DAY
+   209  		      C       JYE = ENDING YEAR
+   210  		      C       JTB = BEGINNING DATE IN JULIAN FORMAT, TIME = 0
+   211  		      C       JTE = ENDING DATE IN JULIAN FORMAT, TIME = 0
+   212  		      C       JTR = BEGINNING DATE IN JULIAN, TIME =3600. (OR 1 HOUR
+   213  		      C             INTO THE DAY)
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:31	PAGE 6
+
+
+   214  		      C*****
+   215  		      C     GET START AND STOP TIME
+   216  		            TYPE 410
+   217  		      410   FORMAT(' ENTER START-DATE AND END-DATE (M D Y M D Y):',$)
+   218  		            ACCEPT 420,JMB,JDB,JYB,JME,JDE,JYE
+   219  		      420   FORMAT(6I)
+   220  		            IF(JMB.EQ.0)GOTO 425
+   221  		            INCRDY=0
+   222  		            IF(JYB.NE.0)GOTO 430
+   223  		            JYB=DTE(I)
+   224  		            JYB=MOD(JYB,100)
+   225  		            GOTO 430
+   226  		      C     CONTINUE WITH NEXT DAY
+   227  		      C       GET NEXT DAY FROM FILE: NEVCON.DAY
+   228  		      425   INCRDY=1
+   229  		            OPEN(22,'NEVCON.DAY',INPUT,SYMBOLIC)
+   230  		            READ(22,427)JMB,JDB,JYB
+   231  		      427   FORMAT(3I)
+   232  		            CLOSE(22)
+   233  		      430   IF(JME.NE.0)GOTO 435
+   234  		            JME=JMB
+   235  		            JDE=JDB
+   236  		      435   IF(JYB.LT.100)JYB=JYB+1900
+   237  		            IF(JYE.EQ.0)JYE=JYB
+   238  		            IF(JYE.LT.100)JYE=JYE+1900
+   239  		            JTB=JULIAN(JMB,JDB,JYB,0,0,0)
+   240  		            JTE=JULIAN(JME,JDE,JYE,0,0,0)
+   241  		            JTR=JTB+3600
+   242  		      C     OPEN CONSOLIDATED OUTPUT FILES
+   243  		      C       NEVLOY.MDD     -LINE OUTAGE EVENTS      Y = LAST DIGIT OF YEAR
+   244  		      C       NEVCRY.MDD     -NODE CRASH EVENTS       M = MONTH, 1-C
+   245  		      C       NEVLSY.MDD     -LINE STATISTICS         DD= DAY, 01-31
+   246  		            ENCODE(25,450,FILE)HEX(MOD(JYB,10)+1),HEX(JMB+1),HEX(JDB/10+1),
+   247  		           1                   HEX(MOD(JDB,10)+1)
+   248  		      450   FORMAT('NEVLO',A1,'.',3A1,15X)
+   249  		            OPEN(22,FILE,OUTPUT,SYMBOLIC)
+   250  		            ENCODE(25,460,FILE)HEX(MOD(JYB,10)+1),HEX(JMB+1),HEX(JDB/10+1),
+   251  		           1                   HEX(MOD(JDB,10)+1)
+   252  		      460   FORMAT('NEVCR',A1,'.',3A1,15X)
+   253  		            OPEN(23,FILE,OUTPUT,SYMBOLIC)
+   254  		            ENCODE(25,470,FILE)HEX(MOD(JYB,10)+1),HEX(JMB+1),HEX(JDB/10+1),
+   255  		           1                   HEX(MOD(JDB,10)+1)
+   256  		      470   FORMAT('NEVLS',A1,'.',3A1,15X)
+   257  		            OPEN(27,FILE,OUTPUT,SYMBOLIC)
+   258  		      C     INITIALIZE CRASH COUNT DATA BASE
+   259  		            CALL CCINIT(JTB)
+   260  		      C*****
+   261  		      C OPEN THE FILE CONTAINING THE EVENT LOG OBTAINED BY NEVGET
+   262  		      C THEN INITIALIZE THE VARIABLES USED TO READ THE DATA FROM THIS FILE.
+   263  		      C
+   264  		      C       IW = 128 WORD ARRAY. ONE BLOCK OF DATA (128 WORDS) IS READ FROM
+   265  		      C           THE NETWORK EVENT LOG (NEL) AND PLACED INTO THIS ARRAY.
+   266  		      C           THE DATA IN THE N.E.L. FILE SHOULD BE THOUGHT OF AS A SET
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:32	PAGE 7
+
+
+   267  		      C           OF 2 WORD PAIRS.  EACH PAIR CONTAINS THE INFORMATION ON
+   268  		      C           A NETWORK EVENT.
+   269  		      C       IWX = INDEX INTO THE IW ARRAY. IWX ALWAYS POINTS TO THE FIRST
+   270  		      C             WORD OF THE NEXT PAIR OF WORDS TO BE CONSIDERED.
+   271  		      C       IWI = NEXT POSITION TO READ FROM IN THE N.E.L. FILE
+   272  		      C       IWS = SIZE (IN WORDS) OF THE N.E.L. FILE
+   273  		      C       IWP = NUMBER OF WORDS TO READ FROM THE N.E.L. FILE.  THIS IS
+   274  		      C             ALSWAYS SET TO 128 UNLESS THERE ARE LESS THAN 128 WORDS
+   275  		      C             LEFT TO BE READ IN THE N.E.L. FILE.  IN THIS CASE IWP
+   276  		      C             IS SET TO THE NUMBER OF WORDS LEFT TO BE READ.
+   277  		      C*****
+   278  		      C     OPEN NETWORK EVENT INPUT LOG
+   279  		      C       FILE: NEVLGY.MDD        Y= LAST DIGIT OF YEAR
+   280  		      C                               M= MONTH, 1-C
+   281  		      C                               DD=DAY
+   		      500   CALL LOADNN(JTB/(24*3600)*(24*3600)+26*3600)
+   283  		            ENCODE(25,530,FILE)HEX(MOD(JYB,10)+1),HEX(JMB+1),HEX(JDB/10+1),
+   284  		           1                   HEX(MOD(JDB,10)+1)
+   285  		      530   FORMAT('NEVLG',A1,'.',3A1,15X)
+   286  		            OPEN(21,FILE,RANDIN,BINARY,ERR=903)
+   287  		            LTIME=JTB
+   288  		            IWX=0
+   289  		            IWP=0
+   290  		            IWI=1
+   291  		            IWS=SIZE(21)
+   292  		      C*****
+   293  		      C READ A PAIR OF WORDS FROM THE NETWORK EVENT LOG FILE
+   294  		      C*****
+   295  		      C       C*****
+   296  		      C       C SET INDEX INTO IW ARRAY TO NEXT PAIR OF WORDS
+   297  		      C       C*****
+   298  		      600   IWX=IWX+2
+   299  		      C       C*****
+   300  		      C       C CK IF FINISHED WITH THIS BLOCK OF WORDS
+   301  		      C       C*****
+   302  		            IF(IWX.LT.IWP)GOTO 630
+   303  		      C       C*****
+   304  		      C       C FINISHED WITH BLOCK. INCREMENT POSITION TO READ FROM IN
+   305  		      C       C THE N.E.L. FILE BY NUMBER OF WORDS READ ON LAST READ.
+   306  		      C       C*****
+   307  		            IWI=IWI+IWP
+   308  		      C       C*****
+   309  		      C       C CK IF THIS PUTS THE POSITION OF THE
+   310  		      C       C FILE PAST THE END-OF-FILE
+   311  		      C       C*****
+   312  		            IF(IWI.GT.IWS)GOTO 900
+   313  		      C       C*****
+   314  		      C       C NOT PAST END OF FILE. THEREFORE, SET NUMBER OF WORDS TO
+   315  		      C       C BE READ TO THE NUMBER OF WORDS LEFT IN THE FILE.
+   316  		      C       C*****
+   317  		            IWP=IWS-IWI+1
+   318  		      C       C*****
+   319  		      C       C NOW CK IF THIS IS GREATER THAN A BLOCK (128) , IF IT S
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:32	PAGE 8
+
+
+   320  		      C       C THEN SET THE NUMBER OF WORDS TO BE READ TO 128.
+   321  		      C       C*****
+   322  		            IF(IWP.GT.128)IWP=128
+   323  		      C       C*****
+   324  		      C       C READ A BLOCK OF DATA FROM THE NETWORK EVENT LOG FILE
+   325  		      C       C*****
+   326  		            READ(21#IWI)(IW(I),I=1,IWP)
+   327  		      C       C*****
+   328  		      C       C SET THE INDEX INTO THE 'IW' ARRAY TO POINT TO THE FIRST
+   329  		      C       C PAIR OF WORDS IN THE ARRAY
+   330  		      C       C*****
+   331  		            IWX=1
+   332  		      C     GET EVENT
+   333  		      C       IF EVENT 0,     IW1 = 0,        TIME
+   334  		      C                                       IW2 = 0, DONE
+   335  		      C                                       IW2 = TIME ELSE
+   336  		      C                       IW1 = 1,        SUP CHANGE
+   337  		      C                                       IW2 = SUP NUMBER
+   338  		      C*****
+   339  		      C GET THE EVENT TYPE FOR THIS NETWORK EVENT.  THE 1ST HEX DIGIT
+   340  		      C OF THE EVENT TYPE IS IN THE 1ST 4 BITS OF THE 1ST WORD OF  PAIR.
+   341  		      C THE 2ND HEX DIGIT OF THE EVENT TYPE IS IN THE 1ST 4 BITS OF THE
+   342  		      C 2ND WORD OF THE PAIR. MULTIPLY THE 1ST DIGIT BY 16 AND ADD THE SECOND
+   343  		      C DIGIT TO GET THE EVENT TYPE.
+   344  		      C*****
+   345  		      630   IEVENT=LSH(IW(IWX),-32)*16+LSH(IW(IWX+1),-32)
+   346  		      C*****
+   347  		      C GET THE LAST 32 BITS OF THE 1ST WORD.  THAT IS GET ALL OF THE WORD
+   348  		      C EXCEPT THE 1ST FOUR BITS THAT CONTAIN PART OF THE EVENT TYPE.
+   349  		      C THIS IS DONE BECAUSE THE LENGTH OF THE WORD ON THE ENGINE THAT NEM
+   350  		      C RUNS ON IS 32 BITS. THEREFORE THE ACTUAL 32 BITS THAT NEM SENDS OUT IS
+   351  		      C WHAT WE WANT TO LOOK AT AND THIS HAS STORED IN BITS 4-35 OF
+   352  		      C THE PDP-10 WORD.
+   353  		      C*****
+   354  		            IW1=IAND(IW(IWX),"37777777777)
+   355  		      C*****
+   356  		      C GET THE LAST 32 BITS OF THE 2ND WORD. FOR THE SAME REASON AS ABOVE.
+   357  		      C*****
+   358  		            IW2=IAND(IW(IWX+1),"37777777777)
+   359  		      C*****
+   360  		      C IF THIS EVENT IS NOT A TIME STAMP OR A SUP CHANGE, THEN GO
+   361  		      C TO THE BRANCH ON EVENT TYPE.  NOTE IF EVENT TYPE = 0, THEN
+   362  		      C THE 2 WORD PAIR CONTAINS INFORMATION ON A SUP CHANGE OR A TIME
+   363  		      C STAMP AND NOT INFORMATION ON A NETWORK EVENT.
+   364  		            IF(IEVENT.NE.0)GOTO 650
+   365  		      C       C*****
+   366  		      C       C THIS IS EITHER A TIME STAMP OR A SUP CHANGE RECORD
+   367  		      C       C IF THE 1ST WORD OF THE PAIR = 0, THEN THIS IS A TIME STAMP.
+   368  		      C       C IF THE 1ST WORD OF THE PAIR = 1, THEN THIS IS A SUP CHANGE.
+   369  		      C       C IF THIS IS A SUP CHANGE (IW1 = 1) THEN BRANCH TO SUP CHANGE
+   370  		      C       C CODE.
+   371  		      C       C*****
+   372  		            IF(IW1.NE.0)GOTO 680
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:32	PAGE 9
+
+
+   373  		      C       C*****
+   374  		      C       C THIS IS A TIME STAMP. IF THE 2ND WORD OF THE PAIR = 0, THEN
+   375  		      C       C WE'VE REACHED THE END OF THE NETWORK EVENT LOG. SO STOP.
+   376  		      C       C*****
+   377  		            IF(IW2.EQ.0)GOTO 900
+   378  		      C       C*****
+   379  		      C       C IN A TIME STAMP IEVNET=0 AND IW1 = 1) THEN IF IW2 DOES NOT
+   380  		      C       C EQUAL ZERO IT CONTAINS THE TIME IN THE EVENT LOG. PLACE THIS
+   381  		      C       C TIME INTO THE VARIABLE: LTIME
+   382  		      C       C*****
+   383  		            LTIME=IW2
+   384  		      C       C*****
+   385  		      C       C NOW CK TO SEE IF IT IS TIME TO STOP
+   386  		      C       C*****
+   387  		            CALL TMSTOP(LTIME)
+   388  		      C       C*****
+   389  		      C       C ONCE AN HOUR WE'RE GOING TO OUTPUT A MESSAGE TO THE TERMINAL
+   390  		      C       C TO LET THE WOROLD KNOW THE PROGRESS OF THIS PROGRAM
+   391  		      C       C CK TO SEE IF AN HOUR OF THE LOG TIME HAS BEEN PROCESSED.
+   392  		      C       C IF AN HOUR HAS NOT BEEN PROCESSED, THEN CONTINUE
+   393  		      C       C*****
+   394  		            IF(LTIME.LT.JTR)GOTO 650
+   395  		      C       C*****
+   396  		      C       C AN HOUR'S WORTH OF LOG DATA HAS BEEN PROCESSED. INCCREMENT
+   397  		      C       C THE VARIABLE KEEPING TRACK OF THE TIME PROCESSED (IN
+   398  		      C       C JULIAN FORMAT) BY ONE HOUR = 3600 SECONDS
+   399  		      C       C*****
+   400  		            JTR=JTR+3600
+   401  		      C       C*****
+   402  		      C       C CONVERT THE JULIAN DATE TO THE FORMAT: MM/DD/YYYY  HR:MN:SC
+   403  		      C       C AND OUTPUT THE DATE ON THE LOGGER, THE NUMBER OF EVENTS
+   404  		      C       C PROCSSED SO FAR, AND THE NUMBER OF FREE EVENT RECORDS.
+   405  		      C       C*****
+   406  		            CALL DTFRMT(LTIME,IDATE)
+   407  		            I=4343-RFREE
+   408  		            TYPE 640,IDATE,IEC,I
+   409  		      640   FORMAT(' NOW AT ',4A5,', EVENTS:',I5,', FREE:',I4)
+   410  		      C*****
+   411  		      C BRANCH ON EVENT TYPE
+   412  		      C*****
+   413  		      C     FAN OUT FOR EVENTS 1-255
+   414  		      650   IF(IEVENT.EQ.6)GOTO 99600
+   415  		            IF(IEVENT.EQ.8)GOTO 99800
+   416  		            IF(IEVENT.EQ.12)GOTO 1200
+   417  		            IF(IEVENT.EQ.18)GOTO 1800
+   418  		            IF(IEVENT.EQ.19)GOTO 1900
+   419  		            IF(IEVENT.EQ.26)GOTO 2600
+   420  		            IF(IEVENT.EQ.28)GOTO 2800
+   421  		            IF(IEVENT.EQ.33)GOTO 3300
+   422  		            IF(IEVENT.EQ.36)GOTO 3600
+   423  		            IF(IEVENT.EQ.44)GOTO 4400
+   424  		            IF(IEVENT.EQ.48)GOTO 4800
+   425  		            IF(IEVENT.EQ.54)GOTO 5400
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:32	PAGE 10
+
+
+   426  		            IF(IEVENT.EQ.57)GOTO 5700
+   427  		            IF(IEVENT.EQ.65)GOTO 6500
+   428  		      C     NOT INTERESTED IN THE REST
+   429  		            GOTO 600
+   430  		      C*****
+   431  		      C THIS IS A SUP CHANGE. HOWEVER YOU BRANCH TO HERE IF IW1 NE 0
+   432  		      C SO NOW MAKE SURE THAT IT IS A 1. IF IW1 IS NOT 1 , THEN IGNORE THIS
+   433  		      C RECORD FROM THE LOGGER, AND GO LOOK AT THE NEXT ONE.
+   434  		      C*****
+   435  		      C     SUP CHANGE
+   436  		      680   IF(IW1.NE.1)GOTO 600
+   437  		      C       C*****
+   438  		      C       C IF THE SUP INVOLVED IN TH SUP CHANGE IS THE SAME
+   439  		      C       C AS WAS INVOLVED IN THE LAST MOVE, IGNORE THIS
+   440  		      C       C LOG RECORD.
+   441  		      C       C*****
+   442  		            IF(ISUP.EQ.IW2)GOTO 600
+   443  		      C       C*****
+   444  		      C       C IF THIS IS THE FIRST SUP CHANGE OF THE DAY DON'T
+   445  		      C       C DO THE NEXT STEP
+   446  		      C       C*****
+   447  		            IF(SUPMVP.EQ.0)GOTO 684
+   448  		      C       C*****
+   449  		      C       C IF THE DIFFERENCE IN THE TIME BETWEEN THE CURRENT TIME
+   450  		      C       C IN TH LOGGER AND THE LAST TIME THE SUP IN QUESTIION WA
+   451  		            IF(IABS(LTIME-SUPMOV(SUPMVP)).LE.5*60)GOTO 688
+   452  		      684   SUPMVP=SUPMVP+1
+   453  		            IF(SUPMVP.GT.100)GOTO 690
+   454  		            SUPMOV(SUPMVP)=LTIME
+   455  		      688   CALL CCUPD(LTIME,ISUP,IW2)
+   456  		            ISUP=IW2
+   457  		            GOTO 600
+   458  		      690   TYPE 691
+   459  		      691   FORMAT(' MORE THAN 100 SUP MOVES')
+   460  		            CALL NEXIT
+   461  		      C     PROCESS LINE OUT EVENTS
+   462  		      C     -----------------------
+   463  		      C     IF RECORD DOESN'T EXIST, START EVENT.  IF NO END TIME, UPDATE
+   464  		      C     THE PLI COUNT.  ELSE, WRITE PREVIOUS EVENT AND REPROCESS
+   465  		      C     THIS INPUT.
+   466  		      700   CONTINUE
+   467  		            CALL LETRC(LTIME,IEVENT,IW1,IW2,IR,INODE,ILINE,INEIGH,IPLI)
+   468  		      C       FIND EVENT FOR NODE-LINE/NEIGHBOR
+   469  		      710   CALL EVTFND($750,RTYLO,INODE,ILINE,INEIGH,I)
+   470  		            IF(R(RETIME,I).NE.0)GOTO 725
+   471  		            R(RPLI,I)=R(RPLI,I)+IPLI
+   472  		            IF(IPLI.NE.0)R(RPLID,I)=R(RPLID,I)+1
+   473  		            GOTO 600
+   474  		      725   CALL EVTLIN(I,INODE,0)
+   475  		            GOTO 710
+   476  		      C       CREATE NEW EVENT
+   477  		      750   CALL LINEVT(RTYLO,INODE,ILINE,INEIGH,IR,IEC,I)
+   478  		            R(RSTIME,I)=LTIME
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:32	PAGE 11
+
+
+   479  		            R(RPLI,I)=IPLI
+   480  		            IF(IPLI.NE.0)R(RPLID,I)=1
+   481  		            GOTO 600
+   482  		      C     PROCESS LINE OK EVENTS
+   483  		      C     ----------------------
+   484  		      C     IF RECORD DOESN'T EXIST, START/END ONE.  IF END TIMER
+   485  		      C     DOESN'T EXIST, SET AS NOW.  ELSE, WRITE OUT EXISTING
+   486  		      C     RECORD AND REPROCESS THIS INPUT.
+   487  		      800   CONTINUE
+   488  		            CALL LETRC(LTIME,IEVENT,IW1,IW2,IR,INODE,ILINE,INEIGH,-1)
+   489  		      C       FIND EVENT FOR NODE-LINE/NEIGHBOR
+   490  		      810   CALL EVTFND($850,RTYLO,INODE,ILINE,INEIGH,I)
+   491  		      C       ENTRY FOR NODE,LINE/NEIGHBOR ... IF NO END TIME, RECORD.
+   492  		      C       IF END TIME WAS MORE THAN 5 MINUTES AGO, CREATE SEPARATE EVENT.
+   493  		      C       ELSE, LINE WENT FROM UP TO DOWN, COUNT
+   494  		            IF(R(RETIME,I).EQ.0)GOTO 830
+   495  		            CALL EVTLIN(I,INODE,0)
+   496  		            GOTO 810
+   497  		      830   R(RETIME,I)=LTIME
+   498  		            IF(R(RLINE,I).EQ.-1)R(RLINE,I)=ILINE
+   499  		            IF(R(RNEIGH,I).EQ.0)R(RNEIGH,I)=INEIGH
+   500  		            IF(R(RMSG,I).EQ.0)R(RMSG,I)=IR
+   501  		            R(RUCNT,I)=R(RUCNT,I)+1
+   502  		            GOTO 600
+   503  		      C       CREATE NEW EVENT
+   504  		      850   CALL LINEVT(RTYLO,INODE,ILINE,INEIGH,IR,IEC,I)
+   505  		            R(RETIME,I)=LTIME
+   506  		            R(RUCNT,I)=1
+   507  		            GOTO 600
+   508  		      C     DONE
+   509  		      C     ----
+   510  		      C     DONE WITH DAY
+   511  		      C       UPDATE ANY OUTSTANDING T-II LINE ERROR EVENTS
+   512  		      C       CLOSE FILE AND TRY NEXT DAY.
+   513  		      900   CALL T2LEMK(844,IEC)
+   514  		            T2LNOD=-1
+   515  		            CLOSE(21)
+   516  		            JTB=JTB+24*3600
+   517  		            IF(JTB.GT.JTE)GOTO 905
+   518  		            CALL MDYHMS(JTB,JMB,JDB,JYB,I,I,I)
+   519  		            GOTO 500
+   520  		      C     INPUT FILE NOT FOUND, STOP
+   521  		      903   TYPE 904,FILE
+   522  		      904   FORMAT(' INPUT FOR DAY NOT FOUND, FILE:',5A5)
+   523  		            PAUSE
+   524  		            CALL NEXIT
+   525  		      C     WRITE ANY OPEN RECORDS
+   526  		      905   CONTINUE
+   527  		            DO 910 INODE=1,2047
+   528  		            IF(NODE(INODE).EQ.0)GOTO 910
+   529  		            CALL LEDUMP(INODE)
+   530  		            IF(NODE(INODE).EQ.0)GOTO 910
+   531  		            CALL LSDUMP(INODE)
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:32	PAGE 12
+
+
+   532  		            IF(NODE(INODE).EQ.0)GOTO 910
+   533  		            I=NODE(INODE)
+   534  		            IF(R(RTY,I).EQ.RTYLO)CALL EVTLIN(I,INODE,1)
+   535  		            IF(R(RTY,I).EQ.RTYCR)CALL EVTCRS(I,INODE)
+   536  		            GOTO 905
+   537  		      910   CONTINUE
+   538  		            TYPE 915,IEC
+   539  		      915   FORMAT(' TOTAL EVENTS FOUND:',I6)
+   540  		      C     CLOSE CRASH COUNT HISTORY
+   541  		            CALL CCUPD(LTIME,ISUP,-1)
+   542  		            CALL CCEND(LTIME)
+   543  		            CLOSE(22)
+   544  		            CLOSE(23)
+   545  		            CLOSE(26)
+   546  		            CLOSE(27)
+   547  		      C     WRITE DAY COMPLETED
+   548  		            IF(INCRDY.EQ.0)GOTO 930
+   549  		            OPEN(22,'NEVCON.DAY',OUTPUT,SYMBOLIC)
+   550  		            CALL MDYHMS(JTB,JMB,JDB,JYB,I,I,I)
+   551  		            WRITE(22,920)JMB,JDB,JYB
+   552  		      920   FORMAT(3I5)
+   553  		            CLOSE(22)
+   554  		      930   CALL NEXIT
+   555  		      C 6   LOST NODE
+   556  		      C -   ---------
+   557  		      C     THIS IS THE FIRST SIGN OF A CRASH, START CRASH EVENT.
+   558  		      C     IF A CRASH IS ALREADY OPEN, IGNORE THIS INPUT.  ELSE, DUMP
+   559  		      C     ALL CLOSED EVENTS SO THEY DON'T GET IN THE WAY OF PROCESSING
+   560  		      C     THIS CRASH.
+   561  		      99600 IR=6
+   562  		      99601 INODE=NODECK(IAND(IW2,"7777),IEVENT,IW1,IW2,$600)
+   563  		      C     CALL NDSTOP(INODE)
+   564  		            CALL EVTFND($99610,RTYCR,INODE,-1,0,I)
+   565  		            IF(R(RETIME,I).EQ.0)GOTO 600
+   566  		            CALL LEDUMP(INODE)
+   567  		            CALL EVTFND($99660,RTYCR,INODE,-1,0,I)
+   568  		            CALL EVTCRS(I,INODE)
+   569  		            GOTO 99650
+   570  		      99610 CALL LEDUMP(INODE)
+   571  		      99650 CALL EVTFND($99660,RTYCR,INODE,-1,0,I)
+   572  		      99660 L=I
+   573  		            CALL GETEVR(I)
+   574  		            R(RTY,I)=RTYCR
+   575  		            IF(L.NE.0)GOTO 99670
+   576  		            NODE(INODE)=I
+   577  		            GOTO 99680
+   578  		      99670 R(RCHAIN,L)=I
+   579  		      99680 IEC=IEC+1
+   580  		            R(RSTIME,I)=LTIME
+   581  		            R(RMSG,I)=IR
+   582  		            R(RCCODE,I)=-1
+   583  		            R(RCLOC,I)=-1
+   584  		            GOTO 600
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:32	PAGE 13
+
+
+   585  		      C 8   NODE REPORT       TYPE 000A PLI'S
+   586  		      C -   -----------       TYPE 0019 CRASH REPORT
+   587  		      C                       TYPE 80LL PACKET COUNT
+   588  		      C                       TYPE 81LL BAD BORI
+   589  		      C                       TYPE 84LL BAD CHECKSUM
+   590  		      C                       TYPE 8ALL HDLC CHECKSUM ERROR
+   591  		      C                       TYPE 8BLL HDLC ABORT
+   592  		      99800 INODE=NODECK(LSH(IW1,-16),IEVENT,IW1,IW2,$600)
+   593  		            IR=IAND(IW1,"177777)
+   594  		            IF(IR.GT.256)GOTO 99850
+   595  		            IR=IR+800
+   596  		            IF(IR.EQ.825)GOTO 99825
+   597  		            IF(IR.NE.810)GOTO 600
+   598  		      C------ TYPE 000A PLI'S
+   599  		            INEIGH=IAND(LSH(IW2,-16),"77777)
+   600  		            IPLI=IAND(IW2,"77777)
+   601  		            ILINE=-1
+   602  		            GOTO 700
+   603  		      C------ TYPE 0019 CRASH REPORT
+   604  		      99825 ICCODE=LSH(IW2,-24)
+   605  		            GOTO 1202
+   606  		      C     HANDLE T-II LINK ERRORS
+   607  		      99850 IR=IR/256
+   608  		            IF(IR.LT.T8LO.OR.IR.GT.T8HI)GOTO 600
+   609  		            IF(T8SEL(IR-T8LO+1).EQ.0)GOTO 600
+   610  		            IR=880+MOD(IR,16)
+   611  		            ILINE=IAND(IW1,"377)
+   612  		            INEIGH=IAND(LSH(IW2,-16),"7777)
+   613  		            IF(IR.EQ.880)GOTO 99854
+   614  		            IF(INEIGH.EQ.0.OR.INEIGH.GT.2047.OR.INEIGH.EQ.INODE)GOTO 600
+   615  		      99854 CONTINUE
+   616  		      C     WRITE(26,99855)LTIME,INODE,INEIGH,ILINE,IR,IW1,IW2
+   617  		      C9855 FORMAT(I10,' N',O4,' E',O4,' L',I2,' L ERR  M',I4,2(1X,O12))
+   618  		            IF(INODE.EQ.T2LNOD)GOTO 99870
+   619  		      C     CHANGE IN NODE, COMPUTE ERRORS FOR PREVIOUS NODE
+   620  		            CALL T2LEMK(844,IEC)
+   621  		            T2LNOD=INODE
+   622  		            T2LNTM=LTIME
+   623  		      C     FILE AWAY ERRORS FOR THIS NODE
+   624  		      99870 IF(ILINE.LT.32)GOTO 99873
+   625  		            TYPE 99872,ILINE,INODE,LTIME,IW1,IW2
+   626  		      99872 FORMAT(5X,'ILLEGAL T-II LINE NO.:',I2,' NODE:',O4,' AT:',I10,
+   627  		           1       ' IW1:',O12,' IW2:',O12)
+   628  		            GOTO 600
+   629  		      99873 ILINE=ILINE+1
+   630  		            IF(T2LNER(T2LNEI,ILINE)+T2LNER(T2LNRP,ILINE).NE.-2)GOTO 99874
+   631  		            T2LINX=T2LINX+1
+   632  		            T2LINS(T2LINX)=ILINE
+   633  		      99874 IF(IR.EQ.880)GOTO 99885
+   634  		      C       RECEIVE ERRORS ARE A COMBINATION OF:
+   635  		      C------ TYPE 81LL BAD BORI
+   636  		      C------ TYPE 84LL BAD CHECKSUM
+   637  		      C------ TYPE 8ALL HDLC CHECKSUM ERROR
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:32	PAGE 14
+
+
+   638  		      C------ TYPE 8BLL HDLC ABORT
+   639  		            IF(T2LNER(T2LNEI,ILINE).EQ.-1)GOTO 99884
+   640  		            IF(T2LNER(T2LNEI,ILINE).EQ.INEIGH)GOTO 99883
+   641  		            I=ILINE-1
+   642  		            TYPE 99881,LTIME,INODE,I,T2LNER(T2LNEI,ILINE),INEIGH
+   643  		      99881 FORMAT(5X,'T-II LINE ERROR INCONSISTENT NEIGHBOR',/,
+   644  		           1       6X,'AT:',I9,' NODE:',O4,' LINE:',I2,' NEIGHS:',O4,',',O4)
+   645  		            GOTO 600
+   646  		      99883 T2LNER(T2LNRE,ILINE)=T2LNER(T2LNRE,ILINE)+IAND(IW2,"177777)
+   647  		            GOTO 600
+   648  		      99884 T2LNER(T2LNEI,ILINE)=INEIGH
+   649  		            T2LNER(T2LNRE,ILINE)=IAND(IW2,"77777)
+   650  		            GOTO 600
+   651  		      C------ TYPE 80LL PACKET COUNT
+   652  		      99885 T2LNER(T2LNRP,ILINE)=IAND(LSH(IW2,-16),"77777)
+   653  		            GOTO 600
+   654  		      C 12  NODE ERROR        TYPE 10EE26     CRASH
+   655  		      C --  ----------        TYPE 1PPP40     NEW STYLE LINE ERROR REPORT
+   656  		      1200  INODE=NODECK(IAND(IW1,"7777),IEVENT,IW1,IW2,$600)
+   657  		            IR=IAND(LSH(IW2,-16),"100077)
+   658  		            IF(IR.LT."100000)GOTO 600
+   659  		            IR=IAND(IR,"77)
+   660  		            IR=1200+IR/8*10+IAND(IR,"7)
+   661  		            IF(IR.EQ.1240)GOTO 1230
+   662  		            IF(IR.NE.1226)GOTO 600
+   663  		      C------ TYPE 10EE26     CRASH
+   664  		      C     RECORD THE CRASH REASON (EE) AND CRASH LOCATION.  IF LOCATION
+   665  		      C     ALREADY EXISTS (FROM CRASH COUNT CHANGE), SHOULD BE THE SAME.
+   666  		            ICCODE=IAND(LSH(IW2,-16-6),"77)
+   667  		      C     CALL NDSTOP(INODE)
+   668  		      1202  CALL EVTFND($1205,RTYCR,INODE,-1,0,I)
+   669  		            IF(R(RETIME,I).EQ.0)GOTO 1208
+   670  		            IF(IABS(LTIME-R(RETIME,I)).LE.20)GOTO 1210
+   671  		            CALL LEDUMP(INODE)
+   672  		            CALL EVTFND($1205,RTYCR,INODE,-1,0,I)
+   673  		            CALL EVTCRS(I,INODE)
+   674  		            GOTO 1202
+   675  		      C     CREATE CRASH RECORD
+   676  		      1205  L=I
+   677  		            CALL GETEVR(I)
+   678  		            R(RTY,I)=RTYCR
+   679  		            IF(L.NE.0)GOTO 1206
+   680  		            NODE(INODE)=I
+   681  		            GOTO 1207
+   682  		      1206  R(RCHAIN,L)=I
+   683  		      1207  IEC=IEC+1
+   684  		            R(RMSG,I)=IR
+   685  		      C     CLOSING CRASH RECORD
+   686  		      1208  R(RETIME,I)=LTIME
+   687  		      C     GET CRASH PARAMTERS AND RECORD.  WE WILL EXAMINE THEM LATER
+   688  		      C     AND IF CRASH COUNT DID'T CHANGE AND WE CAN'T DEDUCE A CRASH
+   689  		      C     FROM LINE OUTAGES, WE WILL DROP THE RECORD AS A RETAKE.
+   690  		      1210  R(RCCODE,I)=ICCODE
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:32	PAGE 15
+
+
+   691  		            ILOC=IAND(IW2,"177777)
+   692  		            IF(R(RCLOC,I).NE.-1.AND.R(RCLOC,I).NE.ILOC)
+   693  		           1  TYPE 1215,INODE,R(RCLOC,I),ILOC,ICCODE,HEX(ICCODE/16+1),
+   694  		           2            HEX(MOD(ICCODE,16)+1)
+   695  		      1215  FORMAT('     CRASH LOC DIFFERENCE NODE:',O4,1X,O6,1X,O6,
+   696  		           1       ' CODE O',O3,' H',2A1)
+   697  		            R(RCLOC,I)=ILOC
+   698  		            GOTO 600
+   699  		      C------ TYPE 1PPP40     NEW STYLE LINE ERROR REPORT
+   700  		      1230  ILINE=IAND(IW2,"17)
+   701  		            INEIGH=0
+   702  		      C     WRITE(26,1231)LTIME,INODE,INEIGH,ILINE,IR,IW1,IW2
+   703  		      C1231 FORMAT(I10,' N',O4,' E',O4,' L',I2,' L ERR  M',I4,2(1X,O12))
+   704  		      C       FIND EVENT FOR NODE-LINE/NEIGHBOR
+   705  		            CALL EVTFND($1240,RTYLS,INODE,ILINE,INEIGH,I)
+   706  		            R(RMSG,I)=IR
+   707  		            GOTO 1245
+   708  		      C       CREATE NEW EVENT
+   709  		      1240  CALL LINEVT(RTYLS,INODE,ILINE,INEIGH,IR,IEC,I)
+   710  		      C       ACCUMALATE TOTAL PACKETS AND ERRORS
+   711  		      1245  IERRS=IAND(LSH(IW2,-4),"7777)*8
+   712  		            IPAKS=IAND(LSH(IW2,-22),"777)*64+IERRS
+   713  		            IF(IPAKS.NE.0)GOTO 1248
+   714  		            IERRS=8
+   715  		            IPAKS=64
+   716  		      C     ERROR RATE = ERRORS/PACKETS, 4 DIGITS OF ACCUMULATION (*10000)
+   717  		      1248  IRATE=IERRS*10000/IPAKS
+   718  		            R(RLNERR,I)=R(RLNERR,I)+10000000+IRATE
+   719  		      C       COMPUTE ERROR SECONDS
+   720  		            R(RLETIM,I)=R(RLETIM,I)+256
+   721  		            GOTO 600
+   722  		      C 18  LINE OUT REPORT
+   723  		      C --  ---------------
+   724  		      1800  ILINE=LSH(IW1,-16)
+   725  		            INEIGH=0
+   726  		            INODE=NODECK(IAND(IW1,"177777),IEVENT,IW1,IW2,$600)
+   727  		            IPLI=IAND(IW2,"177777)
+   728  		            IR=18
+   729  		            GOTO 700
+   730  		      C 19  LINK STATUS:      TYPE 0  LINK OVERLOADED
+   731  		      C --  -----------            1  LINK ERROR RATE
+   732  		      C                            2  LINE ATTACHED
+   733  		      C                            3  NEW LINK
+   734  		      C                            4  LINE DETACHED
+   735  		      C                            5  LINK OUT
+   736  		      C                            6  LINK OUT OF BANDWIDTH
+   737  		      1900  INODE=NODECK(LSH(IW1,-16),IEVENT,IW1,IW2,$600)
+   738  		            ILINE=-1
+   739  		            IR=IAND(IW1,"177777)+1900
+   740  		            INEIGH=IAND(IW2,"177777)
+   741  		            IF(IR.EQ.1900.OR.IR.EQ.1906)GOTO 2605
+   742  		            IPLI=0
+   743  		            IF(IR.EQ.1905)GOTO 700
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:32	PAGE 16
+
+
+   744  		            GOTO 600
+   745  		      C 26  LINE OVERLOADED REPORT
+   746  		      C --  ----------------------
+   747  		      2600  IR=26
+   748  		            INEIGH=0
+   749  		            ILINE=LSH(IW1,-16)
+   750  		            INODE=NODECK(IAND(IW1,"177777),IEVENT,IW1,IW2,$600)
+   751  		            IF(INODE.LE."1777)GOTO 2605
+   752  		            INEIGH=ILINE
+   753  		            ILINE=-1
+   754  		      2605  CONTINUE
+   755  		      C     WRITE(26,2606)LTIME,INODE,INEIGH,ILINE,IR,IW1,IW2
+   756  		      C2606 FORMAT(I10,' N',O4,' E',O4,' L',I2,' L OVLD M',I4,2(1X,O12))
+   757  		      C       FIND EVENT FOR NODE-LINE/NEIGHBOR
+   758  		            CALL EVTFND($2650,RTYLS,INODE,ILINE,INEIGH,I)
+   759  		      C       IF PREVIOUS OVERLOAD FOR LINE BUT NO UNOVERLOAD, ASSUME 256 SECONDS
+   760  		            IF(R(ROVTIM,I).NE.0)CALL LOVEND(I)
+   761  		            R(ROVTIM,I)=LTIME
+   762  		            R(RMSG,I)=IR
+   763  		            GOTO 600
+   764  		      C       CREATE NEW EVENT
+   765  		      2650  CALL LINEVT(RTYLS,INODE,ILINE,INEIGH,IR,IEC,I)
+   766  		            R(ROVTIM,I)=LTIME
+   767  		            GOTO 600
+   768  		      C 28  LINE OUT OF CHANNELS REPORT
+   769  		      C --  ---------------------------
+   770  		      2800  IR=28
+   771  		            INEIGH=0
+   772  		            ILINE=LSH(IW1,-16)
+   773  		            INODE=NODECK(IAND(IW1,"177777),IEVENT,IW1,IW2,$600)
+   774  		            IF(INODE.LE."1777)GOTO 2805
+   775  		            INEIGH=ILINE
+   776  		            ILINE=-1
+   777  		      2805  CONTINUE
+   778  		      C     WRITE(26,2806)LTIME,INODE,INEIGH,ILINE,IR,IW1,IW2
+   779  		      C2806 FORMAT(I10,' N',O4,' E',O4,' L',I2,' OUT CH M',I4,2(1X,O12))
+   780  		            GOTO 600
+   781  		      C 33  LINE OK REPORT
+   782  		      C --  --------------
+   783  		      3300  IR=33
+   784  		            ILINE=LSH(IW1,-16)
+   785  		            INODE=NODECK(IAND(IW1,"177777),IEVENT,IW1,IW2,$600)
+   786  		            INEIGH=0
+   787  		            IF(INODE.LT."2000)GOTO 800
+   788  		            INEIGH=ILINE
+   789  		            ILINE=-1
+   790  		            GOTO 800
+   791  		      C 36  LINE RESET REPORT
+   792  		      C --  -----------------
+   793  		      3600  ILINE=LSH(IW1,-16)
+   794  		            INEIGH=0
+   795  		            INODE=NODECK(IAND(IW1,"177777),IEVENT,IW1,IW2,$600)
+   796  		            IPLI=IAND(IW2,"177777)
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:32	PAGE 17
+
+
+   797  		            IR=36
+   798  		            GOTO 700
+   799  		      C 44  CHANGE IN CRASH COUNT
+   800  		      C --  ---------------------
+   801  		      C     CRASH COUNT CHANGED.  THIS CAN BE ERRONEOUS BECAUSE SUPS DO NOT
+   802  		      C     UPDATE EACH OTHER WITH CURRENT COUNT.  BUT SINCE WE KNOW COUNT,
+   803  		      C     WE CAN FIGURE OUT EXCEPT IF SUP CHANGE AND CC = 1, WHICH IS RELOAD.
+   804  		      4400  INODE=NODECK(IAND(IW1,"7777),IEVENT,IW1,IW2,$600)
+   805  		      C     CALL NDSTOP(INODE)
+   806  		      4402  CALL EVTFND($4405,RTYCR,INODE,-1,0,I)
+   807  		            IF(R(RETIME,I).EQ.0)GOTO 4408
+   808  		            IF(IABS(LTIME-R(RETIME,I)).LE.20)GOTO 4410
+   809  		            CALL LEDUMP(INODE)
+   810  		            CALL EVTFND($4405,RTYCR,INODE,-1,0,I)
+   811  		            CALL EVTCRS(I,INODE)
+   812  		            GOTO 4402
+   813  		      C     CREATE CRASH RECORD
+   814  		      4405  L=I
+   815  		            CALL GETEVR(I)
+   816  		            R(RTY,I)=RTYCR
+   817  		            IF(L.NE.0)GOTO 4406
+   818  		            NODE(INODE)=I
+   819  		            GOTO 4407
+   820  		      4406  R(RCHAIN,L)=I
+   821  		      4407  IEC=IEC+1
+   822  		            R(RCCODE,I)=-1
+   823  		            R(RCLOC,I)=-1
+   824  		            R(RMSG,I)=44
+   825  		      C     CLOSING CRASH RECORD
+   826  		      4408  R(RETIME,I)=LTIME
+   827  		      C     GET CRASH PARAMTERS AND RECORD.  WE WILL EXAMINE THEM LATER
+   828  		      C     AND IF CRASH COUNT DID'T CHANGE AND WE CAN'T DEDUCE A CRASH
+   829  		      C     FROM LINE OUTAGES, WE WILL DROP THE RECORD AS A RETAKE.
+   830  		      4410  IVER=LSH(IW1,-16)
+   831  		            INCC=IAND(IW2,"177777)
+   832  		            ILOC=LSH(IW2,-16)
+   833  		            ICCC=LSH(CRCNT(INODE),-18)
+   834  		            IF(ICCC.NE.INCC)GOTO 4470
+   835  		            IF(ICCC.EQ.IAND(CRCNT(INODE),"777777))TYPE 4409,ISUP,ICCC,INODE
+   836  		      4409  FORMAT(' SUP:',I3,' FORGOT CC:',I4,' NODE:',O4)
+   837  		      4470  CRCNT(INODE)=IOR(INCC,LSH(INCC,18))
+   838  		            R(RCCNT,I)=LSH(ICCC,18)+INCC
+   839  		            R(RCLOC,I)=ILOC
+   840  		            R(RCVER,I)=IVER
+   841  		            GOTO 600
+   842  		      C 48  LINE UNOVERLOADED REPORT
+   843  		      C --  ------------------------
+   844  		      4800  IR=48
+   845  		            INEIGH=0
+   846  		            ILINE=LSH(IW1,-16)
+   847  		            INODE=NODECK(IAND(IW1,"177777),IEVENT,IW1,IW2,$600)
+   848  		            IF(INODE.LE."1777)GOTO 4805
+   849  		            INEIGH=ILINE
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:32	PAGE 18
+
+
+   850  		            ILINE=-1
+   851  		      4805  CONTINUE
+   852  		      C     WRITE(26,4806)LTIME,INODE,INEIGH,ILINE,IR,IW1,IW2
+   853  		      C4806 FORMAT(I10,' N',O4,' E',O4,' L',I2,' L UNOV M',I4,2(1X,O12))
+   854  		      C       FIND EVENT FOR NODE-LINE/NEIGHBOR
+   855  		            CALL EVTFND($4850,RTYLS,INODE,ILINE,INEIGH,I)
+   856  		      C       IF NO PREVIOUS OVERLOAD FOR LINE , ASSUME 256 SECONDS
+   857  		            IF(R(ROVTIM,I).EQ.0)R(ROVTIM,I)=LTIME-256
+   858  		            R(RMSG,I)=IR
+   859  		      4810  R(ROVCNT,I)=R(ROVCNT,I)+1000000+LTIME-R(ROVTIM,I)
+   860  		            R(ROVTIM,I)=0
+   861  		            GOTO 600
+   862  		      C       CREATE NEW EVENT
+   863  		      4850  CALL LINEVT(RTYLS,INODE,ILINE,INEIGH,IR,IEC,I)
+   864  		            R(ROVTIM,I)=LTIME-256
+   865  		            GOTO 4810
+   866  		      C 54  END OF TAKEOVER
+   867  		      C -   ---------------
+   868  		      C     THE NODE HAS COME BACK, RECORD EVENT END TIME.
+   869  		      5400  IR=54
+   870  		            INODE=NODECK(IAND(IW1,"7777),IEVENT,IW1,IW2,$600)
+   871  		      C     CALL NDSTOP(INODE)
+   872  		      5405  CALL EVTFND($5410,RTYCR,INODE,-1,0,I)
+   873  		            IF(R(RETIME,I).EQ.0)GOTO 5440
+   874  		            IF(IABS(LTIME-R(RETIME,I)).LE.20)GOTO 600
+   875  		            CALL LEDUMP(INODE)
+   876  		            CALL EVTFND($5410,RTYCR,INODE,-1,0,I)
+   877  		            CALL EVTCRS(I,INODE)
+   878  		            GOTO 5405
+   879  		      5410  L=I
+   880  		            CALL GETEVR(I)
+   881  		            R(RTY,I)=RTYCR
+   882  		            IF(L.NE.0)GOTO 5420
+   883  		            NODE(INODE)=I
+   884  		            GOTO 5430
+   885  		      5420  R(RCHAIN,L)=I
+   886  		      5430  IEC=IEC+1
+   887  		            R(RCCODE,I)=-1
+   888  		            R(RCLOC,I)=-1
+   889  		            R(RMSG,I)=54
+   890  		      5440  R(RETIME,I)=LTIME
+   891  		            IF(R(RCCNT,I).EQ.0)R(RCCNT,I)=
+   892  		           1  IOR(IAND(CRCNT(INODE),"777777000000),
+   893  		           2      LSH(CRCNT(INODE),-18))
+   894  		            GOTO 600
+   895  		      C 57  ZAPPER RECEIVED ON COMMAND CIRCUIT
+   896  		      C -   ----------------------------------
+   897  		      C     THIS IS THE FIRST SIGN OF A CRASH, START CRASH EVENT.
+   898  		      5700  IR=57
+   899  		            GOTO 99601
+   900  		      C 65  T-I SIDE OF T-I/T-II LINK OUT OF CHANNELS
+   901  		      C --  -----------------------------------------
+   902  		      6500  IR=65
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:32	PAGE 19
+
+
+   903  		            ILINE=-1
+   904  		            INEIGH=LSH(IW2,-16)
+   905  		            INODE=NODECK(IAND(IW2,"177777),IEVENT,IW1,IW2,$600)
+   906  		            WRITE(26,6506)LTIME,INODE,INEIGH,ILINE,IR,IW1,IW2
+   907  		      6506  FORMAT(I10,' N',O4,' E',O4,' L',I4,' OUT CHANS',I4,2(1X,O12))
+   908  		            GOTO 600
+   909  		      999   CONTINUE
+   910  		            END
+
+	CONSTANTS
+
+	0	472132641636	1	471352451206	2	000000000000	3	000000000144	4	472132641636
+	5	471350440662	6	000000000000	7	000000000012	10	000000000025	11	037777777777
+	12	000000001514	13	000000000001	14	000000007777	15	000000177777	16	000000077777
+	17	000000000020	20	000000000377	21	000000100077	22	000000000077	23	000000000007
+	24	777777777752	25	000000000017	26	000000000777	27	000046113200	30	000000777777
+	31	000000000022	32	000003641100	33	777777000000	
+
+	COMMON
+
+	T2LNOD	/T2LE  /+0	T2LNTM	/T2LE  /+1	T2LNER	/T2LE  /+2	T2LNEI	/T2LE  /+142	T2LNRE	/T2LE  /+143
+	T2LNRP	/T2LE  /+144	T2LINS	/T2LE  /+145	T2LINX	/T2LE  /+205	SUPMOV	/SMOVES/+0	SUPMVP	/SMOVES/+144
+	CRCNT 	/CCOUNT/+0	CCSUPT	/CCOUNT/+3777	CCBUF 	/CCOUNT/+4006	NODE  	/.COMM./+0	R     	/.COMM./+3777
+	RFREE 	/.COMM./+130645	RSZ   	/.COMM./+130646	RCHAIN	/.COMM./+130647	RSTIME	/.COMM./+130650	ROVTIM	/.COMM./+130651
+	RETIME	/.COMM./+130652	RLINE 	/.COMM./+130653	RCLOC 	/.COMM./+130654	RNEIGH	/.COMM./+130655	RCCNT 	/.COMM./+130656
+	RMSG  	/.COMM./+130657	RPLI  	/.COMM./+130660	ROVCNT	/.COMM./+130661	RUCNT 	/.COMM./+130662	RCVER 	/.COMM./+130663
+	RPLID 	/.COMM./+130664	RCCODE	/.COMM./+130665	RTY   	/.COMM./+130666	RTYLO 	/.COMM./+130667	RTYCR 	/.COMM./+130670
+	RTYLS 	/.COMM./+130671	RLNERR	/.COMM./+130672	RLETIM	/.COMM./+130673	
+
+	SUBPROGRAMS
+
+	FORSE.	JOBFF 	ONINT 	RLEN. 	INTO. 	INTI. 	DTE   	.INT. 	MOD   	JULIAN	VADDR.	ALPHO.	ALPHI.	CCINIT	LOADNN
+	ERR.  	SIZE  	RECNO.	RANAC.	BINWR.	LSH   	IAND  	TMSTOP	DTFRMT	IABS  	CCUPD 	NEXIT 	LETRC 	EVTFND	EVTLIN
+	LINEVT	T2LEMK	MDYHMS	PAUSE.	LEDUMP	LSDUMP	EVTCRS	CCEND 	NODECK	GETEVR	OCTO. 	OCTI. 	LOVEND	IOR   	EXIT  
+
+	SCALARS
+
+	T8LO  	3750		T8HI  	3751		T2LNOD	0		T2LINX	205		T2LNEI	142	
+	T2LNRE	143		T2LNRP	144		RSZ   	130646		RCHAIN	130647		RSTIME	130650	
+	ROVTIM	130651		RETIME	130652		RLETIM	130673		RLINE 	130653		RCLOC 	130654	
+	RNEIGH	130655		RCCNT 	130656		RMSG  	130657		RPLI  	130660		ROVCNT	130661	
+	RUCNT 	130662		RCVER 	130663		RLNERR	130672		RPLID 	130664		RCCODE	130665	
+	RTY   	130666		RTYLO 	130667		RTYCR 	130670		RTYLS 	130671		ISUP  	3752	
+	RFREE 	130645		I     	3753		JMB   	3754		JDB   	3755		JYB   	3756	
+	JME   	3757		JDE   	3760		JYE   	3761		INCRDY	3762		JTB   	3763	
+	JTE   	3764		JTR   	3765		LTIME 	3766		IWX   	3767		IWP   	3770	
+	IWI   	3771		IWS   	3772		IEVENT	3773		IW1   	3774		IW2   	3775	
+	IEC   	3776		SUPMVP	144		IR    	3777		INODE 	4000		ILINE 	4001	
+	INEIGH	4002		IPLI  	4003		L     	4004		ICCODE	4005		T2LNTM	1	
+	ILOC  	4006		IERRS 	4007		IPAKS 	4010		IRATE 	4011		IVER  	4012	
+	INCC  	4013		ICCC  	4014		
+
+	ARRAYS
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 20
+
+
+
+	FILE  	4015		HEX   	4022		IDATE 	4042		IW    	4046		JDATE 	4246	
+	T8SEL 	4252		T2LNER	2		T2LINS	145		SUPMOV	0		CRCNT 	0	
+	CCSUPT	3777		CCBUF 	4006		NODE  	0		R     	3777		
+
+	 MAIN.
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:31	PAGE 1
+
+
+
+Symbol cross reference
+
+CCBUF	    84	    85
+CCEND	   542
+CCINIT	   259
+CCOUNT	    85
+CCSUPT	    84	    85
+CCUPD	   455	   541
+CRCNT	    84	    85	   833	   835	   837	   891
+DTE	   223
+DTFRMT	   406
+EVTCRS	   535	   568	   673	   811	   877
+EVTFND	   469	   490	   564	   567	   571	   668	   672	   705	   758	   806	   810	   855	   872	   876
+EVTLIN	   474	   495	   534
+FILE	    24	   246	   249	   250	   253	   254	   257	   283	   286	   521
+GETEVR	   573	   677	   815	   880
+HEX	    24	   177	   246	   250	   254	   283	   692
+I	   194	   195	   223	   326	   407	   408	   469	   470	   471	   472	   474	   477	   478	   479
+	   480	   490	   494	   495	   497	   498	   499	   500	   501	   504	   505	   506	   518	   533
+	   534	   535	   550	   564	   565	   567	   568	   571	   572	   573	   574	   576	   578	   580
+	   581	   582	   583	   641	   642	   668	   669	   670	   672	   673	   676	   677	   678	   680
+	   682	   684	   686	   690	   692	   697	   705	   706	   709	   718	   720	   758	   760	   761
+	   762	   765	   766	   806	   807	   808	   810	   811	   814	   815	   816	   818	   820	   822
+	   823	   824	   826	   838	   839	   840	   855	   857	   858	   859	   860	   863	   864	   872
+	   873	   874	   876	   877	   879	   880	   881	   883	   885	   887	   888	   889	   890	   891
+IABS	   451	   670	   808	   874
+IAND	   354	   358	   562	   593	   599	   600	   611	   612	   646	   649	   652	   656	   657	   659
+	   660	   666	   691	   700	   711	   712	   726	   727	   739	   740	   750	   773	   785	   795
+	   796	   804	   831	   835	   847	   870	   891	   905
+ICCC	   833	   834	   835	   838
+ICCODE	   604	   666	   690	   692
+IDATE	    24	   406	   408
+IEC	   408	   477	   504	   513	   538	   579	   620	   683	   709	   765	   821	   863	   886
+IERRS	   711	   712	   714	   717
+IEVENT	   345	   364	   414	   415	   416	   417	   418	   419	   420	   421	   422	   423	   424	   425
+	   426	   427	   467	   488	   562	   592	   656	   726	   737	   750	   773	   785	   795	   804
+	   847	   870	   905
+ILINE	   467	   469	   477	   488	   490	   498	   504	   601	   611	   624	   625	   629	   630	   632
+	   639	   640	   641	   642	   646	   648	   649	   652	   700	   705	   709	   724	   738	   749
+	   752	   753	   758	   765	   772	   775	   776	   784	   788	   789	   793	   846	   849	   850
+	   855	   863	   903	   906
+ILOC	   691	   692	   697	   832	   839
+INCC	   831	   834	   837	   838
+INCRDY	   221	   228	   548
+INEIGH	   467	   469	   477	   488	   490	   499	   504	   599	   612	   614	   640	   642	   648	   701
+	   705	   709	   725	   740	   748	   752	   758	   765	   771	   775	   786	   788	   794	   845
+	   849	   855	   863	   904	   906
+INODE	   467	   469	   474	   477	   488	   490	   495	   504	   527	   528	   529	   530	   531	   532
+	   533	   534	   535	   562	   564	   566	   567	   568	   570	   571	   576	   592	   614	   618
+	   621	   625	   642	   656	   668	   671	   672	   673	   680	   692	   705	   709	   726	   737
+	   750	   751	   758	   765	   773	   774	   785	   787	   795	   804	   806	   809	   810	   811
+	   818	   833	   835	   837	   847	   848	   855	   863	   870	   872	   875	   876	   877	   883
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:31	PAGE 1
+
+
+
+Symbol cross reference
+
+	   891	   905	   906
+IOR	   837	   891
+IPAKS	   712	   713	   715	   717
+IPLI	   467	   471	   472	   479	   480	   600	   727	   742	   796
+IR	   467	   477	   488	   500	   504	   561	   581	   593	   594	   595	   596	   597	   607	   608
+	   609	   610	   613	   633	   657	   658	   659	   660	   661	   662	   684	   706	   709	   728
+	   739	   741	   743	   747	   762	   765	   770	   783	   797	   844	   858	   863	   869	   898
+	   902	   906
+IRATE	   717	   718
+ISUP	   179	   442	   455	   456	   541	   835
+IVER	   830	   840
+IW	    24	   326	   345	   354	   358
+IW1	   354	   372	   436	   467	   488	   562	   592	   593	   611	   625	   656	   724	   726	   737
+	   739	   749	   750	   772	   773	   784	   785	   793	   795	   804	   830	   846	   847	   870
+	   905	   906
+IW2	   358	   377	   383	   442	   455	   456	   467	   488	   562	   592	   599	   600	   604	   612
+	   625	   646	   649	   652	   656	   657	   666	   691	   700	   711	   712	   726	   727	   737
+	   740	   750	   773	   785	   795	   796	   804	   831	   832	   847	   870	   904	   905	   906
+IWI	   290	   307	   312	   317	   326
+IWP	   289	   302	   307	   317	   322	   326
+IWS	   291	   312	   317
+IWX	   288	   298	   302	   331	   345	   354	   358
+JDATE	    24
+JDB	   218	   230	   235	   239	   246	   250	   254	   283	   518	   550	   551
+JDE	   218	   235	   240
+JMB	   218	   220	   230	   234	   239	   246	   250	   254	   283	   518	   550	   551
+JME	   218	   233	   234	   240
+JTB	   239	   241	   259	   282	   287	   516	   517	   518	   550
+JTE	   240	   517
+JTR	   241	   394	   400
+JULIAN	   239	   240
+JYB	   218	   222	   223	   224	   230	   236	   237	   239	   246	   250	   254	   283	   518	   550
+	   551
+JYE	   218	   237	   238	   240
+L	   572	   575	   578	   676	   679	   682	   814	   817	   820	   879	   882	   885
+LEDUMP	   529	   566	   570	   671	   809	   875
+LETRC	   467	   488
+LINEVT	   477	   504	   709	   765	   863
+LOADNN	   282
+LOVEND	   760
+LSDUMP	   531
+LSH	   345	   592	   599	   604	   612	   652	   657	   666	   711	   712	   724	   737	   749	   772
+	   784	   793	   830	   832	   833	   837	   838	   846	   891	   904
+LTIME	   287	   383	   387	   394	   406	   451	   454	   455	   467	   478	   488	   497	   505	   541
+	   542	   580	   622	   625	   642	   670	   686	   761	   766	   808	   826	   857	   859	   864
+	   874	   890	   906
+MDYHMS	   518	   550
+MOD	   224	   246	   250	   254	   283	   610	   692
+NEXIT	   460	   524	   554
+NODE	   158	   528	   530	   532	   533	   576	   680	   818	   883
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:31	PAGE 1
+
+
+
+Symbol cross reference
+
+NODECK	   562	   592	   656	   726	   737	   750	   773	   785	   795	   804	   847	   870	   905
+ONINT	   186
+R	   153	   158	   195	   196	   470	   471	   472	   478	   479	   480	   494	   497	   498	   499
+	   500	   501	   505	   506	   534	   535	   565	   574	   578	   580	   581	   582	   583	   669
+	   670	   678	   682	   684	   686	   690	   692	   697	   706	   718	   720	   760	   761	   762
+	   766	   807	   808	   816	   820	   822	   823	   824	   826	   838	   839	   840	   857	   858
+	   859	   860	   864	   873	   874	   881	   885	   887	   888	   889	   890	   891
+RCCNT	   153	   158	   171	   838	   891
+RCCODE	   153	   158	   175	   582	   690	   822	   887
+RCHAIN	   153	   158	   167	   195	   196	   578	   682	   820	   885
+RCLOC	   153	   158	   170	   583	   692	   697	   823	   839	   888
+RCVER	   153	   158	   174	   840
+RETIME	   153	   158	   169	   470	   494	   497	   505	   565	   669	   670	   686	   807	   808	   826
+	   873	   874	   890
+RFREE	   153	   158	   193	   407
+RLETIM	   153	   158	   169	   720
+RLINE	   153	   158	   170	   498
+RLNERR	   153	   158	   174	   718
+RMSG	   153	   158	   172	   500	   581	   684	   706	   762	   824	   858	   889
+RNEIGH	   153	   158	   171	   499
+ROVCNT	   153	   158	   173	   859
+ROVTIM	   153	   158	   168	   760	   761	   766	   857	   859	   860	   864
+RPLI	   153	   158	   173	   471	   479
+RPLID	   153	   158	   175	   472	   480
+RSTIME	   153	   158	   168	   478	   580
+RSZ	   153	   158	   166
+RTY	   153	   158	   176	   534	   535	   574	   678	   816	   881
+RTYCR	   153	   158	   176	   535	   564	   567	   571	   574	   668	   672	   678	   806	   810	   816
+	   872	   876	   881
+RTYLO	   153	   158	   176	   469	   477	   490	   504	   534
+RTYLS	   153	   158	   176	   705	   709	   758	   765	   855	   863
+RUCNT	   153	   158	   174	   501	   506
+SIZE	   291
+SMOVES	    71
+SUPMOV	    70	    71	   451	   454
+SUPMVP	    70	    71	   447	   451	   452	   453	   454
+T2LE	    57
+T2LEMK	   513	   620
+T2LINS	    56	    57	   632
+T2LINX	    56	    57	    59	   631	   632
+T2LNEI	    56	    57	    60	   630	   639	   640	   642	   648
+T2LNER	    56	    57	    59	   630	   639	   640	   642	   646	   648	   649	   652
+T2LNOD	    56	    57	    59	   514	   618	   621
+T2LNRE	    56	    57	    61	   646	   649
+T2LNRP	    56	    57	    62	   630	   652
+T2LNTM	    56	    57	   622
+T8HI	    32	    33	   608
+T8LO	    32	    33	   608	   609
+T8SEL	    32	    33	   609
+TMSTOP	   387
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:31	PAGE 1
+
+
+
+Macro/Opdef cross reference
+
+  120P	   194	   195
+  410P	   216	   217
+  420P	   218	   219
+  425P	   220	   228
+  427P	   230	   231
+  430P	   222	   225	   233
+  435P	   233	   236
+  450P	   246	   248
+  460P	   250	   252
+  470P	   254	   256
+  500P	   282	   519
+  530P	   283	   285
+  600P	   298	   429	   436	   442	   457	   473	   481	   502	   507	   562	   565	   584	   592	   597
+	   608	   609	   614	   628	   645	   647	   650	   653	   656	   658	   662	   698	   721	   726
+	   737	   744	   750	   763	   767	   773	   780	   785	   795	   804	   841	   847	   861	   870
+	   874	   894	   905	   908
+  630P	   302	   345
+  640P	   408	   409
+  650P	   364	   394	   414
+  680P	   372	   436
+  684P	   447	   452
+  688P	   451	   455
+  690P	   453	   458
+  691P	   458	   459
+  700P	   466	   602	   729	   743	   798
+  710P	   469	   475
+  725P	   470	   474
+  750P	   469	   477
+  800P	   487	   787	   790
+  810P	   490	   496
+  830P	   494	   497
+  850P	   490	   504
+  900P	   312	   377	   513
+  903P	   286	   521
+  904P	   521	   522
+  905P	   517	   526	   536
+  910P	   527	   528	   530	   532	   537
+  915P	   538	   539
+  920P	   551	   552
+  930P	   548	   554
+  999P	   186	   909
+ 1200P	   416	   656
+ 1202P	   605	   668	   674
+ 1205P	   668	   672	   676
+ 1206P	   679	   682
+ 1207P	   681	   683
+ 1208P	   669	   686
+ 1210P	   670	   690
+ 1215P	   692	   695
+ 1230P	   661	   700
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:31	PAGE 1
+
+
+
+Macro/Opdef cross reference
+
+ 1240P	   705	   709
+ 1245P	   707	   711
+ 1248P	   713	   717
+ 1800P	   417	   724
+ 1900P	   418	   737
+ 2600P	   419	   747
+ 2605P	   741	   751	   754
+ 2650P	   758	   765
+ 2800P	   420	   770
+ 2805P	   774	   777
+ 3300P	   421	   783
+ 3600P	   422	   793
+ 4400P	   423	   804
+ 4402P	   806	   812
+ 4405P	   806	   810	   814
+ 4406P	   817	   820
+ 4407P	   819	   821
+ 4408P	   807	   826
+ 4409P	   835	   836
+ 4410P	   808	   830
+ 4470P	   834	   837
+ 4800P	   424	   844
+ 4805P	   848	   851
+ 4810P	   859	   865
+ 4850P	   855	   863
+ 5400P	   425	   869
+ 5405P	   872	   878
+ 5410P	   872	   876	   879
+ 5420P	   882	   885
+ 5430P	   884	   886
+ 5440P	   873	   890
+ 5700P	   426	   898
+ 6500P	   427	   902
+ 6506P	   906	   907
+99600P	   414	   561
+99601P	   562	   899
+99610P	   564	   570
+99650P	   569	   571
+99660P	   567	   571	   572
+99670P	   575	   578
+99680P	   577	   579
+99800P	   415	   592
+99825P	   596	   604
+99850P	   594	   607
+99854P	   613	   615
+99870P	   618	   624
+99872P	   625	   626
+99873P	   624	   629
+99874P	   630	   633
+99881P	   642	   643
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:31	PAGE 1
+
+
+
+Macro/Opdef cross reference
+
+99883P	   640	   646
+99884P	   639	   648
+99885P	   633	   652NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 21
+
+
+     1  		            SUBROUTINE GETEVR(I)
+     2  		      C     --------------------
+     3  		      C     SUBROUTINE TO GET AN EMPTY EVENT RECORD FROM THE FREE LIST.  IF
+     4  		      C     NONE, GIVE ERROR AND EXIT.
+     5  		      C     EVENT RECORD FIELDS
+     6  		            INTEGER                     R,     RFREE,       RSZ,    RCHAIN,
+     7  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+     8  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+     9  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    10  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    11  		            COMMON  NODE(2047),R(10,4343),     RFREE,       RSZ,    RCHAIN,
+    12  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    13  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    14  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    15  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    16  		      C     IEUSKE=IEUSKE+1
+    17  		      C     IF(MOD(IEUSKE,10).NE.0)GOTO 30001
+    18  		      C     IF(IRUSE(I).NE.4343)GOTO 30040
+    19  		      30001 IF(RFREE.EQ.0)GOTO 30010
+    20  		            I=RFREE
+    21  		            RFREE=R(RCHAIN,I)
+    22  		            DO 30005 J=1,RSZ
+    23  		      30005 R(J,I)=0
+    24  		            R(RLINE,I)=-1
+    25  		            RETURN
+    26  		      30010 I=IRUSE(I)
+    27  		            TYPE 30030,I
+    28  		      30030 FORMAT(' ERROR, 4343 (ALL) EVENT RECORDS GONE, IN USE:',I4)
+    29  		            PAUSE
+    30  		            CALL NEXIT
+    31  		      30040 I=IRUSE(I)
+    32  		            TYPE 30045,I
+    33  		      30045 FORMAT(' MISSING EVENT RECORDS, S/B 4343, IS:',I4)
+    34  		            PAUSE
+    35  		            CALL NEXIT
+    36  		            END
+
+
+	GLOBAL DUMMIES
+
+	I     	120		
+
+	COMMON
+
+	NODE  	/.COMM./+0	R     	/.COMM./+3777	RFREE 	/.COMM./+130645	RSZ   	/.COMM./+130646	RCHAIN	/.COMM./+130647
+	RSTIME	/.COMM./+130650	ROVTIM	/.COMM./+130651	RETIME	/.COMM./+130652	RLINE 	/.COMM./+130653	RCLOC 	/.COMM./+130654
+	RNEIGH	/.COMM./+130655	RCCNT 	/.COMM./+130656	RMSG  	/.COMM./+130657	RPLI  	/.COMM./+130660	ROVCNT	/.COMM./+130661
+	RUCNT 	/.COMM./+130662	RCVER 	/.COMM./+130663	RPLID 	/.COMM./+130664	RCCODE	/.COMM./+130665	RTY   	/.COMM./+130666
+	RTYLO 	/.COMM./+130667	RTYCR 	/.COMM./+130670	RTYLS 	/.COMM./+130671	RLNERR	/.COMM./+130672	RLETIM	/.COMM./+130673
+
+	SUBPROGRAMS
+
+	IRUSE 	INTO. 	INTI. 	PAUSE.	NEXIT 	
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 22
+
+
+
+	SCALARS
+
+	GETEVR	121		RFREE 	130645		I     	120		RCHAIN	130647		J     	122	
+	RSZ   	130646		RLINE 	130653		RSTIME	130650		ROVTIM	130651		RETIME	130652	
+	RCLOC 	130654		RNEIGH	130655		RCCNT 	130656		RMSG  	130657		RPLI  	130660	
+	ROVCNT	130661		RUCNT 	130662		RCVER 	130663		RPLID 	130664		RCCODE	130665	
+	RTY   	130666		RTYLO 	130667		RTYCR 	130670		RTYLS 	130671		RLNERR	130672	
+	RLETIM	130673		
+
+	ARRAYS
+
+	NODE  	0		R     	3777		
+
+	 GETEVR
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 21
+
+
+
+Symbol cross reference
+
+GETEVR	     1
+I	     1	    20	    21	    23	    24	    26	    27	    31	    32
+IRUSE	    26	    31
+J	    22	    23
+NEXIT	    30	    35
+NODE	    11
+R	     6	    11	    21	    23	    24
+RCCNT	     6	    11
+RCCODE	     6	    11
+RCHAIN	     6	    11	    21
+RCLOC	     6	    11
+RCVER	     6	    11
+RETIME	     6	    11
+RFREE	     6	    11	    19	    20	    21
+RLETIM	     6	    11
+RLINE	     6	    11	    24
+RLNERR	     6	    11
+RMSG	     6	    11
+RNEIGH	     6	    11
+ROVCNT	     6	    11
+ROVTIM	     6	    11
+RPLI	     6	    11
+RPLID	     6	    11
+RSTIME	     6	    11
+RSZ	     6	    11	    22
+RTY	     6	    11
+RTYCR	     6	    11
+RTYLO	     6	    11
+RTYLS	     6	    11
+RUCNT	     6	    11
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 21
+
+
+
+Macro/Opdef cross reference
+
+30001P	    19
+30005P	    22	    23
+30010P	    19	    26
+30030P	    27	    28
+30040P	    31
+30045P	    32	    33NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 23
+
+
+     1  		            SUBROUTINE PUTEVR(I)
+     2  		      C     --------------------
+     3  		      C     SUBROUTINE TO RETURN AN EVENT RECORD TO THE FREE LIST.
+     4  		      C     EVENT RECORD FIELDS
+     5  		            INTEGER                     R,     RFREE,       RSZ,    RCHAIN,
+     6  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+     7  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+     8  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+     9  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    10  		            COMMON  NODE(2047),R(10,4343),     RFREE,       RSZ,    RCHAIN,
+    11  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    12  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    13  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    14  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    15  		            R(RCHAIN,I)=RFREE
+    16  		            RFREE=I
+    17  		            RETURN
+    18  		            END
+
+	GLOBAL DUMMIES
+
+	I     	27		
+
+	COMMON
+
+	NODE  	/.COMM./+0	R     	/.COMM./+3777	RFREE 	/.COMM./+130645	RSZ   	/.COMM./+130646	RCHAIN	/.COMM./+130647
+	RSTIME	/.COMM./+130650	ROVTIM	/.COMM./+130651	RETIME	/.COMM./+130652	RLINE 	/.COMM./+130653	RCLOC 	/.COMM./+130654
+	RNEIGH	/.COMM./+130655	RCCNT 	/.COMM./+130656	RMSG  	/.COMM./+130657	RPLI  	/.COMM./+130660	ROVCNT	/.COMM./+130661
+	RUCNT 	/.COMM./+130662	RCVER 	/.COMM./+130663	RPLID 	/.COMM./+130664	RCCODE	/.COMM./+130665	RTY   	/.COMM./+130666
+	RTYLO 	/.COMM./+130667	RTYCR 	/.COMM./+130670	RTYLS 	/.COMM./+130671	RLNERR	/.COMM./+130672	RLETIM	/.COMM./+130673
+
+	SCALARS
+
+	PUTEVR	30		RCHAIN	130647		I     	27		RFREE 	130645		RSZ   	130646	
+	RSTIME	130650		ROVTIM	130651		RETIME	130652		RLINE 	130653		RCLOC 	130654	
+	RNEIGH	130655		RCCNT 	130656		RMSG  	130657		RPLI  	130660		ROVCNT	130661	
+	RUCNT 	130662		RCVER 	130663		RPLID 	130664		RCCODE	130665		RTY   	130666	
+	RTYLO 	130667		RTYCR 	130670		RTYLS 	130671		RLNERR	130672		RLETIM	130673	
+
+	ARRAYS
+
+	NODE  	0		R     	3777		
+
+	 PUTEVR
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 23
+
+
+
+Symbol cross reference
+
+I	     1	    15	    16
+NODE	    10
+PUTEVR	     1
+R	     5	    10	    15
+RCCNT	     5	    10
+RCCODE	     5	    10
+RCHAIN	     5	    10	    15
+RCLOC	     5	    10
+RCVER	     5	    10
+RETIME	     5	    10
+RFREE	     5	    10	    15	    16
+RLETIM	     5	    10
+RLINE	     5	    10
+RLNERR	     5	    10
+RMSG	     5	    10
+RNEIGH	     5	    10
+ROVCNT	     5	    10
+ROVTIM	     5	    10
+RPLI	     5	    10
+RPLID	     5	    10
+RSTIME	     5	    10
+RSZ	     5	    10
+RTY	     5	    10
+RTYCR	     5	    10
+RTYLO	     5	    10
+RTYLS	     5	    10
+RUCNT	     5	    10NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 24
+
+
+     1  		            SUBROUTINE EVTDCH(I,INODE)
+     2  		      C     --------------------------
+     3  		      C     SUBROUTINE TO DECHAIN AN EVENT.
+     4  		      C       I = EVENT RECORD ADDRESS IN R()
+     5  		      C       INODE = NODE NUMBER
+     6  		      C
+     7  		      C     NOTE - USER MUST RETURN EVENT RECORD.
+     8  		      C     EVENT RECORD FIELDS
+     9  		            INTEGER                     R,     RFREE,       RSZ,    RCHAIN,
+    10  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    11  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    12  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    13  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    14  		            COMMON  NODE(2047),R(10,4343),     RFREE,       RSZ,    RCHAIN,
+    15  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    16  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    17  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    18  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    19  		            J=NODE(INODE)
+    20  		            IF(J.EQ.I)GOTO 32025
+    21  		      32010 IF(R(RCHAIN,J).EQ.I)GOTO 32030
+    22  		            J=R(RCHAIN,J)
+    23  		            IF(J.NE.0)GOTO 32010
+    24  		            TYPE 32015,I,INODE
+    25  		      32015 FORMAT(' SUBROUTINE EVTDCH, NO RECORD:',I5,' FOR NODE:',O4)
+    26  		            CALL NEXIT
+    27  		      32025 NODE(INODE)=R(RCHAIN,I)
+    28  		            RETURN
+    29  		      32030 R(RCHAIN,J)=R(RCHAIN,I)
+    30  		            RETURN
+    31  		            END
+
+	GLOBAL DUMMIES
+
+	I     	105		INODE 	106		
+
+	COMMON
+
+	NODE  	/.COMM./+0	R     	/.COMM./+3777	RFREE 	/.COMM./+130645	RSZ   	/.COMM./+130646	RCHAIN	/.COMM./+130647
+	RSTIME	/.COMM./+130650	ROVTIM	/.COMM./+130651	RETIME	/.COMM./+130652	RLINE 	/.COMM./+130653	RCLOC 	/.COMM./+130654
+	RNEIGH	/.COMM./+130655	RCCNT 	/.COMM./+130656	RMSG  	/.COMM./+130657	RPLI  	/.COMM./+130660	ROVCNT	/.COMM./+130661
+	RUCNT 	/.COMM./+130662	RCVER 	/.COMM./+130663	RPLID 	/.COMM./+130664	RCCODE	/.COMM./+130665	RTY   	/.COMM./+130666
+	RTYLO 	/.COMM./+130667	RTYCR 	/.COMM./+130670	RTYLS 	/.COMM./+130671	RLNERR	/.COMM./+130672	RLETIM	/.COMM./+130673
+
+	SUBPROGRAMS
+
+	INTO. 	INTI. 	OCTO. 	OCTI. 	NEXIT 	
+
+	SCALARS
+
+	EVTDCH	107		J     	110		INODE 	106		I     	105		RCHAIN	130647	
+	RFREE 	130645		RSZ   	130646		RSTIME	130650		ROVTIM	130651		RETIME	130652	
+	RLINE 	130653		RCLOC 	130654		RNEIGH	130655		RCCNT 	130656		RMSG  	130657	
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 25
+
+
+	RPLI  	130660		ROVCNT	130661		RUCNT 	130662		RCVER 	130663		RPLID 	130664	
+	RCCODE	130665		RTY   	130666		RTYLO 	130667		RTYCR 	130670		RTYLS 	130671	
+	RLNERR	130672		RLETIM	130673		
+
+	ARRAYS
+
+	NODE  	0		R     	3777		
+
+	 EVTDCH
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 24
+
+
+
+Symbol cross reference
+
+EVTDCH	     1
+I	     1	    20	    21	    24	    27	    29
+INODE	     1	    19	    24	    27
+J	    19	    20	    21	    22	    23	    29
+NEXIT	    26
+NODE	    14	    19	    27
+R	     9	    14	    21	    22	    27	    29
+RCCNT	     9	    14
+RCCODE	     9	    14
+RCHAIN	     9	    14	    21	    22	    27	    29
+RCLOC	     9	    14
+RCVER	     9	    14
+RETIME	     9	    14
+RFREE	     9	    14
+RLETIM	     9	    14
+RLINE	     9	    14
+RLNERR	     9	    14
+RMSG	     9	    14
+RNEIGH	     9	    14
+ROVCNT	     9	    14
+ROVTIM	     9	    14
+RPLI	     9	    14
+RPLID	     9	    14
+RSTIME	     9	    14
+RSZ	     9	    14
+RTY	     9	    14
+RTYCR	     9	    14
+RTYLO	     9	    14
+RTYLS	     9	    14
+RUCNT	     9	    14
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 24
+
+
+
+Macro/Opdef cross reference
+
+32010P	    21	    23
+32015P	    24	    25
+32025P	    20	    27
+32030P	32030P	    21	    29NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 26
+
+
+     1  		            SUBROUTINE EVTFND($,ITYPE,INODE,ILINE,INEIGH,I)
+     2  		      C     -----------------------------------------------
+     3  		      C     SUBROUTINE TO FIND AN EXISTING EVENT.
+     4  		      C
+     5  		      C     INPUT:    ITYPE  -TYPE OF EVENT TO LOOK FOR.
+     6  		      C               INODE  -NODE FOR EVENT WANTED.
+     7  		      C               ILINE  -LINE FOR NODE, -1 IF NOT KNOWN OR DON'T CARE.
+     8  		      C               INEIGH -NEIGHBOR FOR NODE, 0 IF NOT KNOWN OR DON'T CARE.
+     9  		      C
+    10  		      C     OUTPUT:   I      -INDEX OF EVENT IF FOUND
+    11  		      C                      -INDEX OF LAST IN CHAIN FOR NODE IF NOT FOUND
+    12  		      C
+    13  		      C     RETURNS:  NORMAL         -EVENT FOUND
+    14  		      C               RETURN 1       -EVENT NOT FOUND
+    15  		      C     EVENT RECORD FIELDS
+    16  		            INTEGER                     R,     RFREE,       RSZ,    RCHAIN,
+    17  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    18  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    19  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    20  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    21  		            COMMON  NODE(2047),R(10,4343),     RFREE,       RSZ,    RCHAIN,
+    22  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    23  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    24  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    25  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    26  		            I=NODE(INODE)
+    27  		            IF(I.EQ.0)RETURN 1
+    28  		      33010 IF(R(RTY,I).NE.ITYPE)GOTO 33030
+    29  		            IF(ILINE.NE.-1)GOTO 33020
+    30  		            IF(INEIGH.EQ.0)RETURN
+    31  		            IF(R(RNEIGH,I).EQ.INEIGH)RETURN
+    32  		            GOTO 33030
+    33  		      33020 IF(R(RLINE,I).EQ.ILINE)RETURN
+    34  		      33030 L=I
+    35  		            I=R(RCHAIN,L)
+    36  		            IF(I.NE.0)GOTO 33010
+    37  		            I=L
+    38  		            RETURN 1
+    39  		            END
+
+	GLOBAL DUMMIES
+
+	ITYPE 	111		INODE 	112		ILINE 	113		INEIGH	114		I     	115	
+
+	COMMON
+
+	NODE  	/.COMM./+0	R     	/.COMM./+3777	RFREE 	/.COMM./+130645	RSZ   	/.COMM./+130646	RCHAIN	/.COMM./+130647
+	RSTIME	/.COMM./+130650	ROVTIM	/.COMM./+130651	RETIME	/.COMM./+130652	RLINE 	/.COMM./+130653	RCLOC 	/.COMM./+130654
+	RNEIGH	/.COMM./+130655	RCCNT 	/.COMM./+130656	RMSG  	/.COMM./+130657	RPLI  	/.COMM./+130660	ROVCNT	/.COMM./+130661
+	RUCNT 	/.COMM./+130662	RCVER 	/.COMM./+130663	RPLID 	/.COMM./+130664	RCCODE	/.COMM./+130665	RTY   	/.COMM./+130666
+	RTYLO 	/.COMM./+130667	RTYCR 	/.COMM./+130670	RTYLS 	/.COMM./+130671	RLNERR	/.COMM./+130672	RLETIM	/.COMM./+130673
+
+	SCALARS
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 27
+
+
+
+	EVTFND	116		I     	115		INODE 	112		RTY   	130666		ITYPE 	111	
+	ILINE 	113		INEIGH	114		RNEIGH	130655		RLINE 	130653		L     	117	
+	RCHAIN	130647		RFREE 	130645		RSZ   	130646		RSTIME	130650		ROVTIM	130651	
+	RETIME	130652		RCLOC 	130654		RCCNT 	130656		RMSG  	130657		RPLI  	130660	
+	ROVCNT	130661		RUCNT 	130662		RCVER 	130663		RPLID 	130664		RCCODE	130665	
+	RTYLO 	130667		RTYCR 	130670		RTYLS 	130671		RLNERR	130672		RLETIM	130673	
+
+	ARRAYS
+
+	NODE  	0		R     	3777		
+
+	 EVTFND
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 26
+
+
+
+Symbol cross reference
+
+EVTFND	I	     1
+I	     1	    26	    27	    28	    31	    33	    34	    35	    36	    37
+ILINE	     1	    29	    33
+INEIGH	     1	    30	    31
+INODE	     1	    26
+ITYPE	     1	    28
+L	    34	    35	    37
+NODE	    21	    26
+R	    16	    21	    28	    31	    33	    35
+RCCNT	    16	    21
+RCCODE	    16	    21
+RCHAIN	    16	    21	    35
+RCLOC	    16	    21
+RCVER	    16	    21
+RETIME	    16	    21
+RFREE	    16	    21
+RLETIM	    16	    21
+RLINE	    16	    21	    33
+RLNERR	    16	    21
+RMSG	    16	    21
+RNEIGH	    16	    21	    31
+ROVCNT	    16	    21
+ROVTIM	    16	    21
+RPLI	    16	    21
+RPLID	    16	    21
+RSTIME	    16	    21
+RSZ	    16	    21
+RTY	    16	    21	    28
+RTYCR	    16	    21
+RTYLO	    16	    21
+RTYLS	    16	    21
+RUCNT	    16	    21
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 26
+
+
+
+Macro/Opdef cross reference
+
+33010P	    28	    36
+33020P	    29	    33
+33030P	    28	    32	    34NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 28
+
+
+     1  		            SUBROUTINE LETRC(LTIME,IEVENT,IW1,IW2,IR,INODE,ILINE,INEIGH,IPLI)
+     2  		      C     -----------------------------------------------------------------
+     3  		      C     SUBROUTINE TO TRACE A LINE EVENT BASED ON NODE NUMBER.
+     4  		      C
+     5  		      C     SELECTION CRITERIA IS PATCHED IN EACH TIME.
+     6  		            INTEGER LDATE(4),HEXW1(2),HEXW2(2)
+     7  		            RETURN
+     8  		            IF((INODE.NE."1316.OR.ILINE.NE.2).AND.
+     9  		           1   (INODE.NE."1650.OR.ILINE.NE.13))RETURN
+    10  		            CALL HEXFMT(IW1,8,HEXW1)
+    11  		            CALL HEXFMT(IW2,8,HEXW2)
+    12  		            CALL DTFRMT(LTIME,LDATE)
+    13  		            WRITE(26,40010)LDATE,LTIME,IEVENT,IW1,IW2,IR,INODE,ILINE,
+    14  		           1           INEIGH,IPLI,HEXW1,HEXW2
+    15  		      40010 FORMAT(1X,4A5,' (',I9,') EVENT:',I3,7X,'DATA:',O11,1X,O11,/,
+    16  		           1       2X,' IR:',I5,' NODE:',O4,' LINE:',I2,' NEIGH:',O4,' PLI:',
+    17  		           2       I3,'   HEX:',3X,A5,A3,4X,A5,A3)
+    18  		            RETURN
+    19  		            END
+
+	CONSTANTS
+
+	0	000000000010	
+
+	GLOBAL DUMMIES
+
+	LTIME 	161		IEVENT	162		IW1   	163		IW2   	164		IR    	165	
+	INODE 	166		ILINE 	167		INEIGH	170		IPLI  	171		
+
+	SUBPROGRAMS
+
+	HEXFMT	DTFRMT	ALPHO.	ALPHI.	INTO. 	INTI. 	OCTO. 	OCTI. 	
+
+	SCALARS
+
+	LETRC 	172		INODE 	166		ILINE 	167		IW1   	163		IW2   	164	
+	LTIME 	161		IEVENT	162		IR    	165		INEIGH	170		IPLI  	171	
+
+	ARRAYS
+
+	LDATE 	173		HEXW1 	177		HEXW2 	201		
+
+	 LETRC
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 28
+
+
+
+Symbol cross reference
+
+DTFRMT	    12
+HEXFMT	    10	    11
+HEXW1	     6	    10	    13
+HEXW2	     6	    11	    13
+IEVENT	     1	    13
+ILINE	     1	     8	    13
+INEIGH	     1	    13
+INODE	     1	     8	    13
+IPLI	     1	    13
+IR	     1	    13
+IW1	     1	    10	    13
+IW2	     1	    11	    13
+LDATE	     6	    12	    13
+LETRC	     1
+LTIME	     1	    12	    13
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 28
+
+
+
+Macro/Opdef cross reference
+
+40010P	40010P	    13	    15NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 29
+
+
+     1  		            SUBROUTINE HEXFMT(IN,ID,HEX)
+     2  		      C     ----------------------------
+     3  		      C     SUBROUTINE TO CONVERT INTEGER TO HEX A5 ARRAY.
+     4  		      C
+     5  		      C     INPUT:    IN     -INPUT INTEGER.
+     6  		      C               ID     -DIGIT COUNT TO CONVERT, LAST DIGITS OF WORD USED.
+     7  		      C
+     8  		      C     OUTPUT:   HEX    -OUTPUT A5 ARRAY.
+     9  		            INTEGER HEX(1)
+    10  		            I=IN
+    11  		            DO 41050 J=ID,1,-1
+    12  		            K=IAND(I,"17)
+    13  		            IF(K.GT.9)K=K+7
+    14  		            CALL PUTC(J,HEX,K+48)
+    15  		      41050 I=LSH(I,-4)
+    16  		            I=MOD(ID,5)
+    17  		            IF(I.EQ.0)RETURN
+    18  		            DO 41080 J=ID+1,ID+5-I
+    19  		      41080 CALL PUTC(J,HEX,32)
+    20  		            RETURN
+    21  		            END
+
+	CONSTANTS
+
+	0	000000000017	1	000000000005	2	000000000040	
+
+	GLOBAL DUMMIES
+
+	IN    	116		ID    	117		HEX   	120		
+
+	SUBPROGRAMS
+
+	IAND  	PUTC  	LSH   	MOD   	
+
+	SCALARS
+
+	HEXFMT	123		I     	124		IN    	116		J     	125		ID    	117	
+	K     	126		
+
+	ARRAYS
+
+	HEX   	120		
+
+	 HEXFMT
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 29
+
+
+
+Symbol cross reference
+
+HEX	41080P	     1	     9	    14	    19
+HEXFMT	     1
+I	    10	    12	    15	    16	    17	    18
+IAND	    12
+ID	     1	    11	    16	    18
+IN	     1	    10
+J	    11	    14	    18	    19
+K	    12	    13	    14
+LSH	    15
+MOD	    16
+PUTC	    14	    19
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 29
+
+
+
+Macro/Opdef cross reference
+
+41050P	    11	    15
+41080P	41080P	    18	    19NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 30
+
+
+     1  		            SUBROUTINE LNEVNG(INODE,IEVC,IEVENT,IENODE)
+     2  		      C     -------------------------------------------
+     3  		      C     SUBROUTINE TO FIND ALL THE LINE EVENTS FROM THE NEIGHBORS POINT
+     4  		      C     OF VIEW FOR A PARTICULAR NODE.
+     5  		      C
+     6  		      C     INPUT:    INODE  -NODE NUMBER TO FIND EVENTS FOR.
+     7  		      C
+     8  		      C     OUTPUT:   IEVC   -NUMBER OF EVENTS FOUND, 0-32.
+     9  		      C               IEVENT -32 ELEMENT ARRAY CONTAINING RECORD INDEXES
+    10  		      C                       FOR EVENTS FOUND.
+    11  		      C               IENODE -NODES FOR RECORDS SELECTED, 32 ELEMENT ARRAY.
+    12  		            INTEGER IEVENT(1),IENODE(1)
+    13  		      C     EVENT RECORD FIELDS
+    14  		            INTEGER                     R,     RFREE,       RSZ,    RCHAIN,
+    15  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    16  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    17  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    18  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    19  		            COMMON  NODE(2047),R(10,4343),     RFREE,       RSZ,    RCHAIN,
+    20  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    21  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    22  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    23  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    24  		            IEVC=0
+    25  		            IF(INODE.GT."1777)GOTO 37130
+    26  		            DO 37120 I=0,15
+    27  		            ILINE=-1
+    28  		            CALL NNDAT($37125,INODE,I,NEIGH)
+    29  		            IF(NEIGH.LE."1777)CALL NNDAT($37120,NEIGH,ILINE,INODE)
+    30  		            CALL EVTFND($37120,RTYLO,NEIGH,ILINE,INODE,J)
+    31  		            IF(IEVC.EQ.0)GOTO 37115
+    32  		            DO 37110 K=1,IEVC
+    33  		            IF(IEVENT(K).EQ.J)GOTO 37120
+    34  		      37110 CONTINUE
+    35  		      37115 IEVC=IEVC+1
+    36  		            IF(IEVC.GT.32)GOTO 37190
+    37  		            IEVENT(IEVC)=J
+    38  		            IENODE(IEVC)=NEIGH
+    39  		      37120 CONTINUE
+    40  		      37125 RETURN
+    41  		      37130 I=INODE
+    42  		      37135 CALL GT2N($37150,I,NEIGH)
+    43  		            ILINE=-1
+    44  		            IF(NEIGH.LE."1777)CALL NNDAT($37135,NEIGH,ILINE,INODE)
+    45  		            CALL EVTFND($37135,RTYLO,NEIGH,ILINE,INODE,J)
+    46  		            IF(IEVC.EQ.0)GOTO 37145
+    47  		            DO 37140 K=1,IEVC
+    48  		            IF(IEVENT(K).EQ.J)GOTO 37135
+    49  		      37140 CONTINUE
+    50  		      37145 IEVC=IEVC+1
+    51  		            IF(IEVC.GT.32)GOTO 37190
+    52  		            IEVENT(IEVC)=J
+    53  		            IENODE(IEVC)=NEIGH
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 31
+
+
+    54  		            GOTO 37135
+    55  		      37150 RETURN
+    56  		      37190 TYPE 37195,INODE,(R(RLINE,IEVENT(I)),R(RNEIGH,IEVENT(I)),I=1,32)
+    57  		      37195 FORMAT(' SUBROUTINE LNEVNG, TOO MANY NEIGHBOR LINE EVENTS FOR',
+    58  		           1       ' NODE:',O4,32(/,' LINE:',I2,' NEIGHBOR:',O4))
+    59  		            PAUSE
+    60  		            CALL NEXIT
+    61  		            END
+
+	GLOBAL DUMMIES
+
+	INODE 	252		IEVC  	253		IEVENT	254		IENODE	255		
+
+	COMMON
+
+	NODE  	/.COMM./+0	R     	/.COMM./+3777	RFREE 	/.COMM./+130645	RSZ   	/.COMM./+130646	RCHAIN	/.COMM./+130647
+	RSTIME	/.COMM./+130650	ROVTIM	/.COMM./+130651	RETIME	/.COMM./+130652	RLINE 	/.COMM./+130653	RCLOC 	/.COMM./+130654
+	RNEIGH	/.COMM./+130655	RCCNT 	/.COMM./+130656	RMSG  	/.COMM./+130657	RPLI  	/.COMM./+130660	ROVCNT	/.COMM./+130661
+	RUCNT 	/.COMM./+130662	RCVER 	/.COMM./+130663	RPLID 	/.COMM./+130664	RCCODE	/.COMM./+130665	RTY   	/.COMM./+130666
+	RTYLO 	/.COMM./+130667	RTYCR 	/.COMM./+130670	RTYLS 	/.COMM./+130671	RLNERR	/.COMM./+130672	RLETIM	/.COMM./+130673
+
+	SUBPROGRAMS
+
+	NNDAT 	EVTFND	GT2N  	OCTO. 	OCTI. 	INTO. 	INTI. 	PAUSE.	NEXIT 	
+
+	SCALARS
+
+	LNEVNG	257		IEVC  	253		INODE 	252		I     	260		ILINE 	261	
+	NEIGH 	262		RTYLO 	130667		J     	263		K     	264		RLINE 	130653	
+	RNEIGH	130655		RFREE 	130645		RSZ   	130646		RCHAIN	130647		RSTIME	130650	
+	ROVTIM	130651		RETIME	130652		RCLOC 	130654		RCCNT 	130656		RMSG  	130657	
+	RPLI  	130660		ROVCNT	130661		RUCNT 	130662		RCVER 	130663		RPLID 	130664	
+	RCCODE	130665		RTY   	130666		RTYCR 	130670		RTYLS 	130671		RLNERR	130672	
+	RLETIM	130673		
+
+	ARRAYS
+
+	IEVENT	254		IENODE	255		NODE  	0		R     	3777		
+
+	 LNEVNG
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 30
+
+
+
+Symbol cross reference
+
+EVTFND	NEXIT	    30	    45
+GT2N	    42
+I	    26	    28	    41	    42	    56
+IENODE	     1	    12	    38	    53
+IEVC	     1	    24	    31	    32	    35	    36	    37	    38	    46	    47	    50	    51	    52	    53
+IEVENT	     1	    12	    33	    37	    48	    52	    56
+ILINE	    27	    29	    30	    43	    44	    45
+INODE	     1	    25	    28	    29	    30	    41	    44	    45	    56
+J	    30	    33	    37	    45	    48	    52
+K	    32	    33	    47	    48
+LNEVNG	     1
+NEIGH	    28	    29	    30	    38	    42	    44	    45	    53
+NEXIT	    60
+NNDAT	    28	    29	    44
+NODE	    19
+R	    14	    19	    56
+RCCNT	    14	    19
+RCCODE	    14	    19
+RCHAIN	    14	    19
+RCLOC	    14	    19
+RCVER	    14	    19
+RETIME	    14	    19
+RFREE	    14	    19
+RLETIM	    14	    19
+RLINE	    14	    19	    56
+RLNERR	    14	    19
+RMSG	    14	    19
+RNEIGH	    14	    19	    56
+ROVCNT	    14	    19
+ROVTIM	    14	    19
+RPLI	    14	    19
+RPLID	    14	    19
+RSTIME	    14	    19
+RSZ	    14	    19
+RTY	    14	    19
+RTYCR	    14	    19
+RTYLO	    14	    19	    30	    45
+RTYLS	    14	    19
+RUCNT	    14	    19
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 30
+
+
+
+Macro/Opdef cross reference
+
+37110P	    32	    34
+37115P	    31	    35
+37120P	    26	    29	    30	    33	    39
+37125P	    28	    40
+37130P	    25	    41
+37135P	    42	    44	    45	    48	    54
+37140P	    47	    49
+37145P	    46	    50
+37150P	    42	    55
+37190P	    36	    51	    56
+37195P	    56	    57NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 32
+
+
+     1  		            SUBROUTINE LINECR(INODE,ITIME,ICTIME,MATCH,IEVC)
+     2  		      C     ------------------------------------------------
+     3  		      C     SUBROUTINE TO DEDUCE IF A CRASH HAS OCCURED FOR A PARTICULAR
+     4  		      C     NODE BY LOOKING AT THE LINE EVENTS FOR THAT NODE FROM THE
+     5  		      C     NEIGHBORS POINT OF VIEW.
+     6  		      C
+     7  		      C     A CRASH HAS OCCURED IF THE MAJORITY OF THE LINE EVENTS THAT
+     8  		      C     HAVE A CLOSE END TIME TO THAT SPECIFIED OR NO END TIME HAVE A
+     9  		      C     COMMON START TIME GREATER THAN THE EXPECTED END TIME.
+    10  		      C
+    11  		      C     INPUT:    INODE  -NODE OF INTEREST.
+    12  		      C               ITIME  -END TIME OF EXPECTED CRASH
+    13  		      C               ICTIME -COMMON START TIME TO FIND, 0 IF ANY.
+    14  		      C
+    15  		      C     OUTPUT:   ICTIME -IF CRASH DEDUCED, START TIME OF CRASH,
+    16  		      C                       0 IF UNKNOWN.
+    17  		      C                      -IF NO CRASH, -1.
+    18  		      C               MATCH  -NUMBER OF EVENTS THAT MATCHED CRITERIA.
+    19  		      C               IEVC   -NUMBER OF EVENTS EXAMINED.
+    20  		            INTEGER IEVENT(32),IENODE(32)
+    21  		      C     EVENT RECORD FIELDS
+    22  		            INTEGER                     R,     RFREE,       RSZ,    RCHAIN,
+    23  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    24  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    25  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    26  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    27  		            COMMON  NODE(2047),R(10,4343),     RFREE,       RSZ,    RCHAIN,
+    28  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    29  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    30  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    31  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    32  		            INTEGER IDATE(4),JDATE(4)
+    33  		            CALL LNEVNG(INODE,IEVC,IEVENT,IENODE)
+    34  		            IF(IEVC.LT.2)GOTO 37240
+    35  		            DO 37230 I=1,IEVC/2+1
+    36  		            IF(I.EQ.IEVC)GOTO 37230
+    37  		            ICT=R(RSTIME,IEVENT(I))
+    38  		            IF(ICT.GT.ITIME)GOTO 37230
+    39  		            IF(ICTIME.EQ.0)GOTO 37205
+    40  		            IF(IABS(ICT-ICTIME).GT.36)GOTO 37230
+    41  		            ICT=ICTIME
+    42  		      37205 ICTS=ICT
+    43  		            MATCH=1
+    44  		            DO 37220 J=I+1,IEVC
+    45  		            IF(R(RETIME,IEVENT(J)).EQ.0)GOTO 37210
+    46  		            IF(IABS(ITIME-R(RETIME,IEVENT(J))).GT.20)GOTO 37220
+    47  		      37210 IF(IABS(ICT-R(RSTIME,IEVENT(J))).GT.36)
+    48  		           1  GOTO 37220
+    49  		            MATCH=MATCH+1
+    50  		            IF(R(RSTIME,IEVENT(J)).LT.ICTS)ICTS=R(RSTIME,IEVENT(J))
+    51  		      37220 CONTINUE
+    52  		            IF(IEVC.EQ.2.AND.MATCH.NE.2)GOTO 37230
+    53  		            IF(MATCH.LT.(IEVC+1)/2)GOTO 37230
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 33
+
+
+    54  		            ICTIME=ICTS
+    55  		            RETURN
+    56  		            CALL DTFRMT(ICTS,IDATE)
+    57  		            CALL DTFRMT(ITIME,JDATE)
+    58  		            TYPE 37225,INODE,MATCH,IEVC,ICTS,ITIME,IDATE,JDATE
+    59  		      37225 FORMAT(' THINK I HAVE A CRASH FOR NODE:',O4,' PROB',I3,'/',I2,
+    60  		           1       2I10,/,'       FROM:',4A5,' TO:',4A5)
+    61  		            RETURN
+    62  		      37230 CONTINUE
+    63  		      37240 ICTIME=-1
+    64  		            RETURN
+    65  		            END
+
+
+	GLOBAL DUMMIES
+
+	INODE 	263		ITIME 	264		ICTIME	265		MATCH 	266		IEVC  	267	
+
+	COMMON
+
+	NODE  	/.COMM./+0	R     	/.COMM./+3777	RFREE 	/.COMM./+130645	RSZ   	/.COMM./+130646	RCHAIN	/.COMM./+130647
+	RSTIME	/.COMM./+130650	ROVTIM	/.COMM./+130651	RETIME	/.COMM./+130652	RLINE 	/.COMM./+130653	RCLOC 	/.COMM./+130654
+	RNEIGH	/.COMM./+130655	RCCNT 	/.COMM./+130656	RMSG  	/.COMM./+130657	RPLI  	/.COMM./+130660	ROVCNT	/.COMM./+130661
+	RUCNT 	/.COMM./+130662	RCVER 	/.COMM./+130663	RPLID 	/.COMM./+130664	RCCODE	/.COMM./+130665	RTY   	/.COMM./+130666
+	RTYLO 	/.COMM./+130667	RTYCR 	/.COMM./+130670	RTYLS 	/.COMM./+130671	RLNERR	/.COMM./+130672	RLETIM	/.COMM./+130673
+
+	SUBPROGRAMS
+
+	LNEVNG	IABS  	DTFRMT	OCTO. 	OCTI. 	INTO. 	INTI. 	ALPHO.	ALPHI.	
+
+	SCALARS
+
+	LINECR	271		INODE 	263		IEVC  	267		I     	272		ICT   	273	
+	RSTIME	130650		ITIME 	264		ICTIME	265		ICTS  	274		MATCH 	266	
+	J     	275		RETIME	130652		RFREE 	130645		RSZ   	130646		RCHAIN	130647	
+	ROVTIM	130651		RLINE 	130653		RCLOC 	130654		RNEIGH	130655		RCCNT 	130656	
+	RMSG  	130657		RPLI  	130660		ROVCNT	130661		RUCNT 	130662		RCVER 	130663	
+	RPLID 	130664		RCCODE	130665		RTY   	130666		RTYLO 	130667		RTYCR 	130670	
+	RTYLS 	130671		RLNERR	130672		RLETIM	130673		
+
+	ARRAYS
+
+	IEVENT	276		IENODE	336		NODE  	0		R     	3777		IDATE 	376	
+	JDATE 	402		
+
+	 LINECR
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 32
+
+
+
+Symbol cross reference
+
+DTFRMT	    56	    57
+I	    35	    36	    37	    44
+IABS	    40	    46	    47
+ICT	    37	    38	    40	    41	    42	    47
+ICTIME	     1	    39	    40	    41	    54	    63
+ICTS	    42	    50	    54	    56	    58
+IDATE	    32	    56	    58
+IENODE	    20	    33
+IEVC	     1	    33	    34	    35	    36	    44	    52	    53	    58
+IEVENT	    20	    33	    37	    45	    46	    47	    50
+INODE	     1	    33	    58
+ITIME	     1	    38	    46	    57	    58
+J	    44	    45	    46	    47	    50
+JDATE	    32	    57	    58
+LINECR	     1
+LNEVNG	    33
+MATCH	     1	    43	    49	    52	    53	    58
+NODE	    27
+R	    22	    27	    37	    45	    46	    47	    50
+RCCNT	    22	    27
+RCCODE	    22	    27
+RCHAIN	    22	    27
+RCLOC	    22	    27
+RCVER	    22	    27
+RETIME	    22	    27	    45	    46
+RFREE	    22	    27
+RLETIM	    22	    27
+RLINE	    22	    27
+RLNERR	    22	    27
+RMSG	    22	    27
+RNEIGH	    22	    27
+ROVCNT	    22	    27
+ROVTIM	    22	    27
+RPLI	    22	    27
+RPLID	    22	    27
+RSTIME	    22	    27	    37	    47	    50
+RSZ	    22	    27
+RTY	    22	    27
+RTYCR	    22	    27
+RTYLO	    22	    27
+RTYLS	    22	    27
+RUCNT	    22	    27
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 32
+
+
+
+Macro/Opdef cross reference
+
+37205P	    39	    42
+37210P	    45	    47
+37220P	    44	    46	    47	    51
+37225P	    58	    59
+37230P	    35	    36	    38	    40	    52	    53	    62
+37240P	37240P	    34	    63NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 34
+
+
+     1  		            SUBROUTINE EVTLIN(I,INODE,IOPT)
+     2  		      C     -------------------------------
+     3  		      C     SUBROUTINE TO WRITE A LINE EVENT TO DISK DISCARDING THOSE CAUSED
+     4  		      C     BY CRASHES AND DUPLICATE EVENTS REPORTED BY THE LINES NEIGHBOR.
+     5  		      C       I = EVENT RECORD ADDRESS IN R()
+     6  		      C       INODE = NODE NUMBER
+     7  		      C       IOPT  = OPTIONS, 0 = APPEND RECORD IF CRASH OPEN
+     8  		      C                        1 = WRITE RECORD IF CRASH OPEN
+     9  		      C     EVENT RECORD FIELDS
+    10  		            INTEGER                     R,     RFREE,       RSZ,    RCHAIN,
+    11  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    12  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    13  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    14  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    15  		            COMMON  NODE(2047),R(10,4343),     RFREE,       RSZ,    RCHAIN,
+    16  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    17  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    18  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    19  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    20  		      C     IF WE HAVE CRASHED RECENTLY, SEE IF OUR LINE CAME UP RIGHT
+    21  		      C     AFTER THE CRASH.
+    22  		      C     CALL NDSTOP(INODE)
+    23  		            IF(R(RPLI,I).NE.0)GOTO 31090
+    24  		            CALL EVTFND($31090,RTYCR,INODE,-1,0,N)
+    25  		            CALL CRANAL($31090,$31090,INODE,N)
+    26  		            IF(R(RSTIME,I).EQ.0)GOTO 31010
+    27  		            IF(IABS(R(RSTIME,I)-R(RETIME,N)).GT.36)GOTO 31090
+    28  		      31010 IF(IABS(R(RETIME,I)-R(RETIME,N)).GT.140)GOTO 31090
+    29  		      C     SEE IF NEIGHBOR HAS AN EVENT TO CORRESPOND TO OURS
+    30  		            NEIGH=R(RNEIGH,I)
+    31  		            ILINE=R(RLINE,I)
+    32  		            IF(NEIGH.EQ.0)CALL NNDAT($31090,INODE,ILINE,NEIGH)
+    33  		      C     CALL NDSTOP(NEIGH)
+    34  		            JLINE=-1
+    35  		            IF(NEIGH.LT."2000)CALL NNDAT($31090,NEIGH,JLINE,INODE)
+    36  		            CALL EVTFND($31090,RTYLO,NEIGH,JLINE,INODE,J)
+    37  		            IF(IABS(R(RETIME,I)-R(RETIME,J)).GT.36)GOTO 31090
+    38  		            CALL LINCON(J,NEIGH,IOPT)
+    39  		      C     SEE IF NEIGHBOR CAUSED OUR LINE EVENT TO BE CONSOLIDATED.
+    40  		      C     IF SO, WE'RE DONE, ELSE OUTPUT OURS.
+    41  		            CALL EVTFND($31095,RTYLO,INODE,ILINE,NEIGH,I)
+    42  		      31090 CALL LINCON(I,INODE,IOPT)
+    43  		      31095 RETURN
+    44  		            END
+
+	CONSTANTS
+
+	0	000000000000	
+
+	GLOBAL DUMMIES
+
+	I     	204		INODE 	205		IOPT  	206		
+
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 35
+
+
+	COMMON
+
+	NODE  	/.COMM./+0	R     	/.COMM./+3777	RFREE 	/.COMM./+130645	RSZ   	/.COMM./+130646	RCHAIN	/.COMM./+130647
+	RSTIME	/.COMM./+130650	ROVTIM	/.COMM./+130651	RETIME	/.COMM./+130652	RLINE 	/.COMM./+130653	RCLOC 	/.COMM./+130654
+	RNEIGH	/.COMM./+130655	RCCNT 	/.COMM./+130656	RMSG  	/.COMM./+130657	RPLI  	/.COMM./+130660	ROVCNT	/.COMM./+130661
+	RUCNT 	/.COMM./+130662	RCVER 	/.COMM./+130663	RPLID 	/.COMM./+130664	RCCODE	/.COMM./+130665	RTY   	/.COMM./+130666
+	RTYLO 	/.COMM./+130667	RTYCR 	/.COMM./+130670	RTYLS 	/.COMM./+130671	RLNERR	/.COMM./+130672	RLETIM	/.COMM./+130673
+
+	SUBPROGRAMS
+
+	EVTFND	CRANAL	IABS  	NNDAT 	LINCON	
+
+	SCALARS
+
+	EVTLIN	210		RPLI  	130660		I     	204		RTYCR 	130670		INODE 	205	
+	N     	211		RSTIME	130650		RETIME	130652		NEIGH 	212		RNEIGH	130655	
+	ILINE 	213		RLINE 	130653		JLINE 	214		RTYLO 	130667		J     	215	
+	IOPT  	206		RFREE 	130645		RSZ   	130646		RCHAIN	130647		ROVTIM	130651	
+	RCLOC 	130654		RCCNT 	130656		RMSG  	130657		ROVCNT	130661		RUCNT 	130662	
+	RCVER 	130663		RPLID 	130664		RCCODE	130665		RTY   	130666		RTYLS 	130671	
+	RLNERR	130672		RLETIM	130673		
+
+	ARRAYS
+
+	NODE  	0		R     	3777		
+
+	 EVTLIN
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 34
+
+
+
+Symbol cross reference
+
+CRANAL	31095P	    25
+EVTFND	    24	    36	    41
+EVTLIN	     1
+I	     1	    23	    26	    27	    28	    30	    31	    37	    41	    42
+IABS	    27	    28	    37
+ILINE	    31	    32	    41
+INODE	     1	    24	    25	    32	    35	    36	    41	    42
+IOPT	     1	    38	    42
+J	    36	    37	    38
+JLINE	    34	    35	    36
+LINCON	    38	    42
+N	    24	    25	    27	    28
+NEIGH	    30	    32	    35	    36	    38	    41
+NNDAT	    32	    35
+NODE	    15
+R	    10	    15	    23	    26	    27	    28	    30	    31	    37
+RCCNT	    10	    15
+RCCODE	    10	    15
+RCHAIN	    10	    15
+RCLOC	    10	    15
+RCVER	    10	    15
+RETIME	    10	    15	    27	    28	    37
+RFREE	    10	    15
+RLETIM	    10	    15
+RLINE	    10	    15	    31
+RLNERR	    10	    15
+RMSG	    10	    15
+RNEIGH	    10	    15	    30
+ROVCNT	    10	    15
+ROVTIM	    10	    15
+RPLI	    10	    15	    23
+RPLID	    10	    15
+RSTIME	    10	    15	    26	    27
+RSZ	    10	    15
+RTY	    10	    15
+RTYCR	    10	    15	    24
+RTYLO	    10	    15	    36	    41
+RTYLS	    10	    15
+RUCNT	    10	    15
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 34
+
+
+
+Macro/Opdef cross reference
+
+31010P	    26	    28
+31090P	    23	    24	    25	    27	    28	    32	    35	    36	    37	    42
+31095P	31095P	    41	    43NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 36
+
+
+     1  		            SUBROUTINE LINCON(I,INODE,IOPT)
+     2  		      C     -------------------------------
+     3  		      C     SUBROUTINE TO WRITE A LINE EVENT TO DISK DISCARDING THOSE CAUSED
+     4  		      C     BY CRASHES AND CONSOLIDATING DUPLICATE EVENTS REPORTED BY
+     5  		      C     THE LINE'S NEIGHBOR.
+     6  		      C       I = EVENT RECORD ADDRESS IN R()
+     7  		      C       INODE = NODE NUMBER
+     8  		      C       IOPT  = OPTIONS, 0 = APPEND RECORD IF CRASH OPEN
+     9  		      C                        1 = WRITE RECORD IF CRASH OPEN
+    10  		      C     EVENT RECORD FIELDS
+    11  		            INTEGER                     R,     RFREE,       RSZ,    RCHAIN,
+    12  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    13  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    14  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    15  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    16  		            COMMON  NODE(2047),R(10,4343),     RFREE,       RSZ,    RCHAIN,
+    17  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    18  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    19  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    20  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    21  		            IRN=1
+    22  		      C     DETERMINE IF NEIGHBOR HAS A CRASH RECORD PRESENT
+    23  		            JLINE=-1
+    24  		            NEIGH=R(RNEIGH,I)
+    25  		            IF(NEIGH.EQ.0)CALL NNDAT($31170,INODE,R(RLINE,I),NEIGH)
+    26  		      C8765 GOTO 31170
+    27  		            CALL EVTFND($31130,RTYCR,NEIGH,-1,0,N)
+    28  		            CALL CRANAL($31130,$31125,NEIGH,N)
+    29  		      C     DETERMINE IF LINE EVENT FITS WITHIN NEIGHBOR'S CRASH BASED ON
+    30  		      C     LINE START TIME.
+    31  		            IF(R(RSTIME,I).EQ.0)GOTO 31130
+    32  		            IF(R(RSTIME,N).EQ.0)GOTO 31102
+    33  		            IF(R(RSTIME,I).LT.R(RSTIME,N)-20)GOTO 31130
+    34  		            IF(R(RSTIME,I).GT.R(RSTIME,N)+16+20)GOTO 31110
+    35  		      C     DETERMINE IF LINE EVENT FITS WITHING NEIGHBOR'S CRASH BASED ON
+    36  		      C     LINE END TIME.
+    37  		      31102 IF(R(RETIME,I).EQ.0)GOTO 31115
+    38  		            J=20
+    39  		            IF(INODE.LE."1777)J=120
+    40  		            IF(R(RETIME,I).GT.R(RETIME,N)+20+J)GOTO 31120
+    41  		      C     LINE EVENT FITS WITHIN NEIGHBOR'S CRASH.  MAKE SURE NEIGHBOR
+    42  		      C     DOES NOT HAVE A SIMILAR EVENT.  IF SO, SOMETHINGS WRONG WITH
+    43  		      C     OUR LOGIC.
+    44  		            JLINE=-1
+    45  		            IF(NEIGH.LE."2000)CALL NNDAT($31105,NEIGH,JLINE,INODE)
+    46  		            CALL EVTFND($31105,RTYLO,NEIGH,JLINE,NEIGH,J)
+    47  		            IF(R(RSTIME,N).EQ.0)GOTO 31105
+    48  		            IF(R(RSTIME,J).GT.R(RSTIME,N)+16+20.AND.
+    49  		           1   R(RSTIME,J).LT.R(RETIME,N)-20)GOTO 31192
+    50  		            IF(R(RETIME,J).GT.R(RSTIME,N)+16+20.AND.
+    51  		           1   R(RETIME,J).LT.R(RETIME,N)-20)GOTO 31192
+    52  		      C     SINCE LINE EVENT WAS CAUSED BY CRASH, COUNT ANY PLI'S AGAINST
+    53  		      C     CRASH AND DISCARD LINE EVENT.  IF NEIGHBOR HAS EVENT WITH SAME
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 37
+
+
+    54  		      C     END TIME AND UNKNOW START TIME OR START TIME GT THIS START
+    55  		      C     TIME AND NO PLI'S, IT IS SAME EVENT, DISCARD TOO.
+    56  		      31105 R(RPLI,N)=R(RPLI,N)+R(RPLI,I)
+    57  		            IF(R(RSTIME,N).EQ.0)R(RSTIME,N)=R(RSTIME,I)
+    58  		      C     TYPE 31106,INODE,R(RLINE,I),NEIGH,R(RSTIME,I),R(RETIME,I)
+    59  		      31106 FORMAT(' DISCARD NODE:',O4,' LINE:',I2,' NEIGH:',O4,' TIME:',
+    60  		           1       I9,'-',I9)
+    61  		      C     CALL NDSTOP(NEIGH)
+    62  		            JLINE=-1
+    63  		            IF(NEIGH.LT."2000)CALL NNDAT($31190,NEIGH,JLINE,INODE)
+    64  		            CALL EVTFND($31190,RTYLO,NEIGH,JLINE,INODE,J)
+    65  		            IF(IABS(R(RETIME,I)-R(RETIME,J)).GT.20)GOTO 31190
+    66  		            IF(R(RSTIME,J).EQ.0)GOTO 31108
+    67  		            IF(R(RSTIME,J).LT.R(RSTIME,I))GOTO 31190
+    68  		      31108 IF(R(RPLI,J).NE.0)GOTO 31190
+    69  		            CALL EVTDCH(J,NEIGH)
+    70  		            CALL PUTEVR(J)
+    71  		            GOTO 31190
+    72  		      C     DETERMINE IF LINE EVENT STARTED INSIDE THE CRASH EVENT.
+    73  		      C     IF SO, THERE CAN'T BE ANY PLI'S IF LOGIC WORKS.  IN ANY
+    74  		      C     CASE, THE EVENT WAS'T CAUSED BY CRASH, OUTPUT NORMALLY.
+    75  		      31110 J=20
+    76  		            IF(INODE.LE."1777)J=120
+    77  		            IF(R(RSTIME,I).GT.R(RETIME,N)+20+J)GOTO 31130
+    78  		            IF(R(RPLI,I).EQ.0)GOTO 31130
+    79  		            TYPE 31112,INODE,R(RLINE,I),R(RPLI,I),R(RSTIME,I),R(RETIME,I),
+    80  		           1           NEIGH,R(RPLI,N),R(RSTIME,N),R(RETIME,N)
+    81  		      31112 FORMAT(' SUBROUTINE EVTLIN, LINE EVENT WITHIN NEIGHBOR CRASH',/,
+    82  		           1       '  NODE:',O4,' LINE:',I2,' PLI:',I3,I10,'-',I9,/,
+    83  		           2       '  NEIGH:',O4,' PLI:',I3,I10,'-',I9)
+    84  		            GOTO 31130
+    85  		      C     LINE EVENT HAS NO END TIME, BUT LINE EVENT START TIME IS WITHIN
+    86  		      C     CRASH EVENT.  COUNT LINES'S PLI'S AGAINST CRASH, BUT RESTART
+    87  		      C     LINE EVENT AT CRASH END SINCE LINE DID NOT COME BACK UP WITH NODE.
+    88  		      31115 CONTINUE
+    89  		      C     LINE EVENT END TIME IS OUTSIDE OF CRASH EVENT, BUT LINE EVENT
+    90  		      C     START TIME IS WITHIN CRASH EVENT.  COUNT LINE'S PLI'S AGAINST
+    91  		      C     CRASH, BUT RESTART LINE EVENT AT CRASH END SINCE LINE DID
+    92  		      C     NOT COME BACK UP WITH NODE.
+    93  		      31120 R(RPLI,N)=R(RPLI,N)+R(RPLI,I)
+    94  		            R(RSTIME,I)=R(RETIME,N)
+    95  		      C     LINE EVENT FITS WITHIN NEIGHBOR'S CRASH.  MAKE SURE NEIGHBOR
+    96  		      C     DOES NOT HAVE A SIMILAR EVENT.  IF SO, SOMETHINGS WRONG WITH
+    97  		      C     OUR LOGIC.
+    98  		            JLINE=-1
+    99  		            IF(NEIGH.LE."2000)CALL NNDAT($31105,NEIGH,JLINE,INODE)
+   100  		            CALL EVTFND($31105,RTYLO,NEIGH,JLINE,NEIGH,J)
+   101  		            IF(R(RSTIME,J).GT.R(RSTIME,N)+16+20.AND.
+   102  		           1   R(RSTIME,J).LT.R(RETIME,N)-20)GOTO 31194
+   103  		            IF(R(RETIME,J).GT.R(RSTIME,N)+16+20.AND.
+   104  		           1   R(RETIME,J).LT.R(RETIME,N)-20)GOTO 31194
+   105  		            GOTO 31130
+   106  		      C     NEIGHBOR HAS A CRASH RECORD OPEN, BUT NOT COMPLETE.  IF LINE
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 38
+
+
+   107  		      C     EVENT IS COMPLETE, APPEND ANY NEW DATA TO IT BY REMOVING LINE
+   108  		      C     EVENT END TIME.
+   109  		      31125 IF(R(RETIME,N).NE.0.OR.IOPT.NE.0)GOTO 31130
+   110  		            R(RETIME,I)=0
+   111  		            RETURN
+   112  		      C     LINE EVENT NOT ASSOCIATED WITH CRASH, SEE IF NEIGHBOR HAS EVENT
+   113  		      C     FROM OTHER SIDE.
+   114  		      31130 JLINE=-1
+   115  		            IF(NEIGH.LT."2000)CALL NNDAT($31170,NEIGH,JLINE,INODE)
+   116  		            CALL EVTFND($31170,RTYLO,NEIGH,JLINE,INODE,J)
+   117  		      C     NEIGHBOR HAS AN EVENT FOR LINE, IF END TIMES CLOSE, ASSUME
+   118  		      C     SAME EVENT
+   119  		            IF(IABS(R(RETIME,I)-R(RETIME,J)).LE.20)GOTO 31135
+   120  		      C     END TIMES NOT CLOSE.  SINCE WE DON'T ALWAYS GET LINK OK FOR
+   121  		      C     BOTH SIDES, IF ONE END TIME IS UNKNOW AND BOTH START TIMES
+   122  		      C     ARE CLOSE, ASSUME SAME EVENT.
+   123  		            IF(IABS(R(RSTIME,I)-R(RSTIME,J)).GT.20+16)GOTO 31170
+   124  		            IF(R(RETIME,I).EQ.0.OR.R(RETIME,J).EQ.0)GOTO 31135
+   125  		      C     STARTTIMES CLOSE, IF T-I/T-II LINK, ALLOW MORE TIME ON END TIMES
+   126  		            IF(IAND(INODE,"6000).EQ.IAND(NEIGH,"6000))GOTO 31170
+   127  		            IF(IAND(INODE,"6000)*IAND(NEIGH,"6000).NE.0)GOTO 31170
+   128  		            IF(IABS(R(RETIME,I)-R(RETIME,J)).GT.120+20)GOTO 31170
+   129  		      C     ASSUMED SAME EVENT, FIND MAXIMUM PARAMETERS.
+   130  		      31135 IF(R(RSTIME,I).EQ.0.OR.(R(RSTIME,I).GT.R(RSTIME,J)
+   131  		           1   .AND.R(RSTIME,J).NE.0))R(RSTIME,I)=R(RSTIME,J)
+   132  		            IF(R(RETIME,J).GT.R(RETIME,I))R(RETIME,I)=R(RETIME,J)
+   133  		            R(RNEIGH,I)=NEIGH
+   134  		      C     IF(IABS(R(RPLI,I)-R(RPLI,J)).GT.0)
+   135  		      C    1  TYPE 31140,INODE,NEIGH,R(RSTIME,I),R(RETIME,I),
+   136  		      C    2             R(RPLI,I),R(RPLI,J)
+   137  		      31140 FORMAT(' NPLI DISCREPENCY: ',O4,'/',O4,I10,'-',I9,2I5)
+   138  		            IF(R(RPLI,I).LT.R(RPLI,J))R(RPLI,I)=R(RPLI,J)
+   139  		      C     IF(IABS(R(RUCNT,I)-R(RUCNT,J)).GT.0)
+   140  		      C    1  TYPE 31142,INODE,NEIGH,R(RSTIME,I),R(RETIME,I),
+   141  		      C    2             R(RUCNT,I),R(RUCNT,J)
+   142  		      31142 FORMAT(' FREQ DISCREPENCY: ',O4,'/',O4,I10,'-',I9,2I5)
+   143  		            IF(R(RUCNT,I).LT.R(RUCNT,J))R(RUCNT,I)=R(RUCNT,J)
+   144  		            IF(R(RPLID,I).LT.R(RPLID,J))R(RPLID,I)=R(RPLID,J)
+   145  		            CALL EVTDCH(J,NEIGH)
+   146  		            CALL PUTEVR(J)
+   147  		      C2342 IEUSKE=IEUSKE+2
+   148  		      C2340 TYPE 12341,INODE,NEIGH,IEUSKE
+   149  		      C2341 FORMAT(' FOUND LIKE EVENT FOR NODES:',O4,'/',O4,I6)
+   150  		            IRN=0
+   151  		            GOTO 31170
+   152  		      31144 GOTO 31170
+   153  		            TYPE 31146,INODE,R(RLINE,I)
+   154  		      31146 FORMAT(' CAN',1H','T FIND NEIGHBOR FOR NODE:',O4,' LINE:',I3)
+   155  		            GOTO 31170
+   156  		      31148 GOTO 31170
+   157  		            TYPE 31150,NEIGH,INODE
+   158  		      31150 FORMAT(' CAN',1H','T FIND LINE FOR NODE:',O4,' NEIGHBOR:',O4)
+   159  		            GOTO 31170
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 39
+
+
+   160  		      31152 GOTO 31170
+   161  		            TYPE 31154,NEIGH,JLINE,INODE,R(RLINE,I),R(RSTIME,I),R(RETIME,I)
+   162  		      31154 FORMAT(' CAN',1H','T FIND NODE:',O4,' LINE:',I3,
+   163  		           1       ' TO MATCH NODE:',O4,' LINE:',I3,I10,'-',I9)
+   164  		            IF(INODE.GE."2000)GOTO 31170
+   165  		            DO 31162 NN=1,2047
+   166  		            II=NODE(NN)
+   167  		      31156 IF(II.EQ.0)GOTO 31162
+   168  		            IF(I.EQ.II)GOTO 31160
+   169  		            IF(IABS(R(RSTIME,I)-R(RSTIME,II)).GT.60)GOTO 31160
+   170  		            IF(IABS(R(RETIME,I)-R(RETIME,II)).GT.60)GOTO 31160
+   171  		            IF(IABS(R(RPLI,I)-R(RPLI,II)).GE.3)GOTO 31160
+   172  		            IF(R(RNEIGH,II).NE.0)GOTO 31160
+   173  		            TYPE 31158,NN,R(RLINE,II),R(RPLI,II),R(RSTIME,II),R(RETIME,II)
+   174  		      31158 FORMAT('  BUT FOUND NODE:',O4,' LINE:',I3,' NPLI:',I4,I10,'-',I9)
+   175  		      31160 II=R(RCHAIN,II)
+   176  		            GOTO 31156
+   177  		      31162 CONTINUE
+   178  		            GOTO 31170
+   179  		      31164 GOTO 31170
+   180  		            TYPE 31166,INODE,R(RLINE,I),R(RSTIME,I),R(RETIME,I),
+   181  		           1           NEIGH,JLINE,R(RSTIME,J),R(RETIME,J)
+   182  		      31166 FORMAT(' CLOSE EVENTS NODE:',O4,' LINE:',I3,I10,'-',I9,/,
+   183  		           1       '              NODE:',O4,' LINE:',I3,I10,'-',I9)
+   184  		      C     CREATE EVENT
+   185  		      C       NODE            OOOO
+   186  		      C       LINE            NN, -1 IF NOT KNOWN
+   187  		      C       NEIGHBOR        OOOO, 0 IF NOT KNOWN
+   188  		      C       LINE            NN, -1 IF NOT KNOWN
+   189  		      C       DOWN TIME       SSSSSSSSSS (SECONDS SINCE 1/1/1974)
+   190  		      C       UP TIME         SSSSSSSSSS (SECONDS SINCE 1/1/1974)
+   191  		      C       TYPE            NNNNN
+   192  		      C       PLI CNT         NNNNN
+   193  		      C       UP COUNT        NNNN
+   194  		      C       PLI FREQ        NNNN
+   195  		      C       REPORTING NODE  N (0=BOTH, 1=1ST, 2=2ND)
+   196  		      31170 IF(NEIGH.GT.INODE)GOTO 31180
+   197  		            IRN=IRN*2
+   198  		            WRITE(22,31185)NEIGH,JLINE,INODE,R(RLINE,I),R(RSTIME,I),
+   199  		           1               R(RETIME,I),R(RMSG,I),R(RPLI,I),R(RUCNT,I),
+   200  		           2               R(RPLID,I),IRN
+   201  		            GOTO 31190
+   202  		      31180 WRITE(22,31185)INODE,R(RLINE,I),NEIGH,JLINE,R(RSTIME,I),
+   203  		           1               R(RETIME,I),R(RMSG,I),R(RPLI,I),R(RUCNT,I),
+   204  		           2               R(RPLID,I),IRN
+   205  		      31185 FORMAT(O4,I2,O4,I2,2I10,I5,I5,I4,I4,I1)
+   206  		      C     RELEASE EVENT RECORD
+   207  		      31190 CALL EVTDCH(I,INODE)
+   208  		            CALL PUTEVR(I)
+   209  		            RETURN
+   210  		      31192 TYPE 31193
+   211  		      31193 FORMAT(' SUBROUTINE EVTLIN, NEIGHBOR HAS EVENT TO BE ATTRIBUTED',
+   212  		           1       ' TO A CRASH')
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 40
+
+
+   213  		            GOTO 31105
+   214  		            PAUSE
+   215  		            CALL NEXIT
+   216  		      31194 TYPE 31193
+   217  		            GOTO 31130
+   218  		            PAUSE
+   219  		            CALL NEXIT
+   220  		            END
+
+	CONSTANTS
+
+	0	000000000000	1	000000006000	
+
+	GLOBAL DUMMIES
+
+	I     	1743		INODE 	1744		IOPT  	1745		
+
+	COMMON
+
+	NODE  	/.COMM./+0	R     	/.COMM./+3777	RFREE 	/.COMM./+130645	RSZ   	/.COMM./+130646	RCHAIN	/.COMM./+130647
+	RSTIME	/.COMM./+130650	ROVTIM	/.COMM./+130651	RETIME	/.COMM./+130652	RLINE 	/.COMM./+130653	RCLOC 	/.COMM./+130654
+	RNEIGH	/.COMM./+130655	RCCNT 	/.COMM./+130656	RMSG  	/.COMM./+130657	RPLI  	/.COMM./+130660	ROVCNT	/.COMM./+130661
+	RUCNT 	/.COMM./+130662	RCVER 	/.COMM./+130663	RPLID 	/.COMM./+130664	RCCODE	/.COMM./+130665	RTY   	/.COMM./+130666
+	RTYLO 	/.COMM./+130667	RTYCR 	/.COMM./+130670	RTYLS 	/.COMM./+130671	RLNERR	/.COMM./+130672	RLETIM	/.COMM./+130673
+
+	SUBPROGRAMS
+
+	NNDAT 	EVTFND	CRANAL	OCTO. 	OCTI. 	INTO. 	INTI. 	IABS  	EVTDCH	PUTEVR	IAND  	PAUSE.	NEXIT 	
+
+	SCALARS
+
+	LINCON	1747		IRN   	1750		JLINE 	1751		NEIGH 	1752		RNEIGH	130655	
+	I     	1743		INODE 	1744		RLINE 	130653		RTYCR 	130670		N     	1753	
+	RSTIME	130650		RETIME	130652		J     	1754		RTYLO 	130667		RPLI  	130660	
+	IOPT  	1745		RUCNT 	130662		RPLID 	130664		NN    	1755		II    	1756	
+	RCHAIN	130647		RMSG  	130657		RFREE 	130645		RSZ   	130646		ROVTIM	130651	
+	RCLOC 	130654		RCCNT 	130656		ROVCNT	130661		RCVER 	130663		RCCODE	130665	
+	RTY   	130666		RTYLS 	130671		RLNERR	130672		RLETIM	130673		
+
+	ARRAYS
+
+	NODE  	0		R     	3777		
+
+	 LINCON
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 36
+
+
+
+Symbol cross reference
+
+CRANAL	NEXIT	    28
+EVTDCH	    69	   145	   207
+EVTFND	    27	    46	    64	   100	   116
+I	     1	    24	    25	    31	    33	    34	    37	    40	    56	    57	    65	    67	    77	    78
+	    79	    93	    94	   110	   119	   123	   124	   128	   130	   132	   133	   138	   143	   144
+	   153	   161	   168	   169	   170	   171	   180	   198	   202	   207	   208
+IABS	    65	   119	   123	   128	   169	   170	   171
+IAND	   126	   127
+II	   166	   167	   168	   169	   170	   171	   172	   173	   175
+INODE	     1	    25	    39	    45	    63	    64	    76	    79	    99	   115	   116	   126	   127	   153
+	   157	   161	   164	   180	   196	   198	   202	   207
+IOPT	     1	   109
+IRN	    21	   150	   197	   198	   202
+J	    38	    39	    40	    46	    48	    50	    64	    65	    66	    67	    68	    69	    70	    75
+	    76	    77	   100	   101	   103	   116	   119	   123	   124	   128	   130	   132	   138	   143
+	   144	   145	   146	   180
+JLINE	    23	    44	    45	    46	    62	    63	    64	    98	    99	   100	   114	   115	   116	   161
+	   180	   198	   202
+LINCON	     1
+N	    27	    28	    32	    33	    34	    40	    47	    48	    50	    56	    57	    77	    79	    93
+	    94	   101	   103	   109
+NEIGH	    24	    25	    27	    28	    45	    46	    63	    64	    69	    79	    99	   100	   115	   116
+	   126	   127	   133	   145	   157	   161	   180	   196	   198	   202
+NEXIT	   215	   219
+NN	   165	   166	   173
+NNDAT	    25	    45	    63	    99	   115
+NODE	    16	   166
+PUTEVR	    70	   146	   208
+R	    11	    16	    24	    25	    31	    32	    33	    34	    37	    40	    47	    48	    50	    56
+	    57	    65	    66	    67	    68	    77	    78	    79	    93	    94	   101	   103	   109	   110
+	   119	   123	   124	   128	   130	   132	   133	   138	   143	   144	   153	   161	   169	   170
+	   171	   172	   173	   175	   180	   198	   202
+RCCNT	    11	    16
+RCCODE	    11	    16
+RCHAIN	    11	    16	   175
+RCLOC	    11	    16
+RCVER	    11	    16
+RETIME	    11	    16	    37	    40	    48	    50	    65	    77	    79	    94	   101	   103	   109	   110
+	   119	   124	   128	   132	   161	   170	   173	   180	   198	   202
+RFREE	    11	    16
+RLETIM	    11	    16
+RLINE	    11	    16	    25	    79	   153	   161	   173	   180	   198	   202
+RLNERR	    11	    16
+RMSG	    11	    16	   198	   202
+RNEIGH	    11	    16	    24	   133	   172
+ROVCNT	    11	    16
+ROVTIM	    11	    16
+RPLI	    11	    16	    56	    68	    78	    79	    93	   138	   171	   173	   198	   202
+RPLID	    11	    16	   144	   198	   202
+RSTIME	    11	    16	    31	    32	    33	    34	    47	    48	    50	    57	    66	    67	    77	    79
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 36
+
+
+
+Symbol cross reference
+
+	    94	   101	   103	   123	   130	   161	   169	   173	   180	   198	   202
+RSZ	    11	    16
+RTY	    11	    16
+RTYCR	    11	    16	    27
+RTYLO	    11	    16	    46	    64	   100	   116
+RTYLS	    11	    16
+RUCNT	    11	    16	   143	   198	   202
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 36
+
+
+
+Macro/Opdef cross reference
+
+31102P	    32	    37
+31105P	    45	    46	    47	    56	    99	   100	   213
+31106P	    59
+31108P	    66	    68
+31110P	    34	    75
+31112P	    79	    81
+31115P	    37	    88
+31120P	    40	    93
+31125P	    28	   109
+31130P	    27	    28	    31	    33	    77	    78	    84	   105	   109	   114	   217
+31135P	   119	   124	   130
+31140P	   137
+31142P	   142
+31144P	   152
+31146P	   153	   154
+31148P	   156
+31150P	   157	   158
+31152P	   160
+31154P	   161	   162
+31156P	   167	   176
+31158P	   173	   174
+31160P	   168	   169	   170	   171	   172	   175
+31162P	   165	   167	   177
+31164P	   179
+31166P	   180	   182
+31170P	    25	   115	   116	   123	   126	   127	   128	   151	   152	   155	   156	   159	   160	   164
+	   178	   179	   196
+31180P	   196	   202
+31185P	   198	   202	   205
+31190P	    63	    64	    65	    67	    68	    71	   201	   207
+31192P	    48	    50	   210
+31193P	   210	   211	   216
+31194P	   101	   103	   216NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 41
+
+
+     1  		            SUBROUTINE LEDUMP(INODE)
+     2  		      C     ------------------------
+     3  		      C     SUBROUTINE TO OUTPUT ALL CLOSED LINE EVENTS THAT CONTAIN
+     4  		      C     A PARTICULAR NODE.
+     5  		      C
+     6  		      C     INPUT     INODE  -NODE NUMBER.
+     7  		            INTEGER IEVENT(32),IENODE(32)
+     8  		      C     EVENT RECORD FIELDS
+     9  		            INTEGER                     R,     RFREE,       RSZ,    RCHAIN,
+    10  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    11  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    12  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    13  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    14  		            COMMON  NODE(2047),R(10,4343),     RFREE,       RSZ,    RCHAIN,
+    15  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    16  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    17  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    18  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    19  		      C     CALL NDSTOP(INODE)
+    20  		      31210 CALL LNEVNG(INODE,IEVC,IEVENT,IENODE)
+    21  		            IF(IEVC.EQ.0)GOTO 31230
+    22  		            DO 31220 I=1,IEVC
+    23  		            IF(R(RETIME,IEVENT(I)).EQ.0)GOTO 31220
+    24  		            CALL EVTLIN(IEVENT(I),IENODE(I),0)
+    25  		      31220 CONTINUE
+    26  		      31230 I=NODE(INODE)
+    27  		      31235 IF(I.EQ.0)GOTO 31250
+    28  		            IF(R(RTY,I).NE.RTYLO)GOTO 31240
+    29  		            IF(R(RETIME,I).EQ.0)GOTO 31240
+    30  		            CALL EVTLIN(I,INODE,0)
+    31  		            GOTO 31230
+    32  		      31240 I=R(RCHAIN,I)
+    33  		            GOTO 31235
+    34  		      31250 RETURN
+    35  		            END
+
+	CONSTANTS
+
+	0	000000000000	
+
+	GLOBAL DUMMIES
+
+	INODE 	104		
+
+	COMMON
+
+	NODE  	/.COMM./+0	R     	/.COMM./+3777	RFREE 	/.COMM./+130645	RSZ   	/.COMM./+130646	RCHAIN	/.COMM./+130647
+	RSTIME	/.COMM./+130650	ROVTIM	/.COMM./+130651	RETIME	/.COMM./+130652	RLINE 	/.COMM./+130653	RCLOC 	/.COMM./+130654
+	RNEIGH	/.COMM./+130655	RCCNT 	/.COMM./+130656	RMSG  	/.COMM./+130657	RPLI  	/.COMM./+130660	ROVCNT	/.COMM./+130661
+	RUCNT 	/.COMM./+130662	RCVER 	/.COMM./+130663	RPLID 	/.COMM./+130664	RCCODE	/.COMM./+130665	RTY   	/.COMM./+130666
+	RTYLO 	/.COMM./+130667	RTYCR 	/.COMM./+130670	RTYLS 	/.COMM./+130671	RLNERR	/.COMM./+130672	RLETIM	/.COMM./+130673
+
+	SUBPROGRAMS
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 42
+
+
+
+	LNEVNG	EVTLIN	
+
+	SCALARS
+
+	LEDUMP	105		INODE 	104		IEVC  	106		I     	107		RETIME	130652	
+	RTY   	130666		RTYLO 	130667		RCHAIN	130647		RFREE 	130645		RSZ   	130646	
+	RSTIME	130650		ROVTIM	130651		RLINE 	130653		RCLOC 	130654		RNEIGH	130655	
+	RCCNT 	130656		RMSG  	130657		RPLI  	130660		ROVCNT	130661		RUCNT 	130662	
+	RCVER 	130663		RPLID 	130664		RCCODE	130665		RTYCR 	130670		RTYLS 	130671	
+	RLNERR	130672		RLETIM	130673		
+
+	ARRAYS
+
+	IEVENT	110		IENODE	150		NODE  	0		R     	3777		
+
+	 LEDUMP
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 41
+
+
+
+Symbol cross reference
+
+EVTLIN	    24	    30
+I	    22	    23	    24	    26	    27	    28	    29	    30	    32
+IENODE	     7	    20	    24
+IEVC	    20	    21	    22
+IEVENT	     7	    20	    23	    24
+INODE	     1	    20	    26	    30
+LEDUMP	     1
+LNEVNG	    20
+NODE	    14	    26
+R	     9	    14	    23	    28	    29	    32
+RCCNT	     9	    14
+RCCODE	     9	    14
+RCHAIN	     9	    14	    32
+RCLOC	     9	    14
+RCVER	     9	    14
+RETIME	     9	    14	    23	    29
+RFREE	     9	    14
+RLETIM	     9	    14
+RLINE	     9	    14
+RLNERR	     9	    14
+RMSG	     9	    14
+RNEIGH	     9	    14
+ROVCNT	     9	    14
+ROVTIM	     9	    14
+RPLI	     9	    14
+RPLID	     9	    14
+RSTIME	     9	    14
+RSZ	     9	    14
+RTY	     9	    14	    28
+RTYCR	     9	    14
+RTYLO	     9	    14	    28
+RTYLS	     9	    14
+RUCNT	     9	    14
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 41
+
+
+
+Macro/Opdef cross reference
+
+31210P	    20
+31220P	    22	    23	    25
+31230P	    21	    26	    31
+31235P	    27	    33
+31240P	    28	    29	    32
+31250P	31250P	    27	    34NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 43
+
+
+     1  		            SUBROUTINE EVTCRS(I,INODE)
+     2  		      C     --------------------------
+     3  		      C     SUBROUTINE TO WRITE A CRASH EVENT TO DISK.
+     4  		      C       I = EVENT RECORD ADDRESS IN R()
+     5  		      C       INODE = NODE NUMBER
+     6  		      C     EVENT RECORD FIELDS
+     7  		            INTEGER                     R,     RFREE,       RSZ,    RCHAIN,
+     8  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+     9  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    10  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    11  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    12  		            COMMON  NODE(2047),R(10,4343),     RFREE,       RSZ,    RCHAIN,
+    13  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    14  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    15  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    16  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    17  		      C     DETERMINE IF CRASH REAL
+    18  		            CALL CRANAL($31395,$31330,INODE,I)
+    19  		            GOTO 31350
+    20  		      C     CRASH EVENT NOT CLOSED, ANALYZE FOR CRASH FROM NEIGHBOR LINE EVENT
+    21  		      31330 J=R(RSTIME,I)
+    22  		            CALL LINECR(INODE,R(RETIME,I),J,MATCH,IEVC)
+    23  		            IF(J.LT.0)GOTO 31350
+    24  		            R(RSTIME,I)=J
+    25  		            R(RCCODE,I)="1000000+MATCH*"100+IEVC
+    26  		      C     CREATE EVENT
+    27  		      C       NODE            OOOO
+    28  		      C       DOWN TIME       SSSSSSSSSS (SECONDS SINCE 1/1/1974)
+    29  		      C       UP TIME         SSSSSSSSSS (SECONDS SINCE 1/1/1974)
+    30  		      C       TYPE            NNNNN
+    31  		      C       CR VER          OOOOOO
+    32  		      C       OLD CR CNT      NNNNN
+    33  		      C       NEW CR CNT      NNNNN
+    34  		      C       PLI CNT         NNNNN
+    35  		      C       CR CODE TYPE    N       0 = REPORTED
+    36  		      C                               1 = DEDUCED FOR LINE OUTAGE
+    37  		      C                               2 = NOT PRESENT (CHANGE IN CC WITHOUT
+    38  		      C                                   DEDUCTION OR NODE LOST AND DID NOT
+    39  		      C                                   COME BACK).
+    40  		      C       CR CODE         OOOOOO
+    41  		      C       CR LOC          OOOOOO
+    42  		      31350 J1=LSH(R(RCCODE,I),-18)
+    43  		      C     CALL NDSTOP(INODE)
+    44  		            IF(R(RCCODE,I).EQ.-1)J1=2
+    45  		            J2=IAND(R(RCCODE,I),"777777)
+    46  		            J3=IAND(R(RCLOC,I),"777777)
+    47  		            J4=LSH(R(RCCNT,I),-18)
+    48  		            J5=IAND(R(RCCNT,I),"777777)
+    49  		            WRITE(23,31370)INODE,R(RSTIME,I),R(RETIME,I),R(RMSG,I),
+    50  		           1               R(RCVER,I),J4,J5,R(RPLI,I),J1,J2,J3
+    51  		      31370 FORMAT(O4,I10,I10,I5,O6,I5,I5,I5,I1,O6,O6)
+    52  		      C     RELEASE EVENT RECORD
+    53  		            CALL EVTDCH(I,INODE)
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 44
+
+
+    54  		            CALL PUTEVR(I)
+    55  		      31395 RETURN
+    56  		            END
+
+	CONSTANTS
+
+	0	000000777777	
+
+	GLOBAL DUMMIES
+
+	I     	231		INODE 	232		
+
+	COMMON
+
+	NODE  	/.COMM./+0	R     	/.COMM./+3777	RFREE 	/.COMM./+130645	RSZ   	/.COMM./+130646	RCHAIN	/.COMM./+130647
+	RSTIME	/.COMM./+130650	ROVTIM	/.COMM./+130651	RETIME	/.COMM./+130652	RLINE 	/.COMM./+130653	RCLOC 	/.COMM./+130654
+	RNEIGH	/.COMM./+130655	RCCNT 	/.COMM./+130656	RMSG  	/.COMM./+130657	RPLI  	/.COMM./+130660	ROVCNT	/.COMM./+130661
+	RUCNT 	/.COMM./+130662	RCVER 	/.COMM./+130663	RPLID 	/.COMM./+130664	RCCODE	/.COMM./+130665	RTY   	/.COMM./+130666
+	RTYLO 	/.COMM./+130667	RTYCR 	/.COMM./+130670	RTYLS 	/.COMM./+130671	RLNERR	/.COMM./+130672	RLETIM	/.COMM./+130673
+
+	SUBPROGRAMS
+
+	CRANAL	LINECR	LSH   	IAND  	OCTO. 	OCTI. 	INTO. 	INTI. 	EVTDCH	PUTEVR	
+
+	SCALARS
+
+	EVTCRS	234		INODE 	232		I     	231		J     	235		RSTIME	130650	
+	RETIME	130652		MATCH 	236		IEVC  	237		RCCODE	130665		J1    	240	
+	J2    	241		J3    	242		RCLOC 	130654		J4    	243		RCCNT 	130656	
+	J5    	244		RMSG  	130657		RCVER 	130663		RPLI  	130660		RFREE 	130645	
+	RSZ   	130646		RCHAIN	130647		ROVTIM	130651		RLINE 	130653		RNEIGH	130655	
+	ROVCNT	130661		RUCNT 	130662		RPLID 	130664		RTY   	130666		RTYLO 	130667	
+	RTYCR 	130670		RTYLS 	130671		RLNERR	130672		RLETIM	130673		
+
+	ARRAYS
+
+	NODE  	0		R     	3777		
+
+	 EVTCRS
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 43
+
+
+
+Symbol cross reference
+
+CRANAL	31395P	    18
+EVTCRS	     1
+EVTDCH	    53
+I	     1	    18	    21	    22	    24	    25	    42	    44	    45	    46	    47	    48	    49	    53
+	    54
+IAND	    45	    46	    48
+IEVC	    22	    25
+INODE	     1	    18	    22	    49	    53
+J	    21	    22	    23	    24
+J1	    42	    44	    49
+J2	    45	    49
+J3	    46	    49
+J4	    47	    49
+J5	    48	    49
+LINECR	    22
+LSH	    42	    47
+MATCH	    22	    25
+NODE	    12
+PUTEVR	    54
+R	     7	    12	    21	    22	    24	    25	    42	    44	    45	    46	    47	    48	    49
+RCCNT	     7	    12	    47	    48
+RCCODE	     7	    12	    25	    42	    44	    45
+RCHAIN	     7	    12
+RCLOC	     7	    12	    46
+RCVER	     7	    12	    49
+RETIME	     7	    12	    22	    49
+RFREE	     7	    12
+RLETIM	     7	    12
+RLINE	     7	    12
+RLNERR	     7	    12
+RMSG	     7	    12	    49
+RNEIGH	     7	    12
+ROVCNT	     7	    12
+ROVTIM	     7	    12
+RPLI	     7	    12	    49
+RPLID	     7	    12
+RSTIME	     7	    12	    21	    24	    49
+RSZ	     7	    12
+RTY	     7	    12
+RTYCR	     7	    12
+RTYLO	     7	    12
+RTYLS	     7	    12
+RUCNT	     7	    12
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 43
+
+
+
+Macro/Opdef cross reference
+
+31330P	    18	    21
+31350P	    19	    23	    42
+31370P	    49	    51
+31395P	31395P	    18	    55NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 45
+
+
+     1  		            SUBROUTINE CRANAL($,$,INODE,I)
+     2  		      C     ------------------------------
+     3  		      C     SUBROUTINE TO ANALYZE CRASH EVENT DATA TO SEE IF IT'S REAL.
+     4  		      C
+     5  		      C     IF A CRASH CODE EXISTS, SOMETHING THOUGH IT WAS REAL, SO LEAVE
+     6  		      C     ALONE.  IF CRASH COUNT HAS CHANGED, BOTH SUP AND WE SAW IT,
+     7  		      C     SO LEAVE ALONE (EXCEPT FILL IN CRASH CODE BY NEIGHBOR LINE
+     8  		      C     ANALYSIS BELOW).  ELSE:
+     9  		      C      -LOOK AT NODE'S LINES FROM NEIGHBOR'S POINT OF VIEW TRYING
+    10  		      C       TO DEDUCE CRASH (SEE SUBROUTINE LINECR FOR TECHNIQUE).
+    11  		      C       IF NEIGHBORS SAW THE NODE DISAPPEAR, PRODUCE DEDUCED CRASH
+    12  		      C       CODE:   100MMLL         LL=NUMBER OF NEIGHBOR OUR LINES FOUND
+    13  		      C                               MM=NUMBER OF LL'S THAT SUPPORT THE
+    14  		      C                                  SAME EVENT.
+    15  		      C      -IF LAST KNOWN CRASH COUNT WAS 1, NODE COULD HAVE BEEN RELOADED
+    16  		      C       WITHOUT SUP SEEING CC CHANGE.  WE DETECT THIS IF THE NODE LOST
+    17  		      C       TIME IS KNOWN BY LOOKING AT THE DURATION GONE.  IF > 1 MINUTE,
+    18  		      C       WE DEDUCE CRASH WITH CODE:
+    19  		      C               1007700
+    20  		      C      -IF LAST KNOWN CRASH COUNT WAS 1, BUT WE DON'T HAVE CRASH START
+    21  		      C       TIME (WHEN NODE WAS LOST),  IT COULD HAVE HAPPENED YESTERDAY OR
+    22  		      C       COULD BE SUP CHANGE.  IF A SUP CHANGE HAS NOT OCCURED WITHIN
+    23  		      C       5 MINUTES OF THE END TIME (END OF TAKEOVER), DEDUCE CRASH
+    24  		      C       CODE:   1007701
+    25  		      C     IF NONE OF THE ABOVE IS FOUND, WE DISCARD THE CRASH DEDUCING IT
+    26  		      C     WAS A SIMPLE RETAKE OF THE NODE.
+    27  		      C
+    28  		      C     INPUT:    INODE  -NODE NUMBER.
+    29  		      C               I      -CRASH RECORD NUMBER
+    30  		      C
+    31  		      C     OUTPUT:   R(RCCODE,I)    -WILL BE SET IF NO PREVIOUS CRASH CODE
+    32  		      C                               AND THERE LOOKS LIKE THERE WAS A CRASH
+    33  		      C                               FROM LINE EVIDENCE.
+    34  		      C
+    35  		      C     RETURNS:  NORMAL -CRASH PRESENT.
+    36  		      C               +1     -CRASH NOT PRESENT.
+    37  		      C               +2     -CRASH OPEN
+    38  		      C
+    39  		      C     NOTE:    -IF CRASH NOT PRESENT, RECORD WILL BE DISCARDED.
+    40  		            INTEGER IDATE(4),JDATE(4)
+    41  		            INTEGER SUPMOV,SUPMVP
+    42  		            COMMON /SMOVES/SUPMOV(100),SUPMVP
+    43  		            INTEGER CRCNT,CCSUPT,CCBUF
+    44  		            COMMON /CCOUNT/CRCNT(2047),CCSUPT(7),CCBUF(128)
+    45  		      C     EVENT RECORD FIELDS
+    46  		            INTEGER                     R,     RFREE,       RSZ,    RCHAIN,
+    47  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    48  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    49  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    50  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    51  		            COMMON  NODE(2047),R(10,4343),     RFREE,       RSZ,    RCHAIN,
+    52  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    53  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 46
+
+
+    54  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    55  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    56  		      C     RETURN 2 IF CRASH NOT CLOSED.
+    57  		      C     CALL NDSTOP(INODE)
+    58  		            IF(R(RETIME,I).EQ.0)RETURN 2
+    59  		      C     IF CRASH CODE PRESENT, RETURN
+    60  		            IF(R(RCCODE,I).NE.-1)RETURN
+    61  		      C     NO CRASH CODE, TRY LINE ANALYSIS
+    62  		            J=R(RSTIME,I)
+    63  		            CALL LINECR(INODE,R(RETIME,I),J,MATCH,IEVC)
+    64  		            IF(J.LT.0)GOTO 31950
+    65  		            R(RSTIME,I)=J
+    66  		            R(RCCODE,I)="1000000+MATCH*"100+IEVC
+    67  		            RETURN
+    68  		      C     LINES CAN'T SUPPORT CRASH, IF CRASH CODE CHANGED, BOTH
+    69  		      C     WE AND SUP SAW IT, LEAVE AS CRASH.  IF NO CHANGE AND IS ONE,
+    70  		      C     COULD BE A RELOAD (NOTE THAT CRASH CODE IS SET BY END OF
+    71  		      C     TAKEOVER TO WHAT WE KNOW IT IS.  THIS IS CHANGED IF WE GET
+    72  		      C     A CHANGE IN CRASH CODE FROM SUP).  ELSE DISCARD.
+    73  		      31950 IF(IAND(R(RCCNT,I),"777777).NE.LSH(R(RCCNT,I),-18))RETURN
+    74  		            IF(IAND(R(RCCNT,I),"777777).NE.1)GOTO 31990
+    75  		      C     IF STARTIME EXISTS, AND LOST TIME WAS > 1 MINUTE, DEDUCE
+    76  		      C     RELOAD CRASH.
+    77  		            IF(R(RSTIME,I).EQ.0)GOTO 31960
+    78  		            IF(IABS(R(RSTIME,I)-R(RETIME,I)).LE.60)GOTO 31990
+    79  		            R(RCCODE,I)="1007700
+    80  		            RETURN
+    81  		      C     NO START TIME, IS EITHER NEW SUP RETAKE OR NODE WAS LOST
+    82  		      C     YESTERDAY.  NEW SUP RETAKE IF WITHIN 5 MINUTES OF SUP
+    83  		      C     MOVE.  IF NO NEW SUP, THEN DEDUCE CRASH.
+    84  		      31960 IF(SUPMVP.EQ.0)GOTO 31980
+    85  		            DO 31970 J=1,SUPMVP
+    86  		            IF(R(RETIME,I).LT.SUPMOV(J))GOTO 31980
+    87  		            IF(R(RETIME,I).LT.SUPMOV(J)+5*60)GOTO 31990
+    88  		      31970 CONTINUE
+    89  		      31980 R(RCCODE,I)="1007701
+    90  		            RETURN
+    91  		      C     CAN'T DEDUCE CRASH, SO MUST HAVE ONLY BEEN A RETAKE.
+    92  		      C     DISCARD CRASH RECORD.
+    93  		      31990 CALL EVTDCH(I,INODE)
+    94  		            CALL PUTEVR(I)
+    95  		            RETURN 1
+    96  		            END
+
+	CONSTANTS
+
+	0	000000777777	1	000001007700	2	000001007701	
+
+	GLOBAL DUMMIES
+
+	INODE 	242		I     	243		
+
+	COMMON
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 47
+
+
+
+	SUPMOV	/SMOVES/+0	SUPMVP	/SMOVES/+144	CRCNT 	/CCOUNT/+0	CCSUPT	/CCOUNT/+3777	CCBUF 	/CCOUNT/+4006
+	NODE  	/.COMM./+0	R     	/.COMM./+3777	RFREE 	/.COMM./+130645	RSZ   	/.COMM./+130646	RCHAIN	/.COMM./+130647
+	RSTIME	/.COMM./+130650	ROVTIM	/.COMM./+130651	RETIME	/.COMM./+130652	RLINE 	/.COMM./+130653	RCLOC 	/.COMM./+130654
+	RNEIGH	/.COMM./+130655	RCCNT 	/.COMM./+130656	RMSG  	/.COMM./+130657	RPLI  	/.COMM./+130660	ROVCNT	/.COMM./+130661
+	RUCNT 	/.COMM./+130662	RCVER 	/.COMM./+130663	RPLID 	/.COMM./+130664	RCCODE	/.COMM./+130665	RTY   	/.COMM./+130666
+	RTYLO 	/.COMM./+130667	RTYCR 	/.COMM./+130670	RTYLS 	/.COMM./+130671	RLNERR	/.COMM./+130672	RLETIM	/.COMM./+130673
+
+	SUBPROGRAMS
+
+	LINECR	IAND  	LSH   	IABS  	EVTDCH	PUTEVR	
+
+	SCALARS
+
+	CRANAL	246		RETIME	130652		I     	243		RCCODE	130665		J     	247	
+	RSTIME	130650		INODE 	242		MATCH 	250		IEVC  	251		RCCNT 	130656	
+	SUPMVP	144		RFREE 	130645		RSZ   	130646		RCHAIN	130647		ROVTIM	130651	
+	RLINE 	130653		RCLOC 	130654		RNEIGH	130655		RMSG  	130657		RPLI  	130660	
+	ROVCNT	130661		RUCNT 	130662		RCVER 	130663		RPLID 	130664		RTY   	130666	
+	RTYLO 	130667		RTYCR 	130670		RTYLS 	130671		RLNERR	130672		RLETIM	130673	
+
+	ARRAYS
+
+	IDATE 	252		JDATE 	256		SUPMOV	0		CRCNT 	0		CCSUPT	3777	
+	CCBUF 	4006		NODE  	0		R     	3777		
+
+	 CRANAL
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 45
+
+
+
+Symbol cross reference
+
+CCBUF	PUTEVR	    43	    44
+CCOUNT	    44
+CCSUPT	    43	    44
+CRANAL	     1
+CRCNT	    43	    44
+EVTDCH	    93
+I	     1	    58	    60	    62	    63	    65	    66	    73	    74	    77	    78	    79	    86	    87
+	    89	    93	    94
+IABS	    78
+IAND	    73	    74
+IDATE	    40
+IEVC	    63	    66
+INODE	     1	    63	    93
+J	    62	    63	    64	    65	    85	    86	    87
+JDATE	    40
+LINECR	    63
+LSH	    73
+MATCH	    63	    66
+NODE	    51
+PUTEVR	    94
+R	    46	    51	    58	    60	    62	    63	    65	    66	    73	    74	    77	    78	    79	    86
+	    87	    89
+RCCNT	    46	    51	    73	    74
+RCCODE	    46	    51	    60	    66	    79	    89
+RCHAIN	    46	    51
+RCLOC	    46	    51
+RCVER	    46	    51
+RETIME	    46	    51	    58	    63	    78	    86	    87
+RFREE	    46	    51
+RLETIM	    46	    51
+RLINE	    46	    51
+RLNERR	    46	    51
+RMSG	    46	    51
+RNEIGH	    46	    51
+ROVCNT	    46	    51
+ROVTIM	    46	    51
+RPLI	    46	    51
+RPLID	    46	    51
+RSTIME	    46	    51	    62	    65	    77	    78
+RSZ	    46	    51
+RTY	    46	    51
+RTYCR	    46	    51
+RTYLO	    46	    51
+RTYLS	    46	    51
+RUCNT	    46	    51
+SMOVES	    42
+SUPMOV	    41	    42	    86	    87
+SUPMVP	    41	    42	    84	    85
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 45
+
+
+
+Macro/Opdef cross reference
+
+31950P	    64	    73
+31960P	    77	    84
+31970P	    85	    88
+31980P	    84	    86	    89
+31990P	    74	    78	    87	    93NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 48
+
+
+     1  		            SUBROUTINE NDSTOP(INODE)
+     2  		      C     ------------------------
+     3  		      C     GIVE DEBUGGING AN OPORTUNITY TO STOP ON SPECIFIED NODE.
+     4  		            IF(INODE.NE."2056)RETURN
+     5  		      99999 RETURN
+     6  		            END
+
+	GLOBAL DUMMIES
+
+	INODE 	22		
+
+	SCALARS
+
+	NDSTOP	23		INODE 	22		
+
+	 NDSTOP
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 48
+
+
+
+Symbol cross reference
+
+INODE	     1	     4
+NDSTOP	     1
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 48
+
+
+
+Macro/Opdef cross reference
+
+99999P	99999P	     5NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 49
+
+
+     1  		            SUBROUTINE TMSTOP(ITIME)
+     2  		      C     ------------------------
+     3  		      C     GIVE DEBUGGING AN OPORTUNITY TO STOP ON SPECIFIED TIME.
+     4  		            IF(ITIME.NE.251214760)RETURN
+     5  		      99999 RETURN
+     6  		            END
+
+	CONSTANTS
+
+	0	001676235650	
+
+	GLOBAL DUMMIES
+
+	ITIME 	23		
+
+	SCALARS
+
+	TMSTOP	24		ITIME 	23		
+
+	 TMSTOP
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 49
+
+
+
+Symbol cross reference
+
+ITIME	99999P	     1	     4
+TMSTOP	     1
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 49
+
+
+
+Macro/Opdef cross reference
+
+99999P	99999P	     5NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 50
+
+
+     1  		            FUNCTION IRUSE(I)
+     2  		      C     -----------------
+     3  		      C     COUNT THE NUMBER OF EVENT RECORDS IN USE
+     4  		      C     EVENT RECORD FIELDS
+     5  		            INTEGER                     R,     RFREE,       RSZ,    RCHAIN,
+     6  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+     7  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+     8  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+     9  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    10  		            COMMON  NODE(2047),R(10,4343),     RFREE,       RSZ,    RCHAIN,
+    11  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    12  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    13  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    14  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    15  		            I=0
+    16  		            IF(RFREE.EQ.0)GOTO 30115
+    17  		            J=RFREE
+    18  		      30112 I=I+1
+    19  		            J=R(RCHAIN,J)
+    20  		            IF(J.NE.0)GOTO 30112
+    21  		      30115 DO 30125 N=1,"3777
+    22  		            IF(NODE(N).EQ.0)GOTO 30125
+    23  		            I=I+1
+    24  		            J=NODE(N)
+    25  		      30120 IF(R(RCHAIN,J).EQ.0)GOTO 30125
+    26  		            I=I+1
+    27  		            J=R(RCHAIN,J)
+    28  		            GOTO 30120
+    29  		      30125 CONTINUE
+    30  		            IRUSE=I
+    31  		            RETURN
+    32  		            END
+
+
+	GLOBAL DUMMIES
+
+	I     	106		
+
+	COMMON
+
+	NODE  	/.COMM./+0	R     	/.COMM./+3777	RFREE 	/.COMM./+130645	RSZ   	/.COMM./+130646	RCHAIN	/.COMM./+130647
+	RSTIME	/.COMM./+130650	ROVTIM	/.COMM./+130651	RETIME	/.COMM./+130652	RLINE 	/.COMM./+130653	RCLOC 	/.COMM./+130654
+	RNEIGH	/.COMM./+130655	RCCNT 	/.COMM./+130656	RMSG  	/.COMM./+130657	RPLI  	/.COMM./+130660	ROVCNT	/.COMM./+130661
+	RUCNT 	/.COMM./+130662	RCVER 	/.COMM./+130663	RPLID 	/.COMM./+130664	RCCODE	/.COMM./+130665	RTY   	/.COMM./+130666
+	RTYLO 	/.COMM./+130667	RTYCR 	/.COMM./+130670	RTYLS 	/.COMM./+130671	RLNERR	/.COMM./+130672	RLETIM	/.COMM./+130673
+
+	SCALARS
+
+	IRUSE 	107		I     	106		RFREE 	130645		J     	110		RCHAIN	130647	
+	N     	111		RSZ   	130646		RSTIME	130650		ROVTIM	130651		RETIME	130652	
+	RLINE 	130653		RCLOC 	130654		RNEIGH	130655		RCCNT 	130656		RMSG  	130657	
+	RPLI  	130660		ROVCNT	130661		RUCNT 	130662		RCVER 	130663		RPLID 	130664	
+	RCCODE	130665		RTY   	130666		RTYLO 	130667		RTYCR 	130670		RTYLS 	130671	
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 51
+
+
+	RLNERR	130672		RLETIM	130673		
+
+	ARRAYS
+
+	NODE  	0		R     	3777		
+
+	 IRUSE
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 50
+
+
+
+Symbol cross reference
+
+I	IRUSE	     1	    15	    18	    23	    26	    30
+IRUSE	     1	    30
+J	    17	    19	    20	    24	    25	    27
+N	    21	    22	    24
+NODE	    10	    22	    24
+R	     5	    10	    19	    25	    27
+RCCNT	     5	    10
+RCCODE	     5	    10
+RCHAIN	     5	    10	    19	    25	    27
+RCLOC	     5	    10
+RCVER	     5	    10
+RETIME	     5	    10
+RFREE	     5	    10	    16	    17
+RLETIM	     5	    10
+RLINE	     5	    10
+RLNERR	     5	    10
+RMSG	     5	    10
+RNEIGH	     5	    10
+ROVCNT	     5	    10
+ROVTIM	     5	    10
+RPLI	     5	    10
+RPLID	     5	    10
+RSTIME	     5	    10
+RSZ	     5	    10
+RTY	     5	    10
+RTYCR	     5	    10
+RTYLO	     5	    10
+RTYLS	     5	    10
+RUCNT	     5	    10
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 50
+
+
+
+Macro/Opdef cross reference
+
+30112P	    18	    20
+30115P	    16	    21
+30120P	    25	    28
+30125P	    21	    22	    25	    29NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 52
+
+
+     1  		            SUBROUTINE LSDUMP(INODE)
+     2  		      C     ------------------------
+     3  		      C     SUBROUTINE TO OUTPUT ALL CLOSED LINE STATISTICS THAT CONTAIN
+     4  		      C     A PARTICULAR NODE.
+     5  		      C
+     6  		      C     INPUT     INODE  -NODE NUMBER.
+     7  		      C     EVENT RECORD FIELDS
+     8  		            INTEGER                     R,     RFREE,       RSZ,    RCHAIN,
+     9  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    10  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    11  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    12  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    13  		            COMMON  NODE(2047),R(10,4343),     RFREE,       RSZ,    RCHAIN,
+    14  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    15  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    16  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    17  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    18  		      C     CALL NDSTOP(INODE)
+    19  		            CALL EVTFND($34900,RTYLS,INODE,-1,0,I)
+    20  		            IF(R(ROVTIM,I).NE.0)CALL LOVEND(I)
+    21  		            IOT=MOD(R(ROVCNT,I),1000000)
+    22  		            IOC=R(ROVCNT,I)/1000000
+    23  		            IE=R(RLNERR,I)/10000000
+    24  		            IR=0
+    25  		            IF(IE.GT.0)IR=MOD(R(RLNERR,I),10000000)/IE
+    26  		            IF(IR.GT.9999)IR=9999
+    27  		            ITIM=MOD(R(RLETIM,I),100000)
+    28  		      C     GET NEIGHBOR'S STATISTICS FOR LINE IF ANY
+    29  		            JLINE=-1
+    30  		            NEIGH=R(RNEIGH,I)
+    31  		            NTIM=0
+    32  		            NOT=0
+    33  		            NOC=0
+    34  		            NE=0
+    35  		            NR=0
+    36  		            IF(NEIGH.EQ.0)CALL NNDAT($34200,INODE,R(RLINE,I),NEIGH)
+    37  		            IF(NEIGH.LT."2000)CALL NNDAT($34200,NEIGH,JLINE,INODE)
+    38  		            CALL EVTFND($34200,RTYLS,NEIGH,JLINE,INODE,N)
+    39  		            IF(R(ROVTIM,N).NE.0)CALL LOVEND(N)
+    40  		            NOT=MOD(R(ROVCNT,N),1000000)
+    41  		            NOC=R(ROVCNT,N)/1000000
+    42  		            NTIM=MOD(R(RLETIM,N),100000)
+    43  		            NE=R(RLNERR,N)/10000000
+    44  		            IF(NE.GT.0)NR=MOD(R(RLNERR,N),10000000)/NE
+    45  		            IF(NR.GT.9999)NR=9999
+    46  		            CALL EVTDCH(N,NEIGH)
+    47  		            CALL PUTEVR(N)
+    48  		      C     CREATE EVENT
+    49  		      C       NODE                    OOOO
+    50  		      C       LINE                    NN      -1 IF NOT KNOWN
+    51  		      C       NEIGHBOR                OOOO     0 IF NOT KNOWN
+    52  		      C       LINE                    NN      -1 IF NOT KNOWN
+    53  		      C       NODE OVERLOAD TIME      SSSSS   SECONDS
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:34	PAGE 53
+
+
+    54  		      C       NODE OVERLOAD CNT       NNNN
+    55  		      C       NODE RCV ERROR TIME     SSSSS   SECONDS
+    56  		      C       NODE RCV ERROR CNT      CCC
+    57  		      C       NODE RCV ERROR RATE     RRRR    AVERAGE ERROR RATE, %*100
+    58  		      C       NEIGH OVERLOAD TIME     SSSSS   SECONDS
+    59  		      C       NEIGH OVERLOAD CNT      NNNN
+    60  		      C       NEIGH RCV ERROR TIME    SSSSS   SECONDS
+    61  		      C       NEIGH RCV ERROR CNT     CCC
+    62  		      C       NEIGH RCV ERROR RATE    RRRR    AVERAGE ERROR RATE, %*100
+    63  		      34200 IF(NEIGH.GT.INODE)GOTO 34500
+    64  		            WRITE(27,34510)NEIGH,JLINE,INODE,R(RLINE,I),
+    65  		           1               NOT,NOC,NTIM,NE,NR,IOT,IOC,ITIM,IE,IR
+    66  		            GOTO 34600
+    67  		      34500 WRITE(27,34510)INODE,R(RLINE,I),NEIGH,JLINE,
+    68  		           1               IOT,IOC,ITIM,IE,IR,NOT,NOC,NTIM,NE,NR
+    69  		      34510 FORMAT(2(O4,I2),2(I5,I4,I5,I3,I4))
+    70  		      C     RELEASE EVENT RECORD
+    71  		      34600 CALL EVTDCH(I,INODE)
+    72  		            CALL PUTEVR(I)
+    73  		      34900 RETURN
+    74  		            END
+
+	CONSTANTS
+
+	0	000000000000	1	000003641100	2	000046113200	3	000000303240	
+
+	GLOBAL DUMMIES
+
+	INODE 	355		
+
+	COMMON
+
+	NODE  	/.COMM./+0	R     	/.COMM./+3777	RFREE 	/.COMM./+130645	RSZ   	/.COMM./+130646	RCHAIN	/.COMM./+130647
+	RSTIME	/.COMM./+130650	ROVTIM	/.COMM./+130651	RETIME	/.COMM./+130652	RLINE 	/.COMM./+130653	RCLOC 	/.COMM./+130654
+	RNEIGH	/.COMM./+130655	RCCNT 	/.COMM./+130656	RMSG  	/.COMM./+130657	RPLI  	/.COMM./+130660	ROVCNT	/.COMM./+130661
+	RUCNT 	/.COMM./+130662	RCVER 	/.COMM./+130663	RPLID 	/.COMM./+130664	RCCODE	/.COMM./+130665	RTY   	/.COMM./+130666
+	RTYLO 	/.COMM./+130667	RTYCR 	/.COMM./+130670	RTYLS 	/.COMM./+130671	RLNERR	/.COMM./+130672	RLETIM	/.COMM./+130673
+
+	SUBPROGRAMS
+
+	EVTFND	LOVEND	MOD   	NNDAT 	EVTDCH	PUTEVR	OCTO. 	OCTI. 	INTO. 	INTI. 	
+
+	SCALARS
+
+	LSDUMP	357		RTYLS 	130671		INODE 	355		I     	360		ROVTIM	130651	
+	IOT   	361		ROVCNT	130661		IOC   	362		IE    	363		RLNERR	130672	
+	IR    	364		ITIM  	365		RLETIM	130673		JLINE 	366		NEIGH 	367	
+	RNEIGH	130655		NTIM  	370		NOT   	371		NOC   	372		NE    	373	
+	NR    	374		RLINE 	130653		N     	375		RFREE 	130645		RSZ   	130646	
+	RCHAIN	130647		RSTIME	130650		RETIME	130652		RCLOC 	130654		RCCNT 	130656	
+	RMSG  	130657		RPLI  	130660		RUCNT 	130662		RCVER 	130663		RPLID 	130664	
+	RCCODE	130665		RTY   	130666		RTYLO 	130667		RTYCR 	130670		
+
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:34	PAGE 54
+
+
+	ARRAYS
+
+	NODE  	0		R     	3777		
+
+	 LSDUMP
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 52
+
+
+
+Symbol cross reference
+
+EVTDCH	    46	    71
+EVTFND	    19	    38
+I	    19	    20	    21	    22	    23	    25	    27	    30	    36	    64	    67	    71	    72
+IE	    23	    25	    64	    67
+INODE	     1	    19	    36	    37	    38	    63	    64	    67	    71
+IOC	    22	    64	    67
+IOT	    21	    64	    67
+IR	    24	    25	    26	    64	    67
+ITIM	    27	    64	    67
+JLINE	    29	    37	    38	    64	    67
+LOVEND	    20	    39
+LSDUMP	     1
+MOD	    21	    25	    27	    40	    42	    44
+N	    38	    39	    40	    41	    42	    43	    44	    46	    47
+NE	    34	    43	    44	    64	    67
+NEIGH	    30	    36	    37	    38	    46	    63	    64	    67
+NNDAT	    36	    37
+NOC	    33	    41	    64	    67
+NODE	    13
+NOT	    32	    40	    64	    67
+NR	    35	    44	    45	    64	    67
+NTIM	    31	    42	    64	    67
+PUTEVR	    47	    72
+R	     8	    13	    20	    21	    22	    23	    25	    27	    30	    36	    39	    40	    41	    42
+	    43	    44	    64	    67
+RCCNT	     8	    13
+RCCODE	     8	    13
+RCHAIN	     8	    13
+RCLOC	     8	    13
+RCVER	     8	    13
+RETIME	     8	    13
+RFREE	     8	    13
+RLETIM	     8	    13	    27	    42
+RLINE	     8	    13	    36	    64	    67
+RLNERR	     8	    13	    23	    25	    43	    44
+RMSG	     8	    13
+RNEIGH	     8	    13	    30
+ROVCNT	     8	    13	    21	    22	    40	    41
+ROVTIM	     8	    13	    20	    39
+RPLI	     8	    13
+RPLID	     8	    13
+RSTIME	     8	    13
+RSZ	     8	    13
+RTY	     8	    13
+RTYCR	     8	    13
+RTYLO	     8	    13
+RTYLS	     8	    13	    19	    38
+RUCNT	     8	    13
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:33	PAGE 52
+
+
+
+Macro/Opdef cross reference
+
+34200P	    36	    37	    38	    63
+34500P	    63	    67
+34510P	    64	    67	    69
+34600P	    66	    71
+34900P	34900P	    19	    73NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:34	PAGE 55
+
+
+     1  		            SUBROUTINE LOVEND(I)
+     2  		      C     --------------------
+     3  		      C     END A LINE OVERLOAD WHEN NO UNOVERLOAD IS AVAILABLE.  THIS IS DONE
+     4  		      C     BY ASSUMING 256 OVERLOAD SECONDS.
+     5  		      C     EVENT RECORD FIELDS
+     6  		            INTEGER                     R,     RFREE,       RSZ,    RCHAIN,
+     7  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+     8  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+     9  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    10  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    11  		            COMMON  NODE(2047),R(10,4343),     RFREE,       RSZ,    RCHAIN,
+    12  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    13  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    14  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    15  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    16  		            R(ROVCNT,I)=R(ROVCNT,I)+1000256
+    17  		            RETURN
+    18  		            END
+
+	CONSTANTS
+
+	0	000003641500	
+
+	GLOBAL DUMMIES
+
+	I     	27		
+
+	COMMON
+
+	NODE  	/.COMM./+0	R     	/.COMM./+3777	RFREE 	/.COMM./+130645	RSZ   	/.COMM./+130646	RCHAIN	/.COMM./+130647
+	RSTIME	/.COMM./+130650	ROVTIM	/.COMM./+130651	RETIME	/.COMM./+130652	RLINE 	/.COMM./+130653	RCLOC 	/.COMM./+130654
+	RNEIGH	/.COMM./+130655	RCCNT 	/.COMM./+130656	RMSG  	/.COMM./+130657	RPLI  	/.COMM./+130660	ROVCNT	/.COMM./+130661
+	RUCNT 	/.COMM./+130662	RCVER 	/.COMM./+130663	RPLID 	/.COMM./+130664	RCCODE	/.COMM./+130665	RTY   	/.COMM./+130666
+	RTYLO 	/.COMM./+130667	RTYCR 	/.COMM./+130670	RTYLS 	/.COMM./+130671	RLNERR	/.COMM./+130672	RLETIM	/.COMM./+130673
+
+	SCALARS
+
+	LOVEND	30		ROVCNT	130661		I     	27		RFREE 	130645		RSZ   	130646	
+	RCHAIN	130647		RSTIME	130650		ROVTIM	130651		RETIME	130652		RLINE 	130653	
+	RCLOC 	130654		RNEIGH	130655		RCCNT 	130656		RMSG  	130657		RPLI  	130660	
+	RUCNT 	130662		RCVER 	130663		RPLID 	130664		RCCODE	130665		RTY   	130666	
+	RTYLO 	130667		RTYCR 	130670		RTYLS 	130671		RLNERR	130672		RLETIM	130673	
+
+	ARRAYS
+
+	NODE  	0		R     	3777		
+
+	 LOVEND
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:34	PAGE 55
+
+
+
+Symbol cross reference
+
+I	R	     1	    16
+LOVEND	     1
+NODE	    11
+R	     6	    11	    16
+RCCNT	     6	    11
+RCCODE	     6	    11
+RCHAIN	     6	    11
+RCLOC	     6	    11
+RCVER	     6	    11
+RETIME	     6	    11
+RFREE	     6	    11
+RLETIM	     6	    11
+RLINE	     6	    11
+RLNERR	     6	    11
+RMSG	     6	    11
+RNEIGH	     6	    11
+ROVCNT	     6	    11	    16
+ROVTIM	     6	    11
+RPLI	     6	    11
+RPLID	     6	    11
+RSTIME	     6	    11
+RSZ	     6	    11
+RTY	     6	    11
+RTYCR	     6	    11
+RTYLO	     6	    11
+RTYLS	     6	    11
+RUCNT	     6	    11NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:34	PAGE 56
+
+
+     1  		            SUBROUTINE LINEVT(ITYPE,INODE,ILINE,INEIGH,IR,IEC,I)
+     2  		      C     ----------------------------------------------------
+     3  		      C     SUBROUTINE TO ESTABLISH A NEW LINE EVENT RECORD.
+     4  		      C
+     5  		      C     INPUT:    ITYPE  -TYPE OF LINE EVENT.
+     6  		      C               INODE  -NODE FOR EVENT.
+     7  		      C               ILINE  -LINE FOR NODE, -1 IF NOT KNOWN OR DON'T CARE.
+     8  		      C               INEIGH -NEIGHBOR FOR NODE, 0 IF NOT KNOWN OR DON'T CARE.
+     9  		      C               IR     -LOG RECORD NUMBER CREATING EVENT.
+    10  		      C               IEC    -EVENT COUNTER
+    11  		      C
+    12  		      C     OUTPUT:   I      -INDEX OF EVENT ESTABLISHED.
+    13  		      C               IEC    -INCREMENTED BY 1.
+    14  		      C               R(X,I) -EVENT RECORD INITIALIZED AS:
+    15  		      C                       R(RLINE,I)= ILINE
+    16  		      C                       R(RNEIGH,I)=INEIGH
+    17  		      C                       R(RMSG,I)=  IR
+    18  		      C     EVENT RECORD FIELDS
+    19  		            INTEGER                     R,     RFREE,       RSZ,    RCHAIN,
+    20  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    21  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    22  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    23  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    24  		            COMMON  NODE(2047),R(10,4343),     RFREE,       RSZ,    RCHAIN,
+    25  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    26  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    27  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    28  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    29  		      C       CREATE NEW EVENT STARTING NEW CHAIN OR CONTINUING CHAIN
+    30  		            CALL PT2N(INODE,INEIGH)
+    31  		            L=INEIGH
+    32  		            IF(L.EQ.0.AND.INODE.LE."1777)CALL NNDAT($35010,INODE,ILINE,L)
+    33  		            CALL PT2N(L,INODE)
+    34  		      35010 L=I
+    35  		            CALL GETEVR(I)
+    36  		            R(RTY,I)=ITYPE
+    37  		            IF(L.NE.0)GOTO 35020
+    38  		            NODE(INODE)=I
+    39  		            GOTO 35030
+    40  		      C       CONTINUE EVENT CHAIN FOR NODE
+    41  		      35020 R(RCHAIN,L)=I
+    42  		      C       COUNT EVENT & INITIALIZE FOR LINE
+    43  		      35030 IEC=IEC+1
+    44  		            R(RLINE,I)=ILINE
+    45  		            R(RNEIGH,I)=INEIGH
+    46  		            R(RMSG,I)=IR
+    47  		            RETURN
+    48  		            END
+
+	GLOBAL DUMMIES
+
+	ITYPE 	126		INODE 	127		ILINE 	130		INEIGH	131		IR    	132	
+	IEC   	133		I     	134		
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:34	PAGE 57
+
+
+
+	COMMON
+
+	NODE  	/.COMM./+0	R     	/.COMM./+3777	RFREE 	/.COMM./+130645	RSZ   	/.COMM./+130646	RCHAIN	/.COMM./+130647
+	RSTIME	/.COMM./+130650	ROVTIM	/.COMM./+130651	RETIME	/.COMM./+130652	RLINE 	/.COMM./+130653	RCLOC 	/.COMM./+130654
+	RNEIGH	/.COMM./+130655	RCCNT 	/.COMM./+130656	RMSG  	/.COMM./+130657	RPLI  	/.COMM./+130660	ROVCNT	/.COMM./+130661
+	RUCNT 	/.COMM./+130662	RCVER 	/.COMM./+130663	RPLID 	/.COMM./+130664	RCCODE	/.COMM./+130665	RTY   	/.COMM./+130666
+	RTYLO 	/.COMM./+130667	RTYCR 	/.COMM./+130670	RTYLS 	/.COMM./+130671	RLNERR	/.COMM./+130672	RLETIM	/.COMM./+130673
+
+	SUBPROGRAMS
+
+	PT2N  	NNDAT 	GETEVR	
+
+	SCALARS
+
+	LINEVT	135		INODE 	127		INEIGH	131		L     	136		ILINE 	130	
+	I     	134		RTY   	130666		ITYPE 	126		RCHAIN	130647		IEC   	133	
+	RLINE 	130653		RNEIGH	130655		RMSG  	130657		IR    	132		RFREE 	130645	
+	RSZ   	130646		RSTIME	130650		ROVTIM	130651		RETIME	130652		RCLOC 	130654	
+	RCCNT 	130656		RPLI  	130660		ROVCNT	130661		RUCNT 	130662		RCVER 	130663	
+	RPLID 	130664		RCCODE	130665		RTYLO 	130667		RTYCR 	130670		RTYLS 	130671	
+	RLNERR	130672		RLETIM	130673		
+
+	ARRAYS
+
+	NODE  	0		R     	3777		
+
+	 LINEVT
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:34	PAGE 56
+
+
+
+Symbol cross reference
+
+GETEVR	    35
+I	     1	    34	    35	    36	    38	    41	    44	    45	    46
+IEC	     1	    43
+ILINE	     1	    32	    44
+INEIGH	     1	    30	    31	    45
+INODE	     1	    30	    32	    33	    38
+IR	     1	    46
+ITYPE	     1	    36
+L	    31	    32	    33	    34	    37	    41
+LINEVT	     1
+NNDAT	    32
+NODE	    24	    38
+PT2N	    30	    33
+R	    19	    24	    36	    41	    44	    45	    46
+RCCNT	    19	    24
+RCCODE	    19	    24
+RCHAIN	    19	    24	    41
+RCLOC	    19	    24
+RCVER	    19	    24
+RETIME	    19	    24
+RFREE	    19	    24
+RLETIM	    19	    24
+RLINE	    19	    24	    44
+RLNERR	    19	    24
+RMSG	    19	    24	    46
+RNEIGH	    19	    24	    45
+ROVCNT	    19	    24
+ROVTIM	    19	    24
+RPLI	    19	    24
+RPLID	    19	    24
+RSTIME	    19	    24
+RSZ	    19	    24
+RTY	    19	    24	    36
+RTYCR	    19	    24
+RTYLO	    19	    24
+RTYLS	    19	    24
+RUCNT	    19	    24
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:34	PAGE 56
+
+
+
+Macro/Opdef cross reference
+
+35010P	    32	    34
+35020P	    37	    41
+35030P	    39	    43NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:34	PAGE 58
+
+
+     1  		            SUBROUTINE T2LEMK(IR,IEC)
+     2  		      C     -------------------------
+     3  		      C     THIS SUBROUTINE MAKES T-II LINE ERROR EVENTS FROM DATA ACCUMULATED
+     4  		      C     FROM LOG IN ARRAY T2LNER.  T-II LINE ERROR EVENTS ARE NOT INSTANTANEOUS
+     5  		      C     SINCE THEY COME IN MULTIPLE LOG MESSSAGES.
+     6  		      C
+     7  		      C     INPUT:    IR     -LOG RECORD NUMBER
+     8  		      C               IEC    -EVENT COUNTER
+     9  		      C               /T2LE/ -NAMED COMMON WITH T-II LINE ERROR DATA FOR
+    10  		      C                       NODE T2LNOD.
+    11  		      C
+    12  		      C     OUTPUT:   IEC    -INCREMENTED FOR EACH NEW EVENT CREATED.
+    13  		      C               /T2LE/ -INITIALIZED FOR NEXT NODE.
+    14  		      C     T-II LINE ERROR STATISTICS FOR CURRENT NODE OUTPUTING TO LOG
+    15  		            INTEGER T2LNOD,T2LNTM,T2LNER,T2LNEI,T2LNRE,T2LNRP,T2LINS,T2LINX
+    16  		            COMMON /T2LE/T2LNOD,T2LNTM,T2LNER(3,32),T2LNEI,T2LNRE,T2LNRP,
+    17  		           1             T2LINS(32),T2LINX
+    18  		      C     EVENT RECORD FIELDS
+    19  		            INTEGER                     R,     RFREE,       RSZ,    RCHAIN,
+    20  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    21  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    22  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    23  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    24  		            COMMON  NODE(2047),R(10,4343),     RFREE,       RSZ,    RCHAIN,
+    25  		           1            RSTIME,    ROVTIM,    RETIME,     RLINE,     RCLOC,
+    26  		           2            RNEIGH,     RCCNT,      RMSG,      RPLI,    ROVCNT,
+    27  		           3             RUCNT,     RCVER,     RPLID,    RCCODE,       RTY,
+    28  		           4             RTYLO,     RTYCR,     RTYLS,    RLNERR,    RLETIM
+    29  		            IF(T2LNOD.EQ.-1)RETURN
+    30  		            IF(T2LINX.EQ.0)RETURN
+    31  		            DO 36190 LL=1,T2LINX
+    32  		            L=T2LINS(LL)
+    33  		            T2LINS(LL)=0
+    34  		            IF(T2LNER(T2LNEI,L).EQ.-1)GOTO 36190
+    35  		            IF(T2LNER(T2LNRP,L).NE.-1)GOTO 36120
+    36  		      C       NO RECEIVE PACKET COUNT FOR ERROR
+    37  		            I=L-1
+    38  		      C     TYPE 36100,T2LNTM,T2LNOD,I,T2LNER(T2LNEI,L),T2LNER(T2LNRE,L)
+    39  		      36100 FORMAT(5X,'NO RCV PACKET CNT FOR T-II LINE ERROR',/,
+    40  		           1       6X,'AT',I10,' NODE:',O4,' LINE:',I2,' NEIGH:',O4,
+    41  		           2       ' ERRS:',I5)
+    42  		            GOTO 36150
+    43  		      C       FIND EVENT FOR NODE-LINE/NEIGHBOR
+    44  		      36120 CALL EVTFND($36130,RTYLS,T2LNOD,-1,T2LNER(T2LNEI,L),I)
+    45  		            R(RMSG,I)=IR
+    46  		            GOTO 36140
+    47  		      C       CREATE NEW EVENT
+    48  		      36130 CALL LINEVT(RTYLS,T2LNOD,-1,T2LNER(T2LNEI,L),IR,IEC,I)
+    49  		      C       ACCUMALATE TOTAL PACKETS AND ERRORS
+    50  		      36140 IERRS=T2LNER(T2LNRE,L)
+    51  		            IPAKS=T2LNER(T2LNRP,L)+IERRS
+    52  		      C     ERROR RATE = ERRORS/PACKETS, 4 DIGITS OF ACCUMULATION (*10000)
+    53  		            IRATE=IERRS*10000/IPAKS
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:34	PAGE 59
+
+
+    54  		            R(RLNERR,I)=R(RLNERR,I)+10000000+IRATE
+    55  		      C2340 TYPE 12341,T2LNOD,T2LNER(T2LNEI,L),R(RLNERR,I)
+    56  		      C       COMPUTE ERROR SECONDS
+    57  		            IT=MOD(R(RLETIM,I),100000)
+    58  		            NT=MOD(T2LNTM,3600*24)+1
+    59  		            LT=R(RLETIM,I)/100000
+    60  		            IF(LT.EQ.0)GOTO 36145
+    61  		            ITD=IABS(NT-LT)
+    62  		            IF((ITD.LE.300).OR.(IABS(ITD-1100).LT.100))IT=IT+ITD-256
+    63  		      36145 R(RLETIM,I)=NT*100000+IT+256
+    64  		      C2341 FORMAT(' LINE ',O4,'-',O4,' RCV ERROR CNT:',I10)
+    65  		      36150 T2LNER(T2LNEI,L)=-1
+    66  		      36190 T2LNER(T2LNRP,L)=-1
+    67  		            T2LINX=0
+    68  		            RETURN
+    69  		            END
+
+	CONSTANTS
+
+	0	000046113200	1	000000303240	2	000000250600	
+
+	GLOBAL DUMMIES
+
+	IR    	310		IEC   	311		
+
+	COMMON
+
+	T2LNOD	/T2LE  /+0	T2LNTM	/T2LE  /+1	T2LNER	/T2LE  /+2	T2LNEI	/T2LE  /+142	T2LNRE	/T2LE  /+143
+	T2LNRP	/T2LE  /+144	T2LINS	/T2LE  /+145	T2LINX	/T2LE  /+205	NODE  	/.COMM./+0	R     	/.COMM./+3777
+	RFREE 	/.COMM./+130645	RSZ   	/.COMM./+130646	RCHAIN	/.COMM./+130647	RSTIME	/.COMM./+130650	ROVTIM	/.COMM./+130651
+	RETIME	/.COMM./+130652	RLINE 	/.COMM./+130653	RCLOC 	/.COMM./+130654	RNEIGH	/.COMM./+130655	RCCNT 	/.COMM./+130656
+	RMSG  	/.COMM./+130657	RPLI  	/.COMM./+130660	ROVCNT	/.COMM./+130661	RUCNT 	/.COMM./+130662	RCVER 	/.COMM./+130663
+	RPLID 	/.COMM./+130664	RCCODE	/.COMM./+130665	RTY   	/.COMM./+130666	RTYLO 	/.COMM./+130667	RTYCR 	/.COMM./+130670
+	RTYLS 	/.COMM./+130671	RLNERR	/.COMM./+130672	RLETIM	/.COMM./+130673	
+
+	SUBPROGRAMS
+
+	INTO. 	INTI. 	OCTO. 	OCTI. 	EVTFND	LINEVT	MOD   	IABS  	
+
+	SCALARS
+
+	T2LEMK	313		T2LNOD	0		T2LINX	205		LL    	314		L     	315	
+	T2LNEI	142		T2LNRP	144		I     	316		RTYLS 	130671		RMSG  	130657	
+	IR    	310		IEC   	311		IERRS 	317		T2LNRE	143		IPAKS 	320	
+	IRATE 	321		RLNERR	130672		IT    	322		RLETIM	130673		NT    	323	
+	T2LNTM	1		LT    	324		ITD   	325		RFREE 	130645		RSZ   	130646	
+	RCHAIN	130647		RSTIME	130650		ROVTIM	130651		RETIME	130652		RLINE 	130653	
+	RCLOC 	130654		RNEIGH	130655		RCCNT 	130656		RPLI  	130660		ROVCNT	130661	
+	RUCNT 	130662		RCVER 	130663		RPLID 	130664		RCCODE	130665		RTY   	130666	
+	RTYLO 	130667		RTYCR 	130670		
+
+	ARRAYS
+
+	NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:34	PAGE 60
+
+
+	T2LNER	2		T2LINS	145		NODE  	0		R     	3777		
+
+	 T2LEMK
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:34	PAGE 58
+
+
+
+Symbol cross reference
+
+EVTFND	    44
+I	    37	    44	    45	    48	    54	    57	    59	    63
+IABS	    61	    62
+IEC	     1	    48
+IERRS	    50	    51	    53
+IPAKS	    51	    53
+IR	     1	    45	    48
+IRATE	    53	    54
+IT	    57	    62	    63
+ITD	    61	    62
+L	    32	    34	    35	    37	    44	    48	    50	    51	    65	    66
+LINEVT	    48
+LL	    31	    32	    33
+LT	    59	    60	    61
+MOD	    57	    58
+NODE	    24
+NT	    58	    61	    63
+R	    19	    24	    45	    54	    57	    59	    63
+RCCNT	    19	    24
+RCCODE	    19	    24
+RCHAIN	    19	    24
+RCLOC	    19	    24
+RCVER	    19	    24
+RETIME	    19	    24
+RFREE	    19	    24
+RLETIM	    19	    24	    57	    59	    63
+RLINE	    19	    24
+RLNERR	    19	    24	    54
+RMSG	    19	    24	    45
+RNEIGH	    19	    24
+ROVCNT	    19	    24
+ROVTIM	    19	    24
+RPLI	    19	    24
+RPLID	    19	    24
+RSTIME	    19	    24
+RSZ	    19	    24
+RTY	    19	    24
+RTYCR	    19	    24
+RTYLO	    19	    24
+RTYLS	    19	    24	    44	    48
+RUCNT	    19	    24
+T2LE	    16
+T2LEMK	     1
+T2LINS	    15	    16	    32	    33
+T2LINX	    15	    16	    30	    31	    67
+T2LNEI	    15	    16	    34	    44	    48	    65
+T2LNER	    15	    16	    34	    35	    44	    48	    50	    51	    65	    66
+T2LNOD	    15	    16	    29	    44	    48
+T2LNRE	    15	    16	    50
+T2LNRP	    15	    16	    35	    51	    66
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:34	PAGE 58
+
+
+
+Symbol cross reference
+
+T2LNTM	    15	    16	    58
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:34	PAGE 58
+
+
+
+Macro/Opdef cross reference
+
+36100P	    39
+36120P	    35	    44
+36130P	    44	    48
+36140P	    46	    50
+36145P	    60	    63
+36150P	    42	    65
+36190P	    31	    34	    66NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:34	PAGE 61
+
+
+     1  		            FUNCTION NODECK(NODE,IEVENT,IW1,IW2,$)
+     2  		      C     --------------------------------------
+     3  		      C     THIS FUNCTION CHECKS THE NODE NUMBER VALUE SPECIFIED.  RETURN 5
+     4  		      C     MADE IF NODE ILLEGAL (.LT.1.OR.GT."3777)
+     5  		            NODECK=NODE
+     6  		            IF(NODE.GT.0.AND.NODE.LE."3777)RETURN
+     7  		            TYPE 38010,NODE,IEVENT,IW1,IW2
+     8  		      38010 FORMAT(5X,'ILLEGAL NODE NUMBER:',O6,' EVENT:',I4,
+     9  		           1       ' IW:',O12,1X,O12)
+    10  		            RETURN 5
+    11  		            END
+
+	GLOBAL DUMMIES
+
+	NODE  	101		IEVENT	102		IW1   	103		IW2   	104		
+
+	SUBPROGRAMS
+
+	OCTO. 	OCTI. 	INTO. 	INTI. 	
+
+	SCALARS
+
+	NODECK	105		NODE  	101		IEVENT	102		IW1   	103		IW2   	104	
+
+	 NODECK
+
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:34	PAGE 61
+
+
+
+Symbol cross reference
+
+IEVENT	     1	     7
+IW1	     1	     7
+IW2	     1	     7
+NODE	     1	     5	     6	     7
+NODECK	     1	     5
+NEVCON.FTF	F40	V27U(26)	21-JUL-83	10:34	PAGE 61
+
+
+
+Macro/Opdef cross reference
+
+38010P	38010P	     7	     8     ë
