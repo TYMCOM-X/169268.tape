@@ -1,0 +1,347 @@
+!            PROGRAM:       CONMER.DPL.
+!            AUTHOR:        Rob Nielsen
+!            DATE:          July 25, 1986
+! 
+!            PURPOSE:      To merge 3 files containing information on ISIS
+!                 Consat Configuration, Traffic, and Node performance into
+!                 a single 1022 data base. All information covers the
+!                 days of July 7 and July 10.
+! 
+!            DESCRIPTION
+!                 Input Files
+!                      CONIS1.DMS:    ISIS Consat node configyration
+!                      SURVEY.DMS     ISIS Consat Deluti data.
+!                      CONTRA.DMS     Traffic originating at Consat slot
+!                 Auxiliary File
+!                      CKTS.DMS       Kernel Host ID
+!                 Output File
+!                      ISISCN.DMS
+! 
+!                 The program uses CONIS1 as its home data base. It maps in
+!            turn to Contra and Survey (all 3 files are organized at the
+!            level)and assigns the relevant attributes to DPL variables.
+! 
+!                 Once the program returns to Conis1 it finds the number of
+!            Consat, X25, etc hosts by looking at the appropriate NMBSLT#
+!            field (for a mapping of # in NMBSLT# to Product see the program
+!            (MSEDSEL:25)ISINFO.DPL). A for loop using the array Other and
+!            the counter Othercnt will pick those products that will not be
+!            referred to by name. At this point we will also map to CKTS and
+!            get the kernel host id.
+! 
+!                 The program operates entirely in single record mode.
+! 
+!            SUBROUTINES
+!                 Main Program
+!                      InitTraf       Initializes traffic variables to 0
+!                      Trafdata       Assigns traffic data from CONTRA
+!                      InitNtrack     Intializes deluti variables to 0
+!                      NTrackData     Assigns Deluti data from SURVEY
+!                      InitConfig     Initializes cnfgrtn vars to 0 or " "
+!                      Configdata     Calculates configuration quantities
+!                           Linedata       # of Sync, SIO, Async lines
+!                           Slotdata       # of each product
+!                      Printout       Prints 1 line per node to ISISCN.DMI
+! 
+!            NOTATION
+!                 The program uses my standard notation where names in all
+!            caps are attributes, files, or reserved words and names in
+!            lower case are user-defined variables, labels, or subroutines.
+! 
+             OPEN (SYSDAT)CONIS1 (MSEDSEL)CONTRA (SYSDAT)SURVEY &
+                  (NETSTAT)CKTS.
+             INIT 1 ISISCN.DMI.
+
+             DPL START.
+
+             DEFINE INTEGER Slots Pass Sessions MinXcnt MinXloop &
+                            Consat T3270 H3270 Cmt Sna Tymcomm Sdlc Hasp &
+                            X25 Kernel Sync Async Sio Count Othercnt.
+
+             DEFINE REAL Connect Chars MaxCpsin MaxCpsout MaxDemur.
+             DEFINE TEXT 10 Other(20).
+             DEFINE TEXT 1 Is2400.
+
+             DBSET CONIS1.
+             FIND ALL.     
+             SORT KEY NODE.
+
+NextNode:    GETREC LastNode.
+                  CALL InitTraf.
+                  MAP TO Contra VIA NODE TO NODE.
+
+!                         The next command will trap for no rcds fnd in map
+                       IF SYSNREC EQ 0 GOTO Deluti.
+                       CALL TrafData.
+
+Deluti:           DBSET Conis1.
+                  CALL InitNTrack.
+                  MAP TO Survey VIA NODE TO NODE.
+                       IF SYSNREC EQ 0 GOTO Config.
+                       CALL NTrackData.
+
+Config:           DBSET Conis1.
+                       CALL InitConfig.
+                       CALL ConfigData.
+
+                  CALL Printout.
+
+                  GOTO NextNode.
+
+LastNode:    GOTO TheEnd.
+
+
+!            **************** SUBROUTINE INITRAF ******************
+
+InitTraf:    LET Sessions EQ 0.
+             LET Connect EQ 0.0.
+             LET Chars EQ 0.0.
+
+             RETURN.
+
+
+
+!            *************** SUBROUTINE TrafData ******************
+
+TrafData:    LET Sessions EQ MAXSESS.
+             LET Connect EQ MAXCON.
+             LET Chars EQ MAXCHAR.
+
+             RETURN.
+
+
+!            ************** SUBROUTINE INITNTRACK *******************
+
+InitNTrack:  LET MinXcnt EQ 0.
+             LET MinXloop EQ 0.
+             LET MaxCpsin EQ 0.0.
+             LET MaxCpsout EQ 0.0.
+             LET MaxDemur EQ 0.0.
+
+             RETURN.
+
+
+
+!            *************  SUBROUTINE NTRACKDATA *********************
+
+NTrackData:  LET MinXcnt EQ MINEXCNT.
+             LET MinXloop EQ MINEXLP.
+             LET MaxCpsin EQ MAXIN.
+             LET MaxCpsout EQ MAXOUT.
+             LET MaxDemur EQ MAXDELAY.
+
+             RETURN.
+
+
+!            *************  SUBROUTINE INITCONFIG *********************
+
+InitConfig:  LET Async EQ 0.
+             LET Sync EQ 0.
+             LET SIO EQ 0.
+
+             LET Consat EQ 0.
+             LET T3270 EQ 0.
+             LET H3270 EQ 0.
+             LET CMT EQ 0.
+             LET SNA EQ 0.
+             LET Tymcomm EQ 0.
+             LET SDLC EQ 0.
+             LET HASP EQ 0.
+             LET X25 EQ 0.
+
+             LET Kernel EQ 0.
+             LET Is2400 EQ " ".
+
+             LET OtherCnt EQ 1.
+InitOther:        LET Other(Othercnt) EQ " ".
+                  LET Othercnt EQ (Othercnt + 1).
+                  IF Othercnt LE 10 GOTO InitOther.
+
+             LET Othercnt EQ 1.
+             LET Count EQ 1. 
+             RETURN.
+
+
+!            ************** SUBROUTINE CONFIGDATA ******************8
+
+ConfigData:  MAP TO CKTS VIA NODE TO PT1.
+                  IF SYSNREC EQ 0 GOTO Lines.
+                  SEARCH PTY1 NCT "HOST".
+                  GETREC Lines.
+                  LET Kernel EQ KHOST1.
+
+Lines:       DBSET Conis1.
+             CALL LineData.
+             CALL SlotData.
+
+             RETURN.
+!            *************** SUBROUTINE LINEDATA ****************
+
+LineData:         LET Async EQ NASYN1 +  &
+                               NASYN2 +  &
+                               NASYN3 +  &
+                               NASYN4 +  &
+                               NASYN5 +  &
+                               NASYN6 +  &
+                               NASYN7 +  &
+                               NASYN8 +  &
+                               NASYN9 +  &
+                               NASYN10 +  &
+                               NASYN11 +  &
+                               NASYN12 +  &
+                               NASYN13 +  &
+                               NASYN14 +  &
+                               NASYN15 +  &
+                               NASYN16 +  &
+                               NASYN17 +  &
+                               NASYN18 +  &
+                               NASYN19 +  &
+                               NASYN20.
+
+                  LET  Sync EQ NSYNC1 +  &
+                               NSYNC2 +  &
+                               NSYNC3 +  &
+                               NSYNC4 +  &
+                               NSYNC5 +  &
+                               NSYNC6 +  &
+                               NSYNC7 +  &
+                               NSYNC8 +  &
+                               NSYNC9 +  &
+                               NSYNC10 +  &
+                               NSYNC11 +  &
+                               NSYNC12 +  &
+                               NSYNC13 +  &
+                               NSYNC14 +  &
+                               NSYNC15 +  &
+                               NSYNC16 +  &
+                               NSYNC17 +  &
+                               NSYNC18 +  &
+                               NSYNC19 +  &
+                               NSYNC20.
+
+                  LET Sio EQ NSIO1 +  &
+                             NSIO2 +  &
+                             NSIO3 +  &
+                             NSIO4 +  &
+                             NSIO5 +  &
+                             NSIO6 +  &
+                             NSIO7 +  &
+                             NSIO8 +  &
+                             NSIO9 +  &
+                             NSIO10 +  &
+                             NSIO11 +  &
+                             NSIO12 +  &
+                             NSIO13 +  &
+                             NSIO14 +  &
+                             NSIO15 +  &
+                             NSIO16 +  &
+                             NSIO17 +  &
+                             NSIO18 +  &
+                             NSIO19 +  &
+                             NSIO20.
+
+
+             RETURN.
+
+!            *************** SUBROUTINE SLOTDATA ******************
+
+SlotData:    LET Consat EQ NMBSLT7.
+             LET T3270 EQ NMBSLT5.
+             LET H3270 EQ NMBSLT4.
+             LET Cmt EQ NMBSLT6.
+             LET Sna EQ NMBSLT10.
+             LET Tymcomm EQ NMBSLT8.
+             LET Sdlc EQ NMBSLT9.
+             LET Hasp EQ NMBSLT16.
+             LET X25 EQ NMBSLT3.
+
+ISlot11:       IF NMBSLT11 GT 0 GOTO Slot11.
+ISlot12:       IF NMBSLT12 GT 0 GOTO Slot12.
+ISlot13:       IF NMBSLT13 GT 0 GOTO Slot13.
+ISlot14:       IF NMBSLT14 GT 0 GOTO Slot14.
+ISlot15:       IF NMBSLT15 GT 0 GOTO Slot15.
+ISlot17:       IF NMBSLT17 GT 0 GOTO Slot17.
+ISlot18:       IF NMBSLT18 GT 0 GOTO Slot18.
+ISlot19:       IF NMBSLT19 GT 0 GOTO Slot19.
+ISlot20:       IF NMBSLT20 GT 0 GOTO Slot20.
+
+             GOTO EndSltdat.
+
+Slot11:      LET Other(Othercnt) EQ "Gateway".
+             LET Othercnt EQ (Othercnt + 1).
+             GOTO ISlot12.
+
+Slot12:      LET Other(Othercnt) EQ "EBUS".
+             LET Othercnt EQ (Othercnt + 1).
+             GOTO ISlot13.
+
+Slot13:      LET Other(Othercnt) EQ "XPC".
+             LET Othercnt EQ (Othercnt + 1).
+             GOTO ISlot14.
+
+Slot14:      LET Other(Othercnt) EQ "MENU".
+             LET Othercnt EQ (Othercnt + 1).
+             GOTO ISlot15.
+
+Slot15:      LET Other(Othercnt) EQ "MUX".
+             LET Othercnt EQ (Othercnt + 1).
+             GOTO ISlot17.
+
+Slot17:      LET Other(Othercnt) EQ "PSC".
+             LET Othercnt EQ (Othercnt + 1).
+             GOTO ISlot18.
+
+Slot18:      LET Other(Othercnt) EQ "ONTYME".
+             LET Othercnt EQ (Othercnt + 1).
+             GOTO ISlot19.
+
+Slot19:      LET Other(Othercnt) EQ "DATATROL".
+             LET Othercnt EQ (Othercnt + 1).
+             GOTO ISlot20.
+
+Slot20:      LET Other(Othercnt) EQ "UNKNOWN".
+             LET Othercnt EQ (Othercnt + 1).
+
+EndSltdat:   LET Count EQ (Othercnt - 1).
+             RETURN.
+
+
+!            *************** SUBROUTINE PRINTOUT *********************
+
+Printout:    DBSET CONIS1.
+
+             LET Is2400 EQ "N".
+             IF IASPD LT 2 GOTO Startprint.
+                  LET Is2400 EQ "Y".
+
+Startprint:  PRINT ON 1 NODE Kernel Sio Sync Async Is2400 IASPD&
+             FORMAT I5 1X I4 1X I2 1X I2 1X I3 1X A1 1X I1 1X $ END.
+
+PrnDeluti:   PRINT ON 1 MinXcnt MinXloop MaxCpsin MaxCpsout MaxDemur &
+             FORMAT I4 1X I4 1X I5 1X I5 1X I4 1X $ END.
+
+PrnTraff:    PRINT ON 1 Sessions Connect Chars &
+             FORMAT I6 1X F8.2 1X F9.0 1X $ END.
+
+MiscData:    PRINT ON 1 Numslot Consat T3270 H3270 Cmt Sna Tymcomm Sdlc Hasp &
+                  X25 &
+             FORMAT I4 1X I4 1X I4 1X I4 1X I4 1X I4 1X I4 1X I4 1X I4 1X I4 &
+                  1X $ END.
+
+             LET Othercnt EQ 1.
+NextSlot:         IF Othercnt GE Count GOTO Endprint.
+                  LET Othercnt EQ (Othercnt + 1).
+             GOTO NextSlot.
+
+Endprint:    PRINT ON 1 FORMAT " " END.
+             RETURN.
+
+
+
+!            ****************** END OF PROGRAM ***********************
+
+TheEnd:      RELEASE 1.
+             DPL STOP.
+             DPL END.
+
+  
