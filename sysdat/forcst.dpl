@@ -1,0 +1,114 @@
+!====================================================================
+! PROGRAM: FORCST.DPL
+!
+! This program creates a flat file of monthly traffic data.
+!
+! For each rotary, FORCST will give these traffic values:
+!	PEAK5:  peak percent for the top 5 days in erlangs
+!	PKABD:  peak percent for average business day
+!	PORTS:  number of available ports (PORTS = AVAIL)
+!	AVERL:  average number of forecasted erlangs for 
+!               top 5 days
+!     CONNECT:  average number of connect hours for the
+!               forecasted month from monthly data
+!
+! Additional variables used in this program are:
+!         INC: counter representing pilot number in ROTARY.DMS 
+!      TOTERL: total erlangs
+!      WTPEAK: peak % x erlangs       
+!      SUMWPK: summation of (peak % x erlangs)
+!      SUMERL: summation of erlangs
+!      COUNT1: counter for SUB1, used to count 5 records
+!      COUNT2: counter for SUB2, used to count 5 records 
+!       
+!
+! Authors:  Louise Kennefick, Karen Corcoran
+! Date:     February 13, 1986
+!===================================================================
+
+
+INIT 1 FORCST.DAT.
+O OCTINF JANINF ROTARY.
+DEFINE INTEGER INC COUNT1 COUNT2 PORTS. 
+DEFINE REAL SUMWPK SUMERL PKABD PEAK5 TOTERL AVERL CONNECT.
+DEFINE TEXT 15 ROTARY.
+DPL START.
+
+	LET INC EQ 1.
+	PRINT ON 1 FORMAT 10X,'PILOT',2X,'CONNECT',2X,'AVAIL',&
+                          2X,'PEAK5',2X,'PKABD',2X,'ERLANG',/ END.
+
+
+!===================================================================
+! Subroutine 1, SUB1, will calculate three variables. The first is 
+!   the peak percent for the average business day (PKABD) and the 
+!   second is the peak percent for the top 5 days in erlangs (PEAK5). 
+!   Lastly, it will give the number of ports for that rotary.
+!===================================================================
+
+
+SUB1:	DBSET 1.
+	F PILOTNO EQ INC.
+        IF PILOTNO EQ 0 GOTO NEXT.
+	SORT BY ERLANG DESCENDING.
+	EVALUATE PKABD EQ TOT(WTPEAK)/TOT(ERLANG).
+	LET COUNT1 EQ 0.
+	LET SUMWPK EQ 0.
+	LET SUMERL EQ 0.
+	
+   LP1: LET COUNT1 EQ COUNT1+1.
+	IF COUNT1 GT 5 GOTO C1.
+	GETREC NEXT.
+	LET SUMWPK EQ SUMWPK+WTDPEAK.
+	LET SUMERL EQ SUMERL+ERLANG.
+	GOTO LP1.
+
+    C1:	LET PORTS EQ AVAIL.
+        LET PEAK5 EQ SUMWPK/SUMERL.
+
+
+!===================================================================
+! Subroutine 2, SUB2, calculates the average number of forecasted
+!   erlangs for the top five 5 days. It will also evaluate the
+!   average connect hours for the "forecasted" month from 
+!   monthly data.
+!===================================================================
+
+
+SUB2:	MAP TO 2 VIA PILOTNO TO PILOTNO.
+	SORT BY ERLANG DESCENDING.
+        EVALUATE CONNECT EQ MEAN(CONHRS).
+        LET COUNT2 EQ 0.
+        LET TOTERL EQ 0.
+
+   LP2: LET COUNT2 EQ COUNT2+1.
+	IF COUNT2 GT 5 GOTO C2.
+	GETREC NEXT.
+	LET TOTERL EQ TOTERL+ERLANG.
+	GOTO LP2.
+
+    C2: LET AVERL EQ TOTERL/5.
+
+
+!===================================================================
+! Subroutine 3, SUB3, assigns the pilot number based on the
+!    counter value (INC) from the ROTARY database.
+!===================================================================
+
+
+SUB3:	DBSET 1.
+	MAP TO 3 VIA PILOTNO TO PILOT.
+	LET ROTARY EQ PILOT.
+	GOTO END.
+
+
+END:	PRINT ON 1 ROTARY CONNECT PORTS PEAK5 PKABD AVERL &
+            FORMAT 1X,'"A15"',2X,F6.1,2X,I5,2X,F5.1,2X,F5.1,2X,F5.1 END.
+NEXT:	LET INC EQ INC+1.
+	IF INC GT 447 GOTO FINISH.
+	GOTO SUB1.
+
+
+FINISH:	RELEASE 1.
+	DPL STOP.	
+	DPL END.
