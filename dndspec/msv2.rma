@@ -1,0 +1,942 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            Menu Server Version 2.00
+
+
+
+                           Reference Manual Appendix
+
+
+
+                               Filename: MSV2.RMA
+
+
+
+
+                     Integrated Communications Applications
+
+
+
+
+                          McDonnell Douglas Inc. - ISG
+
+
+
+                                   Written by
+
+
+
+                                   M.M. Lewis
+
+
+
+
+                                 March 26, 1987
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          +------------------------------------------------------------+
+          |  TYMNET's proprietary rights are included in the infor-    |
+          |  mation disclosed herein.  The recipient, by receiving     |
+          |  this document, agrees that neither this document nor the  |
+          |  information disclosed herein nor any part thereof shall   |
+          |  be reproduced or transferred to other documents or used   |
+          |  or disclosed to others for manufacturing or for any other |
+          |  purpose except as specifically authorized in writing by   |
+          |  TYMNET.                                                   |
+          +------------------------------------------------------------+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                SECTION 1. SCOPE
+
+
+
+          This document is a supplement to the Menu Server Reference
+          Manual (versions 1.12 and 1.13).  It includes a description
+          of the configuration macros for features which have been
+          added to the code to produce Menu Server Version 2.00.
+
+          This document provides a description of the Login Resend
+          String Option, Login Inactivity Timeout, Login Timeout
+          String, Host Inactivity Timeout, and Improved UBUFFER,
+          accompanied by a sample Tymfile which illustrates the
+          configuration parameters used for each of these features.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          March 26, 1987             - 2 -                    MSV2.TRA
+
+
+
+
+
+
+
+
+
+                        SECTION 2. VERSION 2.00 FEATURES
+
+
+
+
+          2.1.  LOGIN RESEND STRING OPTION
+          ________________________________
+
+          The Login Resend String Option is a feature which determines
+          whether the Menu Server will retry a login to the host if
+          the initial login attempt has failed.  A host login attempt
+          may fail for various reasons such as a timeout while waiting
+          for a host response during login or loss of a network
+          circuit.  (The Login Retry option is off by default.)  Login
+          Resend String consists of the following macro:
+
+               LOGTRY
+
+
+
+          2.1.1.  The LOGTRY Macro
+          ________________________
+
+          The LOGTRY macro determines whether the Login Resend String
+          Option is to be used, and the number of retry attempts to
+          make if an initial login attempt fails.  This macro may be
+          placed anywhere in the Tymfile, and is in effect for all
+          subsequent Command macros until another LOGTRY macro is
+          defined.  If the LOGTRY macro is not defined, then the Menu
+          Server will make only one attempt to log in to the host.
+
+          The format for this macro is;
+
+               LOGTRY(YES/NO,#retries)
+
+          where;
+
+               yes/no    indicates whether to set the retry option on.
+               ______
+
+               #retries  indicates the number (decimal) of login
+               ________
+                         attempts to make, including the initial one.
+                         The default value is 3.
+
+          When the Login Resend String Option is set to 'on', the
+          first time Menu Server makes a retry attempt to log in to
+          the host, the following message will appear;
+
+          (ms) RETRYING LOG-IN, TYPE THE ESC KEY THREE TIMES FOR MENU.
+
+                                 1 TRY FAILED.
+
+          Each successive attempt to log in to the host results in one
+          increment of the retry counter.  The following message will
+          be displayed;
+
+                                # TRIES FAILED.
+
+
+          March 26, 1987             - 3 -                    MSV2.TRA
+
+
+
+
+          MSV2 REF APPENDIX                   2. VERSION 2.00 FEATURES
+
+
+
+
+          When the maximum number of configured retry attempts has
+          been exhausted without a successful login, the following
+          message will be displayed;
+
+                       # TRIES FAILED.  MAXIMUM EXCEEDED.
+
+          When this occurs the menu will be redisplayed if the Menu
+          Redisplay option has been configured.  If the Auto-Select
+          feature is configured, the user will be logged off.
+
+
+          2.2.  LOGIN INACTIVITY TIMEOUT
+          ______________________________
+
+          The Login Inactivity Timeout feature sets the timeout period
+          which determines that a host login attempt has failed.  This
+          feature applies to both the network and host portions of the
+          login.
+
+          The login begins with the menu server accessing the host
+          through the network and ends when the sign-in to the host
+          has been completed.  A host sign-in typically consists of an
+          exchange of configured data strings between the menu server
+          and the host.   A login can fail if anything goes wrong
+          during either the network or host portion of the login pro-
+          cess; for example if the network login is successful but the
+          menu server does not receive a configured match string from
+          the host, a login timeout will occur.
+
+          The Login Inactivity Timeout feature consists of two macros:
+
+               LOGTIMEOUT
+               LTO.STRING
+
+
+
+          2.2.1.  The LOGTIMEOUT Macro
+          ____________________________
+
+          The LOGTIMEOUT macro determines the actual decimal value for
+          the Login Timeout.  This macro may be placed anywhere in the
+          Tymfile and is effective for all menu selections until
+          another Login Timeout macro is defined.
+
+          If this macro is defined in a Tymfile for which no LOGRETRY
+          macro has been defined, when the Login Timeout value has
+          expired, the user will receive the diagnostic message
+          (defined with the LTO.STRING macro) followed by the menu
+          prompt, a menu redisplay, or will be logged off the Menu
+          Server, depending on whether Menu Redisplay or Auto-Select
+          have been configured.
+
+          If this macro is not configured, and there is a problem with
+          the login process, the user will get 'stranded' at the login
+          step and must press the 'ESC' key three times to exit.
+
+
+
+          March 26, 1987             - 4 -                    MSV2.TRA
+
+
+
+
+          MSV2 REF APPENDIX                   2. VERSION 2.00 FEATURES
+
+
+
+
+          The format for this macro is;
+
+               LOGTIMEOUT(#seconds)
+
+          where;
+
+               seconds  is the decimal number of seconds in which the
+               _______
+                        menu server will wait for the host login to be
+                        completed after the user has entered a
+                        selection.
+
+
+          2.2.2.  The LTO.STRING Macro
+          ____________________________
+
+          The LTO.STRING macro defines the message which will be dis-
+          played at the terminal if the login timeout occurs.  This
+          macro should be configured for each host which has the
+          LOGTIMEOUT feature, but it is not mandatory.  If it isn't
+          configured for a host, and the login process times out, the
+          default message, 'Timeout, Host Not Responding' will be sent
+          to the user's terminal.
+
+          The format for this macro is;
+
+               LTO.STRING(text)
+
+          where;
+
+               text  is the text message that will be displayed when
+               ____
+                     the Login Inactivity Timeout has expired.
+
+                     Each LTO.STRING macro may consist of up to 156
+                     characters, and long texts may be entered by
+                     splitting the text into two or more LTO.STRING
+                     macros.  When more than one LTO.STRING is
+                     configured for a single message, the macros must
+                     be defined in the Tymfile in the order they are
+                     to appear.
+
+                     In order to display the message or parts of it on
+                     a new line, the text should include the sequence
+                     Carriage Return and Line Feed, specified by
+                     "0D"0A or "8D"8A.
+
+
+          2.3.  HOST INACTIVITY TIMEOUT
+          _____________________________
+
+          The Host Inactivity Timeout feature provides for a con-
+          figurable timeout value to be applied to the user's
+          connection with a host service.  If the timeout period
+          elapses with no input from the user and no output from the
+          host, the user will be logged off the service, but will
+          remain connected to the Menu Server.  If the Menu Redisplay
+
+
+
+          March 26, 1987             - 5 -                    MSV2.TRA
+
+
+
+
+          MSV2 REF APPENDIX                   2. VERSION 2.00 FEATURES
+
+
+
+
+          option is configured, the user will receive a menu display -
+          otherwise he or she will receive the menu prompt.
+
+          The macros used to define the Host Timeout are:
+
+               HOSTTIMEOUT
+               HTO.STRING
+
+
+
+          2.3.1.  The HOSTTIMEOUT Macro
+          _____________________________
+
+          The HOSTTIMEOUT Macro is used to define the amount of time
+          for Menu Server to wait for either user input or host output
+          before disconnecting the user from the host service.  This
+          macro may be placed anywhere within a Tymfile and is
+          effective for all command mcaros until another HOSTTIMEOUT
+          macro is configured.  This feature is OFF by default.
+
+          The format for this macro is;
+
+               HOSTTIMEOUT(#seconds)
+
+          where;
+
+               #seconds  is the decimal value of seconds for the Menu
+               ________
+                         Server to wait for host output or user input
+                         before disconnecting the user from the host
+                         service.
+
+
+          2.3.2.  The HTO.STRING Macro
+          ____________________________
+
+          The HTO.STRING macro defines a message which will be dis-
+          played to the user if the host timeout occurs.  There is no
+          default for this message, so if this macro is not
+          configured, the user will not receive a diagnostic for host
+          timeouts.
+
+          The format for this macro is;
+
+               HTO.STRING(text)
+
+          where;
+
+               text      is a string of text to be displayed when the
+               ____
+                         host timeout value has elapsed.  Each
+                         HTO.STRING may consist of up to 156
+                         characters, however more than one string can
+                         be defined in order to create a long text
+                         message.  When this is done, the HTO.STRINGs
+                         configured for one message must all be
+                         grouped together in the Tymfile in the order
+
+
+
+          March 26, 1987             - 6 -                    MSV2.TRA
+
+
+
+
+          MSV2 REF APPENDIX                   2. VERSION 2.00 FEATURES
+
+
+
+
+                         they are to appear, on a host by host basis.
+                         (Separate messages may be defined for
+                         separate hosts.)
+
+                         In order to display the message or parts of
+                         it on a new line, include the sequence
+                         Carriage Return and Line Feed in the text by
+                         specifying "OD"OA or "8D"8A.
+
+
+
+
+          2.4.  IMPROVED UBUFFER
+          ______________________
+
+          The Menu Server UBUFFER is a part of the UCB (User Control
+          Block) which is assigned to each user upon logging in.
+          UBUFFER stores all the strings defined for a command by the
+          following macros:  C.PASSWORD, C.USERNAME, C.TOSSINCLUDING,
+          C.TOSSUPTO, C.SEEINCLUDING, C.SEEUPTO, C.STRING, and
+          L.TYPEAHEAD.  The UBUFFER has a limit of 255 characters, and
+          its size for a particular user will be determined by the
+          command which contains the largest sum total of characters
+          defined in its strings.  This calculation is done
+          automatically by Menu Server.  Because all of the macros
+          which figure into this calculation (with the exception of
+          Username and Password) require a few extra overhead
+          characters, it is safest to assume 3 additional characters
+          per macro, except for Username and Password.  This helps to
+          prevent the UBUFFER from reaching its limit and beginning to
+          overwrite data.  (Note:  If more than 255 characters are
+          configured for UBUFFER a diagnostic describing that will
+          appear at assembly time.)
+
+          The only UBUFFER related macro which has been added
+          specifically for version 2.00 is:
+
+              L.TYPEAHEAD
+
+
+
+
+
+          2.4.1.  The L.TYPEAHEAD Macro
+          _____________________________
+
+          The L.TYPEAHEAD macro is used to define the number of char-
+          acters that the user may type ahead to the host, while the
+          login strings are being exchanged between the Menu Server
+          and the host.  The number of characters defined by this
+          macro will be saved by Menu Server, then transmitted to the
+          host when the login sequence is complete.  The default
+          number of 'typeahead' characters is 32.
+
+          The format for this macro is;
+
+
+
+          March 26, 1987             - 7 -                    MSV2.TRA
+
+
+
+
+          MSV2 REF APPENDIX                   2. VERSION 2.00 FEATURES
+
+
+
+
+               L.TYPEAHEAD(#bytes)
+
+          where;
+
+               #bytes    is the number of characters which the user
+               ______
+                         may type ahead to the host while the login
+                         exchange between the Menu Server and the host
+                         is in progress.  This is a decimal number
+                         with a default value of 32 bytes.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          March 26, 1987             - 8 -                    MSV2.TRA
+
+
+
+
+
+
+
+
+
+                           SECTION 3. SAMPLE TYMFILE
+
+
+
+
+   :: sample tym file - menu server - version 1.12
+   :: 6mar87 - mml
+
+           subttl show TymFile
+
+   ::      show Menu Server Tym File
+
+           dtnote(mktdemo.tym file 01/26/86)
+
+   Crash.Stop(Yes)         :stop on crashes
+   TimeZone(-8)            :time zone is PST
+   User.Ports(60)          :number of user ports
+   To.Value(0)             :10 seconds per tick (ex. 18 = 3 min)
+
+   :--------------------------------------------------------------
+
+   Host.Number(1158)
+   Auto.Redisplay
+   LTO.String(Login Timeout Exceeded)
+   HTO.String(Host Timed-Out, Please Make Another Selection,"8d"8a)
+   L.TYPEAHEAD(25)
+   WELCOME
+      W.String("8d"8a"8d"8a             TYMNET"8d"8a)
+      W.String(              McDonnell Douglas"8d"8a)
+      W.String(           Network Systems Company"8d"8a)
+      W.String("8d"8a     Welcome to the User Services Menu"8d"8a)
+      W.String("8d"8a     Please report any problems to)
+      W.String("8d"8a     Tymnet at (408) 946-4900.)
+      W.String("8d"8a)
+
+   TIMEOUT
+      T.String("8d"8a"8a)
+      T.String(   Since the Menu has not been used for a pre-defined and
+                  programmable)
+      T.String("8d"8a)
+      T.String(   time limit"ac your connection to the Menu has been
+                  terminated"ac saving)
+      T.String("8d"8a)
+      T.String(   you needless expense.  )
+      T.String("8d"8a)
+
+   ChZappedTxt
+      Zap.String("8d"8a Returning to the Main Menu. "8d"8a)
+
+   LOGOFF
+      L.String("8d"8a Leaving Tymnet User Services.  Thank you."8d"8a"8a)
+   MENU
+      M.String("8d"8a"8a)
+      M.String(      Tymnet User Services Menu"8d"8a"8a)
+
+
+   March 26, 1987             - 9 -                    MSV2.TRA
+
+
+
+
+   MSV2 REF APPENDIX                          3. SAMPLE TYMFILE
+
+
+
+
+      M.String(              Main Menu"8d"8a"8a"8a)
+      M.String(   1   Tymnet Information Service"8d"8a)
+      M.String(   2   Official Airline Guide"8d"8a)
+      M.String(   3   Dow Jones News"afRetrieval"8d"8a)
+      M.String(   4   Async-to-3270 Demonstration "28choose 1"29"8d"8a)
+      M.String(   5   Asynchronous Outdial Demonstration"8d"8a)
+      M.String(   6   Tymnet Access Locations"8d"8a)
+      M.String(   7   Net Message Service"8d"8a)
+      M.String(   8   Lockheed Dialog Information Services"8a"8d)
+      M.String("8a)
+      M.String(   M   manual logon"8a"8d)
+      M.String("8a)
+      M.String(   Q   Log Off"8d"8a"8a)
+
+   SELECT
+      S.String("8d"8a   Please select a service number  >> )
+
+
+   command(yow)
+    c.string("02"12menu1"bbXXXXXXXX"8d"a0)
+    c.TosUpToThen(>>)
+    c.string(y"8d)
+
+   command(m)
+     c.handLogin
+
+   LOGTRY(yes,2)
+   LOGTIMEOUT(3)
+
+   HOSTTIMEOUT(5)
+
+   COMMAND(1)                      : TYMNET information
+      C.g("04"12information"8d)
+
+   COMMAND(2)                      : official airline guide
+      C.String("04"12oag"8d)
+      c.tosincludingthen(WORD)
+      C.String(tnt10003"8d)
+      C.String(XXXXXXXXXX"8d)
+      C.Tosincludingthen(EE)
+      C.String("8d)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   March 26, 1987             - 10 -                   MSV2.TRA
+
+
+
+
+   MSV2 REF APPENDIX                          3. SAMPLE TYMFILE
+
+
+
+
+   LOGTRY(yes,2)
+   LOGTIMEOUT(3)
+
+   COMMAND(3)                      : dow jones news/retrieval
+      C.String("04"12dow1"BB"bb)
+      C.TosIncludingThen(PLEASE?)
+      C.String(djns"8d)
+
+   ::      cmt demo
+   LOGTRY(no)
+   LOGTIMEOUT(5)
+
+   COMMAND(4)
+
+
+
+      c.text("8d"8a"8d"8a Asyn-to-3270 Demo Sub-Menu"8d"8a"8d"8a)
+      c.text(  4a = vt100"8d"8a)
+      c.text(  4b = scanset"8d"8a)
+      c.text(  4c = adm3a"8d"8a)
+      c.text(  4d = televideo"8d"8a)
+      c.text(  4e = displayphone"8d"8a)
+      c.text(  4f = hazeltine"8d"8a)
+      c.text(  4g = adm11"8d"8a"8d"8a)
+
+
+   COMMAND(4a)                     :     ***  vt100
+     c.string("04"12cmtdemo"3bdemo cmt"8d)
+     c.TosIncludingThen(21)        :wait for, but don't show list of
+                                    terminals
+     c.string(19"8d)
+     c.SeeIncludingThen("bf"b5)    :pass the "clear screen" stuff thru
+     c.TosIncludingThen(PRI)       :discard the next prompt (to hit <cr>)
+     c.string("8d)                 :pretend the user hit <cr>
+     c.TOSINCLUDINGThen(N C E)     :DISC the "hourglass" stuff
+     c.string(tso sales)           :send some more logon stuff
+     c.PickFromRotor               :choose unused entry (use to build                                               username)
+
+     c.string("2fdemo"8d)          :send a "canned" password
+   :  c.string("2fdemotso"8d)      :we alternate every 24 days
+     c.SeeIncludingThen(LL)        :wait for yet another prompt (sort of)
+
+     c.string("8d)                 :send this
+
+   : at this point any type-ahead gets sent
+
+     c.rotor
+       c.re(01)
+       c.re(02)
+       c.re(03)
+
+
+
+
+
+
+   March 26, 1987             - 11 -                   MSV2.TRA
+
+
+
+
+   MSV2 REF APPENDIX                          3. SAMPLE TYMFILE
+
+
+
+
+   COMMAND(4b)                     :     ***  scanset
+     c.string("04"12cmtdemo"3bdemo cmt"8d)
+     c.TosIncludingThen(21)        :wait for, but don't show list of                                                terminals
+     c.string(16"8d)
+     c.SeeIncludingThen("90"b3)    :pass the "clear screen" stuff thru
+     c.TosIncludingThen(SO)        :discard the next prompt (to hit <cr>)
+     c.string("8d)                 :pretend the user hit <cr>
+     c.SeeIncludingThen(C E)       :pass the "hourglass" stuff thru
+     c.string(tso sales)           :send some more logon stuff
+     c.PickFromRotor               :choose unused entry (use to build                                               username)
+     c.string("2fdemo"8d)          :send a "canned" password
+   :  c.string("2fdemotso"8d)      :24 days
+     c.SeeIncludingThen(LL)        :wait for yet another prompt (sort of)
+     c.string("8d)                 :send this
+
+   : at this point any type-ahead gets sent
+
+     c.rotor
+   :    c.re(01)
+    :   c.re(02)
+     :  c.re(03)
+        c.re(04)
+
+   COMMAND(4c)                     :     ***  adm3a
+     c.string("04"12cmtdemo"3bdemo cmt"8d)
+     c.TosIncludingThen(21)        :wait for, but don't show list of
+                                    terminals
+     c.string(4"8d)
+     c.SeeIncludingThen("1a)       :pass the "clear screen" stuff thru
+     c.TosIncludingThen(SO)        :discard the next prompt (to hit <cr>)
+     c.string("8d)                 :pretend the user hit <cr>
+     c.SeeIncludingThen(C E)       :pass the "hourglass" stuff thru
+     c.string(tso sales)           :send some more logon stuff
+     c.PickFromRotor               :choose unused entry (use to build
+                                    username)
+     c.string("2fdemo"8d)          :send a "canned" password
+   :  c.string("2fdemotso"8d)      :24 days
+     c.TosUpToThen("1b="20"20)     :don't echo username/password!
+     c.SeeIncludingThen(LL)        :wait for yet another prompt (sort of)
+     c.string("8d)                 :send this
+
+   : at this point any type-ahead gets sent
+
+     c.rotor
+       c.re(05)
+       c.re(06)
+       c.re(07)
+
+   COMMAND(Q)
+       C.Quit
+
+
+
+
+
+
+   March 26, 1987             - 12 -                   MSV2.TRA
+
+
+
+
+
+
+
+
+
+                        TABLE OF CONTENTS
+
+
+
+
+   1 SCOPE ................................................   2
+
+
+   2 VERSION 2.00 FEATURES ................................   3
+
+      2.1 LOGIN RESEND STRING OPTION ......................   3
+         2.1.1 The LOGTRY Macro ...........................   3
+
+      2.2 LOGIN INACTIVITY TIMEOUT ........................   4
+         2.2.1 The LOGTIMEOUT Macro .......................   4
+         2.2.2 The LTO.STRING Macro .......................   5
+
+      2.3 HOST INACTIVITY TIMEOUT .........................   5
+         2.3.1 The HOSTTIMEOUT Macro ......................   6
+         2.3.2 The HTO.STRING Macro .......................   6
+
+      2.4 IMPROVED UBUFFER ................................   7
+         2.4.1 The L.TYPEAHEAD Macro ......................   7
+
+
+   3 SAMPLE TYMFILE .......................................   9
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          March 26, 1987             - i -                    MSV2.TRA
+
+
+
+/bSÅ
