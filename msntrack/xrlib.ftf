@@ -1,0 +1,540 @@
+C                     (MSREPORT) XRLIB.FTF
+C    A LIBRARY FILE OF ROUTINES FOR EXTRACTING DATA FROM XRAY WITH AUX.
+C    CKTS. AND WRITING THE XRAY OUTPUT TO A LOG FILE OR (IN THE CASE OF
+C    A 'KS' COMMAND) TO A 1022 DATA BASE.
+C
+C    SUBROUTINES:
+C        XRCIR -- BUILDS THE AUX. CKT. TO XRAY;
+C        XRFOUT -- WRITES THE XRAY OUTPUT TO A FILE;
+C        XRGLIN -- GETS ONE LINE OF XRAY OUTPUT, PASSES IT TO XRFOUT;
+C        KSDBLD -- LOADS THE DATA FROM A 'KS' COMMAND INTO A 1022 D/B.
+C
+C  IN ORDER TO RUN THE MAIN PROGRAM IN DETACHED MODE, ALL TERMINAL-TYPE
+C  OUTPUT IS WRITTEN TO A MONITOR LOG FILE (DEVICE NO. 22).  THIS FILE
+C  MUST BE IN RANDOM-ACCESS OUTPUT MODE.
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                    C
+C                       SUBROUTINE: XRCIR                            C
+C                                                                    C
+C    BUILDS AN AUX CKT TO XRAY.  PLACES PORT NUMBER IN COMMON:       C
+C                   /AUX/PORT                                        C
+C                                                                    C
+C       FORMAT:     CALL XRCIR(KERNEL,IERR)                          C
+C       ARGUMENTS:                                                   C
+C          KERNEL : VARIABLE CONTAINING THE KERNEL NUMBER TO         C
+C                   LOGIN TO.                                        C
+C          IERR   : ERROR FLAG.                                      C
+C                   IERR =  0:  NO ERROR. CIRCUIT BUILT.             C
+C                   IERR >  0:  UNABLE TO BUILD CIRCUIT.  VALUE =    C
+C                               CREAUX ERROR CODE:  < 10 = SUP ERROR C
+C                               CODE; > 10 = XEXEC ERROR CODE + 50   C
+C                   IERR = -1:  BAD RESPONSE FROM XRAY DURING LOGIN  C
+C                                                                    C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        SUBROUTINE XRCIR(KERNEL,IERR)
+
+        INTEGER KERNEL, IERR, XRAY(3), NOECHO(4), PORT, PROMPT, IERR2,
+     +    RESLT1, RESLT2
+
+C PLACE THE PORT NUMBER INTO COMMON.  INITIALIZE 'PROMPT' AS A
+C RIGHT-ARROW.  INITIALIZE 'NOECHO' AS 'LE', FOR XRAY COMMAND.
+C INITIALIZE 'IERR' AND 'IERR2' AS 0 FOR EACH CALL TO THIS SUBROUTINE.
+
+        COMMON /AUX/ PORT
+        DATA PROMPT /62/
+        DATA NOECHO/3,76,69,13/
+        IERR = 0
+        IERR2 = 0
+
+C BUILD THE XRAY LOGIN STRING USING THE KERNEL NUMBER FROM THE CALLER.1
+C BUILD THE AUXILIARY CIRCUIT TO XRAY.  IF ERROR RETURN IS NON ZERO, 
+C SKIP TO ERROR PROCESSING.
+
+        ENCODE (11,5000,XRAY)KERNEL
+ 5000      FORMAT ('XRAY:', I5, ';')
+
+        CALL FBCIR(XRAY,PORT,IERR2)
+
+        IF (IERR2 .NE. 0) GOTO 200
+
+C XRAY SHOULD GIVE THE NODE AND KERNEL NUMBER, THE DATE AND THEN
+C THE PROMPT.  IF NO PROMPT, PROBABLY WRONG HOST:  RETURN ERROR TO
+C CALLER.   RESULT1:  1 = FOUND; 2 = NOT FOUND.
+
+        CALL SCAN(PROMPT,RESLT1)   
+        IF (RESLT1 .NE. 1) GOTO 150
+
+C TURN OFF ECHO, THEN LOOK FOR THE PROMPT.  IF PROMPT IS THERE, DO A
+C SIMPLE RETURN.
+
+        CALL SEND(NOECHO)
+        CALL SCAN(PROMPT,RESLT2)
+        IF (RESLT2.EQ.1) RETURN
+
+C ERROR. BAD RESPONSE FROM HOST (RIGHT-ARROW NOT FOUND); PROBABLY NOT
+C XRAY, OR HOST DOWN.
+
+  150   IERR = -1
+        RETURN
+
+C ERROR.  NO LOGIN.  RETURN TO CALLER A CODED VERSION OF THE ERROR
+C NUMBER RECEIVED FROM XEXEC:  IF ERROR CODE IS IN THE RIGHT HALF-WORD,
+C MASK OUT THE LEFT HALF-WORD.  IF ERROR CODE IS IN LEFT HALF-WORD, EXTRACT
+C ERROR VALUE AND ADD 50 TO IT, TO DISTINGUISH FROM ERROR CODES FROM
+C RIGHT HALF-WORD.
+
+  200   IF (IERR2 .LT. "777777) IERR = IAND (IERR2, "777777)
+        IF (IERR2 .GT. "777777) IERR = (IERR2 / (2**18)) + 50
+
+        RETURN
+        END
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                    C
+C                       SUBROUTINE: XRFOUT                           C
+C                                                                    C
+C       WRITES THE OUTPUT FROM AN AUXILIARY CIRCUIT ONTO THE         C
+C        SPECIFIED FILE.                                             C
+C                                                                    C
+C       FORMAT:     CALL XRFOUT(PROMPT,FILNUM,LOGPOS)                C
+C       ARGUMENTS:                                                   C
+C          PROMPT : VARIABLE CONTAINING PROMPT CHARACTER, FLAGGING   C
+C                   END OF XRAY OUTPUT.                              C
+C          FILNUM : THE VARIABLE CONTAINING THE DISC DEVICE NUMBER   C
+C                   TO WHICH THE OUTPUT IS TO BE WRITTEN.            C
+C          LOGPOS : VARIABLE CONTAINING THE NUMBER OF THE FIRST LINE C
+C                   TO WRITE TO IN THE OUTPUT LOG FILE.              C
+C                                                                    C
+C       ACCESSES:  COMMON /AUX/ PORT, /OUTPOS/ MTRPOS                C
+C                                                                    C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        SUBROUTINE XRFOUT(PROMPT, FILNUM, LOGPOS)
+
+        INTEGER PROMPT, FILNUM, LOGPOS, PORT, MTRPOS, ARRAY(50,80),
+     +    LARRAY(80), ERR, LINCNT, LINNO
+
+C GET AUX. CKT'S. PORT NUMBER AND LINE ON MONITOR FILE TO WRITE ON.
+C INITIALIZE 'ARRAY' TO BLANKS, 'LINCNT' TO 0, AND 'LINNO' TO THE
+C NUMBER OF THE FIRST LINE ON THE OUTPUT FILE FOR WRITING ON:  IF THE
+C OUTPUT FILE IS THE RANDOM-ACCESS UNIVERSAL FILE, 'LINNO' IS SET TO
+C THE NUMBER OF THE LAST LINE OF THE FILE, PLUS 1; IF THE OUTPUT FILE
+C IS A SEQUENTIAL FILE THAT IS LOADED INTO A 1022 DATA-BASE BY THIS
+C PROGRAM, 'LINNO' IS SET TO 1.
+
+        COMMON /AUX/ PORT
+        COMMON /OUTPOS/ MTRPOS
+
+        DATA ARRAY /4000*'     '/
+        LINCNT = 0
+
+        LINNO = LOGPOS
+        IF (FILNUM .EQ. 23) LINNO = 1
+C RESET 'LARRAY' TO BLANKS, READ EACH LINE OF OUTPUT FROM XRAY INTO 'LARRAY'.
+C WRITE IT TO 'ARRAY' (FOR WRITING TO OUTPUT LOG FILE).
+C*******************************************************
+
+        DO 100 I = 1,50
+
+C RE-INITIALIZE 'LARRAY' TO BLANKS.
+
+        DO 30 J = 1,80
+        LARRAY(J) = '     '
+   30   CONTINUE
+
+C GET ONE LINE OF XRAY OUTPUT.
+
+        CALL XRGLIN (PROMPT, LARRAY, ERR)
+
+
+C ERROR:  0 = NORMAL, LOAD INTO 'ARRAY';  1 = TRUNCATED LINE, PRINT
+C WARNING ON MONITOR FILE AND LOAD INTO 'ARRAY';  2 = XRAY FINISHED,
+C WRITE OUTPUT TO LOG FILE;  3 = CKT. ZAPPED OR 60 SEC. TIMEOUT,
+C RETURN WITHOUT WRITING TO FILE.
+
+        IF (ERR .EQ. 0) GOTO  50
+        IF (ERR .EQ. 2) GOTO 200
+        IF (ERR .EQ. 3) RETURN
+
+        WRITE (22#MTRPOS, 5000) LINNO
+ 5000      FORMAT ('BAD LINE.  #', I5, ' TOO LONG!  TRUNCATED.  ', 
+     +     'POSSIBLE DATA LOSS!')
+        MTRPOS = SIZE (22) + 1
+
+C INCREMENT LINE COUNTERS: NUMBER OF LINES TO WRITE TO LOG FILE, AND
+C THE NUMBER OF THE LOG FILE LINE WHERE TRUNCATION OCCURRED.
+C LOAD LINE INTO OUTPUT ARRAY.
+
+   50   LINCNT = LINCNT + 1
+        LINNO = LINNO + I
+
+        DO 100 J = 1,80
+        ARRAY (I,J) = LARRAY (J)
+  100   CONTINUE
+
+C END LOOP.
+C*******************************************************
+
+C TRUNCATED OUTPUT.  PRINT WARNING ON MONITOR FILE.
+
+        WRITE (22#MTRPOS, 5005) LINNO
+ 5005      FORMAT ('BAD OUTPUT FROM XRAY.  .GE. 50 LINES, ',
+     +     'AT LINE', I6, '.  POSSIBLE LINES LOST!')
+        MTRPOS = SIZE (22) + 1
+
+C WRITE OUTPUT TO LOG FILE.
+C**********************
+
+  200   DO 300 I = 1, LINCNT
+        WRITE(FILNUM#LOGPOS,5010)(ARRAY(I,J),J=1,80)
+ 5010      FORMAT (80A1)
+        LOGPOS = LOGPOS + 1
+  300   CONTINUE
+
+
+  900   RETURN
+        END
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                    C
+C                       SUBROUTINE: XRGLIN                           C
+C                                                                    C
+C   GETS ONE LINE (MAX 78 CHARS) OF OUTPUT FROM AN AUX CKT TO XRAY.  C
+C                                                                    C
+C       FORMAT:     CALL XRGLIN (PROMPT, LARRAY, ERR)                C
+C       ARGUMENTS:                                                   C
+C          PROMPT : VARIABLE WITH THE PROMPT CHARACTER FOR TESTING   C
+C                   FOR END OF OUTPUT.                               C
+C          LARRAY : ARRAY CONTAINING THE OUTPUT LINE FROM XRAY       C
+C          ERR    : VARIABLE CONTAINING ERROR FLAG.                  C
+C                   O = NO ERROR.                                    C
+C                   1 = OVER-LONG LINE ( > 78 CHARACTERS).           C
+C                   2 = END OF OUTPUT FROM XRAY.                     C
+C                   3 = ERROR:  CKT ZAPPED OR 1 MIN. TIMEOUT.        C
+C                                                                    C
+C       ACCESSES:   COMMON/AUX/PORT                                  C
+C                                                                    C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        SUBROUTINE XRGLIN (PROMPT, LARRAY, ERR)
+
+        INTEGER PROMPT, LARRAY (79), ERR, PORT, CHAR, WTCNT, CR, LF
+        INTEGER WAIT
+
+C GET THE AUX. CKT'S. PORT NUMBER FOR EXTRACTING DATA, AND INITIALIZE
+C CONSTANTS FOR TESTING FOR END OF LINE, AND INITIALIZE ERROR CODE.
+
+        COMMON /AUX/ PORT
+        DATA CR /13/, LF /10/, WAIT /1.0/
+        ERR = 0
+
+C READ EACH CHAR. IN LINE OF XRAY OUTPUT, AND LOAD THEM INTO AN ARRAY
+C FOR PASSING BACK TO THE CALLING SUBROUTINE (XRFOUT).
+C*******************************************************
+
+        DO 100 I = 1,80
+   25   WAIT=60
+        CALL GTCHAR (PORT, CHAR, WAIT)
+
+C TEST FOR ERROR RETURNS: -1 = TIMEOUT; -2 = AUX. CKT. ZAPPED.
+
+        IF (CHAR.EQ.-1) GOTO  50
+        IF (CHAR.EQ.-2) GOTO 600
+
+C MASK FOR ONLY THE LAST 7 BITS.
+
+        CHAR=IAND(CHAR,"177)
+
+C TEST FOR END OF LINE AND FOR END OF OUTPUT FROM HOST.  IGNORE
+C CARRIAGE RETURN THEN END READING DATA AT LINE FEED, AND SEND LINE OF
+C DATA (WITHOUT CR/LF PAIR) TO CALLING ROUTINE AND RETURN TO CALLER.
+C DO NOT SEND THE PROMPT AT END OF OUTPUT, BUT SET END-OF-OUTPUT FLAG
+C AND RETURN TO CALLER.
+
+        IF (CHAR .EQ. CR) GOTO 25
+        IF (CHAR .EQ. LF) RETURN
+        IF (CHAR .EQ. PROMPT) GOTO 500
+
+C MOVE THE CHAR TO THE LEFTMOST 8 BITS AND PAD THE WORD WITH BLANKS.
+C LOAD THE CHARACTER INTO THE PROPER ARRAY ELEMENT.
+
+        CHAR=LSH(CHAR,29)
+        CHAR=IOR(CHAR,"1004020100)
+
+        LARRAY(I)=CHAR
+        GOTO 100
+
+C TIMEOUT HAS OCCURRED.  IF 60 SEC. WITH NO CHAR., DO ERROR RETURN.
+
+   50   WTCNT = WTCNT + 1
+        IF (WTCNT .GE. 60) GOTO 600
+  100   CONTINUE
+
+C END OF LOOP.
+C*******************************************************
+
+C MORE THAN 80 CHARS. IN LINE.
+
+        ERR = 1
+        RETURN
+
+C END OF OUTPUT FROM XRAY:  PROMPT WAS RECEIVED.
+
+  500   ERR = 2
+        RETURN
+
+C CKT. ZAPPED OR 60 SEC. TIMOUT.
+
+  600   ERR = 3
+        RETURN
+
+        END
+
+      SUBROUTINE KSDBLD (NUMFIL, IFLNAM)
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                     C
+C                     Subroutine KSDBLD                               C
+C                                                                     C
+C  This subroutine reads the special output file created for the XRAY C
+C  output from the 'KS' command, and writes the data to a 1022 data   C
+C  base.  It reads output in the formats created by Version 4 or      C
+C  Version 5 of T-II node code, with the default being version 4.     C
+C                                                                     C
+C        Format:      CALL KSDBLD (NUMFIL, IFLNAM)                    C
+C        Arguments:   NUMFIL = Device number for the file to load     C
+C                              into 1022.                             C
+C                     IFLNAM = the name of this file.                 C
+C        Accesses:    COMMON /OUTPOS/ MTRPOS                          C
+C                                                                     C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+      INTEGER DATE, TIME, NOD1, NOD2, QUESMK, LCPSIN, LHWIN, LCPOUT, 
+     +  LHWOUT, PCPSIN, PHWIN, PCPSOT, PHWOUT, OVHDIN, OVHDOT, UTLZIN, 
+     +  UTLZOT, CPSIN, CPSOUT, CKTS, PKTSPS, TSTCHR, RCDPKT, PKTSIZ,
+     +  DLAINQ, DLTEAR, DLABUF, DLOUTQ, DLXMIT, DLATOT, CTOVLD, CTSAT, 
+     +  CTBLOG, PKTSMD, IDLCLS, LN1PRT, LNIMRK, LNIRXM, LN1XMS, LN2PRT,
+     +  LN2MRK, LN2RXM, LN2XMS, INNOD, OUTNOD, OUTDAT (34), NUMFIL,
+     +  IFLNAM(4)
+
+C Get line number for writing to, on the monitor file.
+C***********
+      COMMON /OUTPOS/ MTRPOS
+
+C Initialize all the variables.
+C*********************************
+      DATE = 0
+      TIME = 0
+      NOD1 = 0
+      NOD2 = 0
+      QUESMK = ' '
+      LCPSIN = 0
+      LHWIN = 0
+      LCPOUT = 0
+      LHWOUT = 0
+      PCPSIN = 0
+      PHWIN = 0
+      PCPSOT = 0
+      PHWOUT = 0
+      OVHDIN = 0
+      OVHDOT = 0
+      UTLZIN = 0
+      UTLZOT = 0
+      CPSIN = 0
+      CPSOUT = 0
+      CKTS = 0
+      PKTSPS = 0
+      PKTSIZ = 0
+      TSTCHR = ' '
+      RCDPKT = 0
+      DLAINQ = 0
+      DLTEAR = 0
+      DLABUF = 0
+      DLOUTQ = 0
+      DLXMIT = 0
+      DLATOT = 0
+      CTOVLD = 0
+      CTSAT = 0
+      CTBLOG = 0
+      PKTSMD = 0
+      IDLCLS = 0
+      LN1PRT = 0
+      LN1MRK = 0
+      LN1RXM = 0
+      LN1XMS = 0
+      LN2PRT = 0
+      LN2MRK = 0
+      LN2RXM = 0
+      LN2XMS = 0
+      INNOD = 0
+      OUTNOD = 0
+
+C Close the sequential-access output file to output, then re-open to
+C input, to be read for loading the data-base.
+C*********************************
+      CLOSE (NUMFIL)
+      OPEN (NUMFIL, IFLNAM, INPUT)
+
+C Read the needed data from the file, loading it into variables for
+C adding to the data-base.
+C*********************************
+      READ (NUMFIL, 5000, ERR=70, END=999) DATE, TIME, NOD1
+ 5000   FORMAT (8X, I6, 3X, I4 / 6X, I4 //)
+
+      READ (NUMFIL, 5002, ERR=60, END=999) QUESMK
+ 5002    FORMAT (A2)
+        IF (QUESMK .EQ. '??') GOTO 60
+
+      READ (NUMFIL, 5004, ERR=60, END=999) NOD2
+ 5004    FORMAT (7X, I4 /)
+
+      READ (NUMFIL, 5005, ERR=70, END=999) LCPSIN, LHWIN, LCPOUT, 
+     +  LHWOUT, PCPSIN, PHWIN, PCPSOT, PHWOUT
+ 5005   FORMAT ( 2 (/ 2(16X, I5, 10X, I5 /)))
+
+      READ (NUMFIL, 5010, ERR=70, END=999) OVHDIN, OVHDOT, UTLZIN, 
+     +  UTLZOT
+ 5010   FORMAT (9X, I2, 14X, I2 // 9X, I2, 14X, I2 /)
+
+      READ (NUMFIL, 5015, ERR=70, END=999) CPSIN, CPSOUT, CKTS, 
+     +  PKTSPS, PKTSIZ
+ 5015   FORMAT (9X, I4, 10X, I4, 14X, I4 // 18X, I4, 20X, I4)
+
+      READ (NUMFIL, 5017, ERR=30, END=999) TSTCHR, RCDPKT
+ 5017   FORMAT (4X, A5, 12X, I4)
+
+      IF (TSTCHR .EQ. 'RECOR') READ (NUMFIL, 5018)
+ 5018   FORMAT (1X)
+
+   30 READ (NUMFIL, 5020, ERR=70, END=999) DLAINQ, DLTEAR, DLABUF,
+     +  DLOUTQ, DLXMIT, DLATOT
+ 5020   FORMAT (/ 6(6X, I4) /)
+
+      READ (NUMFIL, 5025, ERR=70, END=999) CTOVLD, CTSAT, CTBLOG,
+     +  PKTSMD, IDLCLS
+ 5025   FORMAT ( 4(6X, I4, 6X), 4X, I8 /)
+
+      READ (NUMFIL, 5030, ERR=40, END=40) LN1PRT, LNIMRK,
+     +  LN1RXM, LN1XMS, LN2PRT, LN2MRK, LN2RXM, LN2XMS
+ 5030   FORMAT ( 2(7X, I2, 11X, I4, 14X, I4, 10X, I4 /) /)
+
+C  In each record we will have two entries for the node pair,
+C  once with the order in which the data was collected for them
+C  and the other with the smaller numbered node first.  Load the pair
+C  of variables holding the reporting node first.
+C*********************************
+   40 INNOD=NOD1
+      OUTNOD=NOD2
+
+C  Now sort the other pair of variables holding the node numbers, so
+C  that the smaller node number is first.
+C*********************************
+      IF(NOD1.LT.NOD2) GO TO 50
+      ITMP=NOD1
+      NOD1=NOD2
+      NOD2=ITMP
+
+C Load the data into array for adding to the data base.
+C Select the output data base from the open data bases.
+C Add a record to it. 
+C Return to the queue data base.
+C*********************************
+   50 OUTDAT (1) = DATE
+      OUTDAT (2) = TIME
+      OUTDAT (3) = NOD1
+      OUTDAT (4) = NOD2
+      OUTDAT (5) = LCPSIN
+      OUTDAT (6) = LHWIN
+      OUTDAT (7) = LCPOUT
+      OUTDAT (8) = LHWOUT
+      OUTDAT (9) = PCPSIN
+      OUTDAT (10) = PHWIN
+      OUTDAT (11) = PCPSOT
+      OUTDAT (12) = PHWOUT
+      OUTDAT (13) = OVHDIN
+      OUTDAT (14) = OVHDOT
+      OUTDAT (15) = UTLZIN
+      OUTDAT (16) = UTLZOT
+      OUTDAT (17) = CPSIN
+      OUTDAT (18) = CPSOUT
+      OUTDAT (19) = CKTS
+      OUTDAT (20) = PKTSPS
+      OUTDAT (21) = PKTSIZ
+      OUTDAT (22) = DLAINQ
+      OUTDAT (23) = DLTEAR
+      OUTDAT (24) = DLABUF
+      OUTDAT (25) = DLOUTQ
+      OUTDAT (26) = DLXMIT
+      OUTDAT (27) = DLATOT
+      OUTDAT (28) = CTOVLD
+      OUTDAT (29) = CTSAT
+      OUTDAT (30) = CTBLOG
+      OUTDAT (31) = PKTSMD
+      OUTDAT (32) = IDLCLS
+      OUTDAT (33) = INNOD
+      OUTDAT (34) = OUTNOD
+
+      CALL DBSET (2)
+      CALL DBADDR (OUTDAT)
+      CALL DBSET (1)
+      GOTO 999
+
+C If the message from XRAY is bad, report this to the monitor log file.
+C*********************************
+   60 WRITE (22#MTRPOS, 5100) NOD1, TIME
+ 5100   FORMAT ('BAD XRAY MESSAGE FROM NODE ', I4, '.  TIME =', I5)
+      MTRPOS = SIZE (22) + 1
+      GOTO 999
+
+   70 WRITE (22#MTRPOS, 5150) NOD1, NOD2, TIME
+ 5150   FORMAT ('BAD XRAY MESSAGE, RE. LINK FROM/TO:  ',
+     +  I4, '/', I4, '.  TIME =', I5)
+      MTRPOS = SIZE (22) + 1
+
+C Close the file to input.  Return to caller.
+C*********************************
+  999 CLOSE (NUMFIL)
+      RETURN
+      END
+
+        SUBROUTINE GPWD
+
+	integer gname(4),ghost,xname(4),xpass(3)
+
+	common /gate/gname,ghost
+	common /xray/xname,xpass
+
+	type 10
+10	format(' Gateway username: ',$)
+	accept 15,gname
+15	format(4a5)
+
+	type 20
+20	format(' Gateway host: ',$)
+	accept 25, ghost
+25	format(a4)
+
+	type 30
+30	format(' Xray username: ',$)
+	acceptname
+35	format(4a5)
+
+	call echo(0)
+	type 40
+40	format(' Xray password: ',$)
+	accept 45,xpass
+45	format(3a5)
+
+	call echo(1)
+
+
+
+	return
+	end
+
+
+'T'1É
