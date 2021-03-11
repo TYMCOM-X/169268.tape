@@ -1,0 +1,246 @@
+O FTS88T.P2 (NETSTAT)CKTS.BAK (NETSTAT)CKTS.BAK.
+FI NEW 0.
+DPL START.
+        DEFINE INTEGER HCLASS CNODE SNUM SWV SWH CV CH SWNEIGH.
+        DEFINE INTEGER CLMILES SWID CLID ITEMP MILES.
+        DEFINE TEXT 5 MAXBNDW.
+        DEFINE TEXT 7 TYPE.
+        DEFINE TEXT 15 SWCITY SSTYPE SHTYPE.
+        DEFINE TEXT 2 SSTATE.
+
+NEXTSITE:       DBSET 1.
+                GETREC ENDSITE.
+                TYPE CITY STATE FORMAT // A15 1X A2 // END.
+                LET CNODE EQ NODE CV EQ V CH EQ H.
+
+                DBSET 2.
+                FI POINT1 EQ CNODE.
+                SEARCH LAST AND POINTYPE1 EQ TYMSAT CONSAT ISIS.
+                SEARCH LAST AND COMPANY2 CT TYMNET.
+                LET NEIGHS EQ SYSNREC.
+
+BNDWMS:         FI POINT1 EQ CNODE AND BNDW EQ MS.
+                IF SYSNREC EQ 0 THEN BNDW56.
+                        LET MAXBNDW = 'MS'.
+                        LET TYPE = 'DIGITAL'.
+                        GOTO FINDSW.
+
+BNDW56:         FI POINT1 EQ CNODE AND BNDW EQ 56.
+                IF SYSNREC EQ 0 THEN BNDW96.
+                        LET MAXBNDW = '56'.
+                        LET TYPE = 'DIGITAL'.
+                        GOTO FINDSW.
+
+BNDW96:         FI POINT1 EQ CNODE AND BNDW EQ '9.6'.
+                IF SYSNREC EQ 0 THEN BNDW48.
+                        LET MAXBNDW = '9.6'.
+                        LET TYPE = 'ANALOG'.
+                        GOTO FINDSW.
+
+BNDW48:         FI POINT1 EQ CNODE AND BNDW EQ '4.8'.
+                IF SYSNREC EQ 0 THEN BNDWUK.
+                        LET MAXBNDW = '4.8'.
+                        LET TYPE = 'ANALOG'.
+                        GOTO FINDSW.
+
+BNDWUK:         LET MAXBNDW = 'UK'.
+                LET TYPE = 'ANALOG'.
+
+
+FINDSW:         DBSET 2.
+                LET CLMILES = 9999.
+                FI POINT1 EQ CNODE.
+                SEARCH LAST AND POINTYPE1 TYMSAT CONSAT ISIS.
+                SEARCH LAST AND POINTYPE2 EQ SWITCHER.
+                SAVE FTSP3.
+                IF SYSNREC NE 0 THEN COMPSW.
+                FI POINT1 EQ CNODE.
+                SEARCH LAST AND POINTYPE1 TYMSAT CONSAT ISIS.
+                SEARCH LAST AND COMPANY2 CT TYMNET.
+                TYPE CNODE SYSNREC FORMAT 'NODE: ' I5 ' HAS ' I3 ' TYMNET ' &
+                'NEIGHBORS' END.
+                MAP TO 3 VIA POINT2 TO POINT1.
+                SEARCH LAST AND POINTYPE2 EQ SWITCHER.
+                TYPE SYSNREC FORMAT 'NUMBER OF SWITCHERS = ' I3 END.
+                SAVE FTSP3.
+                IF SYSNREC NE 0 THEN COMPSW.
+                PRINT CNODE FORMAT 'NO SWITCHER AT LEVEL2 FOR NODE: ' I5 END.
+                DBSET 2.
+                FI POINT1 EQ CNODE.
+                SEARCH LAST AND POINTYPE1 TYMSAT CONSAT ISIS.
+                SEARCH LAST AND COMPANY2 CT TYMNET.
+                MAP TO 3 VIA POINT2 TO POINT1.
+                MAP TO 2 VIA POINT2 TO POINT1.
+                SEARCH LAST AND POINTYPE2 EQ SWITCHER.
+                TYPE SYSNREC FORMAT 'NUMBER OF L3 SWITCHERS = ' I3 END.
+                SAVE FTSP3.
+                IF SYSNREC NE 0 THEN COMPSW.
+                PRINT CNODE FORMAT 'NO SWITCHER AT LEVEL3 FOR NODE: ' I5 END.
+                GOTO NEXTSITE.
+
+COMPSW:         FI FILE FTSP3.
+NEXTSW:         GETREC ENDSW.
+                LET SWV EQ V2 SWH EQ H2 SWID EQ SYSID.
+           LET ITEMP EQ (((CV-SWV)*(CV-SWV) + (CH-SWH)*(CH-SWH) + .9)/10).
+                LET MILES EQ SQRT(ITEMP*1.)+.9.
+                TYPE CV SWV CH SWH MILES CLMILES FORMAT '** ' 4(1X I5) '*' &
+                2(1X I5) END.
+                IF MILES GE CLMILES THEN NEXTSW.
+                LET CLMILES = MILES.
+                LET CLID = SWID.
+                GOTO NEXTSW.
+
+ENDSW:          FI SYSID EQ CLID.
+
+UPDATE:         LET SNUM EQ POINT2 SWCITY EQ PLACE2 SSTATE EQ ST2 SWV EQ V2 &
+                   SWH EQ H2 SSTYPE EQ POINTYPE2 SHTYPE EQ HARDWARE2.
+
+                FI POINT1 EQ SNUM.
+                SEARCH LAST AND POINTYPE1 EQ SWITCHER.
+                LET SWNEIGH EQ SYSNREC.
+
+                DBSET 1.
+                CHA NTRU NEIGHS TBNDW MAXBNDW TTYPE TYPE SWIT SNUM SCITY &
+                   SWCITY SSTAT SSTATE SHTYP SHTYPE SSTYP SSTYPE SV SWV SH &
+                   SWH SWD CLMILES SWPP SWNEIGH.
+                GOTO NEXTSITE.
+
+ENDSITE:        DPL END.
+CLEAR.
+O FTS88T.P2.
+FI ALL.
+DPL START.
+        DEFINE INTEGER CPM CPS N9600 N56 CNODE.
+        DEFINE REAL BPS.
+NEXTSITE:       GETREC ENDSITE.
+                LET CPM EQ CHAR CNODE EQ NODE.
+                LET CPS = CHAR/60..
+                LET BPS = .80*(CPS*1.)*8..
+                TYPE CNODE CHAR CPS BPS FORMAT 'NODE: ' I5 ' CHAR: ' I10 &
+                        ' CPS: ' I10 ' BPS: ' F10.4 END.
+                IF BPS LT 4800 THEN N961.
+                IF BPS LT 9600 THEN N962.
+                IF BPS LT 14400 THEN N963.
+                IF BPS LT 19200 THEN N964.
+                IF BPS LT 44800 THEN N561.
+                IF BPS LT 89600 THEN N562.
+                IF BPS LT 134400 THEN N563.
+                GOTO NOTHER.
+
+N961:           LET N9600 = 1.
+                LET N56 = 0.
+                GOTO UPDATE.
+
+N962:           LET N9600 = 2.
+                LET N56 = 0.
+                GOTO UPDATE.
+
+N963:           LET N9600 = 3.
+                LET N56 = 0.
+                GOTO UPDATE.
+
+N964:           LET N9600 = 4.
+                LET N56 = 0.
+                GOTO UPDATE.
+
+N561:           LET N9600 = 0.
+                LET N56 = 1.
+                GOTO UPDATE.
+
+N562:           LET N9600 = 0.
+                LET N56 = 2.
+                GOTO UPDATE.
+
+N563:           LET N9600 = 0.
+                LET N56 = 3.
+                GOTO UPDATE.
+
+NOTHER:         TYPE CNODE BPS FORMAT 'NODE: ' I5 ' IS OVER MAX BPS: AT: ' I10 &
+                        END.
+                GOTO NEXTSITE.
+
+UPDATE:         CHA S9600 N9600 S56 N56.
+                GOTO NEXTSITE.
+
+ENDSITE:        DPL END.
+CLEAR.
+O FTS88T.P2 FTS88T.P3.
+FI ALL.
+DPL START.
+        DEFINE INTEGER NDIAL N4800 N9600 N56.
+        DEFINE TEXT 15 CCITY.
+        DEFINE TEXT 2 CSTATE.
+NEXTSITE:       GETREC ENDSITE.
+                LET CCITY EQ CITY CSTATE EQ STATE.
+                DBSET 2.
+                FI CITY EQ CCITY AND STATE EQ CSTATE.
+                SEARCH LAST AND TYPE CT DIAL.
+                EVALUATE NDIAL EQ TOT PORTS.
+                FI CITY EQ CCITY AND STATE EQ CSTATE.
+                SEARCH LAST AND TYPE CT DED AND TYPE CT 4800.
+                EVALUATE N4800 EQ TOT PORTS.
+                FI CITY EQ CCITY AND STATE EQ CSTATE.
+                SEARCH LAST AND TYPE CT DED AND TYPE CT 9600.
+                EVALUATE N9600 EQ TOT PORTS.
+                FI CITY EQ CCITY AND STATE EQ CSTATE.
+                SEARCH LAST AND TYPE CT DED AND TYPE CT 56.
+                EVALUATE N56 EQ TOT PORTS.
+
+UPDATE:         DBSET 1.
+                CHA DIAL NDIAL D4800 N4800 D9600 N9600 D56 N56.
+                GOTO NEXTSITE.
+
+ENDSITE:        DPL END.
+CLEAR.
+O FTS88T.P2 FTSP6.DMS (NETSTAT)CKTS.BAK.
+INIT 1 FTSP6.OUT.
+FI ALL.
+DPL START.
+        DEFINE INTEGER CNODE SNUM SWV SWH CV CH SWNEIGH.
+        DEFINE INTEGER CLMILES SWID CLID ITEMP MILES.
+        DEFINE TEXT 15 SWCITY SSTYPE SHTYPE.
+        DEFINE TEXT 2 SSTATE.
+
+NEXTSITE:       DBSET 1.
+                GETREC ENDSITE.
+                PRINT CITY STATE FORMAT // A15 1X A2 // END.
+                LET CNODE EQ NODE CV EQ FTSV CH EQ FTSH.
+
+FINDSW:         DBSET 2.
+                LET CLMILES = 9999.
+                FI ALL.
+NEXTSW:         DBSET 2.
+                GETREC ENDSW.
+                LET SWNUM EQ SNUM.
+                DBSET 3.
+                FI POINT1 EQ SWNUM.
+                SEARCH LAST AND POINTYPE1 EQ SWITCHER.
+                GETREC NEXTSW.
+                LET SWV EQ V1 SWH EQ H1 SWID EQ SYSID.
+           LET ITEMP EQ (((CV-SWV)*(CV-SWV) + (CH-SWH)*(CH-SWH) + .9)/10).
+                LET MILES EQ SQRT(ITEMP*1.)+.9.
+                PRINT CV SWV CH SWH MILES CLMILES FORMAT '** ' 4(1X I5) '*' &
+                2(1X I5) END.
+                IF MILES GE CLMILES THEN NEXTSW.
+                LET CLMILES = MILES.
+                LET CLID = SWID.
+                GOTO NEXTSW.
+
+ENDSW:          FI SYSID EQ CLID.
+
+UPDATE:         LET SNUM EQ POINT1 SWCITY EQ PLACE1 SSTATE EQ ST1 SWV EQ V1 &
+                   SWH EQ H1 SSTYPE EQ POINTYPE1 SHTYPE EQ HARDWARE1.
+
+                FI POINT1 EQ SNUM.
+                SEARCH LAST AND POINTYPE1 EQ SWITCHER.
+                LET SWNEIGH EQ SYSNREC.
+
+                DBSET 1.
+                CHA SWIT SNUM SCITY &
+                   SWCITY SSTAT SSTATE SHTYP SHTYPE SSTYP SSTYPE SV SWV SH &
+                   SWH SWD CLMILES SWPP SWNEIGH.
+                GOTO NEXTSITE.
+
+ENDSITE:        DPL END.
+QUIT.
+   
