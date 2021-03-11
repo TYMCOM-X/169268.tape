@@ -1,0 +1,1519 @@
+                                                                          PAGE 1
+ 
+ 
+ 
+NETWORK ANALYSIS
+AUGUST 5, 1987
+JO ANN JOELS
+ 
+ 
+ 
+ 
+ 
+ 
+                              APM DATA PROCESSOR
+                            SOFTWARE SPECIFICATIONS
+ 
+ 
+ 
+     The following document provides a basic design for the implementation
+of the APM DATA PROCESSOR program (APMPRO).  It is not intended to be a
+complete design, since implementation of many of the procedures are system
+dependent.
+ 
+     Pseudo-code is included in some cases where it will help to make the
+description of the procedure more clear.
+ 
+     The APM PROGRAM FLOW provides an outline of the APMPRO program.  The
+program flow also indicates the sequence in which the procedures should be
+called.  Each procedure name is proceeded by the word "CALL".  All variable
+names are in Upper Case letters and are at times inserted within brackets in
+the text of the prgram flow.  Variables which appear only in the CALL
+statement of a procedure are defined completely in the detailed description of
+the procedure.
+ 
+     Procedures which appear in this document are:
+ 
+     STARTUP
+     GET_ROTARY
+     GET_APM_DATA
+     ERASE_OTHER_USAGE
+        FIND_PORTS
+        FIND_SESSIONS
+        DECREMENT_APM
+     COMPUTE
+ 
+ 
+        NOTE: The reader of this document shoud have already read the two
+        previous documents on the APM project contained in files:
+ 
+                (JJOELS:38)DB.APM
+                (JJOELS:38)SCOPE.APM
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+                              APMPRO PROGRAM FLOW
+                              -------------------
+ 
+        I.  Get the date for which to process APM data [PROCESS_DATE] and
+            the time zone in which the APM data collector collected the
+            data [TIME_ZONE].  Also, check that all data and data bases that
+            the program will access are available.
+ 
+                CALL STARTUP(PROCESS_DATE,TIME_ZONE,ERRID,APMID,PORTSID,
+                             ROTID,MAINID,EFLAG)
+ 
+        II. If any data or data base is unavailable, terminate the program.
+ 
+                IF EFLAG.NE.0 THEN GOTO V
+ 
+        III. All data is available.  In APM ROTARY DATA BASE [ROTID], select
+             all records and mark them as not processed.  Change field
+             PROCESSED to 'N'.
+ 
+        IV.  For each record selected from ROTID -
+ 
+                1. Get Rotary information
+ 
+                   CALL GET_ROTARY(ROTID,PROCESS_ROTARY,PROCESS_NODE,SPLIT,
+                                   SPLITN,SPLITC,EFLAG)
+ 
+                2. If all records have been process then terminate program.
+ 
+                   IF EFLAG NE 0 THEN GO TO V.
+ 
+                3. There is a record to process.  Get APM data from the APM
+                   daily data base [APMID] for the first/only node
+                   [PROCESS_NODE]  on which the PROCESS_ROTARY resides.
+ 
+                   CALL GET_APM_DATA(APMID,ERRID,PROCESS_NODE,MAXU,MINU,
+                                     GTMDAT,GMTTIM,NSID,NSID2,EFLAG)
+ 
+                4. If the complete set of 1440 records from APMID (one for
+                   each minute of a 24 hour period) is not available for the
+                   PROCESS_NODE, then, leave this record marked as NOT
+                   processed and go process the next record.
+ 
+                   IF EFLAG NE 0 THEN GO TO IV.1.
+ 
+                5. All APM data is available.  Erase the effects of all usage
+                   other than the usage from the PROCESS_ROTARY on the node or
+                   nodes on which the PROCESS_ROTARY resides.
+ 
+                   CALL ERASE_OTHER_USAGE(APMID,PROCESS_NODE,GMTDAT,GMTTIM,
+                                          SPLIT,SPLITN,SPLITC,MAXU,MINU,
+                                          EFLAG)
+ 
+                6. If the APM data is missing for any of the nodes over which
+                   the PROCESS_ROTARY is split, then do not go any further with
+                   this rotary.
+ 
+                   IF EFLAG NE 0 THEN GOTO IV.1.
+ 
+                7. From the "cleansed" APM data, compute the connect time
+ 
+ 
+ 
+ 
+ 
+ 
+                                                                        PAGE 3
+                   [MAXCT], peak minute [PEAKM], the maximum users over the 24
+                   hour period [SUPREME], the total number of minutes in which
+                   the maximum users for the minute = SUPREME [SMIN1], and the
+                   total number of minutes in which the maximum users for the
+                   minute = SUPREME and the difference between the maximum and
+                   minimum users for that minute is less than or equal to 1
+                   [SMIN2].
+ 
+                   CALL COMPUTE(MAXU,MINU,MAXCT,PEAKM,SUPREME,SMIN1,SMIN2)
+ 
+                8.  Add a record to the APM main data base.
+ 
+                    FIELD IN APM      TAKES VALUE OF      VARIABLE
+                    ------------      --------------      --------
+ 
+                    ROTARY                                 PROCESS_ROTARY
+                    CDATE                                  GMTDAT
+                    MAXCT                                  MAXCT
+                    PEAK                                   PEAKM
+                    SUPREME                                SUPREME
+                    DATA1                                  SMIN1
+                    DATA2                                  SMIN2
+ 
+                9.  Mark all records in ROTID for the PROCESS_ROTARY as being
+                    processed.  Change field PROCESSED to 'Y'.
+ 
+               10.  Go get next record from ROTID.
+ 
+                    GO TO IV
+ 
+ 
+ 
+        V.  Close all files and data bases and terminate program.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+                              PROCEDURE: STARTUP
+ 
+     This procedure gets the date for which to process APM data [PROCESS_DATE]
+     and the time zone in which the APM data collector collected the data
+     [TIME_ZONE].  It also checks on the availablity of all data bases
+     accessed by the APMPRO program.
+ 
+     The PROCESS_DATE and TIME_ZONE can be obtained from the user at run time
+     or obtained from a flat file which is updated by this program at the end
+     of each run.  This is up to the software designer in charge of
+     implementation.
+ 
+     CALLING SEQUENCE:
+        STARTUP(PROCESS_DATE,TIME_ZONE,ERRID,APMID,PORTSID,ROTID,MAINID,
+                EFLAG)
+ 
+     INPUT:
+ 
+        NONE
+ 
+     OUTPUT:
+ 
+        PROCESS_DATE - The date of the Daily APM data which is to be
+                       processed.
+        TIME_ZONE    - The time zone in which the APM data collector runs.
+                       Currently this should either be set to:
+                       PDT = Pacific Daylight Savings Time  or
+                       PST = Pacific Standard Time
+        ERRID        - An identifier for the device to which all error messages
+                       will be written.
+        APMID        - An identifier for the DAILY APM data base
+        PORTSID      - An identifier for the PORTS data base
+        ROTID        - An identifier for the APM ROTARY data base
+        MAINID       - An identifier for the MAIN APM data base
+        EFLAG        - Error flag. Settings are:
+                       0 = No errors encountered.  Have a valid PROCESS_DATE
+                           and TIME_ZONE and all data bases are available.
+                       1 = An error was encountered.  Terminate program.
+ 
+===============================================================================
+ 
+                                    OUTLINE
+                                    -------
+ 
+ 
+        I.      Get PROCESS_DATE and TIME_ZONE
+                If unable to get either the PROCESS_DATE or the TIME_ZONE,
+                then print an error message, set EFLAG = 1, and return to
+                calling program.
+ 
+        II.     Using the PROCESS_DATE, build the following file names:
+                APMymm.dd = DAILY APM data base name
+                APMymm.ddE = DAILY APM ERROR LOG file name
+ 
+                Where y = last digit of year, mm = 2 digit month number,
+                and dd = 2 digit day number.  For example the DAILY APM
+                data base for AUGUST 1, 1987 would have a file name of:
+                APM708.01.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+                                                                        PAGE 5
+        III.    Establish pointers or IDs for the following files and data
+                bases:
+ 
+                ERRID = ID for APMymm.ddE
+                APMID = ID for APMymm.dd
+                ROTID = ID for APMROT, the APM ROTARY data base
+                PORTSID = ID for PORTS data base
+                MAINID = ID for APM, the MAIN APM data base with one record
+                         per rotary per day.
+                NSID   = ID for DAILY NETSTAT DATA BASE where
+                         date = PROCESS_DATE
+                NSID2  = ID for DAILY NETSTAT DATA BASE where
+                         date = PROCESS_DATE + 1
+                NSID3  = ID for DAILY NETSTAT DATA BASE where
+                         date = PROCESS_DATE - 1
+ 
+                The IDs can either be the actual file names of the various
+                data bases and files or simply a device number or data base
+                number, this is system dependent.
+ 
+ 
+        IV.     Open the error log file [ERRID].
+                If unable to open the error log file, then print an error
+                message, set EFLAG = 1, and return to calling program.
+ 
+        V.      Open each of the following data bases, or otherwise check and
+                make sure that they exist and are accessable by this program.
+ 
+                APMID
+                ROTID
+                PORTSID
+                MAINID
+                NSID
+                NSID2
+                NSID3
+ 
+                If any of these data bases are not available, output an
+                appropriate error message to ERRID, set EFLAG = 2, and return
+                to the calling program.
+ 
+                NOTE:  The IDs for the three DAILY NETWORK STATISTICS data
+                bases are not passed back to the calling program because only
+                two of the three will actually be used for any one node, and
+                those two can change from node to node.  The actual data bases
+                to be used for each node is determined in the procedure
+                GET_APM_DATA.
+ 
+        VI.     All data is available.  No errors were encountered.  Set
+                EFLAG = 0, and return to calling program.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+                             PROCEDURE: GET_ROTARY
+ 
+ 
+        This procedure gets the next rotary to process [PROCESS_ROTARY] from
+        the APM rotary data base [APMROT].
+ 
+        CALLING SEQUENCE:
+                GET_ROTARY(ROTID,PROCESS_ROTARY,PROCESS_NODE,SPLIT,SPLITN,
+                           SPLITC,EFLAG)
+ 
+        INPUT:
+ 
+                ROTID - ID for APM ROTARY data base
+ 
+        OUTPUT:
+ 
+                PROCESS_ROTARY - Rotary to process
+                PROCESS_NODE   - First/only node on which PROCESS_ROTARY
+                                 resides
+                SPLIT          - Indicator of whether or not the
+                                 PROCESS_ROTARY is split over more than one
+                                 node. Settings are:
+                                 'Y' = YES PROCESS_ROTARY is split
+                                 'N' = NO PROCESS_ROTARY is not split
+                SPLITN[N]      - List of all nodes on which PROCESS_ROTARY
+                                 resides.  The PROCESS_NODE will always be the
+                                 first entry in SPLITN.  If the PROCESS_ROTARY
+                                 is NOT split, then the PROCESS_NODE will be
+                                 the only entry in SPLITN.
+ 
+                                 SPLITN is a one dimensional array,
+                                 where N = maximum number of nodes over which
+                                 a rotary can be split.
+ 
+                SPLITC         - A count of the number of nodes in SPLITN
+                EFLAG          - Error flag.  Settings are:
+                                 0 = No errors.  A record was retrieved
+                                     from ROTID.
+                                 1 = Error.  Reached end of records in ROTID.
+ 
+==============================================================================
+ 
+ 
+                                    OUTLINE
+                                    -------
+ 
+ 
+        I.      Initialize array SPLITN to all 0's, set SPLITC = 0, and set
+                EFLAG = 0.
+ 
+        II.     Get a record from ROTID
+ 
+        III.    If there are no more records, set EFLAG = 1, return to calling
+                program.
+ 
+        IV.     Get the following information from the record selected.
+ 
+                FIELD IN ROTID     PLACE INTO   VARIABLE
+                --------------     ----------   --------
+ 
+ 
+ 
+ 
+ 
+ 
+                                                                        PAGE 7
+ 
+                ROTARY                          PROCESS_ROTARY
+                NODE                            PROCESS_NODE
+                SPLIT                           SPLIT
+                PROCESSED                       PROCESS
+ 
+        V.      If the record has already been processed, then get another
+                record.
+ 
+                IF PROCESS EQ 'Y' THEN GOTO II.
+ 
+                   (A record gets marked as having been processed after all
+                   computations have been performed on the APM statistics for
+                   the PROCESS_ROTARY.  If the PROCESS_ROTARY is split over
+                   more than one node, then all records, in ROTID, for the
+                   PROCESS_ROTARY will be marked as processed after the first
+                   record for the PROCESS_NODE has been encountered.)
+ 
+        VI.     The record has not been processed. Place the PROCESS_NODE
+                number into array SPLITN as the entry.  And the set number of
+                nodes over which the rotary is split equal to one.
+ 
+                SPLITN(1,1)=PROCESS_NODE
+                SPLITC = 1
+ 
+ 
+        VII.    If the PROCESS_ROTARY is NOT split, then finished.  Return to
+                calling program.
+ 
+                IF SPLIT EQ N THEN RETURN
+ 
+        VIII.   PROCESS_ROTARY is split. Place a list of nodes on
+                which the rotary resides into array SPLITN and the number of
+                nodes over which the rotary is split into variable SPLITC.
+                The PROCESS_NODE is already in SPLITN as the first entry, so
+                be sure to not enter it again.
+ 
+                FIND ALL RECORDS IN ROTID WHERE ROTARY=PROCESS_ROTARY
+                        AND NODE NE PROCESS_NODE
+ 
+                LET SPLITC=2
+                FOR EACH RECORD SELECTED
+                     NODE = NODE NUMBER FROM RECORD
+                     SPLITN(SPLITC)=NODE
+                     SPLITC=SPLITC+1
+                     NEXT RECORD
+                SPLITC=SPLITC-1
+ 
+        IX.     Return to calling program.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+                            PROCEDURE: GET_APM_DATA
+ 
+        This procedure gets the 1440 records from the daily APM data base
+        [APMID] for a given node number.  Each record contains the maximum and
+        minimum user counts for one minute of a 24 hour period.  The maximum
+        user counts are placed into array MAX and the minimum user counts are
+        placed into array MIN.
+ 
+        The date and time that the APM data was collected from the Solo
+        Consat is also retrieved from APMID and converted into GMT.
+ 
+ 
+        CALLING SEQUENCE:
+                GET_APM_DATA(APMID,ERRID,NODE,MAX,MIN,GMTDAT,GMTTIM,NSID,
+                             NSID2,EFLAG)
+ 
+        INPUT:
+ 
+                APMID - ID for daily APM data base
+                NODE  - Node number for which to get records from APMID
+ 
+        OUTPUT:
+ 
+                MAX[1440] - A 1440 element array containing the maximum user
+                            count for each minute in a 24 hour period.  Index
+                            into the array is by minute number.
+                MIN[1440] - A 1440 element array containing the minimum user
+                            count for each minute in a 24 hour period.  Index
+                            into the array is by minute number.
+                GMTDAT    - Date, in GMT, that the APM data was collected from
+                            NODE.
+                GMTTIM    - Time, in GMT, that the APM data was collected from
+                            from NODE.
+                NSID      - ID for DAILY NETSTAT STATISTICS data base which
+                            corresponds with GMTDAT.
+                NSID2     - ID for DAILY NETSTAT STATISTICS data base which
+                            corresponds with the day prior to GMTDAT.
+                EFLAG     = Error flag. Settings are:
+                            0 = No errors. All 1440 records for NODE were
+                                located in APMID.
+                            1 = Error. Either no records were found in APMID
+                                for NODE, or the full set of 1440 records was
+                                not found.
+ 
+===============================================================================
+ 
+ 
+                                    OUTLINE
+                                    -------
+ 
+        I.      Set current data base to APMID and set EFLAG = 0
+ 
+        II.     Find all records in APMID where NODE = NODE.
+ 
+        III.    If no records are found inD for NODE, then
+                        . Place error message in ERRID
+                        . Message = "ERROR IN XXXXXXXXXX - NO RECORDS FOR
+                                     NODE: NNNNN"
+ 
+ 
+ 
+ 
+ 
+ 
+                                                                        PAGE 9
+                          Where XXXXXXXXXX = Daily APM data base name and
+                          NNNNN = node number of NODE.
+                          Message should be all on one line.
+                        . Set EFLAG = 1
+                        . Retrun to calling program
+ 
+        IV.     If records are found in APMID for NODE, then FOR EACH RECORD:
+                        . Place value of MAXU field in APMID into the MAX
+                          array. And place the value of MINU field in APMID
+                          into the MIN array.
+                        . Increment a record counter [REC_COUNT]
+ 
+        V.      If 1440 records were not found,
+                IF REC_COUNT NE 1440 THEN
+                        . Place error message into ERRID
+                        . Message =
+                          "ERROR IN XXXXXXXXXX - LESS THAN 1440 RECORDS
+                           FOR NODE: NNNNN"
+                          Where XXXXXXXXXX = daily APM data base name and
+                          NNNNN = node number of NODE.
+                          Message should be all on one line.
+                        . Set EFLAG = 1
+                        . Return to calling program
+ 
+        VI.     If all 1440 records were found, then
+                        . From one of these records, get the collection date
+                          and time. (The collection date and time are the same
+                          for all records.) In the DAILY APM data base
+                          [APMID], the collection date is in field CDATE and
+                          the collection time is in field CTIME.
+                        . The collection date and time are in Pacific Time,
+                          and must be converted to GMT in order to be able to
+                          find sessions which occured during these times in
+                          the Daily Network Statistic data bases.  To convert
+                          the collection date and time to GMT:
+ 
+                                1. Depending on the value of TIME_ZONE, add
+                                   the appropriate number of hours to convert
+                                   CTIME to GMT.  If TIME_ZONE = PDT, then add
+                                   8 hours to CTIME. If TIME_ZONE = PST, then
+                                   add 7 hours to CTIME.
+ 
+                                   IF TIME_ZONE = PDT THEN GMTTIM = CTIME+8
+                                   IF TIME_ZONE = PST THEN GMTTIM = CTIME+7
+ 
+                                2. If the GMT time is before midnight, then we
+                                   haven't crossed a date boundary and started
+                                   a new day.  However, if the GMT time is
+                                   past midnight then a date boundary has been
+                                   crossed and both the date and time must be
+                                   changed to reflect this.
+ 
+                                   GMTDAT = CDATE
+                                   IF GMTTIM GT 2359 THEN
+                                        GMTTIM = GMTTIM - 2400
+                                        GMTDAT = GMTDAT + 1
+ 
+                        .  Two DAILY NETWORK STATISTICS data bases [NETSTATS]
+                           may need to be accessed.  These two are the one for
+ 
+ 
+ 
+ 
+ 
+ 
+                           the GMTDAT and the one for the day prior to the
+                           GMTDAT.  Using the GMTDAT build data base names for
+                           these two DAILY NETWORK STATISTICS data bases and
+                           place data base IDs into the following variables:
+ 
+                           NSID = ID for NETSTAT data base for GMTDAT
+                           NSID2 = ID for NETSTAT data base for GMTDAT-1
+ 
+                           The availability of the NETSTAT data bases has
+                           already been checked by the STARTUP procedure.
+ 
+                        .  Return to calling program.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+                                                                       PAGE 11
+ 
+ 
+                         PROCEDURE: ERASE_OTHER_USAGE
+ 
+ 
+        Most Solo Consats have other usage on them besides a single public
+        rotary.  This "other usage" can take the form of harwired lines,
+        private access ports, or other public rotaries.  The asynce port
+        statistics which are generated on the Consat reflect all of the usage
+        on the Consat.  In order to determine the PGRADE for a specific
+        rotary, the effects of all other types of usage on the node must be
+        erased.  The erasing of the effects of this other usage is the purpose
+        of this procedure.
+ 
+        CALLING SEQUENCE:
+            ERASE_OTHER_USAGE(APMID,NODE,GMTDAT,GMTTIM,SPLIT,SPLITN,
+                              SPLITC,MAX,MIN,EFLAG)
+ 
+        INPUT:
+ 
+            APMID               - An identifier for the DAILY APM data base
+            NODE                - A Node on which PROCESS_ROTARY resides
+            GMTDAT              - Date, in GMT, that the APM data was
+                                  collected from NODE
+            GMTTIM              - Time, in GMT, that the APM data was
+                                  collected from NODE
+            SPLIT               - Indicator of whether or not the
+                                  PROCESS_ROTARY is split over more than one
+                                  node. Settings are:
+                                  'Y' = YES, PROCESS_ROTARY is split
+                                  'N' = NO, PROCESS_ROTARY is not split
+            SPLITN[N]           - List of all nodes on which PROCESS_ROTARY
+                                  resides.  The PROCESS_NODE will always be the
+                                  first entry in SPLITN.  If the PROCESS_ROTARY
+                                  is NOT split, then the PROCESS_NODE will be
+                                  the only entry in SPLITN.
+ 
+                                  SPLITN is a one dimensional array, where N =
+                                  maximum number of nodes over which a rotary
+                                  can be split.
+            SPLITC              - A count of the number of nodes in SPLITN
+            MAX[1440]           - A 1440 element array containing the maximum
+                                  user count for each minute in a 24 hour
+                                  period.  Index into the array is by minute
+                                  number.
+            MIN[1440]           - A 1440 element array containing the minimum
+                                  user count for each minute in a 24 hour
+                                  period. Index into the array is by minute
+                                  number.
+ 
+            NOTE: The values in the MIN and MAX arrays will be modified if
+            there is any "other usage" on the NODE.
+ 
+ 
+        OUTPUT:
+ 
+            EFLAG               - Error Flag.  Settings are:
+                                  0 = No error.
+                                  1 = Error.  The PROCESS_ROTARY is on a split
+ 
+ 
+ 
+ 
+ 
+ 
+                                      node and the daily APM is missing for
+                                      one of the nodes over which the rotary
+                                      is split.
+ 
+==============================================================================
+ 
+ 
+ 
+                                    OUTLINE
+                                    -------
+ 
+ 
+        For each of the nodes in the SPLITN array
+ 
+            FOR N = 1,SPLITC
+            NODE = SPLITN(N)
+ 
+            I.   Set EFLAG = 0
+ 
+            II.  Find all ports on NODE which are not on the
+                 PROCESS_ROTARY.
+ 
+                 CALL FIND_OTHER_PORTS(PORTSID,ERRID,PROCESS_ROTARY,NODE,
+                                       OTHERP,NUMPRT,ERROR)
+ 
+            III. If all ports on the NODE are on the PROCESS_ROTARY, then there
+                 is no "other usage" to erase.  Return to calling program.
+ 
+                 IF NUMPRT EQ 0 THEN RETURN
+ 
+            IV.  If there are no records for NODE in the PORTS data base, then
+                 assume that there is no "other usage" for NODE and continue
+                 with the next node.
+ 
+                 IF ERROR EQ 1 THEN NEXT N
+                    (GO TO TOP OF OUTLINE)
+ 
+            V.   If the node being processed is NOT the PROCESS_NODE, then
+                 the PROCESS_ROTARY is split over more than one node.  Get the
+                 APM data for this NODE and place the data into a second set
+                 of APM arrays: MAX2 and MIN2
+ 
+                 CALL GET_APM_DATA(APMID,ERRID,NODE,MAX2,MIN2,GMTDAT,
+                                   NSID,NSID2,ERROR)
+ 
+            VI.  If unable to get the APM DATA for NODE, then unable to
+                 proceed with this rotary.
+ 
+                 IF ERROR NE 0 THEN
+ 
+                        . Set EFLAG = 1
+                        . Return to calling program
+ 
+            VII. For each of two DAILY NETSTAT data bases [NSID AND NSID2]:
+ 
+                    FOR DB = 1,2
+                    IF DB = 1 THEN DBID = NSID
+                    IF DB = 2 THEN DBID = NSID2
+ 
+                    1. Set variable DAY_FLAG to indicate which of the two
+ 
+ 
+ 
+ 
+ 
+ 
+                                                                       PAGE 13
+                       DAILY NETSTAT data bases is being processed.
+ 
+                       If data base = NSID then DAY_FLAG = 0
+                       If data base = NSID2 then DAY_FLAG = -1
+ 
+                    2. Set data base pointer to the appropriate data base
+ 
+                    3. Find all sessions in the data base which originated
+                       on NODE and on one of the "other usage" ports
+                       contained in array OTHERP.
+ 
+                       CALL FIND_SESSIONS(DBID,GMTDAT,GMTTIM,DAY_FLAG,NODE,
+                                          OTHERP,NUMSES)
+ 
+                    4. If no sessions were found, then go to next DAILY
+                       NETSTAT data base.
+ 
+                       IF NUMSES EQ 0 THEN NEXT DB
+                        (GO TO THE TOP OF VII.)
+ 
+                    5. Some sessions were found.  If the node being processed
+                       is the PROCESS_NODE then:
+ 
+                       IF NODE EQ PROCESS_NODE THEN
+ 
+                                . Decrement the main APM data arrays MAX and
+                                  MIN.
+ 
+                                  CALL DECREMENT_APM(DAY_FLAG,GMTDAT,GMTTIM,
+                                                     MAX,MIN)
+ 
+                                . Go to next DAILY NETSTAT data base
+ 
+                                  NEXT DB
+                                  (GOTO TOP OF VII.)
+ 
+ 
+                    6. The node being processed is not the PROCESS_NODE.
+ 
+                                 .  Decrement the second set of APM arrays.
+ 
+                                    CALL DECREMENT_APM(DAY_FLAG,
+                                                       GMTDAT,GMTTIM,
+                                                       MAX2,MIN2)
+ 
+                                 .  Go on to next DAILY NETSTAT data base.
+ 
+ 
+                                    NEXT DB
+                                    (GO TO TOP OF VII.)
+ 
+ 
+            VI. If the PROCESS_ROTARY is not split over more than one node,
+                then finished with this procedure.
+ 
+                IF SPLIT EQ 'N' THEN RETURN
+ 
+            VII. The PROCESS_ROTARY is split.  Add the APM data in the second
+                set of APM arrays to the APM data in the main set of arrays.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+                FOR I = 1,1440
+                MAX(I)=MAX(I)+MAX2(I)
+                MIN(I)=MIN(I)+MIN2(I)
+ 
+ 
+            VIII. Go on to next NODE.
+ 
+                  NEXT N
+                  (GOTO TOP OF OUTLINE.)
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+                                                                       PAGE 15
+ 
+ 
+                          PROCEDURE: FIND_OTHER_PORTS
+ 
+ 
+        This procedure finds, in the PORTS data base, all of the ports on a
+        NODE which are NOT on the PROCESS_ROTARY.
+ 
+        CALLING SEQUENCE:
+                FIND_OTHER_PORTS(PORTSID,ERRID,PROCESS_ROTARY,NODE,
+                                 OTHERP,NUMPRT,EFLAG)
+ 
+        INPUT:
+ 
+                PORTSID         - An identifier for the PORTS data base
+                ERRID           - An identifier for the device to which to
+                                  write error messages.
+                PROCESS_ROTARY  - Rotary being processed.
+                NODE            - A node on which PROCESS_ROTARY resides.
+ 
+        OUTPUT:
+ 
+                OTHERP          - Array containing list of the ports which are
+                                  on NODE and are not on PROCESS_ROTARY.
+                NUMPRT          - Number of ports in OTHERP.
+                EFLAG           - Error flag.  Settings are:
+                                  0 = No errors.
+                                  1 = Error. No records in PORTS data base for
+                                      NODE.
+ 
+===============================================================================
+ 
+                                    OUTLINE
+                                    -------
+ 
+        I.      Set data base to PORTSID and set EFLAG = 0
+ 
+        II.     Find all records in PORTS data base for NODE
+ 
+                FIND NODE EQ NODE
+ 
+        III.    If there are no records then:
+ 
+                . Print error message to ERRID
+                . Message is:
+                  "ERROR IN PORTS DATA BASE - NO ENTRIES FOR NODE: NNNN"
+                  Where NNNN = NODE
+                . Set EFLAG = 1
+                . Return to calling program
+ 
+        IV.     There are records for NODE in the PORTS data base. Now find
+                any which are on NODE and not on PROCESS_ROTARY
+ 
+                FIND NODE EQ NODE AND PILOT NE PROCESS_ROTARY
+ 
+ 
+        V.      Set variable NUMPRT = number of records selected which meet
+                the above criteria.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+        VI.     If all of the ports on NODE are also on PROCESS_ROTARY then
+                return to calling program.
+ 
+                IF NUMPRT = 0 THEN RETURN
+ 
+        VII.    There are some ports on NODE which are not on PROCESS_ROTARY.
+                Place the ports numbers of these ports into array: OTHERP.
+ 
+        VIII.   Return to calling program.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+                                                                       PAGE 17
+ 
+ 
+                           PROCEDURE: FIND_SESSIONS
+ 
+ 
+        This procedure selects, from the DAILY NETSTAT data base whose
+        identifier is in DBID, all of the sessions which originated on a
+        specified node and set of ports.  The set of sessions selected is also
+        dependent upon which of the two NETSTAT data bases is being selected
+        from.
+ 
+        CALLING SEQUENCE:
+                FIND_SESSIONS(DBID,GMTDAT,GMTTIM,DAY_FLAG,NODE,OTHERP,NUMSES)
+ 
+        INPUT:
+ 
+                DBID            - An identifier for the DAILY NETSTAT data
+                                  base from which sessions are to be selected.
+                GMTDAT          - Date, in GMT, that the APM data was
+                                  collected from NODE.
+                GMTTIM          - Time, in GMT, that the APM data was
+                                  collected from NODE.
+                DAY_FLAG        - Indicator of which of the two DAILY NETSTAT
+                                  data bases is the current data base.
+                NODE            - A node on which the PROCESS_ROTARY resides.
+ 
+        OUTPUT:
+ 
+                OTHERP          - List of "other usage" ports on NODE.
+                NUMSES          - Number of sessions selected from the DAILY
+                                  NETSTAT data base.
+ 
+==============================================================================
+ 
+ 
+                                    OUTLINE
+                                    -------
+        I.      Set data base to DBID
+ 
+        II.     If selecting sessions from the DAILY NETSTAT data base for the
+                GMT day of collection -
+ 
+                IF DAY_FLAG EQ 0 THEN
+ 
+                1. Select all records where
+ 
+                        . The originating node [ORIGNODE] = NODE.
+ 
+                        and
+ 
+                        . The originating physical port [ORIGPHYPORT] is in
+                           array OTHERP .
+ 
+                        and
+ 
+                        . The session started on any day prior to the GMT
+                           collection date  OR the session started on the GMT
+                           collection date and the start time of the session
+                           is less than the GMT collection time.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+                           (STARTDATE LT GMTDAT)
+                                OR
+                           (STARTDATE EQ GMTDAT AND STARTTIME LE GMTTIM)
+ 
+ 
+                2. Set variable NUMSES equal to the number of sessions
+                   selected .
+ 
+                3. Return to calling program.
+ 
+ 
+ 
+        III. Sessions are to be selected from the DAILY NETSTAT data base
+             prior to the GMT day of collection.
+ 
+             1. Select all records where:
+ 
+                        . The originating node [ORIGNODE] = NODE.
+ 
+                        and
+ 
+                        . The originating physical port [ORIGPHYPORT] is in
+                           array OTHERP .
+ 
+                        and
+ 
+                        . The session ended after the GMT collection time.
+ 
+                           (ENDTIM GE GMTTIM)
+ 
+ 
+                2. Set variable NUMSES equal to the number of sessions
+                   selected .
+ 
+                3. Return to calling program.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+                                                                       PAGE 19
+ 
+                           PROCEDURE: DECREMENT_APM
+ 
+ 
+        This procedure works in conjunction with the FIND_SESSION procedure.
+        DECREMENT_APM goes through each session selected by the FIND_SESSION
+        procedure and decrements a set of values in the MAX and MIN arrays.
+ 
+        CALLING SEQUENCE:
+                DECREMENT_APM(DAY_FLAG,GMTDAT,GMTTIM,MAX,MIN)
+ 
+        INPUT:
+ 
+                DAY_FLAG        - Indicator of which DAILY NETSTAT data base
+                                  is the current data base.
+                                  0 = DAILY NETSTAT data base for GMTDAT
+                                  -1 = DAILY NETSTAT data base for GMTDAT-1
+                GMTDAT          - Date, in GMT, that the APM data was
+                                  collected.
+                GMTTIM          - Time, in GMT, that the APM data was
+                                  collected.
+                MAX[1440]       - A 1440 element array containing the
+                                  maximum user count for each minute in a 24
+                                  hour period.  Index into the array is by
+                                  minute number.
+                MIN[1440]       - A 1440 element array containing the minimum
+                                  user count for each minute in a 24 hour
+                                  period. Index into the array is by minute
+                                  number.
+ 
+        OUTPUT:
+ 
+                MAX and MIN will be modified.
+ 
+==============================================================================
+ 
+                                    OUTLINE
+                                    -------
+ 
+        For each session selected by the FIND_SESSION procedure:
+ 
+        I.      Get the value of attributes: STARTDATE, STARTTIMESEC,
+                ENDTIMESEC.
+ 
+        II.     Convert STARTTIMESEC to format HHMMSS, where HH = HOUR,
+                MM = MINUTES, and SS = SECONDS
+ 
+        III.    Let STARTHOUR = HH
+                    STARTMIN  = MM
+                    STARTSEC  = SS
+ 
+        IV.     Convert ENDTIMESEC to format HHMMSS, where HH = HOUR,
+                MM = MINUTES, and SS = SECONDS
+ 
+        V.      Let ENDHOUR = HH
+                    ENDMIN  = MM
+                    ENDSEC  = SS
+ 
+        VI.     GMTTIM is in format HHMM.  Let GMTMIN = just the minute value
+ 
+ 
+ 
+ 
+ 
+ 
+                of GMTTIM.
+ 
+                GMTMIN = MM
+ 
+        VII.    From the start and end times of the session, determine the set
+                of values in the APM arrays that need to be decremented.
+                Start with the assumption that the whole session occured
+                during the part of the day for which the APM data was
+                collected.
+ 
+                1.  Set APMSTART to the starting minute of the session.
+ 
+                    LET APMSTART = STARTMIN
+ 
+                2.  Set APMEND to the ending minute of the session.
+ 
+                    LET APMEND = ENDMIN
+ 
+                3.  Now handle the exceptions.
+ 
+                    If processing the GMT day of collection
+ 
+                    IF DAY_FLAG = 0 THEN
+ 
+                        . If the session started any day before the GMT day of
+                          collection, set APMSTART to the beginning minute of
+                          the day.
+ 
+                          IF STARTDATE LT GMTDAT THEN APMSTART EQ 0
+ 
+                        . If the session ended after the GMT time of
+                          collection, set APMEND to the GMT collection time.
+ 
+                          IF ENDTIME GT GMTTIM THEN APMEND EQ GMTMIN
+ 
+ 
+                4.  More exceptions.
+ 
+                    If processing the day prior to the GMT day of collection
+ 
+                    IF DAY_FLAG = -1 THEN
+ 
+                        . Set variable NSDAT to the acutal date of the DAILY
+                          NETSTAT data base.
+ 
+                          NSDAT = GMTDAT -1
+ 
+                        . If the session started on the same day as the date
+                          of the DAILY NETSTAT data base from which the
+                          session was selected, and the session started before
+                          the GMT collection time, then set APMSTART to the
+                          GMT collection time.
+ 
+                          IF STARTDATE EQ NSDAT AND STARTTIME LT GMTTIM THEN
+                                APMSTART EQ GMTMIN
+ 
+                        . If the session started on any day prior to the date
+                          of the DAILY NETSTAT data base from which the
+                          session was selected, then set APMSTART to the GMT
+                          collection time.
+ 
+ 
+ 
+ 
+ 
+ 
+                                                                       PAGE 21
+ 
+                          IF STARTDATE LT NSDAT THEN APMSTART EQ GMTMIN
+ 
+ 
+        VIII.   For all emements in MAX  and MIN arrays between, and not
+                including, APMSTART and AMPEND, decrement the value of the
+                elements.
+ 
+                FOR I = AMPSTART+1, APMEND-1
+                MAX(I)=MAX(I)-1
+                MIN(I)=MIN(I)-1
+ 
+        IX.     Decide whether or not to decrement the APM user counts for the
+                minute that the session started.  To do this, the second the
+                session started must be considered.  If the session started
+                less than halfway or halfway through the minute, then the user
+                counts will be decremented.
+ 
+                IF STARTSEC LE 30 THEN
+ 
+                Decrement the value of the element of MAX and MIN arrays which
+                correspond with the starting minute of the session.
+ 
+                MAX(APMSTART) = MAX(APMSTART)-1
+                MIN(APMSTART) = MIN(APMSTART)-1
+ 
+ 
+        X.      Decide whether or not to decrement the APM user counts for the
+                minute that the session ended.  To do this, the second the
+                session ended must be considered.  If the session ended
+                halfway or more thaa halfway through the minute, then the user
+                counts will be decremented.
+ 
+                IF ENDSEC GE 30 THEN
+ 
+                Decrement the value of the element of MAX and MIN arrays which
+                correspond with the ending minute of the session.
+ 
+                MAX(APMEND) = MAX(APMEND)-1
+                MIN(APMEND) = MIN(APMEND)-1
+ 
+        XI.     Go on to next session
+ 
+                GOTO TOP OF OUTLINE
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+                              PROCEDURE: COMPUTE
+ 
+ 
+ 
+        Once the arrays containing the APM user count data for the rotary
+        being processed have been erased of the effects of all other usage on
+        the set of nodes on which the rotary resides, then this procedure can
+        compute the set of values needed to calculate the PGRADE for the
+        rotary.
+ 
+        CALLING SEQUENCE:
+                COMPUTE(MAX,MIN,MAXCT,PEAKM,SUPREME,SMIN1,SMIN2)
+ 
+        INPUT:
+ 
+ 
+                MAX[1440]       - A 1440 element array containing the
+                                  maximum user count for each minute in a 24
+                                  hour period.  Index into the array is by
+                                  minute number.
+                MIN[1440]       - A 1440 element array containing the minimum
+                                  user count for each minute in a 24 hour
+                                  period. Index into the array is by minute
+                                  number.
+ 
+        OUTPUT:
+ 
+ 
+                MAXCT           - Connect time at the peak minute for the 24
+                                  hour period over which the APM data was
+                                  collected.
+                PEAKM           - The peak minute for the 24 hour period over
+                                  which the APM data was collected.
+                SUPREME         - The maximum of the maximum users counts
+                                  for the 24 hour period over which the APM
+                                  data was collected.
+                SMIN1           - The total number of minutes in which the
+                                  maximum users for the minute = SUPREME.
+                SMIN2           - The total number of minutes in which the
+                                  maximum users for the minute = SUPREME AND
+                                  in which the difference between the maximum
+                                  and minumum users counts for that minute is
+                                  less than or equal to 1.
+ 
+==============================================================================
+ 
+                                    OUTLINE
+                                    -------
+ 
+ 
+        I.      Compute the estimated connect time for each of the 1440
+                minutes and place them into array: CT[1440].
+ 
+                FOR I = 1,1440
+                CT(I) = (MIN(I) + MAX(I))/2
+ 
+        II.     Find the maximum connect time for the day and the time at
+                which it occured.
+ 
+ 
+ 
+ 
+ 
+ 
+                                                                       PAGE 23
+ 
+                MAXCT = 0
+ 
+                FOR I = 1,1440
+                IF CT(I) LE MAXCT NEXT I
+                ELSE
+                   MAXCT=CT(I)
+                   PEAKM=I
+                   NEXT I
+ 
+        III.    Find the maximum of the maximum users counts.
+ 
+                SUPREME = 0
+ 
+                FOR I = 1, 1440
+                IF MAX(I) LE SUPREME THEN NEXT I
+                ELSE
+                   SUPREME = MAX(I)
+                   NEXT I
+ 
+        IV.     Now find the other two SUPREME minute counts.  See OUTPUT
+                section above for complete definitions.
+ 
+                FOR I =1, 1440
+                IF MAX(I) NE SUPREME THEN NEXT I
+                ELSE
+                   SMIN1 = SMIN1 + 1
+                   IF (MAX(I)-MIN(I)) LE 1 THEN SMIN2 = SMIN2 + 1
+                   NEXT I
+ 
+        V.      Return to calling program.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+  yVC
