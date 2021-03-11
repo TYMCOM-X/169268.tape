@@ -1,0 +1,165 @@
+        /* Check if this delay is the min or max delay */
+        if ( delay > 0 )
+           {
+           if ( delay < mindelay) mindelay = delay;
+           if ( delay > maxdelay) maxdelay = delay;
+           }
+
+        /*
+        ** Now find the proper range for this delay
+        */
+        for (range = 0; range < MAXRANGE; range++)
+           {
+           if ( delay >= ranges[range][0] && delay <= ranges[range][1] )
+                break;
+           }
+
+
+        /*
+        ** Increment the appropriate elements
+        */
+        if (!rval)
+           {
+           matrix[range].count++;
+           total_circuits++;
+           matrix[range].delay +=delay;
+           total_delay +=delay;
+           }
+       
+        }  /* End of if(delay>0) */
+      }  /* End of else */
+
+    /* Go read next line of circuit information */
+    }  /* End of while (!last) */
+
+
+/*
+** Finished reading all circuit information.
+** Check if there is anything to report.
+*/
+if (numrec == 0)
+        {
+        /* There is nothing to report */
+        vidclr();
+        printf("\n\tThere is no infomation for this survey in the");
+        printf(" Delay data bases.");
+        printf("\n                   ....Press any character to continue....\n");
+        key = kbnec();
+        if ( out_type == DISK || out_type == BOTH)
+           fclose(outid);
+        return(SUCCESS);
+        }
+/*
+** Calculate the frequency that each range ocurred and the mean delay
+** for each range.
+*/
+
+for (range = 0;  range < MAXRANGE+1; range++)
+    {
+     /* Insure a non-zero element */
+     if (matrix[range].count != 0 )
+        {
+         /*
+         ** Calculate frequency.
+         */
+         matrix[range].freq = comfreq + (100. * 
+                  ( (1.*(matrix[range].count)) / (1.*(total_circuits)) ));
+         comfreq = matrix[range].freq; 
+        }
+     else
+        {
+        /*
+        ** There are no circuits in this range.  Therefore, the frequency
+        ** will be the same as for the previous range, unless this is the
+        ** first range.  If this is the first range the cumulative freq.
+        ** will be zero.
+        */
+        if ( range != 0)
+                matrix[range].freq = matrix[range-1].freq;
+        }
+
+     /* Calculate the mean delay */
+     if ( matrix[range].delay != 0 )
+          matrix[range].mean = ( (1. * matrix[range].delay) /
+                        ( 1. * matrix[range].count ) );
+    }
+
+/* Calculate the survey wide average delay */
+avgdelay = ( (1.*total_delay) / (1.*total_circuits) );
+
+
+
+/* From the total number of records, find the number of records in one
+** percentile.
+*/
+one_pc = (total_circuits*1.)/100.;
+
+
+/* Now find the record_number for each user defined percentile.
+** To do this just multiply the user defined percentile times the
+** number of records for one percentile.
+*/
+for ( i = 0; i < MAXPCS; i++)
+     {
+     pc[i].record_number = (long) floor( (double) (pc[i].percentile * one_pc) );
+     }
+
+
+/*
+** Now it is time to compute the Standard Deviation and the 3 user
+** defined percentiles.  To do this
+** it is necessary to go through the circuit information one more time.
+** Request the circuit information sorted by delay in ascending order.
+*/
+last = 0;
+record_count = 0;
+
+/* Go through the circuit information a line at a time */
+while (!last)
+    {
+    /* Get a line. */
+    /* If another line is not availiable set the last flag to terminate */
+    /* this loop                                                        */
+    if  (q_nextrow(row) != Q_OKAY)
+      {
+      last = 1;
+      }
+    else
+      {
+      /* Get the values of the fields and increment the record count. */
+      sscanf(row,"%ld %ld %ld",&node,&date,&delay);
+      record_count++;
+
+      /* Check if this record number matches one of those for the
+      ** three percentiles being tested for.  If so save this delay
+      ** with its associated percentile.
+      */
+      for ( i = 0; i < MAXPCS; i++)
+        {
+        if ( record_count == pc[i].record_number )
+                pc[i].delay = delay;
+        }
+         
+      /* Determine the deviation of this delay value from the mean delay */
+      dev = avgdelay - delay;
+        
+      /*
+      ** Now sqare this deviation to nullify the effect of a possible
+      ** negative deviation.
+      */
+      dev = pow(dev,(double)2);
+
+      /* Sum all of the deviations. */
+      sumdev += dev;
+
+      }  /* End of else */
+    } /* End of while(!last) */
+
+/* Now divide the Sum of the Deviations by the number of circuits */
+/* to get the mean deviation.                                     */
+sumdev = sumdev/total_circuits;
+
+/* Finally, take the square root of the above number to get the  */
+/* Standard Deviation.                                           */
+sd = sqrt(sumdev);
+
