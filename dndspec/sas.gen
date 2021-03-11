@@ -1,0 +1,752 @@
+.se line1='SAS System Generation Manual'
+.se line2='Filename: SAS.GEN'
+.se line3='Integrated Communication Applications'
+.se line4='Tymnet, McDonnell Douglas Inc.'
+.se line5='Written by'
+.se line6='M.M. Lewis'
+.se userdate='April 16, 1986'
+.se doctitle='SAS System Generation'
+.se docnumber='SAS.GEN'
+.ud on
+.fo left
+.front
+
+
+.sk 10;.fo no;.pn roman
++-------------------------------------------------------------+
+|  TYMNET's proprietary rights are included in the infor-     |
+|  mation disclosed herein.  The recipient, by receiving      |
+|  this document, agrees that neither this document nor the   |
+|  information disclosed herein nor any part thereof shall be |
+|  reproduced or transferred to other documents or used or    |
+|  disclosed to others for manufacturing or for any other     |
+|  purpose except as specifically authorized in writing by    |
+|  TYMNET.                                                    |
++-------------------------------------------------------------+
+.pa;.pn arabic;.fo left
+
+.se doctitle='SAS System Generation'
+.se docnumber='SAS.GEN'
+.fo left
+.se sectname='Introduction'
+.chapter 1
+.ntoc 'Introduction'
+.fo left
+.sp;This manual describes the procedures for configuring the SAS
+interface.  This interface is unique among TNAD products in that it
+combines the functions of both host and terminal interface within one
+slot of a Tymnet Engine.
+.sp
+The purpose of the interface is to allow asynchronous PC users to access
+the SAS host computer system in the host's synchronous P1024C protocol.
+The PCs accessing the host system will be running SAS Proprietary
+Terminal Emulator software.  (For a detailed description of the interface
+refer to  SAS Requirements Document, March 6, 1986 - TNAD).
+.sp;The configuration is expressed in a file called the interface tym-
+file.  This tymfile consists of a set of macro* calls that together
+identify users, hosts, lines and device addresses.
+.sp;Section 2 of this manual is a general overview focusing on the struc-
+ture and interdependence of the macros.  Section 3 details each of the
+macros with their variables.  Section 4 covers Error Messages.  Section 5
+describes the step-by-step process of creating a new interface con-
+figuration, and Section 6 discusses some capacity and storage require-
+ments to keep in mind while configuring the interface.  Section 7 con-
+tains a glossary of terms which may be new to the reader, or that may re-
+quire further explanation.  (Words defined in the glossary are marked
+with an asterisk (*) at their first appearance in this document.)  Lastly
+the Appendix at the end of this manual shows a sample tymfile.
+.pa
+.se sectname='Overview'
+.chapter 1
+.ntoc 'Overview'
+.fo left
+.sp;The SAS interface macros are interrelated and must conform to
+a hierarchical structure in the tymfile file in order to be ef-
+fective.  This section shows the development of that hierarchy.
+.sp;The first macro - HSTDEF - defines the host.  Within this macro
+the lines are defined with individual LINDEF macros.  Each line
+contains a set of macros for the corresponding interchange and terminal
+addresses to which it is connected.  These are the RID*, SID* and DID*
+macros.  Each line definition is ended with an ENDLIN macro.  When the
+last line definition has been ended the next host should be defined.
+.sp;To illustrate the hierarchical positioning of these macros a sample
+host definition with its accompanying line and address definitions
+is shown below.
+.sp 2;.in 15;HSTDEF(1234)
+.br;.in 17;LINDEF(2,up)
+.br;.in 19;RIDDEF(21)
+.br;.in 21;SIDDEF(51)
+.br;.in 23;DIDDEF(71)
+.br;.in 23;DIDDEF(75,78)
+.br;.in 21;ENDSID
+.br;.in 19;ENDRID
+.br;.in 17;ENDLIN
+.br;.in 17;     --->LINDEF
+.br;.in 17;   ------->HSTDEF
+.br;.in 17; ------------>POOLDEF/HOSTPOOL
+.sp;.in 0;LINDEF follows an ENDLIN when there is another line on
+the host to be defined.
+.sp;.in 0;HSTDEF follows an ENDLIN when all lines on the host have been
+defined and there is another host to be defined.
+.sp;.in 0;POOLDEF or HOSTPOOL follows an ENDLIN when all hosts and lines
+connected to the interface have been defined.
+.pa
+.in 0
+After all the hosts in the configuration have been defined, the address
+pools must be defined.  This can be done either at the host or the in-
+dividual address level.
+.sp;In the first case, a single HOSTPOOL macro defines all addresses
+assigned to a particular host for one pool.  The macro is completely
+self-contained and requires no individual addresses and no end macro.
+.sp;The POOLDEF macro, on the other hand, is used to define a specific
+set of addreses from one host for one pool.  This macro requires both
+individal POOLADDR macros and an end macro.
+.sp;POOLDEF And HOSTPOOL macros may be placed in the tymfile in any
+order providing they appear after the last host has been defined and
+before the first menu has been defined.
+.sp;The POOLDEF and HOSTPOOL macros are illustrated below.
+.sp 2;.in 15;HOSTPOOL(PL123,1234)
+.sp;.in 15;POOLDEF(POOL1,321)
+.br;.in  17;POOLADDR(1,22,5A,79)
+.br;POOLADDR(4,23,5B,7A,7A)
+.br;.in 15;ENDPOOL
+.sp;.in 15;HOSTPOOL(PL321,321)
+.sp;.in 15;     --->POOLDEF/HOSTPOOL
+.br;.in 15;   ------->INIDEF
+.sp;.in 0;POOLDEF or HOSTPOOL follows a POOLDEF or HOSTPOOL
+when there is another address pool to be defined.
+.sp;.in 0;INIDEF follows ENDPOOL or HOSTPOOL when all address pools
+have been defined.
+
+
+
+
+
+
+
+
+
+
+.pa
+.sp 5;.in 0;After the pools have been defined the menus which the user
+will see upon logging in are defined.  These are created with the INIDEF
+macro.  Each INIDEF macro is followed by the macros which define the
+actual strings of text that will appear on the screen.  These macros are
+called INISTR macros.  There may be up to 17 of them per INIDEF.  Each
+INISTR macro may define a string of up to 70 characters.  The INIDEF
+macro is ended with the INIEND macro.
+.sp;The INIDEF  macro is illustrated in the sample shown below.
+.sp 2;.in 15;INIDEF(MNU1)
+.br;.in 17;INISTR(first line of data)
+.br;.in 17;INISTR(second line of data)
+.br;.in 17;INISTR(third line of data)
+.br;.in 17;INISTR(final line of data)
+.br;.in 15;INIEND
+.br;.in 15;   --->INIDEF
+.br;.in 15;  ------->USER
+.sp;.in 0;INIDEF follows INIEND when there are further menus to be
+defined.
+.sp;.in 0;USER follows INIEND when all menus have been defined.
+.pa
+.in 0
+When each of the menus has been defined the USERIDs which are able
+to access the interface are defined with the USER macro.  One USER macro
+must be defined for each USERID with access.  The USER macro is
+self-contained in that it does not include any sub-macros.  The USER
+variables for menus and pools however, must correspond directly with
+those variables as they have previously been defined in the INIDEF, POOL-
+DEF and HOSTPOOL macros.
+.sp
+The USER list itself does not require an end macro but an EM command must
+be placed after the last USER macro in order to indicate that the end
+of the tymfile has been reached.
+.sp;A sample of this is shown in the illustration below.
+.in  7
+.sp;.in 7;USER(USE,SIV,500,MNU1,12345678,POOL2,POOL1)
+.sp;.in 7;USER(USERNAME,SIV,500,MNU2,87654321,POOL1)
+.sp;.in 7;USER(USERN,SIV,300,MNU2,10000000,POOL3)
+.sp 2;.in 7;EM
+.in 0
+.sp;Notice in the sample of the USER macro that the attributes for menu
+name (defined in INIDEF) and pool name (defined in POOLDEF and HOSTPOOL)
+match those values defined in the previous macros.
+.pa
+.se sectname='Macro Descriptions'
+.chapter 1
+.ntoc 'Macro_Descriptions'
+.sp 5;.fo left
+.se subname='HSTDEF MACRO'
+.pushsect
+.ntoc 'HSTDEF_MACRO'
+.fo left
+.sp;This macro defines a host number to be used for all lines until the
+next host number is indicated.  The supplied argument is a decimal number
+or a symbol.
+.sp 3;The format for the HSTDEF macro is:
+.sp 2;.ce;HSTDEF(HNUM)
+.sp 2;.in 5;where
+.sp 2;.in 5;.hi 9;.us HNUM!     is the host number being defined!
+.pa
+.se subname='LINDEF MACRO'
+.nextsect
+.ntoc 'LINDEF_MACRO'
+.in 0;.hi no;.fo left
+.sp;This macro defines a line.  It associates the line with the last
+defined host.  The supplied argument is a hexadecimal number.
+.sp 3;The format for the LINDEF macro is:
+.hi 9
+.sp 2;.ce;LINDEF(LU,LSTATE)
+.sp 2;.in 5;where
+.sp 2;.in 5;.us LU!       is the logical unit of the sync port as as-
+signed in the Engine tymfile.
+.sp;.us LSTATE!   is the configured state of the line.  If the state of
+a line is down, the interface will not process it.  This argument
+must be set to either UP or DOWN.
+.in 0;.hi no
+.sp 5
+.se subname='ENDLIN MACRO'
+.nextsect
+.ntoc 'ENDLIN_MACRO'
+.fo left
+.sp;This macro ends a line definition.  Each LINDEF macro must be paired
+with an ENDLIN macro.
+.sp 3;The format for the ENDLIN macro is:
+.sp 2;.ce;ENDLIN
+.in 0
+.pa
+.se subname='RIDDEF MACRO'
+.nextsect
+.ntoc 'RIDDEF_MACRO'
+.fo left
+.sp;This macro defines a RID.  The input argument is a hexadecimal
+value.  This RID is configured as a valid RID on the latest defined
+line.
+.sp 3;The format for the RIDDEF macro is:
+.hi 9
+.sp 2;.ce;RIDDEF(RID)
+.sp 3;.in 5;where
+.sp 2;.in 5;.us RID!      is the RID number in hexadecimal and should be
+between hex 21 and hex 4F.
+.in 0;.hi no
+.sp 5
+.se subname='ENDRID MACRO'
+.nextsect
+.ntoc 'ENDRID_MACRO'
+.fo left
+.sp;This macro marks the end of a RID definition.  An ENDRID macro must
+be paired with a RIDDEF macro.
+.sp 3;The format for the ENDRID macro is:
+.hi 9
+.sp 2;.ce;ENDRID
+.in 0;.hi no
+.pa
+.se subname='SIDDEF MACRO'
+.nextsect
+.ntoc 'SIDDEF_MACRO'
+.fo left
+.sp;This macro defines a SID.  The input argument is a hexadecimal value.
+This SID is configured as a valid SID on the latest defined RID.
+.sp 3;The format for the SIDDEF macro is:
+.hi 9
+.sp 2;.ce;SIDDEF(SID)
+.sp 2;.in 5;where
+.sp 2;.in 5;.us SID!      is the SID number in hexadecimal.  It should
+be between 51 and 6F.
+.sp 5
+.in 0;.hi no
+.sp 2
+.se subname='ENDSID MACRO'
+.nextsect
+.ntoc 'ENDSID_MACRO'
+.fo left
+.sp;This macro marks the end of a SID definition.  An ENDSID macro must
+follow a SIDDEF macro.
+.sp 3;The format for the ENDSID macro is:
+.sp 2;.ce;ENDSID
+.in 0
+.pa
+.se subname='DIDDEF MACRO'
+.nextsect
+.ntoc 'DIDDEF_MACRO'
+.fo left
+.sp;This macro defines a range of DIDs.  Start DID must be less than or
+equal to end DID.  If end DID is missing it is set equal to start DID.
+Each DID in the range is defined as a valid DID on the latest defined
+SID.
+.sp 3;The format for the DIDDEF macro is:
+.hi 9
+.sp 2;.ce;DIDDEF(STARTDID,ENDDID)
+.sp 2;.in 5;where
+.sp 2;.in 5;.us STARTDID! is the first hexadecimal value for the DID
+range and should be between 71 and 7F.
+.sp;.us ENDDID!   is the last hexadecimal value for the DID range and
+should be between 71 and 7F.
+.in 0;.hi no;.pa
+.se subname='HOSTPOOL MACRO'
+.nextsect
+.ntoc 'HOSTPOOL_MACRO'
+.sp;This macro defines all addresses for a given host as one pool.
+.sp 2;The format for the HOSTPOOL macro is:
+.sp;.ce;HOSTPOOL(POOLN,HOSTNUM)
+.sp;.in 5;.hi 9;where
+.sp;.us POOLN!    is a previously undefined symbol or name that will be
+used to identify this pool.
+.sp;.us HOSTNUM!  is the previously defined host number for this pool.
+.sp 2
+.se subname='POOLDEF MACRO'
+.nextsect
+.ntoc 'POOLDEF_MACRO'
+.fo left
+.sp;This macro starts the definition of a specific set of addresses
+(assigned to a host) that are to comprise an address pool.
+.sp 3;The format for the POOLDEF macro is:
+.hi 9
+.sp 2;.ce;POOLDEF(POOLN,HOSNUM)
+.sp 2;.in 5;where
+.sp 2;.in 5;.us POOLN!    is a symbol that will be associated with this
+pool.  It will be used later in the USER macro.  The symbol name for the
+pool must be previously undefined in order to be valid.
+.sp;.us HOSTNUM!    is a previously defined host number.  All addresses
+specified in the POOLADDR macros within this defintion must be assigned
+to this host.
+.in 0;.hi no
+.pa
+.se subname='POOLADDR MACRO'
+.nextsect
+.ntoc 'POOLADDR_MACRO'
+.fo left
+.sp;This macro defines a range of addresses as part of the current pool.
+Arguments are the LU, RID, SID and DID range.
+.sp;End DID must be greater than or equal to  Start DID.  If End DID
+is missing it is set to the same values as Start DID.
+.sp 3;The format for the POOLADDR macro is:
+.hi 9
+.sp 2;.ce;POOLADDR(LU,RID,SID,STARTDID,ENDDID)
+.sp 2;.in 5;where
+.sp 2;.in 5;.us LU!        is the logical unit for the sync port.!
+.sp;.us RID!       is the RID.!
+.sp;.us SID!       is the SID.!
+.sp;.us STARTDID!  is the Start DID.!
+.sp;.us ENDDID!    is the End DID.!
+.in 0;.hi no
+.sp 4
+.se subname='ENDPOOL MACRO'
+.nextsect
+.ntoc 'ENDPOOL_MACRO'
+.fo left
+.sp;This macro marks the end of a pool definition.  All pool definitions
+must be terminated with an ENDPOOL macro.
+.sp 3;The format for the ENDPOOL macro is:
+.sp 2;.ce;ENDPOOL
+.in 0
+.pa
+.se subname='INIDEF MACRO'
+.nextsect
+.ntoc 'INIDEF_MACRO'
+.fo left
+.sp;This macro starts an initial display (menu) definition.
+.sp 3;The format for the INIDEF macro is:
+.hi 9
+.sp 2;.ce;INIDEF(ININAM)
+.sp 2;.in 5;where
+.sp 2;.in 5;.us ININAM!   is a previously undefined symbol that will be
+associated with this menu definition.
+.in 0;.hi no
+.sp 2
+.se subname='INISTR MACRO'
+.nextsect
+.ntoc 'INISTR_MACRO'
+.fo left
+.sp;This macro defines a line within the intial display.  It checks
+against a miximum line size and truncates it if necessary.
+.sp 3;The format for the INISTR macro is:
+.hi 12
+.sp 2;.ce;INISTR(STRING)
+.sp 2;.in 5;where
+.sp 2;.in 5;.us STRING!      is a line of text that will appear as a
+menu string.  Each INISTR macro represents a seperate line of data.
+There may be up to 17 lines of data - or 17 INISTR macros - within one
+INIDEF macro.  Each string must consist of 70 characters or less.
+.in 0;.hi no
+.pa
+.se subname='INIEND MACRO'
+.nextsect
+.ntoc 'INIEND_MACRO'
+.fo left
+.sp;This macro ends an initial display definition.  It must be paired
+with an INIDEF macro.
+.sp 3;The format for the INIEND macro is:
+.sp 2;.ce;INIEND
+.in 0
+.pa
+.se subname='USER MACRO'
+.nextsect
+.ntoc 'USER_MACRO'
+.fo left
+.sp;This macro defines a user and specific username parameters.
+.sp;Since the pool names are positional and prone to error, this macro
+checks correspondence between the host's bit mask and the pool names
+and that the supplied pools actually belong to the proper host.
+.sp 3;The format for the USER macro is:
+.ll 80
+.sp 2
+USER(USERID,TTYPE,ATO,ININAM,DEFPW,P1,P2,P3,P4,P5,P6,P7,P8,P9,PA)
+.ll 66;.hi 10
+.sp 2;.in 5;where
+.sp 2;.in 5;.us USERID!    is the logon username being defined!
+.sp;.us TTYPE!     is the user's terminal type, currently must be SIV!
+.sp;.us ATO!       is the activity timeout for this user in decimal sec-
+onds.
+.sp;.us ININAM!    is the name from an INIDEF macro to be used for this
+user
+.sp;.us DEFPW!     is the default password for this user, either a hex
+number or a symbol
+.sp;.us P1-PA!     are the pool names (from the POOLDEF and HOSTPOOL
+macros.  One pool name may be defined per host.  A user is valid to log
+in only to hosts for which he has a defined pool.
+.in 0;.hi no
+.pa
+.se sectname='SAS Configuration Error Messages'
+.chapter 1
+.ntoc 'SAS_Configuration_Error_Messages'
+.fo left
+.sp;LINDEF MUST BE PRECEEDED BY HSTDEF
+.sp;.in 2;The host must be defined with a HSTDEF macro before its lines
+can be defined.
+.in 0
+.sp 2;LINDEF PREVIOUS DEFINITION NOT TERMINATED
+.sp;.in 2;The previous line definition must be terminated with an
+ENDLIN macro before a new line definition can be declared.
+.in 0;.sp 2;ENDLIN LINE DEFINITION NOT STARTED
+.sp;.in 2;The ENDLIN macro is valid only for terminating a defined line.
+This message indicates that no LINDEF macro has been declared.
+.in 0;.sp 2;RIDDEF MUST BE WITHIN A LINE DEFINITION
+.sp;.in 2;The RIDDEF macro is valid only as part of a line def-
+inition.
+.sp 2;.in 0;RIDDEF PREVIOUS DEFINITION NOT TERMINATED
+.sp;.in 2;The previously defined RID must be terminated with the ENDRID
+macro in order for a new RID to be defined.
+.sp 2;.in 0;RIDDEF RID VALUE IS NOT GREATER THAN THE BASE VALUE
+.sp;.in 2;The base value for a RID is 20 hex.  A RID definition
+must have a value of greater than 20 hex in order to be valid.
+.sp 2;.in 0;RIDDEF RID VALUE IS GREATER THAN THE MAXIMUM VALUE
+.sp;.in 2;The RID value must be greater than or equal to 21 and less than
+or equal to 4F in order to be valid.
+.pa
+.sp 2;.in 0;ENDRID NO RID DEFINITION STARTED
+.sp;.in 2;The ENDRID macro is valid only for terminating a defined RID.
+If no RIDDEF macro has been declared and the ENDRID macro is given this
+message will appear.
+.sp 2;.in 0;SIDDEF MUST BE WITHIN A RID DEFINITION
+.sp;.in 2;The SIDDEF macro is valid only as part of a RIDDEF macro.
+.sp 2;.in 0;SIDDEF PREVIOUS DEFINITION NOT TERMINATED
+.sp;.in 2;The previously defined SIDDEF macro must be terminated with an
+ENDSID macro before a new SID can be defined.
+.sp 2;.in 0;SIDDEF SID VALUE IS NOT GREATER THAN THE BASE VALUE
+.sp;.in 2;The base value for a SID is 50 hex.  A SID definition
+must be greater than 50 hex in order to be valid.
+.sp 2;.in 0;SIDDEF SID VALUE IS GREATER THAN THE MAXIMUM VALUE
+.sp;.in 2;The SID value must be within the range of not less than
+50 and not greater than 6F in order to be valid.
+.sp 2;.in 0;ENDSID  NO SID DEFINITION STARTED
+.sp;.in 2;The ENDSID macro is valid only for terminating a defined SID.
+If no SIDDEF macro has been declared and the ENDSID macro is given this
+message will appear.
+.sp 2;.in 0;DIDDEF MUST BE WITHIN A SID DEFINITION
+.sp;.in 2;The DIDDEF macro is valid only as part of a SID definition.
+.sp 2;.in 0;DIDDEF START DID GREATER THAN END DID
+.sp;.in 2;This error message will appear if an incorrect DID range is
+declared.  The Start DID must be less than or equal to the End DID in
+order to be valid.
+.pa
+.sp 2;.in 0;DIDDEF DID SDID(value) IS NOT GREATER THAN THE BASE VALUE
+.sp;.in 2;The base value for a DID is 70 hex.  Any DID definition
+must be greater than 70 hex in order to be valid.
+.sp 2;.in 0;DIDDEF DID VALUE IS GREATER THAN THE MAXIMUM VALUE
+.sp;.in 2;The value of Start DID must be greater than or equal to 70
+and the value of End DID must be less than or equal to 7F in order to
+be valid.
+.sp 2;.in 0;POOLDEF PREVIOUS POOL DEFINITION NOT TERMINATED
+.sp;.in 2;In order to define a ool, the previously declared POOL-
+DEF macro must be terminated with the ENDPOOL macro.
+.sp 2;.in 0;POOLDEF POOLN IS A PREVIOUSLY DEFINED SYMBOL
+.sp;.in 2;The variable for POOLN must be a new, previously undefined
+symbol in order to be valid.
+.sp 2;.in 0;POOLDEF HOST ARGUMENT IS REQUIRED
+.sp;.in 2;The host number which corresponds to the pool being defined
+must be supplied in order to create a valid POOLDEF macro.
+.sp 2;.in 0;POOLADDR NOT WITHIN POOL DEFINITIONS
+.sp;.in 2;A pool address must be placed between a POOLDEF and an ENDPOOL
+macro in order to be valid.
+.sp 2;.in 0;POOLADDR START DID GREATER THAN END DID
+.sp;.in 2;This message will appear when an incorrect DID range has been
+declared.  The Start DID must be less than or equal to the End DID in
+order for the range to be valid.
+.sp 2;.in 0;POOLADDR LINE LU(value) NOT ASSIGNED TO HOST
+.sp;.in 2;The logical unit specified in a POOLADDR is not associated with
+the host that was specified in the POOLDEF macro.
+.pa
+.sp 2;.in 0;ENDPOOL NO POOL DEFINITION STARTED
+.sp;.in 2;The ENDPOOL macro is valid only when it is being used to term-
+inate a defined pool.  If no pool has been defined and an END-
+POOL macro is supplied this error message will appear.
+.sp 2;.in 0;INIDEF PREVIOUS INIT DEFINITION NOT TERMINATED
+.sp;.in 2;The previous INIDEF macro must be terminated with an INIEND
+macro before a new INITDEF macro can be declared.
+.sp 2;.in 0;INISTR NOT WITHIN INIT DISPLAY DEFINITION
+.sp;.in 2;The INISTR macro is valid only when it is a part of an
+INIDEF macro.
+.sp 2;.in 0;CURLIN TOO MANY LINES IN ONE INIT DISPLAY
+.sp;.in 2;The maximum number of lines that may be defined in one INIDEF
+macro is 17.  Any lines after 17 will be truncated from the screen dis-
+play.
+.sp 2;.in 0;CURLIN INIT DISPLAY LINE TOO LONG, TRUNCATED
+.sp;.in 2;The maximum number of characters that may be declared for any
+one INISTR macro is 70.  Any characters after 70 will be truncated.
+.sp 2;.in 0;INIEND NO INITIAL DISPLAY STARTED
+.sp;.in 2;The INIEND macro is valid only as a termination for an INIDEF
+macro.
+.sp 2;.in 0;MORE THAN ONE POOL ASSIGNED TO USERID FOR HOST NUMBER
+.sp;.in 2;A userid may have only one pool defined for each host to which
+it has access.
+.pa
+.se sectname='Creating the SAS Interface'
+.chapter 1
+.ntoc 'Creating_the_SAS_Interface'
+.fo left
+.sp;In order to create a new SAS interface you need to create
+a new tymfile and sysgen file.  These are then assembled into a
+NIB file which is loaded into the slot to produce the interface con-
+figuration.
+.sp;A sample tymfile and genfile will be supplied with the release
+of this product.  These files can be modified and renamed in order to
+create the initial interface.  Once this is done, they can later be
+modified and renamed to configure new interfaces.
+.sp;The person creating these files will need the following:
+.sp 5;.hi 4
+.sp;.in 5;++  A valid username and password on systems 25 & 37,
+.sp;++  Working knowledge of an online text editor system,
+.sp;++  A valid, available host number for each host that will be de-
+fined.  (Host numbers are obtained through the normal Tymnet Validations
+procedure.),
+.sp;++  Working knowledge of the Tymnet programs LOADII and NAD.
+.pa;.in 0;.hi no
+.se subname='Creating the Tymfile'
+.pushsect
+.ntoc 'Creating_the_Tymfile'
+.fo left
+.hi 5
+.sp;1.)  Find the most recently created SAS tymfile, or use the sample
+tymfile.
+.sp;2.)  Create a new tymfile to reflect the new node and slot number
+using a text editor system.  The example illustrates tymfile creation
+using the PDP10 Editor package and a production file.
+.sp;.in 10;Example:
+.sp;-mod ND####.T## (cr)  <ND old node#.T old slot#>
+.sp;(Make required changes.)
+.sp;*write ND####.T## (cr)  <ND new node#.T new slot#>
+.sp 2;.in 0;3.)  Modify the newly created tymfile by changing the macro
+descriptions, adding and deleting lines and values where necessary.
+Change header comments where appropriate.  Commonly, most if not all
+macro variables will need to be modified when creating a new SAS
+interface.
+.in 0;.hi no;.sp 17;NOTE:
+.br;The sample tymfile is a development file and follows a different
+naming convention than does a production file.  The development
+tymfile will be named SASI##.T##, where SASI## represents the release
+number of the interface code and T## represents the version number.
+The naming convention for the production tymfile is illustrated
+in the example.
+.pa
+.se subname='Creating the Genfile'
+.nextsect
+.ntoc 'Creating_the_Genfile'
+.fo left;.hi 5
+.sp;1.)  Find the most recently created SAS genfile, or use the sample
+genfile.
+.sp;2.)  Create a new genfile to reflect the new node and slot number
+using the same method shown on the previous page for creating a tymfile.
+.sp;.in 10;Example:
+.sp;-mod ND####.C## (cr)  <ND old node#.C old slot#>
+.sp;(Make required changes.)
+.sp;*write ND####.C## (cr)  <ND new node#.C new slot#>
+.sp 2;.in 0;3.)  Modify the newly created genfile by changing the
+tymfile name and the NIB file names to reflect the new ones.  Add ap-
+propriate header comments.
+.sp;4.)  If a different release/version of the code is needed, substitute
+the correct new names for all filenames.
+.sp;5.)  Always make sure that GENSTR contains the name of the genfile.
+.in 0;.hi no
+.pa
+.se subname='Creating the NIB File'
+.nextsect
+.ntoc 'Creating_the_NIB_File'
+.fo no
+.sp;When the Genfile and tymfile have been created, create the
+NIB file by assembling all the files in the genfile.  This is done
+as it is shown in the example:
+.sp;.in 15;-r nad
+.br;;x (genfile name) <cr>
+.sp;.in 0;Once the assembly is complete, the NIB file has been created.
+Download the NIB file into a slot using LOADII or NAD.  (LOADII is
+the preferred method of slot loading as it runs more quickly than
+the NAD program.  Tymnet documentation can be referenced
+for instructions on using both LOADII and NAD.)
+.pa
+.se sectname='Capacity and Requirements'
+.chapter 1
+.ntoc 'Capacity_and_Requirements'
+.fo no
+.sp;Following are some points to keep in mind while configuring
+a SAS interface tymfile.
+.sp 5;.ce;THE NUMBER OF USERS IN THE LUD
+.sp 2;The SAS interface was designed on the premise that there
+will be more users in the LUD than ports defined on the host.
+If there are more addresses than users, some addresses will never
+be used.  (This does not pose a problem, if for example, you intend
+to add new users in the near future and place the addresses for them
+in the file early.)
+.sp 2;.ce;STORAGE REQUIREMENTS
+.sp 2;For storage allocation, the SAS interface has been designed on
+the premise that there can never be more logged on users than the
+number of configured DIDs.
+.sp;.in 0;Increasing the configuration by one DID increases the storage
+requirements by approximately 4.1k (kilobytes).  If you were to
+increase the number of DIDs by 50, the interface would require
+approximately 270k more storage.
+.pa
+.se sectname='Glossary'
+.chapter 1
+.ntoc 'Glossary'
+.fo left
+.sp;MACRO:
+.br;A macro is a programming tool that saves time and effort when
+a repetitive process is applied to differing data.  The process can
+be written once (as a macro) and the data supplied in calls to the
+macro.
+.sp;Macro calls can be thought of as command statements.  The macro
+name is the keyword and is followed by a series of parameter fields.
+In macro calls the parameters are enclosed in parentheses and sep-
+arated by commas.
+.sp;POOL:
+.br;An address pool is a list of defined IA and TA addresses which are
+used for host polling.  An address pool must be defined in the tymfile
+for each host.  The host will route data to and accept data from only
+valid addresses in its pool.
+.sp;A pool may contain one or several addresses.   A host may also have
+one or several address pools.
+.sp;RID,SID,DID:
+.br;The RID, SID and DID represent the P1024C 3-level addressing scheme.
+.sp;RID:
+.br;The RID is the first level of P1024C addressing and roughly cor-
+responds to an IA in IBM 2946 protocol.  The RID is the address which re-
+ceives and responds to polls.
+.sp;SID:
+.br;The SID is the second level of P1024C addressing.  The SID and the
+DID together make up the terminal device address.  This corresponds
+roughly to the TA in IBM 2946 protocol.
+.sp;DID:
+.br;The DID is the third level of P1024C addressing.
+.sp;Certain devices may be addressed at the SID level and have the base
+DID (70) as their address but the base DID is not valid in the current
+SAS interface.  DID Addresses in the SAS tymfile macros are often ex-
+pressed as a group or a range.
+.pa
+.nbroff
+.se sectname='Appendix - SAMPLE TYMFILE'
+.chapter 1
+.mtoc 'Appendix:Sample_Tymfile'
+.fo left
+.sp;This sample Tymfile has been designed to illustrate the structure
+and content of an SAS interface configuration.  Some macros, such as the
+POOLDEF and INIDEF, are accurate representations of those fields in a
+typical tymfile.  Others such as USER, RIDDEF, SIDDEF and DIDDEF are
+shown in an abbreviated version.  Because most Tymfiles contain a large
+number of User and Address definitions it would be redundant to place
+a realistic amount of them in this sample.  Therefore it has been
+annotated (in {} brackets) where appropriate, to indicate configurations
+which will be common to most SAS interfaces.
+.sp 3
+.br;    HSTDEF(1234)           {It is common for an
+.br;      LINDEF(2,UP)          interface configuration
+.br;        RIDDEF(21)          to have one or two hosts.}
+.br;          SIDDEF(51)
+.br;            DIDDEF(71)
+.br;            DIDDEF(72,78)
+.br;          ENDSID
+.br;          SIDDEF(52)
+.br;            DIDDEF(71,73)
+.br;          ENDSID
+.br;        ENDRID
+.br;        RIDDEF(22)           {It is possible to
+.br;          SIDDEF(51)          configure up to 47
+.br;            DIDDEF(71,77)     RIDs per line, but
+.br;          ENDSID              a maximum of 8-10 is
+.br;          SIDDEF(57)          the recommended number.
+.br;            DIDDEF(71,77)     A larger amount will
+.br;          ENDSID              result in response
+.br;        ENDRID                time degradation.
+.br;        RIDDEF(27)            The selected number
+.br;          SIDDEF(53)          should be based on
+.br;            DIDDEF(71,76)     traffic volume
+.br;          ENDSID              estimates.}
+.br;        ENDRID
+.br;      ENDLIN
+.sp;
+.br;    HSTDEF(321)
+.br;      LINDEF(1,DOWN)
+.br;        RIDDEF(22)
+.br;          SIDDEF(5A)
+.br;            DIDDEF(79)
+.br;          ENDSID
+.br;        ENDRID
+.br;      ENDLIN
+.pa
+.br;      LINDEF(4)
+.br;        RIDDEF(23)
+.br;          SIDDEF(5B)
+.br;            DIDDEF(7A)
+.br;          ENDSID
+.br;        ENDRID
+.br;      ENDLIN
+.sp
+.br;  HOSTPOOL(PL321,321)
+.sp;                               {Each host must have
+.br;  POOLDEF(POOL1,321)            at least one pool
+.br;     POOLADDR(1,22,5A,79)       defined, but it is
+.br;     POOLADDR(4,23,5B,7A,7A)    not uncommon for a
+.br;  ENDPOOL                       host to have two.}
+.sp;
+.br;  HOSTPOOL(PL123,1234)
+.br;
+.sp;  POOLDEF(POOL2,1234)
+.br;    POOLADDR(2,21,51,72,78)
+.br;  ENDPOOL
+.br;  POOLDEF(POOL3,1234)
+.br;    POOLADDR(2,21,51,73,74)
+.br;    POOLADDR(2,27,53,71,76)
+.br;  ENDPOOL
+.sp;
+.br;  INIDEF(MNU1)
+.br;    INISTR(first line of text)    {Tymfiles generally
+.br;    INISTR(second line of text)    contain no more than
+.br;    INISTR(third line of text)     two INIDEF macros.}
+.br;    INISTR(fourth line of text)
+.br;  INIEND
+.sp;
+.br;  INIDEF(MNU2)
+.br;    INISTR(first display line)
+.br;    INISTR(second display line)
+.br;    INISTR()
+.br;    INISTR(fourth display line)
+.br;  INIEND
+.br;
+.br;
+.sp;  {Generally 100-200 users will be defined per interface.}
+.sp;  USER(USRNAME1,SIV,500,MNU1,12345678,POOL2,POOL1)
+.br;  USER(USERNAME2,SIV,200,MNU2,98654321,POOL1)
+.br;  USER(USERNAME3,SIV,300,MNU2,10000000,POOL3)
+.sp
+.br;  EM
+.nbron
+  i 
