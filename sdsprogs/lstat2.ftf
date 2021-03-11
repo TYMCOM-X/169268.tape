@@ -1,0 +1,99 @@
+      INTEGER FILE(5),HEX(16),IDATE(4),IW(128),JDATE(4)
+
+      DATA HEX/1H0,1H1,1H2,1H3,1H4,1H5,1H6,1H7,1H8,1H9,
+     1         1HA,1HB,1HC,1HD,1HE,1HF/
+
+      CALL ONINT($999)
+
+      OPEN(26,'LSTAT2.DAT',OUTPUT,SYMBOLIC)
+
+C     GET START AND STOP TIME
+100   TYPE 410
+410   FORMAT(' ENTER START-DATE AND END-DATE (M D Y M D Y):',$)
+      ACCEPT 420,JMB,JDB,JYB,JME,JDE,JYE
+420   FORMAT(6I)
+      IF(JMB.EQ.0)GOTO 100
+      INCRDY=0
+      IF(JYB.NE.0)GOTO 430
+      JYB=DTE(I)
+      JYB=MOD(JYB,100)
+      GOTO 430
+
+430   IF(JME.NE.0)GOTO 435
+      JME=JMB
+      JDE=JDB
+435   IF(JYB.LT.100)JYB=JYB+1900
+      IF(JYE.EQ.0)JYE=JYB
+      IF(JYE.LT.100)JYE=JYE+1900
+      JTB=JULIAN(JMB,JDB,JYB,0,0,0)
+      JTE=JULIAN(JME,JDE,JYE,0,0,0)
+      JTR=JTB+3600
+
+C     OPEN NETWORK EVENT INPUT LOG
+C       FILE: NEVLGY.MDD        Y= LAST DIGIT OF YEAR
+C                               M= MONTH, 1-C
+C                               DD=DAY
+500   ENCODE(25,530,FILE)HEX(MOD(JYB,10)+1),HEX(JMB+1),HEX(JDB/10+1),
+     1                   HEX(MOD(JDB,10)+1)
+530   FORMAT('NEVLG',A1,'.',3A1,15X)
+      OPEN(21,FILE,RANDIN,BINARY,ERR=903)
+      IWX=0
+      IWP=0
+      IWI=1
+      IWS=SIZE(21)
+
+C     GET EVENT
+C       IF EVENT 0,     IW1 = 0,        TIME
+C                                       IW2 = 0, DONE
+C                                       IW2 = TIME ELSE
+C                       IW1 = 1,        SUP CHANGE
+C                                       IW2 = SUP NUMBER
+600   IWX=IWX+2
+      IF(IWX.LT.IWP)GOTO 630
+      IWI=IWI+IWP
+      IF(IWI.GT.IWS)GOTO 900
+      IWP=IWS-IWI+1
+      IF(IWP.GT.128)IWP=128
+      READ(21#IWI)(IW(I),I=1,IWP)
+      IWX=1
+630     IE1=LSH(IW(IWX),-32)
+        IE2=LSH(IW(IWX+1),-32)
+        IE3=IE1*16
+        IE4=IE3+IE2
+      IEVENT=LSH(IW(IWX),-32)*16+LSH(IW(IWX+1),-32)
+      IW1=IAND(IW(IWX),"37777777777)
+      IW2=IAND(IW(IWX+1),"37777777777)
+
+      IF(IEVENT.NE.0)GOTO 650
+      IF(IW1.NE.0)GOTO 600
+      IF(IW2.EQ.0)GOTO 900
+
+        GO TO 600
+
+C     FAN OUT FOR EVENTS 1-255
+650   IF(IEVENT.NE.19)GOTO 600
+
+C 19  LINK STATUS:      TYPE 0  LINK OVERLOADED
+C --  -----------            1  LINK ERROR RATE
+C                            2  LINE ATTACHED
+C                            3  NEW LINK
+C                            4  LINE DETACHED
+C                            5  LINK OUT
+C                            6  LINK OUT OF BANDWIDTH
+1900  INODE=NODECK(LSH(IW1,-16),IEVENT,IW1,IW2,$600)
+      ILINE=-1
+      IR=IAND(IW1,"177777)
+      INEIGH=IAND(IW2,"177777)
+        IDET=LSH(IW2,-24)
+        IPORT=LSH(IAND(IW2,"77600000),-16)
+      IF(IR.LT.2.OR.IR.GT.5) GO TO 600
+        WRITE(26,1910)IR,INODE,IPORT,INEIGH,IDET
+1910    FORMAT (I2,1X,O4,1X,O3,1X,O4,1X,O5)
+      GOTO 600
+
+900     CLOSE(21)
+        CLOSE(26)
+
+903     CONTINUE
+
+999     END
