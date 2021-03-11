@@ -1,0 +1,2670 @@
+                                                               January 20, 1988
+
+
+
+
+
+
+
+
+                       *    *  ***   ****    ****    ***  
+                       **   * *   *  *   *   *   *  *     
+                       * *  * *      *   *   ****   *  ** 
+                       *  * * *   *  *   *   *   *  *   * 
+                       *    *  ***   ****    ****    ***  
+
+               N O D E  C O D E  D E B U G G E R ' S  G U I D E 
+
+                  ******************************************* 
+                  >>F O R   I N T E R N A L  U S E  O N L Y<< 
+                  ******************************************* 
+
+                     TYMNET NETWORK TECHNOLOGY DEVELOPMENT
+                               January 20, 1988
+
+
+
+
+
+
+
+
+
+
+      ******************************************************************
+      **                  PROPRIETARY INFORMATION                     **
+      **                                                              **
+      **  MDC-TYMNET's   proprietary  rights  are  included  in  the  **
+      **  information disclosed herein.  The recipient, by receiving  **
+      **  this document,  agrees that neither this document nor  the  **
+      **  information disclosed herein nor any part thereof shall be  **
+      **  reproduced  or  transferred to other documents or used  or  **
+      **  disclosed  to  others for manufacturing or for  any  other  **
+      **  purpose  except as specifically authorized in  writing  by  **
+      **  MDC-TYMNET.                                                 **
+      ******************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide
+                                                               January 20, 1988
+
+
+
+
+
+
+
+                                TABLE OF CONTENTS
+
+   Section                                                                 Page
+
+
+
+   1.   Introduction                                                          1
+
+
+   2.   Using The Debugger                                                    2
+     2.1   Five History Rings                                                 2
+     2.2   Assembly Switches                                                  2
+     2.3   Enable/Disable Flags                                               3
+     2.4   Accessing the data                                                 3
+
+
+   3.   General Description of the Data Structures                            4
+     3.1   Port Logon/Logoff History Ring -- LNFHST                           4
+     3.2   Circuit Building/Zapping History Ring -- CBZHST                    5
+     3.3   Buffer Structure History Ring -- BFSHST                            5
+     3.4   Node Code - Supe History Ring -- LPGHST                            6
+     3.5   Line and Link Event History Ring -- LNKHST                         6
+
+
+   4.   Detailed Description of the Data Structures                           7
+     4.1   Port Logon/Logoff History Ring -- LNFHST                           8
+        4.1.1    LOGIN                                                        8
+
+     4.2   Circuit Building/Zapping History Ring -- CBZHST                    8
+        4.2.1    CRQHCR                                                       9
+        4.2.2    CRQ                                                          9
+        4.2.3    ZAPHRD                                                      10
+        4.2.4    ZAPX7                                                       11
+        4.2.5    NEEDLE                                                      11
+        4.2.6    ZAPV                                                        12
+        4.2.7    GLZPV                                                       12
+        4.2.8    GB3CR3                                                      13
+
+     4.3   Buffer Structure History Ring -- BFSHST                           13
+        4.3.1    GFCBUF                                                      13
+        4.3.2    RFCBUF                                                      14
+        4.3.3    CBCLR                                                       14
+        4.3.4    WRE                                                         15
+        4.3.5    CKZB                                                        15
+        4.3.6    REBZ                                                        16
+        4.3.7    BUFZAP                                                      16
+
+     4.4   Node Code - Supe History Ring -- LPGHST                           17
+
+        NCDBG.DOC             Node Code Debugger's Guide
+                                                               January 20, 1988
+
+
+        4.4.1    LEP                                                         17
+        4.4.2    LOGGER                                                      18
+        4.4.3    LEP0D                                                       19
+        4.4.4    LEP09                                                       19
+        4.4.5    LEPZLI                                                      20
+
+     4.5   Line and Link Event History Ring -- LNKHST                        20
+        4.5.1    RTDSNP                                                      20
+        4.5.2    RMKSNP                                                      21
+        4.5.3    LINK SNIP PACKET                                            21
+        4.5.4    TRANSMITTING WINDOW                                         21
+        4.5.5    RECEIVING WINDOW                                            22
+        4.5.6    BAD SIO RECORD                                              22
+
+
+   5.   Sample Tymfile                                                       23
+
+
+   6.   XRAY Commands                                                        24
+     6.1   Commands to read the history ring                                 24
+     6.2   Commands to enable/disable the data tracing                       25
+     6.3   Examples                                                          26
+
+
+   7.   Memory Utilization                                                   34
+
+
+                                APPENDICES
+                                ==========
+
+
+   I.   Newly Implemented Debugging Aids                                     36
+     I-1   Save CRYPTO Log Messages on Crash                                 36
+     I-2   Save Packets on Crash                                             36
+     I-3   Save Data When a Buffer is to be zapped                           36
+
+
+   II.  Other Debugging Aids Available in the Node Code                      37
+     II-1  Channel Trace                                                     37
+     II-2  ISIS Dispatcher Ring Trace                                        37
+     II-3  UPSW Trace                                                        37
+     II-4  Sync Line Diagnostic Trace                                        38
+     II-5  Link Snip Register Table                                          38
+     II-6  Some Special CRYPTO Log Messages                                  38
+
+
+   III. Debugging Aids Undocumented                                          39
+     III-1 DB.CPU                                                            39
+     III-2 DB.CLK                                                            39
+     III-3 DSPCNT                                                            39
+     III-4 DSPTRC                                                            39
+     III-5 DB.DEB                                                            39
+     III-6 Adding New Debug Routines                                         40
+
+        NCDBG.DOC             Node Code Debugger's Guide
+                                                               January 20, 1988
+
+
+        III-6.1  Calling a Debugging Routine                                 40
+        III-6.2  Debug Setup                                                 40
+        III-6.3  Debug Routine                                               41
+           III-6.3.1   Routine Name                                          41
+           III-6.3.2   Debugger Flag                                         41
+           III-6.3.3   Putting Routine Mark into history                     41
+           III-6.3.4   Debugger Data History                                 42
+           III-6.3.5   End of Debug Routine                                  42
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide
+        Introduction                                           January 20, 1988
+
+
+
+
+
+   1 -  Introduction
+
+
+             This is a guide for a newly implemented Node Code generalized
+        'on-line'   debugger.   Also,   some  additional   debugging  aids
+        available in the Node Code are shown in the appendices.
+
+             Because of the lack of debugging aids and relevant historical
+        data, and  the operational difficulties  in obtaining  dump files,
+        the bugs remaining in the  Node Code have been difficult  to find.
+        Therefore,  it  is necessary  for  the Node  Code  to  implement a
+        generalized  'on-line'  debugger for  data  capture  to facilitate
+        crash debugging without a memory dump.
+
+             This 'on-line' debugger retains relevant information which is
+        accessible through XRAY after a node restarts from a  crash.  This
+        data traces the sequence of events leading up to a crash  and also
+        reduces  our  dependence  on  memory  dumps  for  crash debugging.
+        Besides crash debugging, this 'on-line' debugger can also  be used
+        for general data tracing.
+
+             This  is  an 'on-line'  debugger  because it  can  be enabled
+        (turned-on) or disabled (turned-off)  via XRAY. The Node  Code can
+        be assembled  without the  debugging option  to save  memory.  The
+        Node Code can be assembled with this option and with  history data
+        tracing enabled.   Some CPU overhead  will be incurred.   The Node
+        Code can also be assembled with this option but with  history data
+        tracing  disabled to  avoid CPU  overhead.  Once  data  tracing is
+        enabled, the history data will be stored in the history ring.  All
+        the  history  data will  still  be retained  and  the  debugger is
+        automatically disabled on restart.   We can easily access  all the
+        history data through XRAY.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                      1
+        Using The Debugger                                     January 20, 1988
+
+
+
+
+
+   2 -  Using The Debugger
+
+
+
+
+   2.1  Five History Rings
+
+
+             The debugger  traces numerous  routines.  These  routines are
+        grouped  into  5  different  categories.   All  the  relevant data
+        captured from the  same category of  routines will be  stored into
+        the same ring.  So, there are a total of 5 rings in which to store
+        the data:
+
+           (1) Ring LNFHST (LogoN/logofF HiSTory)
+               to store all the data on port logon/logoff.  
+
+           (2) Ring CBZHST (Circuit Building/Zapping HiSTory)
+               to store all the data on circuit building/zapping.
+
+           (3) Ring BFSHST (BuFfer Structure HiSTory)
+               to store all the data on buffer structure.
+
+           (4) Ring LPGHST (LeP/loGger HiSTory)
+               to store all the data on Node Code - Supervisor
+               communications.
+
+           (5) Ring LNKHST (Line and liNK HiSTory)
+               to store all information of line and link event.
+
+
+             The data coming  from the same  category of routines  will be
+        stored into the same ring. Inside each ring, a common  mark 'BBBB'
+        followed by a specific  routine number is used to  distinguish the
+        data coming from each of the various routines.
+
+
+
+   2.2  Assembly Switches
+
+
+             Actually,  this  debugger contains  5  separate  debuggers to
+        trace 5 different  categories of events and  save the data  into 5
+        different history rings.  Each debugger has an individual assembly
+        switch.   When generating  the  image file,  you need  to  set the
+        assembly switch to  '1' in the TYMFILE  for each of  the different
+        categories of data capture you want.  The default value is  set to
+        'off'.  (Please refer to the Sample Tymfile section)
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                      2
+        Using The Debugger                                     January 20, 1988
+
+
+   2.3  Enable/Disable Flags
+
+
+             In addition  to the  assembly switch  for each  debugger, the
+        various routines also have enable/disable flags to turn on/off the
+        data tracing  for them.   Some routines share  a common  flag, but
+        some  have their  own  individual flags.   All  the enable/disable
+        flags are set  to 'off' when the  node code starts up  or restarts
+        from a crash.  To  use the debugger, besides generating  the image
+        file  with the  assembly  switches on,  you need  to  decide which
+        routines you want to trace, and then turn on  their enable/disable
+        flags.
+
+             You  can  enable/disable  the data  tracing  for  the various
+        routines by writing non-zero or zero into their flags through XRAY
+        'WS <symbol> <count>' command.  You can also use XRAY command 'TH'
+        to turn  on/off the  various combinations  of data  tracing.  'TH'
+        with argument 0 is to turn off all the history data tracing.  'TH'
+        with an argument of 1,2,3, or 4 is to turn on various combinations
+        of data tracing.  (Please refer to the XRAY Commands section)
+
+
+
+   2.4  Accessing the data
+
+
+             There are  two ways to  access the data  in the ring.  One is
+        using a specific XRAY command  'LG', 'CZ', 'BF', 'LL', or  'LK' to
+        display each ring.   The whole ring of  data will be  displayed in
+        order.  The earliest data will be displayed first, and  the latest
+        data will be displayed last.  Also, the data for each routine will
+        be displayed after  a three-letter interpretation of  the routine.
+        This  makes  it  easier  to identify  where  the  data  came from.
+        (Please refer to the XRAY Commands section)
+
+             The  second way  to access  the data  is using  the  XRAY 'RS
+        <symbol>  <count>' command  to read  the ring  itself.   This way,
+        <count> bytes of data will be displayed continuously.  You need to
+        look for the  ring pointer to find  out where the latest  data is.
+        The data coming  from the different  routines is separated  by the
+        mark 'BBBB' followed by a specific routine number.
+
+             When  using  the  debugger  for  general  data  tracing,  the
+        enable/disable flag should be turned off before you read  the data
+        so that the  data is not  updated or over-written.   However, when
+        using the debugger  for crash debugging, since  the enable/disable
+        flag has automatically been turned off on restart, this  data area
+        is static.
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                      3
+        General Description of the Data Structures             January 20, 1988
+
+
+
+
+
+   3 -  General Description of the Data Structures
+
+
+             The debugger uses rings (or circular buffers) to  store data.
+        Associated with each ring is  a ring pointer. It is the  number of
+        bytes from the  beginning of the ring  to the next  location where
+        the next data is to be stored.
+
+             Each ring  size is variable.   It is the  byte count  in hex.
+        The  default size  of each  ring is  800(H) bytes.   You  can also
+        define various ring sizes in the TYMFILE.
+
+             Each enable/disable flag is a halfword, and the default value
+        is set to 'off'.
+
+             The mark  to distinguish the  data coming from  the different
+        routines is 'BBBB' followed by a specific routine number.
+
+             In the  notation below,  an  Enable/Disable flag  followed by
+        '++' indicates a common flag shared by several routines.
+
+             An  Enable/Disable flag  followed  by (TH)  with  an argument
+        indicates this  flag can be  turned on by  XRAY command  'TH' with
+        this argument.
+
+             A routine name followed by (T2G2) indicates the  data tracing
+        is for Gateway only.
+
+
+
+   3.1  Port Logon/Logoff History Ring -- LNFHST
+
+
+           Ring Name       : LNFHST        (LogoN / logofF HiSTory)
+           Ring Pointer    : LNFPTR
+           Ring Size       : LNFSIZ        (Default size = 400 byte)
+           Xray Command    : LG            (LoG)
+           Assembly Switch : LNFDBG
+
+           Traces all the following routines:
+
+           Routine         7-letter        Routine         Enable/Disable
+           Name        interpretation      Number          Flag
+           =======     ===============     =======         ==============
+
+           LOGIN           LOGIN           2               LINDIS       (TH 2)
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                      4
+        General Description of the Data Structures             January 20, 1988
+
+
+   3.2  Circuit Building/Zapping History Ring -- CBZHST
+
+
+           Ring Name       : CBZHST        (Circuit Building/Zapping HiSTory)
+           Ring Pointer    : CBZPTR
+           Ring Size       : CBZSIZ        (Default size = 800 bytes)
+           Xray Command    : CZ            (Crq/Zapper)
+           Assembly Switch : CBZDBG
+
+           Traces all the following routines:
+
+           Routine         7-letter        Re         Enable/Disable
+           Name        interpretation      Number          Flag
+           =======     ===============     =======         ==============
+
+           CRQHCR          CRQHCR          8               CRQDIS ++    (TH 2)
+           CRQ             CRQ             9               CRQDIS ++    (TH 2)
+           ZAPHRD          ZAPHRD          A               ZAPDIS ++    (TH 1)
+           ZAPX7   (T2G2)  ZAPX7           1E              ZAPDIS ++    (TH 1)
+           ZAPV            ZAPV            B               ZAPDIS ++    (TH 1)
+           GB3CR3  (T2G2)  GB3CR3          1D              ZAPDIS ++    (TH 1)
+           GLZPV   (T2G2)  GLZPV           1C              ZAPDIS ++    (TH 1)
+
+
+
+
+   3.3  Buffer Structure History Ring -- BFSHST
+
+
+           Ring Name       : BFSHST        (BuFfer Structure HiSTory)
+           Ring Pointer    : BFSPTR
+           Ring Size       : BFSSIZ        (Default size = 800 bytes)
+           Xray Command    : BF            (BuFfer)
+           Assembly Switch : BFSDBG
+
+           Traces all the following routines:
+
+           Routine         7-letter        Routine         Enable/Disable
+           Name        interpretation      Number          Flag
+           =======     ===============     =======         ==============
+           GFCBUF          GFCBUF          C               GRFDIS ++    (TH 1)
+           RFCBUF          RFCBUF          D               GRFDIS ++    (TH 1)
+           CBCLR           CBCLR           F               CBCDIS       (TH 2)
+           WRE             WRE             10              WREDIS ++    (TH 3)
+           CKZB            CKZB            11              WREDIS ++    (TH 3)
+           REBZ            REBZ            12              WREDIS ++    (TH 3)
+           BUFZAP          BUFZAP          13              WREDIS ++    (TH 3)
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                      5
+        General Description of the Data Structures             January 20, 1988
+
+
+   3.4  Node Code - Supe History Ring -- LPGHST
+
+
+           Ring Name       : LPGHST        (LeP/loGger HiSTory)
+           Ring Pointer    : LPGPTR
+           Ring Size       : LPGSIZ        (Default size = 800 bytes)
+           Xray Command    : LL            (Lep/Logger)
+           Assembly Switch : LPGDBG
+
+           Traces all the following routines:
+
+           Routine         7-letter        Routine         Enable/Disable
+           Name        interpretation      Number          Flag
+           =======     ===============     =======         ==============
+
+           LEP             LEP             14              LPGDIS ++    (TH 1)
+           LOGGER          LOGGER          15              LPGDIS ++    (TH 1)
+           LEP0D           LEP0D           16              LPDDIS ++    (TH 2)
+           LEP09           EP099           17              LPDDIS ++    (TH 2)
+           LEPZLI          LEPZ            18              LPDDIS ++    (TH 2)
+
+
+
+
+   3.5  Line and Link Event History Ring -- LNKHST
+
+
+           Ring Name       : LNKHST        (Async Input/Output HiSTory)
+           Ring Pointer    : LNKPTR
+           Ring Size       : LNKSIZ        (Default size = 800 bytes)
+           Xray Command    : LK            (Line/linK Data)
+           Assembly Switch : LNKDBG
+
+           Traces all the following routines:
+
+           Routine         7-letter        Routine         Enable/Disable
+           Name        interpretation      Number          Flag
+           =======     ===============     =======         ==============
+           RTDSNP          RTDsnip         0               LKLDIS ++    (TH 1)
+           RMKSNP          RMKsnip         1               LKLDIS ++    (TH 1)
+           RMKSNP/RMKSNP   SnpPCKT         3               LKLDIS ++    (TH 1)
+           TRLINK          OUTWNDW         4               LKLDIS ++    (TH 1)
+           TRLINK          INWNDW          5               LKLDIS ++    (TH 1)
+           SIPKSV          BadSIOR         6               LKLDIS ++    (TH 1)
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                      6
+        Detailed Description of the Data Structures            January 20, 1988
+
+
+
+
+
+   4 -  Detailed Description of the Data Structures
+
+
+             In the notation below,  the data fields surrounded  by square
+        brackets are described as following:
+
+                   [  A  ]         indicates data A is a halfword.
+                   [  
+                      B  ]         indicates data B is a fullword.
+                   [ C/D ]         indicates data C is a byte, and data D 
+                                           is a byte, too.
+
+
+             An Enable/Disable  flag followed by  '++' indicates  a common
+        flag shared by several routines.
+
+             An  Enable/Disable flag  followed  by (TH)  with  an argument
+        indicates this  flag can be  turned on by  XRAY 'TH'  command with
+        this argument.
+
+             NOTE: When tracing one routine, the data fields are displayed
+        after a seven-letter interpretation of routine.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                      7
+        Detailed Description of the Data Structures            January 20, 1988
+
+
+
+
+
+   4.1  Port Logon/Logoff History Ring -- LNFHST
+
+
+           Ring Name       : LNFHST        (LogoN / logofF HiSTory)
+           Ring Pointer    : LNFPTR
+           Ring Size       : LNFSIZ        (Default size = 400 bytes)
+           Xray Command    : LG            (LoG)
+           Assembly Switch : LNFDBG
+
+           Traces all the following routines:
+
+
+
+
+   4.1.1  LOGIN
+
+           Routine Name            : LOGIN
+           7-letter interpretation : LIN
+           Routine Number          : 2
+           Enable/Disable Flag     : LINDIS    (TH 2)
+           Function of Routine     : Initiates the login process for a
+                                     dispatcher port.
+
+           Data fields             :
+                   [CHN]  ABS DIS chn
+                   [login buffer #] (DIS buf )
+                   [BF of login buffer]
+                   [BF of login buffer+4]
+                   [TVRBUF] (There is Supe. if TVRBUF > 0)
+                   [TID of the port] (R0, AUX circuit if TID = 0)
+
+
+
+
+   4.2  Circuit Building/Zapping History Ring -- CBZHST
+
+
+           Ring Name       : CBZHST        (Circuit Building/Zapping HiSTory)
+           Ring Pointer    : CBZPTR
+           Ring Size       : CBZSIZ        (Default size = 800 bytes)
+           Xray Command    : CZ            (Crq/Zapper)
+           Assembly Switch : CBZDBG
+
+           Traces all the following routines:
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                      8
+        Detailed Description of the Data Structures            January 20, 1988
+
+
+   4.2.1  CRQHCR
+
+           Routine Name            : CRQHCR
+           7-letter interpretation : CRH
+           Routine Number          : 8
+           Enable/Disable Flag     : CRQDIS ++    (TH 2)
+           Function of Routine     : Called from LEP and RTD to build the
+                                     first half circuit.
+
+           Data fields             :
+                   [
+                    caller] (R9)
+                   [original buffer #] (entry R2)
+                   [BF of original buffer] (after circuit is built)
+                   [BF of complementary buffer] (after circuit is built)
+
+
+
+
+   4.2.2  CRQ
+
+           Routine Name            : CRQ
+           7-letter interpretation : CRQ
+           Routine Number          : 9
+           Enable/Disable Flag     : CRQDIS ++    (TH 2)
+           Function of Routine     : Completes the 'second half' of the
+                                     circuit-building process.
+
+           Data fields             :
+                   [Needle buffer #] (R2)
+                   [BF of needle buffer] (after circuit is built)
+                   [BF of needle buffer+4] (after circuit is built)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                      9
+        Detailed Description of the Data Structures            January 20, 1988
+
+
+
+
+
+   4.2.3  ZAPHRD
+
+           Routine Name            : ZAPHRD
+           7-letter interpretation : ZPH
+           Routine Number          : A
+           Enable/Disable Flag     : ZAPDIS ++    (TH 1)
+           Function of Routine     : Zaps the first half of a circuit,
+                                     and if the other half is dead, returns 
+                                     the buffer (R2) to the free list.
+
+           Data fields             :
+                   [
+                    caller] (R9)
+                   [original buffer #] (entry R2)
+                   [BF of original buffer] (before the circuit is zapped)
+                   [BF of comp. buffer] (before the circuit is zapped)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     10
+        Detailed Description of the Data Structures            January 20, 1988
+
+
+
+
+
+   4.2.4  ZAPX7
+
+           Routine Name            : ZAPX7  (Gateway only)
+           7-letter interpretation : ZAPX7
+           Routine Number          : 1E
+           Enable/Disable Flag     : ZAPDIS ++    (TH 1)
+           Function of Routine     : Final part of ZAPHRD
+
+           Data fields             :
+                   [BF of orig buffer] (before the circuit is zapped)
+
+
+
+
+
+
+
+
+   4.2.5  NEEDLE
+
+           Routine Name            : CRQ  (only if NDREAD eq 1)
+           7-letter interpretation : NEEDLE
+           Routine Number          : 7
+           Enable/Disable Flag     : CRQDIS ++    (TH 2)
+           Function of Routine     : Copies all Needles processed by CRQ
+
+           Data fields             :
+                   [needle]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     11
+        Detailed Description of the Data Structures            January 20, 1988
+
+
+
+
+
+   4.2.6  ZAPV
+
+           Routine Name            : ZAPV
+           7-letter interpretation : ZPV
+           Routine Number          : B
+           Enable/Disable Flag     : ZAPDIS ++    (TH 1)
+           Function of Routine     : Zaps the second half of a circuit.
+
+           Data fields             :
+                   [
+                    caller] (R9)
+                   [original buffer #] (entry R2)
+                   [BF of original buffer] (before the circuit is zapped)
+                   [BF of comp. buffer] (before the circuit is zapped)
+
+
+
+
+
+
+
+
+
+   4.2.7  GLZPV
+
+           Routine Name            : GLZPV  (Gateway only)
+           7-letter interpretation : GLZPV
+           Routine Number          : 1C
+           Enable/Disable Flag     : ZAPDIS ++    (TH 1)
+           Function of Routine     : Similar to ZAPV for Gateway
+
+           Data fields             :
+                   [
+                    caller] (R9)
+                   [BF of orig buffer] (before the circuit is zapped)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     12
+        Detailed Description of the Data Structures            January 20, 1988
+
+
+   4.2.8  GB3CR3
+
+           Routine Name            : GB3CR3 (Gateway only)
+           7-letter interpretation : GB3CR3
+           Routine Number          : 1E
+           Enable/Disable Flag     : ZAPDIS ++    (TH 1)
+           Function of Routine     : Handlers Zappers when in ISIS login mode
+
+           Data fields             :
+                   [BF of orig buffer] (before the circuit is zapped)
+
+
+
+
+
+
+
+
+   4.3  Buffer Structure History Ring -- BFSHST
+
+
+           Ring Name       : BFSHST        (BuFfer Structure HiSTory)
+           Ring Pointer    : BFSPTR
+           Ring Size       : BFSSIZ        (Default size = 800 bytes)
+           Xray Command    : BF            (BuFfer)
+           Assembly Switch : BFSDBG
+
+           Traces all the following routines:
+
+
+
+   4.3.1  GFCBUF
+
+           Routine Name            : GFCBUF
+           7-letter interpretation : GFC
+           Routine Number          : C
+           Enable/Disable Flag     : GRFDIS ++    (TH 1)
+           Function of Routine     : Gets a free buffer number. 
+
+           Data fields             :
+                   [
+                    caller] (R8)
+                   [buffer #] (free buffer #)
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     13
+        Detailed Description of the Data Structures            January 20, 1988
+
+
+   4.3.2  RFCBUF
+
+           Routine Name            : RFCBUF
+           7-letter interpretation : RFC
+           Routine Number          : D
+           Enable/Disable Flag     : GRFDIS ++    (TH 1)
+           Function of Routine     : Returns a buffer pair to free list.
+
+           Data fields             :
+                   [
+                    caller] (R8)
+                   [buffer #] (low order half of pair - even buffer #)
+                   [BF of buffer #] (BF of even buffer #)
+                   [BF of complementary buffer #] (BF of odd buffer #)
+
+
+
+
+
+   4.3.3  CBCLR
+
+           Routine Name            : CBCLR
+           7-letter interpretation : CBC
+           Routine Number          : F
+           Enable/Disable Flag     : CBCDIS    (TH 2)
+           Function of Routine     : Clears a buffer.
+
+           Data fields             :
+                   [
+                    caller] (R8)
+                   [original buffer #] (entry R2)
+                   [BF of original buffer] (before the buffer is cleared)
+                   [BF of comp. buffer] (before the buffer is cleared)
+                   [BCT of original buffer] (before the buffer is cleared)
+                   [old FREELT] (before the buffer is cleared)
+                   [new FREELT] (after the buffer is cleared)      
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     14
+        Detailed Description of the Data Structures            January 20, 1988
+
+
+
+
+
+   4.3.4  WRE
+
+           Routine Name            : WRE
+           7-letter interpretation : WRE
+           Routine Number          : 10
+           Enable/Disable Flag     : WREDIS ++    (TH 3)
+           Function of Routine     : Called to link the reserve tank into 
+                                     the free bufflet list when free
+                                     bufflet list was empty.
+
+           Data fields             :
+                   [
+                    caller] (R0)
+                   [old FREELT] (before linking the reserve tank)
+                   [old REBL] (before linking the reserve tank)
+                   [new FREELT] (after linking the reserve tank)
+                   [new REBL] (after linking the reserve tank)
+
+
+
+
+
+   4.3.5  CKZB
+
+           Routine Name            : CKZB
+           7-letter interpretation : CKZ
+           Routine Number          : 11
+           Enable/Disable Flag     : WREDIS ++    (TH 3)
+           Function of Routine     : Refills the bufferlet reserve
+                                     tank.  Highest priority process 
+                                     in the node code.
+
+           Data fields             :
+                   [new REBL] (after refilling the reserve tank)
+                   [new FREELT] (after refilling the reserve tank)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     15
+        Detailed Description of the Data Structures            January 20, 1988
+
+
+
+
+
+   4.3.6  REBZ
+
+           Routine Name            : REBZ
+           7-letter interpretation : RBZ
+           Routine Number          : 12
+           Enable/Disable Flag     : WREDIS ++    (TH 3)
+           Function of Routine     : Finds the biggest buffer and calls
+                                     BUFZAP to zap it, and returns to 
+                                     CKZB to try again to refill bufferlet 
+                                     reserve tank.
+
+           Data fields             :
+                   [buffer #] (R2, the zapped buffer #)
+                   [new FREELT] (after the buffer is zapped)
+
+
+
+
+
+   4.3.7  BUFZAP
+
+           Routine Name            : BUFZAP
+           7-letter interpretation : BFZ
+           Routine Number          : 13
+           Enable/Disable Flag     : WREDIS ++    (TH 3)
+           Function of Routine     : Zaps the buffer specified by R2.
+
+           Data fields             :
+                   [
+                    caller] (R0)
+                   [buffer #] (R2, the buffer to be zapped)
+                   [the buffer count of the buffer] (R4, get from CBCCT)
+                   [new FREELT] (after the buffer is cleared)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     16
+        Detailed Description of the Data Structures            January 20, 1988
+
+
+   4.4  Node Code - Supe History Ring -- LPGHST
+
+
+           Ring Name       : LPGHST        (LeP/loGger HiSTory)
+           Ring Pointer    : LPGPTR
+           Ring Size       : LPGSIZ        (Default size = 800 bytes)
+           Xray Command    : LL            (Lep/Logger)
+           Assembly Switch : LPGDBG
+
+           Traces all the following routines:
+
+
+
+
+   4.4.1  LEP
+
+           Routine Name            : LEP
+           7-letter interpretation : LEP
+           Routine Number          : 14
+           Enable/Disable Flag     : LPGDIS    (TH 1)
+           Function of Routine     : Processes all the supervisor --
+                                     node code messages, which comes 
+                                     from or goes to the command circuit.
+
+           Data fields             :
+                   [leading 0] 0 - leading 0 in normal case.
+                               3 - zapper comes from the command channel.
+                   if got zapper from command channel, data field end 
+                   here.
+                   [data] (in variable length, all the data coming from
+                           the supe after the node #.  It contains escapes)
+                      .
+                      .
+                      .
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     17
+        Detailed Description of the Data Structures            January 20, 1988
+
+
+
+
+
+   4.4.2  LOGGER
+
+           Routine Name            : LOGGER
+           7-letter interpretation : LGG
+           Routine Number          : 15
+           Enable/Disable Flag     : LPGDIS ++    (TH 1)
+           Function of Routine     : Processes ports in login mode to send
+                                     all the login messages to supervisor.
+
+           Data fields             :
+                   [buffer #] (Dispatcher buffer)
+                   [BF of buffer] (login status)
+                   [BF of complementary buffer] (ABS login channel #)
+                   [case #] 0 - BF of buffer is not 10 - 17. (logmin -
+                                logmax)
+                            1 - No Supervisor or just taken over.
+                            2 - TID still in buffer, and timeout expired.
+                            3 - Both of the node code and the supe are
+                                ready. Login buffer emptied while we
+                                were transfering data to the supe
+                                buffer but the terminator has not been
+                                detected yet.
+                            4 - Has detected the terminator - <CR>, Escape, 
+                                or ';'.  The message will be transfered
+                                to the supe. Mark BF for TID sent and
+                                waiting for response from supe. (ie, Node
+                                Code and Supe are not ready)
+                           5 - Forwarding a NCRM to supe
+                           6 - Converting a Zapper to NCRM zap MO
+                   [data] (in variable length, all the data going to the supe
+                           after the message type. It does'nt contain 
+                           escapes)
+                      .
+                      .
+                      .
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     18
+        Detailed Description of the Data Structures            January 20, 1988
+
+
+
+
+
+   4.4.3  LEP0D
+
+           Routine Name            : LEP0D
+           7-letter interpretation : LPD
+           Routine Number          : 16
+           Enable/Disable Flag     : LPDDIS ++    (TH 2)
+           Function of Routine     : Supe to Node Code message
+                                     type D -- message for ports in 
+                                     login mode.
+
+           Data fields             :
+                   [CHN] (ABS login chn # of Dispatcher for ISIS)
+                   [buffer #] (DIS buffer )
+                   [BF of login buffer] (login status)
+                   [BF of complementary buffer] (ABS login chn # = CHN)
+                   [flag + message sub type / ] (one byte only)
+
+
+
+
+
+   4.4.4  LEP09
+
+           Routine Name            : LEP09
+           7-letter interpretation : LP9
+           Routine Number          : 17
+           Enable/Disable Flag     : LPDDIS ++    (TH 2)
+           Function of Routine     : Supe to Node Code message 
+                                     type 9 -- Needle.
+
+           Data fields             :
+                   [CHN] (ABS login chn for Dispatcher port)
+                   [buffer #] (Dispatcher buffer)
+                   [BF of login buffer] (login status)
+                   [BF of complementary buffer] (ABS login chn # = CHN)
+                   [to network buffer #] (R7)
+                   [case #] 1 - got early zapper
+                            2 - normal case
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     19
+        Detailed Description of the Data Structures            January 20, 1988
+
+
+   4.4.5  LEPZLI
+
+           Routine Name            : LEPZLI
+           7-letter interpretation : LPZ
+           Routine Number          : 18
+           Enable/Disable Flag     : LPDDIS ++    (TH 2)
+           Function of Routine     : Supe to Node Code message,
+                                     type D - login zapper confirmation.
+
+           Data fields             :
+                   [CHN] (ABS login chn of Dispatcher port for ISIS)
+                   [buffer #] (Dispatcher buffer for ISIS)
+                   [BF of login buffer] (login status)
+                   [BF of complementary buffer] (ABS login chn # = CHN)
+
+
+
+
+
+
+
+
+
+
+   4.5  Line and Link Event History Ring -- LNKHST
+
+
+           Ring Name       : LNKHST        (Line/LiNK HiSTory)
+           Ring Pointer    : LNKPTR
+           Ring Size       : LNKSIZ        (Default size = 800 bytes)
+           Xray Command    : LK            (Line/linK)
+           Assembly Switch : LNKDBG
+
+           Traces all the following routines:
+
+
+
+
+   4.5.1  RTDSNP
+
+           Routine Name            : RTDSNP
+           7-letter interpretation : RTDsnip
+           Routine Number          : 0
+           Enable/Disable Flag     : LKLDIS    (TH 1)
+           Function of Routine     : Starts teardown after a link snip
+                                     by RTEAR.
+
+           Data fields             :
+                   [Registers R0-R15]
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     20
+        Detailed Description of the Data Structures            January 20, 1988
+
+
+   4.5.2  RMKSNP
+
+           Routine Name            : RMKSNP
+           7-letter interpretation : RMKsnip
+           Routine Number          : 1
+           Enable/Disable Flag     : LKLDIS    (TH 1)
+           Function of Routine     : Starts teardown after a link snip
+                                     by RMAKE.
+
+           Data fields             :
+                   [Registers R0-R15]
+
+
+
+
+   4.5.3  LINK SNIP PACKET
+
+           Routine Name            : RMKSNP/RTDSNP
+           7-letter interpretation : SnpPCKT
+           Routine Number          : 3
+           Enable/Disable Flag     : LKLDIS    (TH 1)
+           Function of Routine     : The packet RMAKE or RTEAR was
+                                     processing when it snipped the link.
+
+           Data fields             :
+                   [Tymnet-II packet]
+
+
+
+
+   4.5.4  TRANSMITTING WINDOW
+
+           Routine Name            : TRLINK
+           7-letter interpretation : OUTWNDW
+           Routine Number          : 4
+           Enable/Disable Flag     : LKLDIS    (TH 1)
+           Function of Routine     : All packets in the transmitting
+                                     window on a link being traced by the
+                                     XRAY TL are saved when that link goes
+                                     out.
+
+           Data fields             :
+                   [All Tymnet-II packets
+                    in the OSEC (transmitting) window]
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     21
+        Detailed Description of the Data Structures            January 20, 1988
+
+
+   4.5.5  RECEIVING WINDOW
+
+           Routine Name            : TRLINK
+           7-letter interpretation : INWNDW
+           Routine Number          : 5
+           Enable/Disable Flag     : LKLDIS    (TH 1)
+           Function of Routine     : All packets in the receiving
+                                     window on a link being traced by the
+                                     XRAY TL are saved when that link goes
+                                     out.
+
+           Data fields             :
+                   [All Tymnet-II packets
+                    in the ISEC (incoming) window]
+
+
+
+
+   4.5.6  BAD SIO RECORD
+
+           Routine Name            : SIPKSV
+           7-letter interpretation : BadSIOR
+           Routine Number          : 6
+           Enable/Disable Flag     : LKLDIS    (TH 1)
+           Function of Routine     : The first PKSVLH (default 20)
+                                     bytes of a bad SIO record are saved.
+                                     The desired line number must be stored
+                                     in PSLNUM for the record to be saved.
+
+           Data fields             :
+                   [Line number]
+                   [calling routine] (R9)
+                   [First twenty bytes of the bad
+                    SIO record]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     22
+        Sample Tymfile                                         January 20, 1988
+
+
+
+
+
+   5 -  Sample Tymfile
+
+
+             Here is  an example to  show you how  to define  the assembly
+        switch  in  the  TYMFILE to  configure  each  debugger.   (each of
+        different categories of data tracing)
+
+           LNFDBG  EQ      1       :debugger for port logon/logoff history
+                                   :data tracing.  ring LNFHST.
+           CBZDBG  EQ      1       :debugger for circuit building/zapping
+                                   :history data tracing.  ring CBZHST
+           BFSDBG  EQ      1       :debugger for buffer structure history
+                                   :data tracing.  ring BFSHST
+           LPGDBG  EQ      1       :debugger for node code - supe
+                                   :communications data tracing.  ring LPGHST
+           LNKDBG  EQ      1       :debugger for line and link event
+                                   :tracing.  ring LNKHST
+
+
+             The default  size of each  ring is 800  bytes.  You  can also
+        define various ring sizes in the Tymfile.  Here is an example.
+
+           LNFSIZ  EQ      1000    :ring size of ring LNFHST
+           CBZSIZ  EQ      500     :ring size of ring CBZHST
+           BFSSIZ  EQ      900     :ring size of ring BFSHST
+           LPGSIZ  EQ      500     :ring size of ring LPGHST
+           LNKSIZ  EQ      1000    :ring size of ring LNKHST
+
+
+           ===>  NOTE :  If the ring size is greater than 1000,
+           the XRAY command 'LG', 'CZ', 'BF', 'LL', or 'LK' will 
+           not work properly.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     23
+        XRAY Commands                                          January 20, 1988
+
+
+
+
+
+   6 -  XRAY Commands
+
+
+
+
+   6.1  Commands to read the history ring
+
+
+             The following XRAY super  privileged commands can be  used to
+        read each of the history ring :
+
+           LG - This command displays port logon/logoff history 
+                ring LNFHST.
+
+           CZ - This command displays circuit building/zapping 
+                history ring CBZHST.
+
+           BF - This command displays buffer structure history 
+                ring BFSHST.
+
+           LL - This command displays Node Code - Supe communications
+                history ring LPGHST.
+
+           LK - This command displays link and link event history
+                ring LNKHST.
+
+
+
+           ===>  NOTE :  If the ring size is greater than 1000,
+           the XRAY command 'LG', 'CZ', 'BF', 'LL', or 'LK' will 
+           not work properly.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     24
+        XRAY Commands                                          January 20, 1988
+
+
+   6.2  Commands to enable/disable the data tracing
+
+
+             The XRAY  super privileged command  'TH' with an  argument of
+        0,1,2, 3, or 4 can be used to disable/enable  various combinations
+        of data tracing.
+
+
+           TH 0 - This command disables all the history data tracing.
+
+
+
+           TH 1 - This command writes non-zero value into the
+                  following flags to enable the data tracing for
+                  the following routines when the specified assembly 
+                  switch is turned on in the specified configuration.
+
+                                                    ASSEMBLY ENABLE/DISABLE
+               ROUTINES             CONFIGURATION   SWITCH      FLAG
+               --------             --------------  -------- --------------
+
+               ZAPHRD, ZAPV           ALL           CBZDBG      ZAPDIS
+               ZAPX7, GB3CR3          GATEWAY
+               GLZPV                  GATEWAY
+
+               GFCBUF, RFCBUF         ALL           BFSDBG      GRFDIS
+
+               LEP, LOGGER            ALL           LPGDBG      LPGDIS
+
+               TRLINK, SIPKSV         ALL           LNKDBG      LKLDIS
+               RTDSNP, RMKSNP
+                   
+
+           TH 2 - This command writes non-zero value into the
+                  above-mentioned and the following flags to enable
+                  the data tracing for the above-mentioned routines
+                  (in TH 1) and the following routines when the
+                  specified assembly switch is turned on in the
+                  specified configuration.
+
+                                                    ASSEMBLY ENABLE/DISABLE
+               ROUTINES             CONFIGURATION   SWITCH      FLAG
+               --------             --------------  -------- --------------
+
+               LOGIN                  ALL           LNFDBG      LINDIS
+
+               CRQHCR, CRQ            ALL           CBZDBG      CRQDIS
+
+               CBCLR                  ALL           BFSDBG      CBCDIS
+
+               LEP0D, LEP09, LEPZLI   ALL           LPGDBG      LPDDIS
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     25
+        XRAY Commands                                          January 20, 1988
+
+
+
+
+
+
+           TH 3 - This command writes non-zero value into the
+                  above-mentioned and the following flags to enable
+                  the data tracing for the above-mentioned routines
+                  (in TH 1 and TH 2) and the following routines when
+                  the specifie assembly switch is turned on in the 
+                  specified configuration.
+
+                                                    ASSEMBLY ENABLE/DISABLE
+               ROUTINES             CONFIGURATION   SWITCH      FLAG
+               --------             --------------  -------- --------------
+
+               WRE, CKZB, REBZ, 
+               BUFZAP                 ALL           BFSDBG      WREDIS
+
+
+
+
+   6.3  Examples
+
+
+             Here are  some examples  to show XRAY  outputs to  you.  Note
+        that some garbage data will  be left over in the beginning  of the
+        display sometimes.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     26
+        XRAY Commands                                          January 20, 1988
+
+
+
+   **X-RAY** NODE: 2165  HOST: 0637  TIME: 286:18:52:48
+   >CZ
+
+         000B  0001  4C96  0368  0738  
+   ZPV   0001  4C96  02E0  0739  
+   ZPV   0001  4C96  0328  073A  
+   ZPV   0001  4C96  02F0  073B  
+   ZPV   0001  4C96  0210  073C  
+   ZPV   0001  4C96  0170  073D  
+   ZPV   0001  4C96  01DC  0830  
+   ZPV   0001  4C96  0120  07CF  
+   CRH   0001  40E2  0120  03B2  
+   ZPV   0001  4C96  0218  073E  
+   ZPV   0001  4C96  02A8  073F  
+   ZPV   0001  4C96  0118  0720  
+   ZPV   0001  4C96  0140  0721  
+   ZPV   0001  4C96  0128  0722  
+   ZPV   0001  4C96  0350  0723  
+   ZPV   0001  4C96  01A0  0724  
+   ZPV   0001  4C96  01E0  0725  
+   ZPV   0001  4C96  0168  0726  
+   ZPV   0001  4C96  0310  072A  
+   ZPV   0001  4C96  02F8  072B  
+   ZPV   0001  4C96  0308  072C  
+   CRQ   0130  0530  03B3  
+   CRH   0001  40E2  0148  0330  
+   CRQ   0148  07CE  0330  
+   CRH   0001  40E2  0320  0331  
+   CRQ   0320  0730  0331  
+   ZPH   0001  7870  0204  0047  001E  
+   CRH   0001  DB58  0200  0047  
+   CRH   0001  70E8  0338  01F7  
+   CRQ   0338  0031  01F7  
+   CRH   0001  40E2  0398  0332  
+   CRQ   0398  0731  0332  
+   CRH   0001  40E2  0200  0333  
+   CRQ   0200  0732  0333  
+   CRQ   0168  0630  084E  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     27
+        XRAY Commands                                          January 20, 1988
+
+
+
+   **X-RAY** NODE: 2165  HOST: 0637  TIME: 286:18:53:00
+   >BF
+
+
+   CBC   0001  5FB6  11A4  018B  
+   CBC   0001  8AE8  0360  0015  01E5  0001  018B  008A  
+   RFC   0001  8C44  0360  
+   CBC   0001  5F42  0360  0001  018B  008A  
+   CBC   0001  5F68  0364  008A  
+   RFC   0001  8CF4  0388  06C8  
+   GFC   0001  40D0  0388  
+   CBC   0001  8AE8  038C  06CE  0930  0001  0286  01B9  
+   CBC   0001  8B46  0388  0930  06CE  0286  
+   RFC   0001  8CF4  0388  06CE  
+   CBC   0001  5F42  0388  06CE  01B9  
+   GFC   0001  40D0  0388  
+   GFC   0001  40D0  0360  
+   RFC   0001  8CF4  0388  06CC  
+   CBC   0001  5F42  0388  06CC  01E7  
+   GFC   0001  40D0  0388  
+   CBC   0001  93A0  0388  0030  0332  01E5  
+   EMT   0001  BE6A  0170  0933  004E  
+   EMT   0001  BE74  0174  004E  0933  
+   RFC   0001  8CF4  0170  0933  
+   CBC   0001  5F68  0174  0933  00E3  
+   EMT   0001  BE6A  FFFF  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     28
+        XRAY Commands                                          January 20, 1988
+
+
+
+   **X-RAY** NODE: 2165  HOST: 0637  TIME: 286:19:01:00
+   >LL
+
+   LGG   0160  0015  01D0  0002  
+   LGG   01A8  0010  01CF  0004  0F00  8981  CF82  7DD3  
+         8492  EEE9  EBEB  E98D  
+   LEP   8475  0D0D  0001  CFBB  
+   LPD   01CF  01A8  0010  01CF  000D  
+   LGG   01A8  0010  01CF  0004  0E00  8A81  CFE3  E8E1  
+         EEE7  E5A0  EDE5  8D01  
+   LEP   8475  0983  1944  6580  B004  7500  01CF  0418  
+         042E  04AD  8068  D380  827D  4E49  4B4B  498D  
+   LP9   01A8  0010  01CF  0180  0002  
+   LGG   0160  0015  01CE  0002  
+   LGG   0180  0010  01CD  0004  0F00  8981  CD82  7DD3  
+         8492  EEE9  EBEB  E98D  
+   LEP   8475  0D0D  0001  CD09  
+   LPD   01CD  0180  0010  01CD  000D  
+   LGG   0180  0010  01CD  0004  0E00  8A81  CDE3  E8E1  
+         EEE7  E5A0  EDE5  8D10  
+   LEP   8475  0983  1944  D680  B004  7500  01CD  0418  
+         042E  04AD  8068  D380  827D  4E49  4B4B  498D  
+   LP9   0180  0010  01CD  01A8  0002  
+   LEP   0003  
+   LEP   0475  0881  
+   LEP   8475  0F88  17FC  D913  
+   LGG   01C0  0015  01CC  0002  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     29
+        XRAY Commands                                          January 20, 1988
+
+
+
+   **X-RAY** NODE: 2165  HOST: 0637  TIME: 286:19:10:02
+   >AD
+
+         0034  
+   GTC   0001  B652  02BC  0047  02CF  0034  
+   GTC   0001  B652  02BC  0047  02CF  001B  
+   GTC   0001  B652  02BC  0047  02CF  0026  
+   GTC   0001  B652  02BC  0047  02CF  0061  
+   GTC   0001  B652  02BC  0047  02CF  0031  
+   GTC   0001  B652  02BC  0047  02CF  003E  
+   PTC   0001  B4B0  02B8  02CF  0047  0054  
+   PTC   0001  B4B0  02B8  02CF  0047  0048  
+   GTC   0001  B652  02BC  0047  02CF  0054  
+   PTC   0001  B4B0  02B8  02CF  0047  0020  
+   GTC   0001  B652  02BC  0047  02CF  0048  
+   GTC   0001  B652  02BC  0047  02CF  0020  
+   PTC   0001  B4B0  02B8  02CF  0047  0030  
+   PTC   0001  B4B0  02B8  02CF  0047  000D  
+   GTC   0001  B652  01BC  004E  02CE  00EC  
+   GTC   0001  B652  01BC  004E  02CE  00EC  
+   GTC   0001  B652  01BC  004E  02CE  00F9  
+   GTC   0001  B652  01BC  004E  02CE  00EE  
+   GTC   0001  B652  01BC  004E  02CE  003E  
+   PTS   0001  B170  0228  034F  0043  0F03  0005  0003  
+         0500  
+   GTC   0001  B652  02BC  0047  02CF  0034  
+   GTC   0001  B652  022C  0043  034F  0005  000F  
+   PTS   0001  B310  0228  034F  0043  09B6  0004  E4B6  
+         0400  
+   GTC   0001  B652  02BC  0047  02CF  005E  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     30
+        XRAY Commands                                          January 20, 1988
+
+
+
+   **X-RAY** NODE: 2165  HOST: 0637  TIME: 286:19:20:25
+
+   >RS LINDIS,2
+
+   02028:  0001  
+
+   >RS LNFPTR,2
+
+   41B58:  01BE  
+
+   >RS LNFHST,100
+
+   41B5A:  BBBB  0004  0073  01B8  0000  0000  0014  01F3  
+   41B6A:  02FC  026E  004E  000E  0000  02F8  02FC  026E  
+   41B7A:  004E  000E  0312  888D  8D8A  E8EF  F3F4  A0EE  
+   41B8A:  EFF4  A0E1  F6E1  E9EC  E1E2  ECE5  A0F4  E8F2  
+   41B9A:  F5A0  EEE5  F48D  8A03  12C9  BBBB  0004  0073  
+   41BAA:  01B8  0000  0000  0014  01F3  02FC  026E  004E  
+   41BBA:  000E  0000  02F8  02FC  026E  004E  000E  8D8D  
+   41BCA:  8AE8  EFF3  F4A0  EEEF  F4A0  E1F6  E1E9  ECE1  
+   41BDA:  E2EC  E5A0  F4E8  F2F5  A0EE  E5F4  8D8A  0312  
+   41BEA:  C914  BBBB  0003  000E  02F8  026E  004E  0308  
+   41BFA:  020E  01B8  0014  01F3  9284  E1ED  EFF2  F2E9  
+   41C0A:  F3F3  BAB5  B7B0  8DCE  BBBB  0004  0073  01B8  
+   41C1A:  0000  0000  0014  01F3  02FC  026E  004E  000E  
+   41C2A:  0000  02F8  02FC  026E  004E  000E  0312  0D07  
+   41C3A:  BBBB  0003  000E  02F8  026E  004E  0308  020E  
+   41C4A:  01B8  0014  01F3  E1EC  ECF9  EEA0  F38D  BBBB  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     31
+        XRAY Commands                                          January 20, 1988
+
+
+
+   **X-RAY** NODE: 2165  HOST: 0637  TIME: 286:19:30:02
+   >RS CBZPTR,2
+
+   4235A:  026C  
+
+   >RS CBZHST,100
+
+   4235C:  0008  0001  40E2  0310  0000  032A  BBBB  0009  
+   4236C:  0310  07CD  032A  BBBB  0008  0001  40E2  0378  
+   4237C:  0000  03B4  BBBB  0009  0378  0728  03B4  BBBB  
+   4238C:  0008  0001  70E8  01B8  0000  01F5  BBBB  0009  
+   4239C:  01B8  02CE  01F5  BBBB  000A  0001  DE40  01B8  
+   423AC:  02CE  004E  BBBB  000B  0001  4C96  01B8  02CE  
+   423BC:  0000  BBBB  0008  0001  DB58  01B8  0000  004E  
+   423CC:  BBBB  0008  0001  70E8  02F8  0000  01F4  BBBB  
+   423DC:  0009  02F8  02CE  01F4  BBBB  000A  0001  3D56  
+   423EC:  02FC  004E  02CE  BBBB  0008  0001  DB58  02F8  
+   423FC:  0000  004E  BBBB  0008  0001  70E8  0318  0000  
+   4240C:  01F3  BBBB  0009  0318  02CE  01F3  BBBB  000A  
+   4241C:  0001  3D56  031C  004E  02CE  BBBB  0008  0001  
+   4242C:  DB58  0318  0000  004E  BBBB  000A  0001  3D56  
+   4243C:  02B0  0030  0321  BBBB  000B  0001  9484  02B0  
+   4244C:  0030  0000  BBBB  0008  0001  40E2  02B0  0000  
+
+
+   **X-RAY** NODE: 2165  HOST: 0637  TIME: 286:20:03:01
+   >RS BFSPTR,2
+
+   42B5C:  03E0  
+
+   >RS BFSHST,100
+
+   42B5E:  084F  0001  00EE  01D6  BBBB  000F  0001  4006  
+   42B6E:  02A0  0030  084F  0001  0241  0266  BBBB  000F  
+   42B7E:  0001  4006  02A0  0030  084F  0001  01AE  01E0  
+   42B8E:  BBBB  000F  0001  4006  02A0  0030  084F  0001  
+   42B9E:  0186  00DE  BBBB  000F  0001  4006  02A0  0030  
+   42BAE:  084F  0001  0139  00A5  BBBB  000F  0001  4006  
+   42BBE:  02A0  0030  084F  0001  020A  0239  BBBB  000F  
+   42BCE:  0001  4006  02A0  0030  084F  0001  01AD  0170  
+   42BDE:  BBBB  000F  0001  4006  02A0  0030  084F  0001  
+   42BEE:  0131  01E8  BBBB  000F  0001  4006  02A0  0030  
+   42BFE:  084F  0001  0081  0170  BBBB  000F  0001  4006  
+   42C0E:  02A0  0030  084F  0001  01B9  014D  BBBB  000F  
+   42C1E:  0001  4006  02A0  0030  084F  0001  01E0  00B3  
+   42C2E:  BBBB  000F  0001  4006  02A0  0030  084F  0001  
+   42C3E:  0122  014F  BBBB  000F  0001  4006  02A0  0030  
+   42C4E:  084F  0001  009B  008E  BBBB  000F  0001  4006  
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     32
+        XRAY Commands                                          January 20, 1988
+
+
+
+   **X-RAY** NODE: 2165  HOST: 0637  TIME: 286:40:01:20
+   >RS LPGPTR,2
+
+   4335E:  04FA  
+
+   >RS LPGHST,100
+
+   43360:  0015  0188  0010  01F7  0004  0E00  8B81  F7ED  
+   43370:  E1E7  E9E3  A0E3  EFE4  E58D  BBBB  0014  0000  
+   43380:  8475  0980  0000  70F3  BF80  B004  7500  01F7  
+   43390:  827D  D380  827D  5449  4944  4556  8D80  BBBB  
+   433A0:  0017  0188  0010  01F7  0338  0002  BBBB  0015  
+   433B0:  0178  0010  01F6  0004  0F00  9081  F682  7DD3  
+   433C0:  9284  F3E8  F5E9  E8F7  E5E9  BAB5  B7B1  BB02  
+   433D0:  BBBB  0014  0000  8475  0D08  0001  F675  BBBB  
+   433E0:  0016  01F6  0178  0010  01F6  0008  BBBB  0015  
+   433F0:  0178  0010  01F6  0004  0E00  8881  F6E8  F3F5  
+   43400:  E2F5  E2E2  8D10  BBBB  0014  0000  8475  0D96  
+   43410:  0001  F684  BBBB  0016  01F6  0178  0010  01F6  
+   43420:  8016  BBBB  0014  0000  8475  0DC9  0001  F620  
+   43430:  BBBB  0016  01F6  0178  0014  01F6  C009  BBBB  
+   43440:  0015  0178  0010  01F6  0004  0E00  8F81  F692  
+   43450:  84F3  E8F5  E9E8  F7E5  E9BA  B5B7  B0BB  BBBB  
+
+
+   **X-RAY** NODE: 2165  HOST: 0637  TIME: 286:35:20:00
+   >RS LNKPTR,2
+
+   43B60:  0232  
+
+   >RS LNKHST,100
+
+   43B62:  0034  BBBB  0019  0001  B652  02BC  0047  02CF  
+   43B72:  0035  BBBB  0019  0001  B652  02BC  0047  02CF  
+   43B82:  003A  BBBB  0019  0001  B652  02BC  0047  02CF  
+   43B92:  0034  BBBB  0019  0001  B652  02BC  0047  02CF  
+   43BA2:  0035  BBBB  0019  0001  B652  02BC  0047  02CF  
+   43BB2:  001B  BBBB  0019  0001  B652  02BC  0047  02CF  
+   43BC2:  0026  BBBB  0019  0001  B652  02BC  0047  02CF  
+   43BD2:  0061  BBBB  0019  0001  B652  02BC  0047  02CF  
+   43BE2:  0031  BBBB  0019  0001  B652  02BC  0047  02CF  
+   43BF2:  0033  BBBB  0019  0001  B652  02BC  0047  02CF  
+   43C02:  0079  BBBB  0019  0001  B652  02BC  0047  02CF  
+   43C12:  0043  BBBB  0019  0001  B652  02BC  0047  02CF  
+   43C22:  003E  BBBB  001A  0001  B4B0  02B8  02CF  0047  
+   43C32:  0054  BBBB  001A  0001  B4B0  02B8  02CF  0047  
+   43C42:  0048  BBBB  001A  0001  B4B0  02B8  02CF  0047  
+   43C52:  0020  BBBB  0019  0001  B652  02BC  0047  02CF  
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     33
+        Memory Utilization                                     January 20, 1988
+
+
+
+
+
+   7 -  Memory Utilization
+
+
+             Here is a table  to show memory utilization  when  generating
+        code with various combinations of debugger.
+
+   ADDITIONAL     SOLOCS               DEBUGGER     DEBUGGER
+   MEMORY (K)    WITH MPVC      ISIS   RING SIZE     SWITCH
+   ----------  --------------   ----  ---------  ---------------
+
+     7d               1            X       800        LNFDBG
+
+     5d               1            X       800        LNKDBG
+
+    19d               1            X       800        LNFDBG,CBZDBG,
+                                                      BFSDBG,LPGDBG,
+                                                      LNKDBG
+
+    12d               X            1       800        CBZDBG,BFSDBG,
+                                                      LPGDBG
+
+
+   * NOTE :  '1' means yes.  'X' means no.
+           
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     34
+                                                               January 20, 1988
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                   *   ****  ****  ***** *   * ****  ***** *   *
+                  * *  *   * *   * *     **  * *   *   *    * * 
+                 ***** ****  ****  ****  * * * *   *   *     *  
+                 *   * *     *     *     *  ** *   *   *    * * 
+                 *   * *     *     ***** *   * ****  ***** *   *
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     35
+        Newly Implemented Debugging Aids                       January 20, 1988
+
+
+
+
+
+
+                  APPENDIX I.   Newly Implemented Debugging Aids
+
+
+
+             The following data is saved at crash time for debugging.
+
+
+
+   I-1  Save CRYPTO Log Messages on Crash
+
+
+             The whole CRYPTO  Log message table  will be saved  at symbol
+        CRYPSV when a node crashes.   The size of the table for  Node Code
+        is 1000(H) bytes, but for Gateway is 400(H) bytes.
+
+
+
+   I-2  Save Packets on Crash
+
+
+             All the  packets (physical records)  will be saved  at symbol
+        PCKTSV when a node crashes  and if the switch PKTSAV is  turned on
+        in the  TYMFILE.  The  size is  PCKTSZ bytes.  (PCKTSZ =  NRECDS *
+        RECBSZ)
+
+
+
+   I-3  Save Data When a Buffer is to be zapped
+
+
+             When a  buffer is to  be zapped because  of BCT  (byte count)
+        overflow, some data of this buffer will be saved at symbol BUFZSV.
+        The size is BUFZSZ bytes.  (The default size is 400(H) bytes)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     36
+        Other Debugging Aids Available in the Node Code        January 20, 1988
+
+
+
+
+
+
+          APPENDIX II.   Other Debugging Aids Available in the Node Code
+
+
+
+
+
+   II-1  Channel Trace
+
+
+             XRAY commands TD, TE,  and TA display the current  trace ring
+        TRRING.
+
+             When a node crashes, the  whole ring will be copied  into the
+        saved ring TRRSAV.   The ring pointer  is TRIXSV.  Both  of TRRSAV
+        and  TRIXSV  are in  XRAY  symbol table.   Currently  there  is no
+        special  XRAY  command to  display  the saved  channel  trace ring
+        TRRSAV.
+
+
+
+   II-2  ISIS Dispatcher Ring Trace
+
+
+             XRAY command  DR displays the  current dispatcher  input ring
+        DIRING, and output ring DORING.
+
+             When a node crashes, the whole input ring will be copied into
+        the saved ring  DIRSAV, and the whole  output ring will  be copied
+        into the saved  ring DORSAV.  XRAY  command DS displays  the saved
+        dispatcher input ring DIRSAV, and output ring DORSAV.
+
+
+
+   II-3  UPSW Trace
+
+
+             The  debugging  aids  for UPSW  trace  can  be  configured by
+        defining 'OPTION(UTRC)' or 'DB.TRC EQ 1' in the TYMFILE.
+
+             XRAY command 'TR' dumps the current UPSW trace ring  from the
+        beginning.  The ring is TRCTAB, and the ring pointer is TRNDEX.
+
+             When a node crashes, the whole UPSW trace ring will be copied
+        into the saved UPSW trace ring TRSTAB. XRAY command  'TT' displays
+        the  last n  jump address  stored in  table TRSTAB,  and  the most
+        recent jump address will be the last entry.
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     37
+        Other Debugging Aids Available in the Node Code        January 20, 1988
+
+
+   II-4  Sync Line Diagnostic Trace
+
+
+             We  can  either define  'OPTION(TLEV)'  or 'DB.TSN  EQ  1' to
+        enable  sync line  diagnostic trace.   We can  also  either define
+        'OPTION(NTLV)' or  'DB.SYN EQ 1'  to disable sync  line diagnostic
+        trace.
+
+
+
+   II-5  Link Snip Register Table
+
+
+             When a link  is snipped, all the  registers will be  saved in
+        table LKSNRG  (16 full  words).  How many  times this  problem has
+        happened will be kept in LSNIPS ( 1 half word).
+
+
+
+   II-6  Some Special CRYPTO Log Messages
+
+
+             We can either define  'CRYDIS EQ 1' or 'OPTION(CIRC)'  in the
+        TYMFILE to display CRYPTO Log messages for all the  circuits built
+        and zapped. (CRYPTO - 0B, and 0C)
+
+             We can define 'ASYDIS EQ 1' in the TYMFILE to  display CRYPTO
+        Log  messages  for  each async  port  logon/logoff  status change.
+        (CRYPTO - 3F, 3C, and 3D)
+
+             Both of CRYDIS and ASYDIS are in XRAY symbol table.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     38
+        Debugging Aids Undocumented                            January 20, 1988
+
+
+
+
+
+
+                   APPENDIX III.   Debugging Aids Undocumented
+
+
+
+
+
+   III-1  DB.CPU
+
+
+             EXEC loop  dispatch-dismiss trace.
+
+
+
+   III-2  DB.CLK
+
+
+             EXEC loop time trace, used with DB.CPU only.
+
+
+
+   III-3  DSPCNT
+
+
+             Track dispatch counts, used with DB.CPU only.
+
+
+
+   III-4  DSPTRC
+
+
+             Dispatch address and count trace, used with DB.CPU only.
+
+
+
+   III-5  DB.DEB
+
+
+             OPTION(DBUG),  Node Code laboratory debugging option.
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     39
+        Debugging Aids Undocumented                            January 20, 1988
+
+
+   III-6  Adding New Debug Routines
+
+
+             The Debugger  becomes useless if  new debugging  routines are
+        not added along with new Node Code features.  The  debugger should
+        be  used  for testing  new  features since  that  allows  a smooth
+        transition  between test  code and  the completed  code  by simply
+        turning off the debugger.  Also, any code which must be written to
+        track down a problem  is almost by definition of  sufficient value
+        to be in the debugger.
+
+
+
+   III-6.1  Calling a Debugging Routine
+
+             A convention  is defined in  the actual calling  of debugging
+        routines in order to minimize confusion and conflicts, and prevent
+        errors and wasteful duplication.  The convention also puts  all of
+        the original  registers in a  known memory location.   This allows
+        the  debugging  routine  to  easily  find  whatever  registers for
+        storage into the history ring.
+
+             The convention is as follows:
+          IF       LNKDBG :or whichever of the five debugger rings
+           STM     R0,REGST,,          :save all regs to prevent problems
+           JAL     R14,debug.routine,, :links on R14
+           GL      debug.routine       :routine is defined in later module
+           LM      R0,REGST,,          :restore all registers.
+          EI       :LNKDBG (or whichever of the five debugger rings)
+
+             Note:  REGST  is for use  with BACKGROUND routines.   RGST is
+        for use with FOREGROUND routines.  Currently all debugger routines
+        that are present are for background routines.
+
+
+
+   III-6.2  Debug Setup
+
+             Within  the  DEBUG  module  several  steps  have  to  be done
+        correctly.  First is  to decide of a  string of 7  characters that
+        you think is appropiate and understandable which is to  be printed
+        out when displaying  data from this  routine.  Then add  this onto
+        the INTERP table in debug.   The position in the table  gives your
+        routine's Number.
+
+             Second, you must locate the routine among other  routines for
+        this debugger  to make  sure this routine  is only  assembled when
+        that particular debugger is turned on.
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     40
+        Debugging Aids Undocumented                            January 20, 1988
+
+
+   III-6.3  Debug Routine
+
+             The  current  structure  of debug  routines  and  some useful
+        subroutines broken down into its constituent parts.
+
+
+
+   III-6.3.1  Routine Name
+
+             The name convention is to  use the first three letters  to be
+        from the calling routine, followed by 'DB', and then a number.
+
+             Example, CBCLR (clear buffer) has debuggers called CBCDB1 and
+        CBCDB2.
+
+
+
+   III-6.3.2  Debugger Flag
+
+             Each of  the five debuggers  has a flag  which is set  to one
+        when the  debugger is  to save information.   Thus, the  first two
+        lines of any debug routine should be:
+           LHL     R3,LNKDIS       :or whichever flag
+           JER     R14             :do not store any information
+
+             The convention is to use  R3 since R3 will be  overwritten in
+        the following step.
+
+
+
+   III-6.3.3  Putting Routine Mark into history
+
+             The display  routine must  know when a  new entry  begins and
+        which routine name to output.  The steps to writing this  into the
+        history is to:
+   1)  Load the correct History ring Pointer (halfword) into R6.  Throughout
+       the rest of the debug routine and its subroutines R6 will remain the
+       new ring pointer.  Please notice that it is not stored by any
+       subroutines and must be stored at the end of the debug routine.
+
+   2)  Then load the Routine Number corresponding to the display string
+       into R3.
+
+   3)  The JAL on R15 to the MARK routine for the current subdebugger.
+       All MARK routines begin with 'MRK' followed by three letters for
+       subdebugger.
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     41
+        Debugging Aids Undocumented                            January 20, 1988
+
+
+   III-6.3.4  Debugger Data History
+
+             Now the  debugger routine is  ready to save  any data  to the
+        history ring.  Each debugger has several useful subroutines.
+   1) INxxxB where xxx represents the subdebugger.  This increments
+      the ring pointer (R6) by 1 and checks for wrap for this
+      subdebugger ring.  This routine links on R4 and only changes R6.
+
+   2) INxxxH where xxx represents the subdebugger.  This increments
+      the ring pointer (R6) by 2 and checks for wrap for this
+      subdebugger ring.  This routine links on R4 and only changes R6.
+
+   3) EVNxxx where xx represent the subdebugger.  This makes sure the
+      ring pointer (R6) for this subdebugger is on a halfword boundary.
+      This routine links on R4 and only changes R6.
+
+   4) Many subdebuggers have a routine BUFxxx which stores the buffer
+      number in R2 and its BF.
+
+             Typical  usage  of  these  routines  is  to:  STH Rx,xxHST,R6
+        followed by JAL R4,INxxxH.
+
+             Note: Since these are  rings with an emphasis  on simplicity,
+        it is not safe to simply  use ST to store a word since  the second
+        halfword can  overwrite the end  of the ring  when it  should have
+        wrapped.
+
+
+
+   III-6.3.5  End of Debug Routine
+
+             The end of the debug should simply save R6 (the ring pointer)
+        and return on R14.  Remember that the caller takes care  of saving
+        all of the registers.
+
+             Also, PLEASE  make sure  to document what  the data  is being
+        stored by the new debugger routine within the debug document.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        NCDBG.DOC             Node Code Debugger's Guide                     42
+ ]@
+f9
