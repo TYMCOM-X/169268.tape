@@ -1,0 +1,4357 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                         General External Design
+
+                         MBASE SUPERVISOR SUPPORT GED
+
+
+                         Dick Rawson
+
+
+                         Revision 1.0  DRAFT  16:24
+                         August 27, 1987
+
+
+                         Document Number:  mbs_ged
+
+
+
+                         TYMNET
+                         Network Technology Development
+
+                         MCDONNELL DOUGLAS NETWORK SYSTEMS COMPANY
+
+
+
+
+
+
+
+
+
+
+
+
+
+   +------------------------------------------------------------------------+
+   |                         PROPRIETARY INFORMATION                        |
+   |                                                                        |
+   | MDC-TYMNET's proprietary rights are included in the information        |
+   | disclosed herein.  The recipient, by receiving this document, agrees   |
+   | that neither this document nor the information disclosed herein nor    |
+   | any part thereof shall be reproduced or transferred to other documents |
+   | or used or disclosed to others for manufacturing or for any other      |
+   | purpose except as specifically authorized in writing by MDC-TYMNET.    |
+   +------------------------------------------------------------------------+
+
+
+
+
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      1.0 PROJECT OBJECTIVES
+
+
+
+      This project is to provide "virtual disk and tape support on TSI," as
+      McDonnell Douglas Computer Systems Company (MD CSC) requested in PIR
+      2343.  The TSI card (TYMNET Spirit Interface) has no provision for
+      attaching to disks or tapes.  The Supervisor needs disk access; NETVAL,
+      RAM, and ELF need both disk and tape access.  The project is to provide
+      the appearance of disks and tapes being present, so that those programs
+      can run, while actually using storage devices on a Spirit system.
+      Spirit disk will simulate ISIS disk; Spirit disk or tape will simulate
+      ISIS tape.
+
+
+
+      1.1 PRIMARY REQUIREMENTS
+
+      These are the primary issues that determine whether the Supervisor
+      Support Project satisfies the needs of MD CSC.
+
+      1.  Support the TYMNET Supervisor so that it runs on TSI.
+
+      2.  Support NETVAL, RAM, and ELF so that they run on TSI (lower
+          priority).
+
+      3.  Allow the Supervisor access to virtual disk storage, without seeing
+          any differences, other than speed, from its usual execution
+          environment on a TYMNET Engine.
+
+      4.  Spirit files need not be in a format compatible to Spirit
+          applications.
+
+      The above products block disk and tape I/O as follows:
+
+      1.  The Supervisor default disk record lengths are 1K bytes for error
+          log and accounting, and 2K bytes for the MUD.  MUD disk blocking
+          (logical record length) can be configured in the TYM file to be 512,
+          1024, or 2048 bytes; blocking for error log and accounting is not
+          configurable.
+
+      2.  NETVAL disk blocks are 2K bytes, and tape blocks are 16K bytes.
+          These values are fixed, and cannot be configured in the TYM file.
+
+      3.  RAM disk blocks may usually be variable up to the entire session
+          pool, allowing up to 12 ISIS 65K byte segments (786432 bytes) in one
+          disk write, but it is uncertain if this is really usual practice.
+          The minimum disk write is one disk sector, which is 256 bytes.  Most
+          customers block 10 session records (of 240 bytes) per tape write,
+          meaning 2400 bytes/block; the minimum disk write is 240 bytes.  Disk
+          and tape blocking are configurable in the TYM file.
+
+      4.  ELF uses 1024 bytes per disk block, and 1028 bytes per tape block.
+          These values are fixed, and cannot be configured in the TYM file.
+
+
+      Project Objectives                                                     1
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      1.2 SECONDARY PROJECT REQUIREMENTS.
+
+      These are requirements beyond the specific functionality requested,
+      which were added for various reasons.
+
+      1.  Minimize ISIS complexity.
+
+          The ISIS Kernel is a relatively difficult development environment,
+          and errors there have relatively higher impact, compared to the slot
+          environment (where MBase is implemented).
+
+      2.  Keep the service protocols general enough that much of this project
+          could be reused to provide "remote" ISIS disk and tape storage in
+          other situations.
+
+          To get the most value out of the effort spent developing the MBase
+          Supervisor Support, we should identify modules whose design, or even
+          implementation, could be reused to satisfy other needs.
+
+      3.  Provide the disk and tape access in a way that is resilient to
+          communication errors.
+
+          TYMNET generally provides a very low residual error rate (rate of
+          unsignaled errors), and a higher rate of circuit drops and buffer
+          zaps.  MBase is designed to behave this way, too.  The Supervisor is
+          a critical resource in its network.  It will be more reliably
+          available if its disk access is not seriously disrupted by MBase
+          buffer zaps.
+
+          In an attempt to use these protocols over ordinary TYMNET circuits,
+          they will be much more successful if they support recovering from
+          signalled network errors.
+
+
+
+      1.3 DERIVED REQUIREMENTS.
+
+      These requirements appear to follow from the preceding primary and
+      secondary requirements.
+
+      1.  Permit ISIS application slots that use the ISIS Kernel SHARE SVC to
+          perform disk and tape reading and writing to execute correctly and
+          adequately fast on TSI.  It is unnecessary to support SVC 0E (Disk
+          I/O, Block), or SVC 0F (Disk I/O, Sector).  It is also unnecessary
+          to support use of disk as ISRS save areas, which corresponds to the
+          "system device" attribute of an ISIS Global Unit.
+
+      2.  Support at least 10 disk reads per second; ISIS and MBase
+          contributions to delay are not an issue, unless the delay prevents
+          achieving the required throughput.
+
+      3.  Single-threaded access to the I/O server provides adequate response
+          times for Supervisor login processing.
+
+
+
+      Project Objectives                                                     2
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      4.  Explicitly separate network, transport, and server protocols.
+
+      5.  Eliminate from the server protocol all control and status details
+          that are peculiar to specific disk and tape devices and controllers.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      Project Objectives                                                     3
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      2.0 OVERVIEW OF THE DESIGN
+
+
+
+      Figure 1 shows the players in a system which has an actual disk storage
+      device.  The Supervisor requests a disk read via a certain ISIS SVC
+      system call.  The ISIS Kernel responds by causing the disk to read or
+      write data.  Later, it tells the Supervisor that the operation
+      completed: the disk data is available in the Supervisor's buffer.
+
+                                      ___________ ___________
+                                     |           |           |
+                                     |  I S I S  |           |
+                      ______         |           |           |
+                     |      +--------+           |           |
+                     |  ......................   |           |
+                     |  :   +--------+       :   |___________|
+                     | DISK |        |       :   |           |
+                     |  OR  |        |       :   |  SUPER-   |
+                     | TAPE |        |       :   |     VISOR |
+                     |      |        |       :   |           |
+                     |______|        |       :..I/O SVC      |
+                                     |           |___________|
+                                     |           |           |
+                                     |           |   NODE    |
+                                     |___________|___________|
+
+                   Figure 1.  Conventional ISIS Support of Disk I/O
+
+
+      Figure 2 shows the players in this design, in a TSI/MBase configuration
+      which has disk only at the Spirit host.  Again, the Supervisor requests
+      a disk read via SVC.  On TSI, the ISIS Kernel responds by formatting a
+      request message asking Spirit to read the disk, and sends it to MBase.
+      MBase sends it to the Server application on Spirit.  The Server
+      simulates reading a physical disk (ISIS logical unit) by reading from a
+      disk file.  Then the Server formats a reply message containing the data
+      it read; it sends the message to MBase, who sends it to ISIS.  When ISIS
+      receives the message, ISIS moves the data into the Supervisor's buffer,
+      and tells the Supervisor that the operation completed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      Overview of the Design                                                 4
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+                      _____________________         ___________ ___________
+                     |                     |       |           |           |
+                     |  SPIRIT OPER SYS    +-------+  I S I S  |   MBASE   |
+         ______      |                 ......SCOM.........S-BUS DRVR...    |
+        |      +-----+                 :   +-------+           |      :    |
+        |  ........ I/O ...            :   | S-BUS |       ..JCOM.....:    |
+        |  :   +-----+    :            :   |       |       :   |___________|
+        | DISK |     |    :            :   |       |       :   |           |
+        |      |     |--- : ---------- : --|       |       :   |  SUPER-   |
+        | FILE |     |    :            :   |       |       :   |     VISOR |
+        |      |     |    :............:   |       |       :   |           |
+        |______|     |                     |       |       :..I/O SVC      |
+                     |                     |       |           |___________|
+                     |  DISK/TAPE SERVER   |       |           |           |
+                     |    APPLICATION      |       |           |   NODE    |
+                     |_____________________|       |___________|___________|
+
+               Figure 2.  Spirit/TSI Tape and Disk Server for ISIS I/O
+
+
+      To provide the Disk and Tape Service, there are four protocols arranged
+      in three layers.
+
+      -   Network Layer:  simple communication between MBase and ISIS, and
+          between MBase and Spirit:
+
+          -   JCOM - connection between ISIS and MBase
+          -   SCOM - connection between Spirit and MBase
+
+      -   Transport Layer:  end-to-end communication between ISIS Kernel and
+          Spirit
+
+      -   Application Layer:  remote disk and tape I/O services
+
+
+
+      2.1 NETWORK LAYER
+
+      Two protocols at the Network Layer provide communications to carry
+      messages from the upper layers.  MBase interfaces to ISIS using JCOM, a
+      simple protocol using a pair of rings that resemble Dispatcher rings.
+      MBase interfaces to Spirit using SCOM, which is just a name for a
+      specific virtual circuit that behaves like any other MBase virtual
+      circuit, in most respects.
+
+
+      2.1.1 JCOM INTERFACE BETWEEN MBASE AND ISIS
+
+      ISIS and MBase communicate over an ICOM-like connection, called JCOM.
+      (ICOM is the ISIS Communicator.)  There is only a single connection,
+      regardless of the number of ISIS Disk and Tape LUs being supported.  It
+      is ICOM-like, and not the facility recently known as ICOM, in the sense
+      that a general set of ICOM facilities is not available; the JCOM
+      implementation is dedicated to this Disk and Tape Service.  But the
+
+
+      Overview of the Design                                                 5
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      design could appear in the future as part of a true ICOM facility of
+      ISIS.
+
+
+      2.1.2 SCOM INTERFACE BETWEEN MBASE AND ISIS
+
+      MBase and Spirit communicate over a connection that resembles a
+      Permanent Virtual Circuit.  As Spirit sees it, the SCOM circuit is
+      established like any other incoming call.  Moreover it behaves like any
+      circuit behaves.  It just happens to specify a prearranged userid, and
+      it always arrives on the same MBase port.
+
+      MBase handles this circuit specially.  If the Disk and Tape Server is
+      configured, MBase builds the SCOM circuit on its own initiative, and
+      without any participation by the Supervisor.  The specific MBase port,
+      mentioned above, is reserved for this use.  ISIS is configured never to
+      assign the corresponding Dispatcher port, and MBase does not accept a
+      Dispatcher Needle message on it.
+
+      MBase simply assembles a Circuit Attach message specifying the reserved
+      userid and port, and delivers it to Spirit on Port 0.  The Circuit
+      Attach message is the same as an ISIS needle would have produced.  (Of
+      course, some fields contain dummy values.)
+
+      Spirit recognizes the prearranged userid, and connects the SCOM circuit
+      to the Transport Protocol interface of the Disk and Tape Server
+      application.  That userid is specified in the MBase TYM file; see the
+      chapter on configuration.
+
+      There is a single SCOM session, regardless how many Disk and Tape LUs
+      are in use.
+
+
+      2.1.3 MBASE SUPPORT OF THE NETWORK LAYER
+
+      When MBase receives a message via JCOM, it queues the message for Spirit
+      just as if it had received it from ISIS on SCOM's dispatcher port.  And
+      when MBase receives a message from Spirit on this port, it sends the
+      message to ISIS via JCOM.  MBase pays no attention to the contents of
+      Data messages.
+
+      The JCOM and SCOM protocols are separate from from the Transport
+      protocol and the Disk and Tape Service protocol.  This improves error
+      recovery.  It also makes it easier to reuse the component parts for
+      future developments.
+
+      When MBase resets initially or after a crash, it initializes its JCOM
+      connection with ISIS.  When JCOM is connected and Spirit has reported
+      itself answered, MBase initializes its SCOM connection with Spirit.
+
+      MBase may lose data queued for Spirit due to a buffer zap, and may lose
+      data in either direction due to an MBase Interface Reset.  In the first
+      case, MBase inserts a Black Ball into the SCOM queue (toward Spirit) in
+      place of bytes removed by a buffer zap.  This is standard MBase behavior
+
+
+      Overview of the Design                                                 6
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      for all Spirit circuits.
+
+      After an MBase Interface Reset, assuming MBase itself didn't actually
+      crash, MBase does not know whether data is lost, but presumes so, and
+      inserts a Black Ball into the JCOM queue (toward ISIS).  Spirit observes
+      Interface Reset clear the SCOM connection.  If instead MBase crashes,
+      ISIS sees the crash disconnect the JCOM interface.
+
+
+
+      2.2 TRANSPORT SERVICE
+
+      The Transport Service provides a transport connection between two
+      Transport Service users that is of better quality than the corresponding
+      network connection.  The improvements added by this implementation are:
+
+      -   The transport connection is end-to-end.
+
+      -   The transport connection survives data loss in the network
+          connection, and temporary interruptions in the network connection,
+          without involving either Transport Service user in recovery
+          procedures.
+
+      In the Supervisor Support project, the Transport Service users are
+      cooperating Disk and Tape Simulation modules in the ISIS Kernel and in
+      Spirit.  A transport connection carries Application (Disk and Tape
+      Service) messages.  The network connections are provided by JCOM and
+      SCOM, respectively.  The Transport protocol recovers from data loss due
+      to MBase buffer zaps, and from data loss and general confusion due to an
+      MBase crash or Interface Reset.
+
+      There is a only single Transport connection, regardless how many ISIS
+      Disk and Tape LUs are in use.
+
+
+
+      2.3 DISK AND TAPE SERVICE
+
+      ISIS uses the Disk and Tape Simulation protocol to request Spirit to
+      simulate reads from and writes to ISIS disks and tapes.  The messages
+      carry read requests, read responses with the resulting data, write
+      requests with the data to be written, and write responses.
+
+      ISIS also uses the protocol initially to confirm compatibility between
+      Logical Units in the ISIS configuration, and resources accessible to the
+      Spirit Disk and Tape Server.
+
+      After ISIS and Spirit initialize a Transport connection, they initialize
+      a Disk and Tape Service connection; thereafter, ISIS can make requests
+      for disk and tape I/O.  That is, reinitializing the Transport connection
+      signals that the Disk and Tape Service connection also needs
+      reinitialization.
+
+
+
+
+      Overview of the Design                                                 7
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      2.4 CONVENTION FOR RESULT CODES
+
+ The Transport and DTS protocols need to indicate details about errors or
+      exceptional events.  In both protocols, the codes are assigned according
+      to the following scheme.  (Other than this scheme, the two codes are not
+      coordinated.)
+
+      Result Code System
+
+      0x  We pretty much did what you asked.
+      1x  The request was ok, but world is unable to do what you want, or the
+          world just did something to you.
+      2x  The request is inconsistent with the specified configuration.
+      3x  The request asks for unsupported facilities.
+      4x  The request has an invalid combination of parameters, or the
+          parameters are invalid for the current protocol state.  (Invalid
+          means failure to follow the rules.)
+      5x  The request has an invalid format, or cannot be interpreted.
+          (Invalid means failure to follow the rules.)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      Overview of the Design                                                 8
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      3.0 NETWORK SERVICE SPECIFICATIONS
+
+
+
+      This chapter specifies two network layer service interfaces, JCOM and
+      SCOM.  As specified, each interface can send and receive most of the
+      things that can pass over a TYMNET virtual circuit.
+
+      The Transport Service uses only a small subset of these:
+
+      -   User data, in the form of ISIS Data messages over JCOM, and Spirit
+          Data message over SCOM.
+
+      -   Two network control signals, in the form of ISIS Black Ball and SIIX
+          messages over JCOM, and Spirit Black Ball and SIIX circuit signals
+          over SCOM.
+
+      In particular, MBase inserts a Black Ball into the SCOM queue toward
+      Spirit in place of bytes removed by a buffer zap.  MBase inserts a Black
+      Ball into the JCOM ring toward ISIS to indicate possible data loss due
+      to Interface Reset on the Spirit/MBase interface.  (MBase may instead
+      crash, which resets the JCOM interface instead of sending a Black Ball
+      on it.)
+
+      SIIX is used only for Global IIX Message number 5, Resynchronize
+      Interface Exchange, and this is sent end-to-end (between Transport
+      Entities).
+
+
+
+      3.1 ISIS JCOM SPECIFICATION
+
+      JCOM comprises a descriptor and a pair of rings in MBase, an SVC that
+      MBase issues to connect JCOM, and a TYM-file entry authorizing MBase to
+      use the SVC.
+
+
+      3.1.1 CONNECTING JCOM
+
+      MBase initializes the JCOM descriptor, and its RING descriptors, then
+      issues an ISIS SVC to connect JCOM to the ISIS Kernel's Disk/Tape
+      Simulator:
+
+              SVC     JCOM<48>,JCDES      : Connect JCOM rings
+
+      ISIS sets register R0 to indicate the resulting status:
+
+      0   JCOM connected, no surprises.
+      1   JCOM connected, a previous connection broken.
+      2   JCOM not connected, JCOM descriptor inaccessible.
+      3   JCOM not connected, a RING descriptor inaccessible.
+      4   JCOM not connected, JCOM or RING descriptor invalid.
+
+      Executing the JCOM SVC reinitializes ISIS use of the JCOM connection.
+
+
+      Network Service Specifications                                         9
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      ISIS locates and validates the JCOM descriptor and ring descriptors.  It
+      delivers an N-OPERATIONAL indication to its Transport Layer module.  And
+      it begins to examine the from-MBase ring from time to time, and delivers
+      whatever it finds there to the Transport Layer module.
+
+      If the descriptor was already in use, it is first disconnected, and then
+      it is reconnected as described.
+
+      ISIS disconnects JCOM if MBase crashes.  That means that ISIS stops
+      examining the from-MBase ring, and delivers an N-OUT_OF_ORDER indication
+      to its Transport Layer module.
+
+      The MBase TYM file contains an entry authorizing its slot to issue the
+      JCOM-connect SVC.  (See the chapter "ISIS and MBase Configuration
+      Declarations.") If MBase attempts to connect JCOM but is not authorized
+      to, ISIS returns an error indication, and MBase proceeds without further
+      attempts to use JCOM or SCOM.
+
+
+      3.1.2 JCOM DESCRIPTOR
+
+      The JCOM-connect SVC points to this descriptor.  It contains status
+      information for the connection, and pointers to the JCOM rings.  It is
+      in the address space of MBase, aligned on a 4-byte boundary, and has the
+      following format.
+
+              JCDES WS      0   : cause 4-byte alignment
+                    AC /JCOM/   : eye catcher
+              JSTAT HS      1   : JCOM status code.
+                    HS      1   : reserved.
+              PRIRP WS      1   : address of primary ring descriptor
+              SECRP WS      1   : address of secondary ring descriptor
+
+
+      JCOM is a protocol for communicating through shared memory, which means
+      that both MBase and ISIS see the same JCOM descriptor.  By convention,
+      the entity that owns the memory being shared is called the "primary
+      entity." In this case it is MBase.  ISIS is then the "secondary entity."
+      The purpose of this convention is determining how each entity finds its
+      input and output ring descriptors: they must make opposite choices for
+      communication to work.
+
+
+      3.1.3 JCOM RINGS
+
+      JCOM uses a pair of rings in the MBase slot's address space.  With one
+      exception, entries in each ring follow the format of the Dispatcher
+      ring, although neither ring is serviced by the Dispatcher.  That means
+      that everything is copied into a ring by ISIS, and copied out by MBase,
+      or vice versa.
+
+      Each message in the ring to MBase is either a data text string (types 01
+      through X'9D'), a SIIX command (type X'BF'), or a Ring-Wrap command
+      (type X'FF').  Each message in the other ring is either data, SIIX,
+
+
+      Network Service Specifications                                        10
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      Black Ball (type X'A4'), or Ring-Wrap (type X'FF').
+
+
+      RING DESCRIPTOR FORMAT
+
+      Each ring has the same format:  ring indexes followed by ring buffer.
+      The ring begins on a 4-byte boundary.
+
+              RGDES WS      0   : cause 4-byte alignment
+                    AC /RING/   : eye catcher
+              RGBL  HC length   : length of ring's buffer area
+              RGFIL HS      1   : next fill index
+              PRIRP HS      1   : current empty index
+                    HS      1   : reserved.
+              RBUFF BS length   : ring's buffer area
+
+
+      RING-WRAP MESSAGE
+
+      Message type X'FF' means "wrap the ring now." That is, when the sender
+      inserts an X'FF', it then sets next fill index to zero.  And when the
+      receiver encounters an X'FF', it sets the current empty index to zero.
+
+      RING NEVER WRAPS IMPLICITLY
+
+      The Sender never permits a message to fit partly at the end of the ring
+      buffer, and the rest to wrap to the beginning.  The Sender inserts the
+      Ring-Wrap message if the next message to be inserted cannot fit entirely
+      within space remaining until the end of the ring buffer.  The Receiver
+      checks this rule for each message it encounters, rather than checking
+      for end-of-buffer when processing each byte.
+
+      In other words, ring wrapping is always signalled explicitly, using the
+      Ring-Wrap message, and is never understood implicitly, as the result of
+      placing (or removing) a byte at the last buffer position.
+
+
+      3.1.4 FLOW CONTROL (BACKPRESSURE)
+
+      To stop JCOM input, one simply stops removing messages from the ring.
+      There is no backpressure signalling as such.  See the discussion titled
+      "MBase Connection between JCOM and SCOM" for how JCOM and SCOM flow
+      control interact.
+
+
+
+
+
+
+
+
+
+
+
+
+
+      Network Service Specifications                                        11
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      3.2 SPIRIT SCOM SPECIFICATION
+
+      SCOM is in most respects an ordinary Tymnet virtual circuit.
+
+      MBase attempts to connect SCOM after Spirit reports itself as
+      "answered," regardless of whether the Supervisor is up, or whether it
+      has taken over the node code.
+
+      A difference that Spirit's MBase interface must understand is that
+      Spirit must automatically connect this circuit to the proper
+      application, based upon the calling userid, and not expect a
+      conversational session with a terminal.
+
+      There are other differences.  An MBase port (S-BUS channel pair) is
+      reserved for SCOM, and no other circuits can connect on it.  Data is
+      copied between the SCOM circuit and JCOM, not the Dispatcher rings.
+
+      MBase connects SCOM without involving or notifying either ISIS or a
+      Supervisor.
+
+
+      3.2.1 CONNECTING SCOM
+
+      If Spirit is answered, MBase connects SCOM immediately after connecting
+      JCOM, and reconnects SCOM if Spirit zaps it, or after an Interface Reset
+      zaps all circuits.
+
+      Connection amounts to delivering an appropriate Attach Channel (needle)
+      message: one specifying the reserved MBase port, the configured network
+      userid for SCOM, and IIX intelligence.
+
+
+      3.2.2 SCOM MESSAGES
+
+      Spirit's Read data command receives circuit signals with one of the
+      following Spirit type codes: Data (type 0), Data Lost in This Direction
+      (type 6), or Start Intelligent Interface Exchange (type X'20').
+
+      Spirit uses Write Data or Write Single Byte commands to output
+      circuit-data bytes.
+
+      Spirit uses Send Circuit Signal or Send Circuit Signal Short commands to
+      output circuit signals with the following Spirit type codes: Data Lost
+      in This Direction (type 6), or Start Intelligent Interface Exchange
+      (type X'20').
+
+      MBase also handles the following signals from Spirit, if necessary, but
+      does not need them: Disconnect (Zap) (type 2), Apply Backpressure (type
+      3), and Release Backpressure (type 4).
+
+      No other circuit signal types are used.
+
+
+
+
+
+      Network Service Specifications                                        12
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      3.2.3 FLOW CONTROL (BACKPRESSURE)
+
+      Flow control for the SCOM circuit is essentially the same as for any
+      Tymnet circuit into Spirit.  See the following discussion for how JCOM
+      and SCOM flow control interact.
+
+
+
+      3.3 MBASE CONNECTION BETWEEN JCOM AND SCOM
+
+      MBase copies between JCOM and SCOM so long as the SCOM circuit exists
+      and JCOM is connected.  If ISIS refuses to connect JCOM, MBase does not
+      connect SCOM either.  If the SCOM circuit is cleared, MBase puts a Black
+      Ball into the JCOM ring to ISIS, and tries to connect SCOM again, when
+      possible.  (The SCOM circuit is cleared by MBase Interface Reset, and by
+      a zapper from Spirit.)
+
+      If the SCOM circuit applies input backpressure, MBase stops copying
+      anything from its JCOM input ring.  There is only one transport
+      connection on JCOM, and no functions like zapper or gobbler exist, so
+      this works well.
+
+      While the JCOM output ring (to ISIS) is full, MBase doesn't copy SCOM
+      output into it, so the SCOM circuit sees the same result as it would
+      have from ISIS backpressure.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      Network Service Specifications                                        13
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      4.0 TRANSPORT SERVICE SPECIFICATION
+
+
+
+      This chapter specifies an abstract Transport Service interface, and one
+      of two alternative protocols to implement such a Transport Service.
+      (The other alternative is in an Appendix.)  It is a program-callable
+      interface, and is implemented differently in the ISIS Kernel and in
+      Spirit; the more concrete specification of the ISIS interface is in its
+      GID.
+
+      The two alternatives are mutually exclusive, in that both ISIS and
+      Spirit must implement the same alternative.  The implementation in this
+      chapter provides end-to-end, resilient transport connections.  It is
+      described as an explicit functional module, so that its interfaces can
+      be specified clearly, although it need not be implemented that way.  Its
+      benefit is an improved quality of service provided to the Disk and Tape
+      Service.
+
+      It is modeled after the CCITT Class 1 (Basic Error Recovery Class)
+      transport protocol (see X.224, section 5.4).  Class 1 is intended for
+      use with a network connection having an acceptable residual error rate,
+      but an unacceptable rate of signalled errors (i.e., Black Balls and
+      crashes).
+
+      The alternative in its Appendix is a "simple" Transport Layer.  It does
+      not need as complex an implementation particularly in the ISIS Kernel.
+      It does not shield the Supervisor from MBase disruptions.  It is shown
+      as an alternative to consider if a less costly implementation is needed,
+      particularly for the ISIS Kernel.
+
+      The Transport Service does not perform segmenting and reassembling,
+      which means that it does not break up a long Transport Service Data Unit
+      (see Some Notes on Notation, below) into multiple, shorter Transport
+      Protocol Data Units, and reassemble them at the other end of the
+      Transport Connection.  That is simply unnecessary, because the JCOM and
+      SCOM interfaces are used to carry byte streams without regard to
+      boundaries.
+
+
+
+      4.1 SOME NOTES ON NOTATION
+
+      We are about to begin stumbling over acronyms like NSDU, TPDU, APDU.
+      Their purpose is to help keep distinct the several protocols to be
+      described.  There are two distinctions to observe.  First, "service"
+      versus "protocol":
+
+      Service
+          By service, we mean the interface that a layer presents to the layer
+          above.  Taking the Transport Layer for an example, an application
+          interacts with the Transport Service interface using primitive
+          operations that concern things such as:
+
+
+
+      Transport Service Specification                                       14
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+          -   Establishing and releasing Transport Connections.
+          -   Sending and receiving data on a Transport Connection.
+
+      Protocol
+          By protocol, we mean the dialog that two peer entities use to
+          deliver a service to users at their "service" interfaces.  For
+          example, the Transport Protocol is a dialog between Transport
+          Entities, having primitive messages that concern things such as:
+
+          -   Sending and receiving data.
+          -   Resending data that was lost by network trouble.
+
+
+      We use "data unit" for the collection of information that is
+      communicated in a single step.  (We could just as well use "message",
+      except that the CCITT seems to use "data unit".)
+
+      We can now construct acronyms for each layer:
+
+      NSDU - Network Service Data Unit
+          Requests that a Network-Service user makes for network services, and
+          indications that the Network Layer gives to its user.
+
+      NPDU - Network Protocol Data Unit
+          Messages that one Network Entity sends to its peer on a virtual
+          circuit, concerning things such as data, flow control, and failures.
+
+      TSDU - Transport Service Data Unit
+          Requests that a Transport-Service user makes for transport services,
+          and indications that the Transport Layer gives to its user.
+
+      TPDU - Transport Protocol Data Unit
+          Messages that one Transport Entity sends to its peer on a Transport
+          Connection, concerning things such as data, flow control, and
+          failures.
+
+      APDU - Application Protocol Data Unit
+          Messages that one Application Entity (e.g. the ISIS disk/tape
+          driver) sends to its peer, concerning attaching and detaching I/O
+          units, reading, writing, etc.
+
+
+      (ASDU is not relevant.)
+
+
+
+
+
+
+
+
+
+
+
+
+
+      Transport Service Specification                                       15
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      4.2 NETWORK SERVICE INTERFACE
+
+      JCOM and SCOM provide the Network Layer services that the Transport
+      Layer needs.  This is a brief summary of those services in abstract
+      terms; JCOM and SCOM are specified elsewhere.
+
+      The Network layer provides Permanent Virtual Circuit (PVC) like
+      connections, meaning that the Transport Layer does not place calls.  The
+      Network layer provides the following indications:
+
+      N-OPERATIONAL indication
+          This indicates that Network Protocol Data Units (NPDUs) may now be
+          sent.  (For an X.25 PVC, when the PVC returns to service after being
+          out of order, the X.25 interface provides a RESET packet with a
+          cause code of "network operational." The name N-OPERATIONAL is more
+          concise.)
+
+      N-OUT_OF_ORDER indication
+          This indicates that nothing more can be sent over the network
+          connection until an N-OPERATIONAL indication arrives.  (Analogous
+          derivation.)
+
+      N-RESET indication
+          This indicates that NPDUs were discarded from the network
+          connection, or may have been discarded.  It corresponds to a Black
+          Ball.  (Named after X.25 RESET packet with the cause code "network
+          congestion.")
+
+      N-DATA request and indication
+          This is a request to send one or more arbitrary data bytes, or an
+          indication of their arrival.  This is "TYMNET-style" in that the
+          network provides a stream of bytes, not a sequence of packets.
+
+      N-RESYNC request and indication
+          This is a synchronization mark.  It is used to establish a known
+          starting point in the stream of bytes, after an N-RESET indicates a
+          loss of synchronization.  It corresponds to the Global IIX Message
+          number 5, Resynchronize Interface Exchange.
+
+
+      Note that Grey Ball is not used.  It does not seem to be necessary or
+      helpful.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      Transport Service Specification                                       16
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      4.3 TRANSPORT SERVICE INTERFACE
+
+      The Transport Layer correctly communicates between its two access
+      points, as long as it can, or delivers a T-DISCONNECT indication when it
+      cannot.  The Network Layer does the same sort of thing.  They differ in
+      that the Transport Layer recovers from temporary outages signalled by
+      the Network Layer.  If the Network Layer provides enough reliability,
+      the Transport Layer becomes unnecessary.
+
+      The Transport layer provides services discussed abstractly as Transport
+      Service Data Units (TSDUs).  (The name suggests that these are encoded
+      messages, but they may represented other ways, such as by functions or
+      by shared data structures.)  The set of TSDUs is:
+
+      T-DATA request (or indication)
+          Information to be conveyed to, or received from, the other end.
+
+      T-CONNECT indication (or confirmation)
+          Indication that a Transport Connection has now been established.
+
+      T-DISCONNECT indication
+          Indication that the Transport Connection has been released.
+
+
+      This interface modifies some standard usage (from X.214), as follows.  A
+      Transport Connection is provided as permanently as possible.  The
+      Transport Layer signals connection establishment and release
+      automatically; there is no means for requesting or releasing a Transport
+      Connection.  Therefore, the terms T-CONNECT and T-DISCONNECT are bent
+      out of their X.214 meanings.  E.g., the ISIS Transport Entity delivers a
+      T-CONNECT "confirmation", when it never received a T-CONNECT "request."
+
+      The Transport layer is implemented by Transport Entities, one at each
+      end of a connection; they communicate with each other using services of
+      the Network Layer.
+
+
+
+      4.4 TRANSPORT PROTOCOL DATA UNITS (TPDUS)
+
+      TPDUs are carried on JCOM as ISIS format Data Messages, and on SCOM as
+      Spirit Data messages.  (This resembles how MBase normally connects a
+      Dispatcher port to a pair of S-BUS channels.)
+
+
+      4.4.1 TPDU FIELDS
+
+      Every TPDU begins as follows:
+
+      Fields:  LI, TPDU Type.
+
+      Notice that the Destination Reference and Source Reference fields, which
+      appear in 4 of the 6 TPDU types, must be used with attention to which
+      direction the TPDU travels: the Initiator's reference value is put into
+
+
+      Transport Service Specification                                       17
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      the Source Reference field of a TPDU it sends, and into the Destination
+      Reference field of a TPDU the Responder sends.
+
+          Length Indicator (LI):  1 or 3 bytes; contains the number of bytes
+          in the TPDU, including the LI field.  Examine the first byte of LI
+          (same as the first byte of the TPDU): if the leftmost bit is zero,
+          LI is simply that one byte, whose value is in the range 0 through
+          127.  Otherwise the leftmost bit is one, and LI is the first three
+          TPDU bytes; whose value (disregarding the leftmost bit) is in the
+          range 0 through (2**24 - 1).
+
+          TPDU Type:  one byte.
+
+          Destination Reference (DST-REF):  2 bytes.  The receiver's
+          identifier for this transport connection.
+
+          Source Reference (SRC-REF):  2 bytes.  The sender's identifier for
+          this transport connection.
+
+          Sending Sequence Number (TPDU-NR):  1 byte.
+
+          Acknowledged Sequence Number (YR-TPDU-NR):  1 byte.
+
+          Protocol Type:  1 byte.
+
+          Reason:  1 byte.  An encoded reason for a RJ or ER TPDU.
+
+          User Data:  The remainder of the TPDU.
+
+
+      4.4.2 CR, CONNECT REQUEST
+
+      The Initiator sends Connect Request to establish a new Transport
+      Connection.  The Initiator selects an identifier for the connection, and
+      puts it into SRC-REF.
+
+      Fields:  LI, TPDU Type, SRC-REF, Protocol Type, ....
+
+      In this design of the Transport Protocol, the field Protocol Type has
+      the value 1, and it is the last parameter of the CR TPDU.  These are
+      provisions for downward compatibility in the future: with other values
+      of Protocol Type, CR may have additional parameters.
+
+
+      4.4.3 CC, CONNECT CONFIRM
+
+      The Responder sends Connect Confirm to indicate that it initialized the
+      Transport Connection, in response to receiving Connect Request.  The
+      Responder selects an identifier for the connection, and puts it into
+      SRC-REF, and sets DST-REF to the value received in the Connect Request's
+      SRC-REF.
+
+      Fields:  LI, TPDU Type, DST-REF, SRC-REF, Protocol Type.
+
+
+
+      Transport Service Specification                                       18
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      4.4.4 DA, DATA
+
+      Both Transport Entities send Data TPDUs to communicate user data.  In
+      this context, user data is Disk and Tape Service Protocol.  Data TPDUs
+      are sequence numbered (separately in each direction), for detecting
+      missing or duplicate Data TPDUs.  They also contain a field to
+      acknowledge received TPDUs.
+
+      Fields:  LI, TPDU Type, TPDU-NR, YR-TPDU-NR, User Data.
+
+
+      4.4.5 AK, ACKNOWLEDGMENT
+
+      A Transport Entity may send AK to acknowledge a received Data TPDU
+      without sending a Data TPDU.
+
+      Fields:  LI, TPDU Type, YR-TPDU-NR.
+
+
+      4.4.6 RJ, REJECT
+
+      A Transport Entity sends Reject to acknowledge all Data TPDUs up to the
+      sequence number carried in the Reject, and request that any subsequent
+      DAs be retransmitted.  Reject is used in the Resynchronization
+      procedure.
+
+      Fields:  LI, TPDU Type, DST-REF, SRC-REF, YR-TPDU-NR, Reason.
+
+
+      4.4.7 ER, ERROR
+
+      The Responder sends an Error TPDU to indicate that it recognized an
+      error in a received TPDU.  The Responder has deleted any existing
+      Transport connection.
+
+      The error may be that the Responder did not recognize the DST-REF,
+      either because it had no existing transport connection, or because the
+      existing connection didn't match the TPDU's DST-REF.  Other problems
+      with the format of a TPDU, or with receiving TPDUs in the wrong
+      sequence, also evoke an ER TPDU.
+
+      Fields:  LI, TPDU Type, DST-REF, SRC-REF, Reason.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      Transport Service Specification                                       19
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      4.5 TPDU REASON CODES
+
+
+      01  Reason not specified.
+      10  Received N-OPERATIONAL.
+      11  Received N-RESET.
+      12  DST-REF is not now assigned to a connection.
+      30  Unsupported protocol type (i.e., not 1).
+      40  Invalid TPDU-NR.
+      41  Invalid YR-TPDU-NR.
+      42  Inconsistent DST-REF and SRC-REF.
+      50  Invalid format TPDU:  length.
+      51  Invalid format TPDU:  type.
+
+
+
+      4.6 TRANSPORT PROTOCOL OVERVIEW
+
+      We describe the protocol in terms of a connection's Initiator (ISIS) and
+      its Responder (Spirit).  The more abstract terms are used for two
+      reasons: to make it easier to apply the description in some other future
+      context, and to make it easier to compare CCITT X.224 to this protocol.
+
+
+      4.6.1 ESTABLISHING A TRANSPORT CONNECTION
+
+      The Initiator sends Connect Request when it does not have an existing
+      Transport Connection with the Responder.  This is the case initially,
+      and after the Initiator times out and abandons a suspended Transport
+      Connection (see timer TTR, in "Initiator's Rules for Transport
+      Protocol").  The Initiator selects an identifier for the connection, and
+      puts it into SRC-REF.
+
+      If the Responder remembers a suspended Transport Connection whose
+      timeout has not yet expired, an arriving Connection Request means that
+      the suspended connection is gone forever, and the Responder abandons it.
+
+      When the Responder receives the Connect Request, it discards any
+      Transport activity or status that is pending from a previous Transport
+      connection.  It also tells the Disk and Tape Server application about
+      the initialization, and the Server discards any application activity or
+      status that is pending, and relevant only to the previous Transport
+      connection.  Then the Responder returns CC, Connect Confirm.
+
+      The Responder sends Connect Confirm to indicate that it initialized the
+      Transport Connection, in response to receiving Connect Request.  The
+      Responder selects an identifier for the connection, and puts it into
+      SRC-REF, and sets DST-REF to the value received in the Connect Request's
+      SRC-REF.
+
+
+
+
+
+
+
+      Transport Service Specification                                       20
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      4.6.2 REESTABLISHING A SUSPENDED TRANSPORT CONNECTION
+
+      If the network connection fails, either by disconnecting or by losing
+      data, the Transport Connection is put into the Suspended state.  The
+      Initiator attempts to reestablish the Transport Connection when it
+      receives an N-RESET or N-OPERATIONAL indication; if the Responder
+      receives an N-RESET indication, it induces the Initiator to begin
+      reestablishing the connection by issuing an N-RESET request.
+
+      Before a timeout expires, the two Transport Entities must reestablish
+      communications and determine from what state they can proceed with the
+      Transport Protocol; when its timeout expires, each Transport Entity
+      abandons the connection and informs its Transport Service user of the
+      failure.  (Because each is measuring the timeout independently, the two
+      entities will recognize the expiration only approximately at the same
+      time.)
+
+      Once the Network Connection is available, the Initiator sends N-RESET
+      followed by RJ.  The RJ TPDU contains each entity's reference values for
+      the suspended Transport Connection, and the sequence number of the last
+      Data TPDU that it can acknowledge.  The Responder compares those with
+      its records, and also compares the Data TPDU number with its records.
+      If the Responder can continue with the connection, it sends an RJ TPDU
+      of its own, and regards the connection restored.
+
+      If the Responder cannot continue with the connection, it returns an ER
+      TPDU and abandons the connection.  This happens if the Responder's
+      timeout has expired already, the Responder has reinitialized, or the
+      Responder no longer has a TPDU that RJ needs it to resend (this last
+      case is probably a programming error).
+
+      The Responder does not initiate a Transport Connection, and also does
+      not initiate recovery when the Network Connection fails and returns.
+
+      Each transport entity acknowledges a Data TPDU by sending an AK TPDU or
+      a Data TPDU containing the sequence number of the Data TPDU being
+      acknowledged.  For simplicity, the state-transition tables show only the
+      AK TPDU choice, but the Data TPDU method of acknowledgment is also
+      correct, and can reduce the protocol's overhead.
+
+
+
+      4.7 NOTES ON HANDLING EXCEPTIONS
+
+      The tables of state transition rules show several cases of an event
+      happening during an inappropriate state.
+
+      Such exceptions are handled in one of three ways.  Certain cases are
+      logically impossible, meaning that if they are detected, the program
+      that detected them must be at fault.  For example, receiving data from a
+      connection that is out of order.
+
+      Certain other cases can result from data being lost from the network
+      connection.  If the data loss was signalled properly by the network
+
+
+      Transport Service Specification                                       21
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      layer, the Transport Entities attempt to recover by re-sending TPDUs
+      that haven't been acknowledged.
+
+      The remaining cases imply programming errors without indicating which
+      entity is at fault.  This includes cases that might result from either
+      programming errors or unsignaled errors or loss in the network layer.
+      An example is an invalid-format TPDU.  Another is a TPDU that refers to
+      an unknown Transport Connection (there is only one at a time, so this
+      would indicate confusion).  For these, any existing transport connection
+      is abandoned, and a new one is established, in hopes that it will work
+      better.
+
+
+
+      4.8 NOTES ON SYNCHRONIZATION ISSUES
+
+      The Transport Layer deals with three kinds of synchronization problems,
+      all of which result from a Network Service disruption (signalled by
+      N-RESET or N-OUT_OF_ORDER).  Therefore, these problems are handled when
+      resuming communications after such a disruption.
+
+      -   Determining that the same Transport Connection is known to both
+          Transport Entities.
+
+      -   Re-sending any TPDUs that seem to have disappeared.
+
+      -   Re-establishing at what byte a TPDU begins (TPDU alignment).
+
+      Following receipt of N-RESET or N-OPERATIONAL NSDUs, a Transport Entity
+      discards incoming data bytes until it receives an N-RESYNC NSDU.  This
+      is necessary to assure alignment to TPDU boundaries.  The following
+      TPDUs are always sent preceded by an N-RESYNC request; these are the
+      only TPDUs that might be sent after data loss on the network connection:
+
+      -   RJ - Reject
+      -   CR - Connect Request
+      -   CC - Connect Confirm
+      -   ER - Error
+
+
+      The state of "discarding data bytes, awaiting RESYNC" is not shown
+      explicitly in the protocol state tables.
+
+
+      If N-RESET or N-OPERATIONAL is received before a transport connection
+      has timed out, the Initiator begins the Resynchronization procedure.  It
+      issues an N-RESYNC request, then sends an RJ TPDU, and waits for a
+      matching sequence from the Responder.  The RJ TPDUs include DST-REF and
+      SRC-REF fields to identify the specific instance of a transport
+      connection, and the YR-TPDU-NR field to acknowledge received Data TPDUs.
+      After receiving an acceptable RJ, each entity proceeds with sending any
+      unacknowledged Data TPDUs.
+
+
+
+
+      Transport Service Specification                                       22
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      4.9 INITIATOR'S RULES FOR TRANSPORT PROTOCOL
+
+      ###Renumber events and actions to match logical sequence.  Initiator's
+      States:
+
+      S1   Transport Connection unavailable, JCOM not connected
+      S2   Transport Connection suspended, JCOM not connected
+      S3   Transport Connection unavailable, Connect Request TPDU pending
+      S4   Transport Connection suspended, Reject TPDU pending
+      S5   Transport Connection available
+
+      Initiator's Timer:
+
+      TTR  Time to Try Resynchronization
+
+      Initiator's Events:
+
+      E1   Receive N-OPERATIONAL (JCOM connected).
+      E2   Receive N-OUT_OF_ORDER (slot crash).
+      E14  Receive N-RESET (Black Ball).
+      E12  Receive N-RESYNC outside a TPDU.
+      E13  Receive N-RESYNC within a TPDU.
+      E3   Receive CC TPDU with right DST-REF.
+      E6   Receive CC TPDU with wrong DST-REF.
+      E4   Receive compatible RJ TPDU.
+      E7   Receive incompatible RJ TPDU.
+      E5   Receive in-sequence DA TPDU.
+      E16  Receive out-of-sequence DA TPDU.
+      E15  Receive invalid TPDU.
+      E17  Receive T-DATA TSDU.
+      E11  Timer TTR expires.
+
+      Initiator's Actions:
+
+      A0   Do nothing.
+      A1   Issue N-RESYNC, send RJ TPDU.
+      A9   Issue N-RESYNC, send CR TPDU with new SRC-REF.
+      A4   Start timer TTR if not already running.
+      A11  Cancel TTR if running
+      A7   Deliver T-DATA TSDU, send AK TPDU.
+      A18  Begin discarding all arriving data bytes (until N-RESYNC).
+      A15  Realign TPDU assembly, resume accepting arriving data.
+      A16  Record or report protocol error.
+      A8   Deliver T-DISCONNECT TSDU.
+      A10  Deliver T-CONNECT TSDU.
+      A14  Resend unacknowledged DA TPDUs in sequence.
+      A19  Send DA TPDU.
+
+      A5   A11 and A10 (cancel TTR, deliver T-CONNECT).
+      A13  A11, A8, and A9 (cancel TTR, deliver T-DISCONNECT, send CR).
+      A2   A8 and A9 (deliver T-DISCONNECT, send new CR).
+      A17  A16, A11, A8, and A9 (grump, cancel TTR, deliver T-DISCONNECT, send
+           CR).
+
+
+
+      Transport Service Specification                                       23
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      Note:  If the Network Connection cannot send something when necessary
+      according to an action, the indication or TPDU must be queued to be sent
+      later.  (This is so when the Network Connection is out of order or
+      backpressured.)  The state-transition rules do not show this
+      consideration explicitly.
+
+      Initiator State Transition Rules
+
+      Event   State            Action   State  Commentary
+              Now                       Next
+      =====   ==============   ======   =====  =====================
+      E1      S1               A9       S3
+      E1      S2               A1       S4     TTR continues
+      E1      S3, S4, or S5     fault          Programming error
+
+      E2      S1               A0       S1
+      E2      S2               A0       S2     TTR continues
+      E2      S3               A0       S1
+      E2      S4               A0       S2     TTR continues
+      E2      S5               A4       S2
+
+      E3      S1 or S2          fault          Programming error
+      E3      S3               A5       S5     yea!
+      E3      S4               A0       S4     wait, flushing
+      E3      S5               A13      S3     grump, reconnect
+
+      E4      S1, 2             fault          Programming error
+      E4      S3               A0       S3     wait, flushing
+      E4      S4               A5       S5     successful resync
+      E4      S5               A14      S5     just resend pending
+
+      E5      S1 or S2          fault          Programming error
+      E5      S3               A0       S3     wait, flushing
+      E5      S4               A0       S4     wait, flushing
+      E5      S5               A7       S5     normal data transfer
+
+      E6      S1 or S2          fault          Programming error
+      E6      S3               A0       S3     wait, flushing
+      E6      S4               A0       S3     wait, flushing
+      E6      S5               A17      S3     grump, reconnect
+
+      E7      S1 or S2          fault          Programming error
+      E7      S3               A0       S3     wait, flushing
+      E7      S4               A13      S3
+      E7      S5               A17      S3     grump, reconnect
+
+      E11     S1, S3, or S5     fault          Programming error
+      E11     S2               A8       S1     wait to restart
+      E11     S4               A2       S3     try to restart
+
+      E12     S1 or S2          fault          Programming error
+      E12     S3, S4, or S5    A0       same   No realignment needed
+
+      E13     S1 or S2          fault          Programming error
+
+
+      Transport Service Specification                                       24
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      E13     S3               A15      S3     wait, flushing
+      E13     S4               A15      S4     wait, flushing
+      E13     S5               A17      S3     grump, reconnect
+
+      E14     S1 or S2          fault          Programming error
+      E14     S3               A9       S3     assume lost last CR
+      E14     S4               A1       S4     await RJ in return
+      E14     S5               A1       S4     await RJ in return
+
+
+
+      4.10 RESPONDER'S RULES FOR TRANSPORT PROTOCOL
+
+      Responder States
+
+      S101  Transport Connection unavailable, SCOM not connected
+      S102  Transport Connection suspended, SCOM not connected
+      S103  Transport Connection unavailable, SCOM connected
+      S104  Transport Connection suspended, SCOM connected
+      S105  Transport Connection available
+
+      Responder's Timer:
+
+      TWR   Time to Wait for Resynchronization
+
+      Responder Events
+
+      E101  Receive N-OPERATIONAL (Attach Channel).
+      E102  Receive N-OUT_OF_ORDER (Begin Interface Reset).
+      E108  Receive N-RESET (Black Ball indication).
+      E110  Receive N-RESYNC outside a TPDU.
+      E111  Receive N-RESYNC within a TPDU.
+      E103  Receive RJ TPDU with right DST-REF.
+      E109  Receive RJ TPDU with wrong DST-REF.
+      E104  Receive CR TPDU.
+      E105  Receive in-sequence DA TPDU.
+      E106  Receive already acknowledged DA TPDU.
+      E107  Receive invalid TPDU.
+      E114  Receive T-DATA TSDU.
+      E113  Timer TWR expires.
+
+
+
+      Responder Actions
+
+      A0    Do nothing.
+      A101  Issue N-RESYNC, send RJ TPDU.
+      A102  Issue N-RESYNC, send CC TPDU.
+      A113  Start timer TWR if not already running.
+      A119  Cancel timer TWR if running.
+      A123  Deliver T-DATA TSDU, send AK TPDU.  [Note 2.]
+      A116  Send AK TPDU.
+      A103  Send DA TPDU.
+      A117  Issue N-RESET, begin discarding arriving data.
+
+
+      Transport Service Specification                                       25
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      A118  Realign TPDU assembly, resume accepting arriving data.
+      A112  Issue N-RESYNC, send ER TPDU.
+      A120  Record or report protocol error.
+      A105  Deliver T-DISCONNECT TSDU.
+      A106  Deliver T-CONNECT TSDU.
+      A114  Resend unacknowledged Data TPDUs in sequence.
+      A104  A119, A123.
+      A107  A102 and A106.
+      A108  A119, A102, A105, and A106.
+      A115  A101, A114.
+      A124  A120, A118.
+      A125  A120, A118, A112, A105.
+
+      Note 1:  If the Network Connection cannot send something when necessary
+      according to an action, the indication or TPDU must be queued to be sent
+      later.  (This is so when the Network Connection is out of order or
+      backpressured.)  The state-transition rules do not show this
+      consideration explicitly.
+
+      Note 2:  If Initiator knows that the Disk and Tape Server will send a
+      reply T-DATA TSDU soon, there is no need to send a separate AK TPDU.
+
+      Responder State Transition Rules
+
+
+      Event   State            Action   State   Commentary
+              Now                       Next
+      =====   ==============   ======   =====  =====================
+      E101    S101             A0       S103   await CR
+      E101    S102             A0       S104   await RJ
+      E101    S103,S104,S105    fault          programming error
+
+      E102    S101             A0       S101   await N-OPERATIONAL
+      E102    S102             A0       S102   await N-OPERATIONAL
+      E102    S103             A0       S101   await N-OPERATIONAL
+      E102    S104             A0       S102   await N-OPERATIONAL
+      E102    S105             A113     S102   await N-OPERATIONAL
+
+      E103    S101, S102        fault          Programming error
+      E103    S103             A112     S103   no such connection
+      E103    S104             A115     S105   resynchronized ok
+      E103    S105             A115     S105   resynchronized ok
+
+      E104    S101, S102        fault          Programming error
+      E104    S103             A107     S105   new connection ok
+      E104    S104             A108     S105   new conn. repl. old
+      E104    S105             A108     S105   new conn. repl. old
+
+      E105    S101, S102        fault          Programming error
+      E105    S103             A112     S103   grump, release conn.
+      E105    S104             A0       S104   wait, flushing
+      E105    S105             A104     S105   normal DA transfer
+
+      E106    S101, S102        fault          Programming error
+
+
+      Transport Service Specification                                       26
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      E106    S103             A112     S103   grump, release conn.
+      E106    S104             A0       S104   wait, flushing
+      E106    S105             A116     S105   AK but discard
+
+      E107    S101, S102        fault          Programming error
+      E107    S103             A112     S103   grump
+      E107    S104             A0       S104   wait, flushing
+      E107    S105             A112     S103   grump, release conn.
+
+      E108    S101, S102        fault          Programming error
+      E108    S103             A117     S103   await N-RESYNC
+      E108    S104             A113     S104   await N-RESYNC
+      E108    S105  ?notify#   A113     S104   await N-RESYNC
+
+      E109    S101, S102        fault          Programming error
+      E109    S103             A112     S103   grump
+      E109    S104             A112     S103   ER both, await N-RESYNC
+      E109    S105             A112     S103   ER both, await N-RESYNC
+
+      E110    S101, S102        fault          Programming error
+      E110    S103,S104,S105   A0       same   N-RESYNC: no effect
+
+      E111    S101, S102        fault          Programming error
+      E111    S103             A124     S103   await TPDU
+      E111    S104             A125     S103   release; await TPDU
+      E111    S105             A125     S103   release, await TPDU
+
+      E113    S101,S103,S105    fault          Programming error
+      E113    S102             A105     S101   await Attach Channel
+      E113    S104             A105     S103   await next CR
+
+      E114    S101, S102        fault          Programming error
+      E114    S103             A0       S103   keep TSDU for later
+      E114    S104             A0       S104   keep TSDU for later
+      E114    S105             A103     S105   normal data transfer
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      Transport Service Specification                                       27
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      5.0 DISK AND TAPE SERVICE PROTOCOL SPECIFICATION
+
+
+
+      The Disk and Tape Service (DTS) Protocol is an application layer
+      protocol that provides remote access for Disk and Tape I/O.  As
+      specified here, it has more generality than the Supervisor Support
+      project needs; this chapter also specifies that certain facilities are
+      not actually to be implemented yet.  Doing this provides for later
+      upward compatibility with a more complete implementation.
+
+      The protocol does not pass device-specific status bits, nor does it
+      support the ISIS-specific "get status" operation.  The protocol, and
+      Spirit's Disk and Tape server, implement a straight-forward set of
+      primitive operations and status codes.  ISIS must translate between this
+      set and whatever slots need.
+
+      The protocol does not include dividing long data transfers into shorter
+      pieces.  The Application Entity gives the entire block to be transferred
+      to the Transport Service as a single thing to be transferred.  The
+      interface for doing that is defined in the internal designs.
+
+
+
+      5.1 DISK FORMAT COMPATIBILITY
+
+      The Requester issues the Unit Attach Request, stating the desired
+      characteristics of the unit.  The Server attaches the specified unit, if
+      possible, and returns the actual characteristics made available,
+      depending on what was requested and what it had to offer.  These values
+      are negotiated downward:  PROT (to read-only), MAXP, FMT (to 0, meaning
+      fixed-size), RECL, and SPACE.
+
+
+
+      5.2 GENERAL APDU RULES
+
+      A common header format begins each APDU.  The header begins with the
+      length indicator (LI) field; the APDU contains LI number of bytes
+      including LI.  Following is a one-byte function code (FUNCT), and a
+      cross-reference value (KEY).  A Confirm or Response APDU has the same
+      value in KEY as the corresponding Request APDU had; the KEY value of
+      zero is reserved to mean that the corresponding Request is unknown.
+      (Zero is reserved for this use, and not in fact used.)
+
+      Thus, all APDUs begin as follows.
+
+      Format :  LI, FUNCT, KEY
+
+      Summary of APDU field labels, meanings, sizes
+
+      LI    length indicator (1 or 3 bytes; same encoding as in TPDU)
+      FUNCT function code (1 byte)
+      KEY   if not zero, reference value to associate requests with responses
+
+
+      Disk and Tape Service Protocol Specification                          28
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+            (1 byte)
+      UNIT  unit number (1 byte)
+      KIND  disk or tape (1 byte)
+      NAME  name of resource to be connected (8 bytes)
+      PROT  write permission (1 byte)
+      POSN  disk position (4 bytes)
+      MAXP  maximum disk position in records of length RECL (4 bytes)
+      FMT   disk record format (1 byte)
+      RECL  disk record length (4 bytes)
+      SPACE space in bytes needed for the unit (4 bytes)
+      SUBOP sub-operation code (1 byte)
+      DATA  data that was read, or to be written (variable length)
+      RCODE reason code, or zero if no problem (2 bytes)
+      STATUSencoded tape status, unused for disk (2 bytes)
+
+
+
+      5.3 DTS RESOURCE NAMES
+
+      A Unit Attach Request associates a UNIT number that the Requester
+      selects with a resource NAME known to the Disk and Tape Server on
+      Spirit.  The name is 1 to 8 alphanumeric characters, coded in upper-case
+      ASCII.
+
+      For TSI, the ISIS TYM file specifies the resource NAME for each Logical
+      Unit to be supported by DTS: see the chapter, ISIS and MBase
+      Configuration Declarations.
+
+
+
+      5.4 REASON CODES
+
+      These are the reason codes in the RCODE parameter of Unit Detach
+      Confirm, Unit Read Response, and Unit Write Response APDUs.  Also, for
+      Unit Read Response, the RECL parameter indicates whether data is being
+      returned.
+
+      The Server is responsible for correcting errors when it can do so with
+      its own resources.  If it corrects an error, it reports the resulting
+      situation as if the error hadn't taken place; otherwise, it reports an
+      uncorrectable error.
+
+      Multiple situations
+
+      00  No error, on Read, Write or Control Request.
+      01  Reason not specified, on Detach Request.
+      02  Tape Mark (end-of-file mark) encountered.
+      10  UNIT is not attached.
+      11  UNIT is permanently unable to perform the request.
+      50  Invalid format:  FUNCT.
+      51  Invalid format:  length.
+
+      Unit Detach Confirm
+
+
+
+      Disk and Tape Service Protocol Specification                          29
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      03  UNIT detached by request.
+      12  UNIT unusable or unavailable.
+      13  Specified UNIT was already attached; now detached.
+      20  Resource NAME not found.
+      21  Resource NAME inconsistent with KIND, MAXP, RECL, or SPACE.
+      30  DTS limit violation:  FMT is non-zero.
+      31  DTS limit violation:  SPACE != RECL * MAXP.
+      32  DTS limit violation:  unsupported RECL value.
+
+      Unit Read or Write Response, Tape Control Response
+
+      04  Done:  Actual record read was longer than RECL requested.
+      14  Not done:  Read or Write has RECL incompatible with UNIT's RECL.
+      15  Not done:  Attempt to read or write beyond UNIT's extent.
+      16  Not done:  Unrecoverable device or media error.
+      17  Not done:  Attempt to write data or Tape Mark on read-only UNIT.
+
+
+
+      5.5 INITIALIZATION AND CONFIGURATION AGREEMENT.
+
+      The requester attaches an I/O unit before attempting to use it, and may
+      later detach it.  Possibly, the request to attach it could fail.  And
+      possibly not all the resources requested are available, but some are, so
+      the server may respond by providing a portion of what was requested.
+
+      The configuration APDUs are:
+
+      1.  Unit Attach Request
+      2.  Unit Attach Confirm
+      3.  Unit Detach Request
+      4.  Unit Detach Confirm
+
+
+      5.5.1 UNIT ATTACH REQUEST
+
+      The requester (ISIS) issues a Unit Attach Request in response to a slot
+      requesting to attach a corresponding LU.
+
+      Format:  LI, FUNCT, KEY, UNIT, KIND, STATUS, NAME, PROT, MAXP, FMT, RECL
+
+
+      UNIT
+          is a single-byte value that is to be used subsequently to designate
+          the I/O unit.  It must not be zero, and it must not already be in
+          use.
+
+      KIND
+          is 0 for disk (random access), or 1 for tape (sequential access).
+
+      STATUS
+          encodes the required recording density for tape, using only the
+          tape-density field of the STATUS parameter; the remaining fields are
+          zero.  (See the section titled "Tape Unit STATUS Parameter.") STATUS
+
+
+      Disk and Tape Service Protocol Specification                          30
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+          is 0 for a disk (KIND 0).
+
+      NAME
+          is the character-string name of the remote resource (device or file)
+          that is to serve as the I/O unit being attached.
+
+      PROT
+          is a protection code:  0 if read-only; 1 if writable.
+
+      MAXP
+          is the maximum value of the disk-positioning field, POSN, that will
+          be used.  Present but zero if device is not a disk, or if it is a
+          disk but the requester does not care.  (See also the section Disk
+          Format Compatibility.)
+
+      FMT
+          is a format code:  0 if every transfer is of length RECL bytes, or 1
+          if lengths vary.  (See also the section Disk Format Compatibility.)
+
+      RECL
+          is the nominal record length; it is the exact record length, in
+          bytes, if the record length is fixed (FMT = 0), otherwise it is the
+          maximum record length to be written.
+
+      SPACE
+          is the total number of data bytes needed for the unit.
+
+
+      5.5.2 UNIT ATTACH CONFIRM
+
+      The Server (Spirit) returns a Unit Attach Confirm in response to a
+      successful Unit Attach Request.  (Otherwise, it returns Unit Detach
+      Confirm.)  It is a copy of the Request APDU, with these exceptions: The
+      following fields may be changed as a result of negotiation:  PROT, MAXP,
+      FMT, RECL.  And STATUS returns the current tape-unit status.
+
+      Format:  LI, FUNCT, KEY, UNIT, KIND, STATUS, NAME, PROT, MAXP, FMT, RECL
+
+      These fields are as described under Unit Attach Request.
+
+
+      5.5.3 UNIT DETACH REQUEST
+
+      This APDU breaks the association between the UNIT and corresponding
+      Server resources.  Both become available for subsequent reuse.  ISIS
+      issues the Unit Detach Request when a slot detaches the corresponding
+      LU.  RCODE is zero.
+
+      Format:  LI, FUNCT, KEY, UNIT, RCODE.
+
+
+
+
+
+
+
+      Disk and Tape Service Protocol Specification                          31
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      5.5.4 UNIT DETACH CONFIRM
+
+      This APDU announces that the UNIT is not now connected to anything.  It
+      is the response to a Unit Detach Request.  It also results from an
+      unsuccessful Unit Attach Request; if the UNIT was already attached, that
+      connection is now also broken.  That means that a mistaken attempt to
+      attach two slot devices as the same simulation UNIT results in neither
+      of them being available.
+
+      The RCODE field indicates the specific cause.
+
+      Format:  LI, FUNCT, KEY, UNIT, RCODE.
+
+
+
+      5.6 READ AND WRITE OPERATIONS
+
+      Read and write operations are handled like transactions.  That is, a
+      request eventually results in a matching response; the two are
+      correlated by matching up the reference field (KEY) in each.  The
+      requester can, however, perform I/O operations in an interlocked
+      fashion:  make a request, and wait for its response, before making
+      another request.  The server simply handles the requests as they arrive.
+
+      If the UNIT is a FMT 0 disk, which means that all blocks are the fixed
+      length stated in its Unit Attach Request, then multiple blocks can be
+      transferred by a single read or write operation.
+
+      The I/O operation APDUs are:
+
+      1.  Unit Read Request
+      2.  Unit Read Response
+      3.  Unit Write Request
+      4.  Unit Write Response
+      5.  Tape Control Request
+      6.  Tape Control Response
+
+
+      5.6.1 UNIT READ REQUEST
+
+      This APDU requests to read up to RECL bytes from device UNIT.  A tape
+      record may return RECL bytes or less.  (The Spirit server does not
+      support varying-length disk records; but a server that did would treat
+      RECL the same for disk and tape.)
+
+      A disk record may also return RECL bytes or less, if the disk unit was
+      attached with FMT of 1 (varying length transfers); otherwise, RECL must
+      be the value given when attaching the unit, or an integer multiple of
+      that value.
+
+      If UNIT is a disk, POSN is set to the desired record number; otherwise
+      it is zero.  KEY should be a value that will serve to identify the
+      response APDU.  RCODE and STATUS are zero.
+
+
+
+      Disk and Tape Service Protocol Specification                          32
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      Format:  LI, FUNCT, KEY, UNIT, RCODE, STATUS, POSN, RECL
+
+
+      5.6.2 UNIT READ RESPONSE
+
+      This APDU returns the data read by a preceding Unit Read Request having
+      the same value of KEY.  RCODE is set to indicate whether the read
+      request succeeded.  STATUS shows the tape UNIT's condition after
+      completing the request; it is zero if UNIT is a disk.
+
+      If successful, RECL contains the number of bytes actually read; the
+      bytes themselves are in the DATA field.  (If the unit was attached with
+      a FMT of 0, RECL is always the value given when attaching the unit, or
+      an integer multiple of that value.)  KEY, UNIT, and POSN have the values
+      sent in the corresponding request.
+
+      If the Unit Read Request found the UNIT unusable or unavailable, the
+      result is a Unit Detach Confirm APDU.
+
+      Format:  LI, FUNCT, KEY, UNIT, RCODE, STATUS, POSN, RECL, DATA
+
+
+      5.6.3 UNIT WRITE REQUEST
+
+      This APDU requests to write RECL bytes onto UNIT.  The bytes to write
+      are in DATA.  RECL may be shorter than the number of bytes that could
+      fit in the DATA field (LI has the length of the entire APDU).  If the
+      unit was attached with a FMT of 0, RECL must be the value given when
+      attaching the unit, or an integer multiple of that value.
+
+      If UNIT is a disk, POSN is set to the desired record number; otherwise
+      it is zero.  KEY should be a value that will serve to identify the
+      response APDU.  RCODE and STATUS are zero.
+
+      Format:  LI, FUNCT, KEY, UNIT, RCODE, STATUS, POSN, RECL, DATA
+
+
+      5.6.4 UNIT WRITE RESPONSE
+
+      This APDU returns the result of a preceding Unit Write Request having
+      the same value of KEY.  RCODE is set to indicate whether the write
+      request succeeded.  STATUS shows the tape UNIT's condition after
+      completing the request; it is zero if UNIT is a disk.
+
+      KEY, UNIT, and POSN have the values sent in the corresponding request.
+      RECL is the number of bytes written; if the UNIT is FMT 0, the number of
+      bytes written is always an integer multiple of the fixed record length.
+
+      If the Unit Write Request found the UNIT unusable or unavailable, the
+      result is a Unit Detach Confirm APDU.
+
+      Format:  LI, FUNCT, KEY, UNIT, RCODE, STATUS, POSN, RECL
+
+
+
+
+      Disk and Tape Service Protocol Specification                          33
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      5.6.5 TAPE CONTROL REQUEST
+
+      This APDU requests performing the sub-operation SUBOP on UNIT, which is
+      a tape.  This request applies only to a tape UNIT, actual or simulated.
+      The results are returned by a Tape Control Response.  RCODE is zero.  If
+      SUBOP specifies setting density, STATUS is zero except for encoding the
+      requested density; otherwise, STATUS is entirely zero.
+
+      The SUBOP to "read tape status" returns the current status information,
+      without necessarily interacting with the tape hardware.
+
+      Format:  LI, FUNCT, KEY, UNIT, RCODE, STATUS, SUBOP
+
+      The codes for SUBOP are:
+
+      1.  Read tape status.
+      2.  Set density to value encoded by STATUS.
+      3.  Write tape mark (end-of-file mark).
+      4.  Erase gap.
+      5.  Space backward one record, finish ready to read that record.
+      6.  Space forward one record, finish as if having read it.
+      7.  Skip forward one file, finish as if having read the tape mark.
+      8.  Skip backward one file, finish ready to read the tape mark.
+      9.  Rewind tape, finish ready at load point.
+      10. Rewind and Unload tape, finish requiring manual intervention.
+
+
+      5.6.6 TAPE CONTROL RESPONSE
+
+      This APDU returns the result of a preceding Tape Control Request having
+      the same value of KEY.  It is sent only after the tape has completed any
+      requested mechanical motion, with one exception: when Rewind and Unload
+      is requested, the Tape Control Response MAY be sent any time after
+      initiating motion, if the tape will then proceed automatically to the
+      Unloaded state.
+
+      RCODE is set to indicate whether the control request succeeded.  STATUS
+      shows the tape UNIT's condition after completing the request.
+
+      Format:  LI, FUNCT, KEY, UNIT, RCODE, SUBOP, STATUS
+
+
+      5.6.7 TAPE UNIT STATUS PARAMETER
+
+      Tape units are typically controlled quite differently from disk units.
+      Unlike with a disk, a tape driver make pay close attention to the tape's
+      current position, relative to each end of the tape, to tape marks, and
+      to existing records on the tape.
+
+      To support this use, the DTS protocol reports a tape unit's status with
+      other responses to a tape request (attach, read, write, control).  This
+      uses the STATUS parameter (zero for disks).  In addition, the UNIT
+      ATTACH command uses the STATUS parameter to indicate what tape density
+      is required, encoded exactly the same way that responses encode actual
+
+
+      Disk and Tape Service Protocol Specification                          34
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      density.
+
+      The STATUS field generally returns the status of a tape UNIT after all
+      activity initiated by a request has completed.  That is, it is the
+      "ending status." In the case of Rewind and Unload, the STATUS field
+      shows the tape condition after the action has been initiated; whether
+      the resulting activity is already complete is indeterminate.
+
+      Encoding of the 16-bit STATUS parameter is show below.  It does not
+      follow the hardware encoding of any particular tape equipment.
+
+                       -----.----.----.-----
+                       |0000 XRLB 0000 DDDD|
+                       ---------------------
+
+
+      X (Off Line)
+          Tape is offline, needs manual intervention to make it ready.  This
+          is true if no tape reel is mounted, and after performing the Rewind
+          and Unload sub-operation.  It may also indicate a hardware
+          malfunction.
+
+      R (Read Only)
+          Tape is read-only (write-protected), according to its controller.
+          This indication can happen with a real tape, not with one simulated
+          by a file.  It could become write-protected any time after it was
+          attached R/W, by a manual action, so successfully completing Unit
+          Attach in R/W mode is not an assurance that the tape will always be
+          R/W.  (The Disk and Tape Server will itself prevent write requests
+          if the UNIT Attach Request specifies read-only access.
+
+      L (Load Point)
+          Tape is at the Load Point, also called Beginning of Tape (BOT).  Any
+          forward motion from Load Point turns off this indication.  The
+          meaning of the Density indication depends on whether this Load Point
+          indication is on.
+
+      B (Beginning or End of Tape)
+          Tape is positioned at BOT or EOT reflective marker.  The tape
+          controller hardware sensed the reflective marker that customarily
+          signals the beginning of tape, and the end of tape.
+
+          The Load Point indication should be used to recognize that the tape
+          is positioned at the very beginning; if it is on, the EOT/BOT
+          indication says nothing more that is useful.
+
+          At EOT, this indication is returned at least one time if the tape
+          hardware reported it, even if the hardware report has already turned
+          off after appearing on.  At EOT, it is still possible to read and
+          write the tape for a few feet more, to write or read trailing tape
+          marks and labels.  The EOT indication may vanish after the marker
+          passes.  After enough feet, the tape falls off the supply reel.
+
+
+
+
+      Disk and Tape Service Protocol Specification                          35
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      D (Density - a 4-bit field)
+          If the tape is at Load Point, this value is the last density to
+          which the controller had been set; it does not necessarily match the
+          density of the actual tape.  Beyond Load Point, this value is the
+          density of the tape, set either by commanding the controller, or by
+          reading the tape.
+
+          0   unspecified (for ATTACH, accepts any density)
+          1   800 or less bits (frames) per inch
+          2   1600 bits per inch
+          3   6250 bits per inch
+
+          Values of 4 through 16 are reserved for future assignment.
+
+
+
+      5.7 LIMITS FOR THIS DTS IMPLEMENTATION
+
+      Here is how the protocol described above is simplified for the purposes
+      of the Supervisor Support project.
+
+      -   ISIS and Spirit support only fixed-size disk blocking.  When
+          attaching a disk, FMT must be zero, and RECL must be the number of
+          bytes ISIS will read or write on each request.  SPACE is the product
+          of RECL and MAXP.
+
+      -   ISIS attaches a device according to its declarations in the TYM
+          file.  If the server changes any of the parameters subject to
+          negotiation (PROT, MAXP, FMT, or RECL), ISIS detaches the device and
+          indicates to the slot that the device is unavailable.
+
+
+
+      5.8 CORRESPONDENCE BETWEEN SHARE SVCS AND DTS PROTOCOL
+
+      According to the ISIS-II Reference Manual, The Shared Device Control SVC
+      has the form:
+
+           SVC     SHARE<4>, ADDR
+
+      where ADDR is the address of a parameter block of the form:
+
+
+                    --------.--------.-----------------
+                    |O| R/S |   LU   |      status    |
+                    -----------------------------------
+                    |               VMA               |
+                    -----------------------------------
+                    |              COUNT              |
+                    -----------------------------------
+                    |                P                |
+                    -----------------------------------
+
+
+
+
+      Disk and Tape Service Protocol Specification                          36
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      where the R/S field has alternate uses:
+
+      -   the slot provides an R value (request) when executing the SVC
+
+      -   ISIS returns an S value (status of completed operation)
+
+
+      To the slot, ISIS responds the same way to SHARE SVCs, whether the I/O
+      devices are directly under ISIS's control, or are under the control of a
+      remote server.  The SVC's parameter block, including the extended form
+      used with a "get status" request, all the fields in these blocks, and
+      overlapping of slot execution with I/O activity, all are the same in
+      both circumstances.  Actual timing certainly is different, of course.
+      Also, some events do not happen when performing I/O using the server, so
+      corresponding status codes also do not happen; for example, "error
+      return from controller," and "hardware timeout."
+
+      To gain access to a tape or disk, the slot makes the "attach unit"
+      request.  ISIS first determines whether the requested LU is configured
+      for the slot, and whether it is free to be attached.  If ISIS sees no
+      problems, it sends a Unit Attach Request to the DTS Server; if the
+      Server can attach the necessary resources, ISIS informs the slot that
+      the SVC succeeded.  However, if any of the steps found a problem ISIS
+      informs the slot that the SVC failed.
+
+      The slot requests read, write, and other operations via the SHARE SVC.
+      ISIS evaluates the requests just as it would for physically present
+      devices, sends acceptable requests to the DTS Server, and processes the
+      Server's responses.  ISIS must copy I/O data between the slot's memory
+      and DTS APDUs.
+
+      Physical devices can fail or become not-ready.  This can happen too to
+      devices controlled by the DTS Server.  Additionally, the communication
+      path can fail.  ISIS may receive an unexpected indication that a DTS
+      device is broken, or is not ready, or that communication has failed to
+      the DTS Server.  (The Transport Layer attempts to reestablish
+      communications without losing messages in transit, but it may give up.)
+      In such cases, ISIS records the change in status, and presents the
+      trouble indication to the slot as if a physically present device had
+      similar trouble.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      Disk and Tape Service Protocol Specification                          37
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      6.0 ISIS AND MBASE CONFIGURATION DECLARATIONS
+
+
+
+      This chapter discusses how the new MBase Supervisor Support
+      functionality depends on existing and new TYM file parameters.
+
+
+
+      6.1 ISIS CONFIGURATION
+
+      This section specifies how the TYM file selects disk and tape
+      simulation, and how the simulation parameters are calculated from
+      existing declarations of Global and Local units.
+
+
+      6.1.1 SELECTION OF SIMULATION DISK AND TAPE DRIVERS
+
+      ISIS supports actual physical disk and tape devices by default.  To
+      specify whether the MBase Supervisor Support simulation is wanted
+      instead, include:
+
+                TSISUP    EQ    1       : SUP Disk/Tape support
+                                        :   0/1 = omit/include
+
+
+      6.1.2 DETERMINING EACH UNIT'S CHARACTERISTICS
+
+      The DTS Protocol's Unit Attach Request must specify certain
+      characteristics of the simulated device that are not in the TYM file.
+      This results from the DTS Protocol having considerably more generality
+      than absolutely essential for MBase Supervisor Support functionality.
+
+      This section explains how disk and tape devices are specified in the
+      ISIS TYM file, and then specifies how ISIS calculates the TYPE, NAME,
+      MAXP, RECL, and SPACE characteristics of a DTS UNIT.
+
+      EXISTING TYM FILE INFORMATION
+
+      In the TYM file for an Engine ISIS system, shared devices are defined in
+      terms of three steps or layers:
+
+      -   Device Unit identifier, which is the pair '<type><instance>'.
+
+          Each such pair identifies one real hardware I/O device, a tape or
+          disk drive.  For example:  DK0, DK1, MT0, MT1, MS0, MS1, MS2.
+
+      -   Global Unit Number, which is a number in the set 0, 1, 2, ....
+
+          These are specified using the SGU.DEF macro.  For tapes, a Global
+          Unit Number corresponds to a Device Unit identifier.  For disks, a
+          Global Unit Number corresponds to a cylinder extent of a Device
+          Unit.  (Additionally, a disk Global Unit can be flagged as a "system
+          device"; that use is not supported by this project.)  For example:
+
+
+      ISIS and MBase Configuration Declarations                             38
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+          Global Unit 1 could be cylinders 30 through 3F of MS0.
+
+      -   Logical Unit identifier, which is the pair '<slot><number>'.
+
+          These are specified using the SGU.REF macro.  Each such pair
+          identifies a Global Unit Number, plus the kinds of access permitted
+          to the slot:  read, write, attach, and save.  Multiple Logical Units
+          can be mapped to a single Global Unit, with the same or different
+          access permissions; only one slot at a time can successfully attach
+          the corresponding Global Unit.
+
+      AUTOMATIC CALCULATION OF DTS PARAMETERS
+
+      Each Global Unit corresponds staticly to a DTS NAME.  When a slot
+      successfully performs the SHARE SVC Attach operation, attaching an LU,
+      it establishes a temporary correspondence of Logical Unit, Global Unit,
+      and DTS NAME.  The following DTS parameters are calculated automatically
+      from the parameters obtained from the TYM file.
+
+      NAME
+          The Ascii encoding of the Global Unit number as 2 hex digits is
+          appended to the string "GBLU".  For example, Global Unit 0
+          corresponds to NAME GBLU00, Unit 7 corresponds to GBLU07, etc.
+
+      RECL
+          RECL always is 256, the number of bytes in a sector of either kind
+          of disk.
+
+      MAXP and SPACE
+          These are equivalent for ISIS disks, because the disk has fixed-size
+          records; they are in different units, however.
+
+          MAXP is calculated as (number of cylinders) * (sectors/cylinder).
+
+          SPACE is calculated as (number of cylinders) * (bytes/cylinder).
+
+
+
+      6.2 MBASE CONFIGURATION
+
+      The TYM file for an MBase slot must specify additional information if
+      MBase is to support communications for MBase Supervisor Support.
+
+
+      6.2.1 INCLUSION OF SUPERVISOR SUPPORT
+
+      MBase can be generated with or without code for MBase Supervisor
+      Support; if not specified, the default is without the support.  To
+      specify it:
+
+                TSISUP    EQ    1       : SUP Disk/Tape support
+                                        :   0/1 = omit/include
+
+
+
+
+      ISIS and MBase Configuration Declarations                             39
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      6.2.2 SCOM HOST NUMBER, USER NAME, MBASE PORT
+
+      MBase supports 125 circuit ports, plus port zero for ISIS control
+      messages.  IF TSISUP is not selected, MBase generates dispatcher ports 0
+      through 125.  If TSISUP is selected, MBase generates dispatcher ports 0
+      through 124, and reserves port 125 for the SCOM needle.
+
+      The SCOM needle by default specifies the username DTSERVER; to override
+      this default, include the statement:
+
+                          DTSNAME(username)    :username for DTS login
+
+      The SCOM needle Destination Host field must be specified as follows:
+
+                DTSHOST   EQ      $Annnn       :destination for DTS login
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ISIS and MBase Configuration Declarations                             40
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      APPENDIX A. SIMPLE TRANSPORT PROTOCOL
+
+
+
+      This protocol implements a "simple" Transport Layer, which probably
+      should be combined with the Network Service interface of JCOM and SCOM
+      in an actual implementation.  The purpose of considering this protocol
+      is to see how much complexity is absolutely required, with a view to
+      minimizing the implementation in the ISIS Kernel.  It assures that MBase
+      disruptions do not produce wrong results, but it does not shield the
+      Supervisor from outages due to temporary MBase disruptions.
+
+      It is shown as an alternative to consider if a less costly
+      implementation is needed, particularly for the ISIS Kernel.
+
+      It is modeled after the CCITT Class 0 (Simple Class) transport protocol
+      (see X.224, section 5.4).  Class 0 is intended for use with a network
+      connection having an acceptable residual error rate, and an acceptable
+      rate of signalled errors (i.e., Black Balls or crashes).
+
+
+
+      A.1 INFORMAL NOTES ON THE PROCEDURES
+
+      There are only two kinds of Transport Protocol Data Units:
+
+      DA, Data
+          Both Transport Entities send Data TPDUs to communicate user data.
+          In this context, user data is Disk and Tape Service Protocol.  There
+          is no sequence numbering, as there is no attempt to salvage a
+          Transport Connection after possible data loss.
+
+          Fields:  LI, TPDU Type, User Data.
+
+      YB, Yellow Ball
+          This Yellow Ball has a Unique Number field, which is large enough
+          that the Initiator never sends the same value twice.
+
+          Fields:  LI, TPDU Type, Unique Number.
+
+
+      While operating normally, each Transport Entity accepts T-DATA TSDUs and
+      sends the data, in DA TPDUs, to the other Transport Entity, which
+      delivers the information as T-DATA TSDUs.
+
+      Both Transport Entities respond to N-RESET by ceasing to examine the
+      arriving stream of data; they discard it.  They also stop handling
+      T-DATA TSDUs: the Responder simply discards them, while the Initiator
+      tells the Disk and Tape Server that the Transport Connection is
+      unavailable.
+
+      In addition, the Responder issues N-RESET to compel the Initiator to
+      begin resynchronization, which is as follows.
+
+
+
+      Simple Transport Protocol                                             41
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      The Initiator is responsible for reestablishing TPDU alignment, and for
+      flushing data of the previous Transport Connection before beginning a
+      new one.  The Initiator always responds to N-RESET by issuing N-RESYNC,
+      then sending a Yellow Ball TPDU that it has never send before,
+      remembering its Unique Number, and waiting for it to return.  The
+      Initiator ignores any other arriving data.  The Responder reflects any
+      Yellow Ball TPDU exactly as received.
+
+      When the Initiator receives the specific Yellow Ball TPDU that it is
+      currently awaiting, it resumes sending and receiving TPDUs.
+
+
+
+      A.2 INITIATOR'S RULES FOR TRANSPORT PROTOCOL
+
+      Initiator's states:
+
+      S201  Transport Connection unavailable.
+      S202  Transport Connection frozen, awaiting YB TPDU.
+      S202  Transport Connection available.
+
+      Initiator's Events:
+
+      E201  Receive N-OPERATIONAL (JCOM connected).
+      E202  Receive N-OUT_OF_ORDER (slot crash).
+      E203  Receive N-RESET (Black Ball).
+      E204  Receive DA TPDU.
+      E205  Receive T-DATA TSDU.
+      E206  Receive invalid TPDU.
+      E207  Receive N-RESYNC, expected YB TPDU.
+      E208  Receive N-RESYNC, not the expected YB TPDU.
+
+      Note:  Each YB TPDU (Transport Yellow Ball) has a unique number.
+
+      Initiator's Actions:
+
+      A0    Do nothing.
+      A201  Deliver T-CONNECT TSDU.
+      A202  Deliver T-DISCONNECT TSDU.
+      A203  Deliver T-DATA TSDU.
+      A204  Send DA TPDU.
+      A205  Send N-RESYNC, new YB TPDU, begin discarding arriving data.
+      A206  Realign TPDU assembly, resume accepting arriving data.
+      A207  A202, A205.
+      A208  A201, A206.
+
+
+
+
+
+
+
+
+
+
+
+      Simple Transport Protocol                                             42
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      Initiator State Transition Rules
+
+      Event   State            Action   State  Commentary
+              Now                       Next
+      =====   ==============   ======   =====  =====================
+      E201    S201             A0       S203   new transp conn
+      E201    S202             A205     S202   wait, flushing
+      E201    S203              fault          Programming error
+
+      E202    S201             A202     S201   lost transp conn
+      E202    S202             A0       S202   wait
+      E202    S203              fault          Programming error
+
+      E203    S201              fault          Programming error
+      E203    S202             A205     S202   await new YB
+      E203    S203           A202,A205  S202   release tnsp conn
+
+      E204    S201              fault          Programming error
+      E204    S202             A0       S202   wait, flushing
+      E204    S203             A203     S203   deliver the data
+
+      E205    S201, S202        fault          Programming error
+      E205    S203             A204     S203   send the data
+
+      E206    S201              fault          Programming error
+      E206    S202              fault          Programming error
+      E206    S203           A202,A205  S202   release tnsp conn
+
+      E207    S201              fault          Programming error
+      E207    S202           A201,A206  S203   new tnsp conn
+      E207    S203              fault          Programming error
+
+      E208    S201, S203        fault          Programming error
+      E208    S202             A0       S202   not it; keep waiting
+
+
+
+      A.3 RESPONDER'S RULES FOR TRANSPORT PROTOCOL
+
+      Responder's states:
+
+      S301  TPDU boundary alignment unknown; discarding data.
+      S302  Assembling TPDUs
+
+      Responder's Events:
+
+      E301  Receive N-RESET (Black Ball).
+      E302  Receive DA TPDU.
+      E303  Receive T-DATA TSDU.
+      E304  Receive invalid TPDU.
+      E305  Receive N-RESYNC, YB TPDU.
+
+      Responder's Actions:
+
+
+
+      Simple Transport Protocol                                             43
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      A0    Do nothing.
+      A301  Deliver T-DATA TSDU.
+      A302  Send DA TPDU.
+      A303  Realign TPDU assembly, resume accepting arriving data.
+      A304  Issue N-RESYNC, echo the YB TPDU.
+      A305  Issue N-RESET, begin discarding arriving data.
+      A306  Discard T-DATA TSDU.
+
+
+      Responder's State Transition Rules
+
+      Event   State            Action   State  Commentary
+              Now                       Next
+      =====   ==============   ======   =====  =====================
+      E301    S301             A0       S301   await N-RESYNC
+      E301    S302             A305     S301   await N-RESYNC
+
+      E302    S301              fault          Programming error
+      E302    S302             A301     S302   deliver the data
+
+      E303    S301             A306     S301   discard TSDU
+      E303    S302             A302     S302   send TPDU
+
+      E304    S301              fault          Programming error
+      E304    S302             A305     S301   await N-RESYNC
+
+      E305    S301              fault          Programming error
+      E305    S302           A303,A304  S302   established conn
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      Simple Transport Protocol                                             44
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      APPENDIX B. REFERENCES
+
+
+
+      These are the most important reference documents that were consulted in
+      preparing this design.  Specifically, the design uses the specific
+      document versions indicated, and doesn't take into account changes made
+      in later versions.
+
+
+
+      B.1 MBASE SUPERVISOR SUPPORT PROJECT DOCUMENTATION
+
+
+      MBase Supervisor Support - ISIS General Internal Design.  Revision 1.0,
+          in draft.
+
+      MBase Supervisor Support - MBase General Internal Design.  Revision 1.0,
+          in draft.
+
+      MBase Supervisor Support - Spirit Simulator General Internal Design.
+          Revision 1.0, in draft.
+
+      MBase Supervisor Support - Test Plan.  Revision 1.0, in draft.
+
+      MBase Supervisor Support - Test Slot General External Design.  Revision
+          1.0, in draft.
+
+      MBase Supervisor Support - Test Slot General Internal Design.  Revision
+          1.0, in draft.
+
+
+
+
+      B.2 MBASE, TSI, AND SPIRIT REFERENCE DOCUMENTATION
+
+
+      MBase General External Design, Revision 1.1, March 17, 1986.  TYMNET
+          Network Technology Development.
+
+          Generally describes MBase functionality and interfaces as
+          implemented.  Lacks any details on how to use or configure the
+          operations monitor.  Refer to TSI/MBASE SOFTWARE INTERFACE,
+          Microdata TYM.03.S, for details of the interface between MBase and
+          Spirit.
+
+      Circuit Clearing Sequences in MBase, August 21, 1986.
+
+          A one-page memo that diagrams the four different cases that can
+          happen in MBase when clearing a circuit.  It supplements the MBase
+          GED.
+
+
+
+
+
+      References                                                            45
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      SPIRIT BUS INTERFACE SPECIFICATION, Microdata IS20035007, Revision AX5
+          (May 21, 1985).
+
+          The primary reference documentation for the Spirit Bus.  However, at
+          this level, the Spirit Bus is regarded as a framework within which
+          the different Microdata controllers are defined.  Notice that "word"
+          in this document means 16-bit word.  There are frequent references
+          to other products.
+
+      SPIRIT I/O SOFTWARE INTERFACE, Microdata SPI.21.S, Revision 6 (August 8,
+          1984).
+
+          The interface presented to Spirit applications-system software by
+          the I/O software and firmware.  Doesn't specify details needed for
+          MBase, but provides a supplementary view of how a Spirit system may
+          use its peripherals.
+
+      TSI/MBASE SOFTWARE INTERFACE, Microdata TYM.03.S, Revision 2 22.1.86.
+
+          The interface presented by MBase to Spirit, and vice versa.  This is
+          the interface as negotiated between Tymnet and Microdata, and is
+          incorporated into this GED by reference.  Any contradictions between
+          this GED and TYM.03.S, or between TYM.03.S and Tymnet's ISIS
+          Reference Manual, are are unintended and should be fixed.
+
+      ISIS-II REFERENCE MANUAL, Tymnet, September 26, 1985.
+
+          The standard documentation of ISIS interfaces.
+
+      TYMNET CIRCUIT PROTOCOL REFERENCE MANUAL, TYMNET, February 4, 1986.
+
+          Describes many aspects of TYMNET virtual circuits, including
+          particularly IIX.
+
+
+
+      B.3 CCITT RECOMMENDATIONS
+
+
+      Reference Model of Open Systems Interconnection for CCITT Applications.
+          Recommendation X.200 (1984).
+
+          This document corresponds to ISO 7498; ISO is the International
+          Standards Organization.  The CCITT intends that X.200 will be used
+          as the model for CCITT descriptions of new services, interfaces, and
+          procedures.
+
+      Transport Protocol Specification for Open Systems Interconnection for
+          CCITT Applications.  Recommendation X.224 (1984).
+
+          X.224 specifies a suite of five Classes of transport protocol,
+          suited to different combinations of requirements.  It was used as a
+          source of ideas and consistent terminology, and as a checklist of
+          issues that might need handling.
+
+
+      References                                                            46
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      Transport Service Definition for Open Systems Interconnection for CCITT
+          Applications.  Recommendation X.214 (1984).
+
+          X.214 specifies a single definition of a transport service, with an
+          implementation-independent service interface, that is consistent
+          with all five X.224 transport protocols.  Of course, there are
+          service options that are not available with all of the protocols.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      References                                                            47
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      APPENDIX C. DESIGN CHOICES REGARDING IIX
+
+
+
+      This chapter discusses two aspects of using Tymnet IIX signalling.  The
+      first explores what is necessary in order to recover from data loss in
+      the Network Layer, and whether to use IIX in the Tymnet standard way to
+      recover from such data loss.  The other is the cost of using IIX
+      messages to frame all Transport Layer or Application Layer protocol data
+      units.
+
+      The reasons for these choices isn't itself part of the design, but may
+      be useful for a critique of the it.
+
+      (We use "message" in this discussion, rather than "protocol data unit,"
+      partly because it is not necessary to specify a particular protocol, and
+      partly because IIX documentation itself uses "message.")
+
+
+
+      C.1 SYNCHRONIZATION AFTER DATA LOSS
+
+      IIX is a standard ISIS facility which slots use to communicate
+      application messages that must be distinct from the user data stream.
+      The Dispatcher ring interface already keeps user data distinct from all
+      ISIS messages, and the network merely preserves the distinctions without
+      processing them additionally; both the network and the Dispatcher are
+      designed to handle the mixture of message types pretty efficiently.
+
+      All of the functions of IIX can be programmed without IIX.  ISIS
+      guarantees that data and ISIS message contents are properly delimited by
+      ISIS message type codes and length counts.  Without IIX, an application
+      must devise its own convention for delimiting user data and control
+      messages (and preventing confusion between these two), then implement
+      it.
+
+      IIX does make several things easier:
+
+      -   ISIS distinguishes SIIX and TIIX from user data.
+
+      -   IIX is already invented and documented.
+
+      -   IIX specifies a simple way to regain synchronization if data is lost
+          from the circuit.
+
+      For the Disk and Tape service, we chose to design a reliable Transport
+      protocol, so IIX doesn't contribute much as a preexisting, documented
+      protocol.  The Transport protocol doesn't need to be distinguished from
+      other, unstructured data, because there isn't any.
+
+      A Black Ball notifies Spirit of data loss; IIX is not necessary for
+      that.
+
+      The remaining issue is regaining synchronization after data loss.  Some
+
+
+      Design Choices Regarding IIX                                          48
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      choices are:
+
+      -   Clear SCOM and JCOM connections, and start over.  That would require
+          adding the functionality of resetting the JCOM connection, including
+          anything buffered in MBase; it is feasible, but not trivial.
+
+      -   Use a reserved data byte pattern as an optional "start of message"
+          mark.  A long enough string of zeroes (or ones) is a good choice, if
+          there is an upper limit on the length of a Transport Protocol Data
+          Unit.  (That's because so many bytes couldn't be all zero for any
+          other reason.)
+
+      -   Use an IIX message as an optional "start of message" mark, for use
+          only after a data loss when the location of "start of message" is
+          unknown.  This is different from using IIX all the time (SIIX and
+          possibly TIIX with every Transport message).  This use of IIX causes
+          no performance loss, and was adopted.
+
+      The highlights of the resynchronization method in this design are:
+
+      -   A Black Ball signals loss of start-of-message alignment.
+
+      -   Transport Layer messages are defined for recovering synchronization
+          status of a previous connection, and for starting a new one.
+
+      -   An IIX Resynchronize message is always sent immediately in front of
+          certain Transport messages: these are the ones that happen during
+          recovery from data loss, but not during normal data transfer.  Thus,
+          the added IIX message never costs anything during normal data
+          transfer.
+
+
+
+      C.2 IIX PERFORMANCE BURDEN
+
+      The Transport protocol is designed so that IIX is not necessary during
+      normal operation.  It is feasible to modify it so that Spirit selects
+      whether to use IIX by how it responds to SCOM needle.  That would
+      increase execution overhead in Spirit and in MBase, without any
+      significant benefit, so it wasn't done.
+
+      If used, IIX confirms the location of message boundaries in the byte
+      stream.  Using IIX might increase transaction delay unacceptably,
+      however, because of extra protocol steps.
+
+      -   Without IIX, Spirit could receive a request message by performing
+          one Start I/O, then one Read Data and Status Service Request.  Then
+          Spirit could send a response message by performing one Start I/O, a
+          Write Data Service Request, and a Read Status Service Request.
+          Let's call these the "basic steps."
+
+          One request and response cycle takes 2 Start I/Os and 3 Service
+          Requests.
+
+
+
+      Design Choices Regarding IIX                                          49
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      -   Using SIIX to begin every message, but not using TIIX, in addition
+          to the basic steps, add one Start I/O and one Read Data and Status
+          Service Request (to input SIIX); plus a Start I/O (Send Circuit
+          Signal Short command) and a Read Status Service Request (to output
+          SIIX).
+
+          One request and response cycle takes 4 Start I/Os and 5 Service
+          Requests.
+
+      -   Using SIIX and TIIX to frame every message, in addition to the basic
+          steps, add two Start I/Os, and two Read Data and Status Service
+          Requests (to input SIIX and TIIX); plus two Start I/Os (Send Circuit
+          Signal Short commands), and two Read Status Service Requests (to
+          output SIIX and TIIX).
+
+          One request and response cycle takes 6 Start I/Os and 7 Service
+          Requests.
+
+
+      Using IIX framing would involve significant additional Spirit execution
+      costs.  The design omits it.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      Design Choices Regarding IIX                                          50
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      APPENDIX D. JCOM - DISCUSSION OF ALTERNATIVES
+
+
+
+      I explored several ways to optimize the work of transferring data for
+      the Disk and Tape Service.  Here are notes on two alternatives that
+      didn't make the cut.
+
+      I ended up using a straightforward ring pair interface for JCOM.  Unless
+      JCOM needs to carry data rates comparable to MBase's throughput on
+      communications circuits, reducing the execution cost of JCOM would give
+      little increase in MBase's throughput.  The only apparent way to reduce
+      JCOM's cost is to reduce data copying, as explored in the two
+      alternatives below; to reduce copying takes complex procedures, and so
+      is apparently unjustified.
+
+      JCOM could be reworked later for lower execution cost, if justified,
+      without affecting Spirit, or the transport or application protocols.
+
+      The notes in this chapter are not well thought out, and are more or less
+      inconsistent with the body of the GED.  They may be instructive.
+
+
+
+      D.1 ISIS JCOM (ALTERNATIVE 1)
+
+      Here are notes on an alternative JCOM specification.
+
+      Buffers:
+
+          ISIS puts messages in S-BUS-window buffers.
+               compact.
+
+              Each LU has its own set of those buffers.
+
+              These are ISIS-out buffers only - MBase just returns them when
+              done.
+
+              MBase schedules S-BUS Service Requests to transfer the
+              information portion of a JCOM buffer directly to Spirit without
+              MBase copying the information portion.  (Additional SRBs may be
+              used to transfer protocol headers and trailers.)
+
+
+          MBase puts messages in non-S-BUS-window buffers.
+
+              Each LU has its own set of those buffers.
+
+              These are ISIS-in buffers only - ISIS just returns them when
+              done.
+
+              MBase handles Spirit output commands on SCOM the same as on
+              other circuits, except that it copies output from S-BUS-window
+              buffers into its JCOM buffers instead of into the Dispatcher OUT
+
+
+      JCOM - Discussion of Alternatives                                     51
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+              ring.
+
+
+          These buffers are all the same size for any one LU.
+
+          ISIS abandons these buffers if MBase crashes.
+
+          MBase assumes it can use all s-bus space upon interface reset - as
+          now
+
+          Except to allocate and deallocate them, buffers are referenced by an
+          index, not an address, to help limit the range of memory that could
+          be addressed as a buffer by mistake.
+
+      JCOM uses a pair of rings.  Each entry in the ring is a fixed length,
+      with fields for:
+
+          Function code (see list of messages and parameters, below)
+
+          Buffer number
+
+          Logical channel (will distinguish Logical Units in this
+          implementation)
+
+          Versatile parameter (fixed-length field, a few bytes long)
+
+      The different JCOM ring entries are:
+
+      1.  Here is information (buffer number)
+
+      2.  I am finished with the content of (buffer number)
+
+      3.  Please allocate (buffer number) buffers of length (versatile
+          parameter) for use on (logical channel)
+
+      4.  Cannot allocate (buffer number) buffers of length (versatile
+          parameter)
+
+      5.  (Buffer number) was allocated at (versatile parameter).
+
+      6.  Please deallocate (buffer number)
+
+      7.  (Buffer number) was deallocated.
+
+      8.  (Buffer number) cannot be deallocated because it was not allocated.
+
+      9.  I declare that send (buffer number) means address (versatile
+          parameter).
+
+      10. I will no longer use send (buffer number).
+
+      Memory addresses are MBase slot virtual addresses.
+
+      The buffers have a format that identify them as JCOM buffers, explicitly
+
+
+      JCOM - Discussion of Alternatives                                     52
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      contain the length, and have headers and trailers to help detect
+      overwriting.
+
+      The protocol is formally symmetric, but is used asymmetrically in that
+      only MBase allocates space, and only ISIS requests it to.
+
+
+
+      D.2 ISIS JCOM (ALTERNATIVE 2)
+
+      Here are notes on another approach.
+
+      How much can we reduce copying I/O data?  We would need to put data in
+      the S-BUS window and share access to it, while avoiding putting too much
+      knowledge of one module's data structures into another module.  We also
+      seek to limit complexity, but optimizations tend to increase complexity,
+      and to add special cases that can be hard to test convincingly.
+
+      rings of headers
+
+      data buffers in s-bus window
+
+      ISIS asks MBase to allocate and deallocate S-bus buffers via messages
+
+      ISIS asks to allocate a pre-configured number of these buffers when a
+      slot attaches an LU to be simulated, and deallocates them when the LU is
+      detached for any reason.
+
+      The result of ISIS asking to allocate buffers is that MBase gives ISIS
+      control of that many new buffers if possible; perhaps less or zero.
+
+      ISIS can give MBase control of a buffer ISIS controls, and vice versa.
+
+      ISIS puts an output message into any S-BUS buffer it controls, then
+      passes MBase a pointer to the buffer.
+
+      This also gives MBase control of the buffer.
+
+      MBase puts incoming (to ISIS) messages into any S-BUS buffer it
+      controls, then passes ISIS a pointer to the buffer.  This also gives
+      ISIS control of the buffer.
+
+      If MBase can be clever enough to cause Write Data service requests to
+      fill up a buffer in the window, it can avoid copying.  Otherwise, it
+      does normal automatic buffer management, then copies from those buffers
+      into JCOM buffers.
+
+      This is getting messy.
+
+      ISIS must keep MBase supplied with enough buffers to handle input from
+      Spirit.
+
+      ISIS normally does this with no explicit steps, because each ISIS
+      message produces one Spirit response, and because buffers are
+
+
+      JCOM - Discussion of Alternatives                                     53
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      interchangeable for any one LU.
+
+      Doesn't that mean messages have to be tagged according to LU?  And
+      buffers?
+
+      If MBase runs out, it gives ISIS a JCOM indication of data loss; ISIS
+      responds with a Transport layer reset.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      JCOM - Discussion of Alternatives                                     54
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      APPENDIX E. OPEN SYSTEMS INTERCONNECTION MODEL
+
+
+
+      The International Standards Organization defined a communications model
+      called the Open Systems Interconnection, or OSI, model.  It is described
+      in ISO 7498.  The CCITT also has its own definition of the OSI model;
+      I'm using the CCITT document, Recommendation X.200, because I have a
+      current copy of it at hand.
+
+      The OSI model consists of seven layers, usually described with layer
+      seven as the highest:
+
+      7   Application Layer
+      6   Presentation Layer
+      5   Session Layer
+      4   Transport Layer
+      3   Network Layer
+      2   Data Link Layer
+      1   Physical Layer
+
+      We speak of a service being provided in the layer having the same name;
+      i.e., the Transport Layer contains the Transport Service, and so on.
+
+      We will try to divide this design of the Disk and Tape Service into
+      layers, following the principles of the OSI model.  The layers of this
+      design are as follows; we will consider how they compare to the OSI
+      model.
+
+
+      -   Disk and Tape Service (Application)
+      -   End to End Transport Service (Transport)
+      -   End to End Network Service (Network)
+
+      For our purposes, we can focus on the Transport Layer; it is enough to
+      consider that everything is either in the Transport Layer, above it, or
+      below it.
+
+      The Transport Service provides an end-to-end Transport Connection.  It
+      relies on a Network Connection provided by the next lower layer, which
+      is also an end-to-end connection.  However, a Transport Connection
+      needn't be released when its Network Connection fails.  A single
+      Transport Connection could use several Network Connections, one after
+      the other, if necessary.  Then a user of the Transport Service would not
+      see its Transport Connection break, but it might experience service
+      delays.  Do you recognize the strategy of TYMNET's Circuit Rebuild?
+
+      CCITT Recommendation X.224 (1984), Sec. 5.4.3, contains a useful way to
+      characterize the error behavior of the Network Layer.  This method
+      considers whether error rates are "acceptable", meaning whether they are
+      acceptable for the use you have in mind.
+
+          Type A -- Network connection with acceptable residual error rate
+          (for example not signalled by disconnect or reset [Tymnet's Black
+
+
+      Open Systems Interconnection Model                                    55
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+          Ball]) and acceptable rate of signalled errors.
+
+          Type B -- Network connections with acceptable residual error rate
+          (for example not signalled by disconnect or reset) but unacceptable
+          rate of signalled errors.
+
+          Type C -- Network connections with unacceptable residual error rate.
+
+      MBase is connected to ISIS and to Spirit in two different ways here: by
+      JCOM, and by SCOM (a Permanent Virtual Circuit).  In the OSI model, this
+      service corresponds approximately to the Network Level.  And one can
+      argue for viewing JCOM as a link protocol, and putting it at the Link
+      Level.  Over SCOM, however, MBase delivers what amounts to a Call
+      Indication to Spirit, using an interface and protocol that carries lots
+      of calls, so the Network Level seems appropriate.
+
+      Both the JCOM and SCOM interfaces handle all the services from the
+      Network Layer on down, and don't provide Transport Layer services at
+      all.  Therefore it is consistent to declare that these are at the
+      Network Layer.
+
+      Each layer has two interfaces: its Service Access Point (SAP) with a
+      user or a higher layer, and the Protocol entities follow within the same
+      layer.
+
+      The Disk and Tape Service has Service Access Points in ISIS and in
+      Spirit.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      Open Systems Interconnection Model                                    56
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      GLOSSARY
+
+
+
+
+      APDU (Application Protocol Data Unit)
+          A message in the protocol between two Application Entities.  In this
+          context, the Disk and Tape Server is the application.
+
+      ASDU (Application Service Data Unit)
+          An abstraction that is not really part of this design.  It would be
+          a message, command, or indication exchanged between an Application
+          Entity and its user.  There are conceptually two points in this
+          design where ASDUs are exchanged:  between a slot and ISIS (using
+          primarily the SHARE SVC), and between the Spirit Disk and Tape
+          Server and its operating system.
+
+      Backpressure
+          TYMNET terminology for its method of flow control.  Backpressure is
+          "applied" and "released" (or "relieved") by different means in
+          different TYMNET components.
+
+      Black Ball
+          The TYMNET signal that data was lost from a network connection,
+          similar to an X.25 circuit reset.
+
+      BOT (Beginning of Tape)
+
+      CC (Connect Confirm)
+          The response to CR (Connect Request), in the Transport Protocol.
+
+      CCITT (a French-language acronym)
+          A committee of the International Telecommunications Union concerned
+          with telecommunications standardization.
+
+      CR (Connect Request)
+          The request to establish a new connection in the Transport Protocol.
+
+      DA (Data)
+          The Transport Protocol Data Unit that carries user data.
+
+      DATA
+          Disk or Tape data that was read, or to be written; part of the Disk
+          and Tape Protocol.
+
+      DST-REF (Destination Reference)
+          The field in some Transport Protocol Data Units that identifies the
+          relevant Transport Connection by giving the identifier that the
+          OTHER Transport Entity assigned to it.
+
+      DTS (Disk and Tape Service or Server)
+
+
+
+
+
+      Glossary                                                              57
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      ELF (Engine Load Facility)
+
+      EOT (End of Tape)
+          A magnetic tape is at EOT when there are only a few usable feet of
+          tape remaining.
+
+      ER (Error)
+          The Transport Protocol Data Unit that reports a protocol error.
+
+      FMT (Format)
+          A field in the Unit Attach Request indicating whether all data
+          records will be the same number of bytes.
+
+      FUNCT (Function)
+          The field that identifies which sort of Disk and Tape Protocol APDU
+          this is.
+
+      gobbler The TYMNET signal that an interface can sent, asking to discard
+          previously sent data that is still buffered in a circuit.  Receiving
+          a gobbler therefore means that some data may have been discarded
+          from the circuit, due to an explicit request rather than a network
+          malfunction.
+
+      Grey Ball
+          The TYMNET indication that is sent by the end of a circuit that
+          observes receiving a Black Ball (which see).
+
+      ICOM (ISIS Communicator)
+          An unfinished proposal for a facility that permits ISIS slot
+          programs to communicate with more generality or efficiency (or both)
+          than the Dispatcher provides.
+
+      IIX (Interface Information Exchange)
+          A TYMNET facility to provide out-of-band signalling for use by
+          interface applications, including a way for applications to
+          negotiate a choice among alternatives.  See the TYMNET CIRCUIT
+          PROTOCOL REFERENCE MANUAL.
+
+      ISO (International Standards Organization)
+
+      JCOM
+          The Network Layer interface between MBase and ISIS for MBase
+          Supervisor Support.  The name is a whimsical variant of ICOM.
+
+      KEY
+          In the Disk and Tape Protocol, a reference value used to associate
+          requests with responses.
+
+      KIND
+          In the Disk and Tape Protocol, the field that specifies whether a
+          device is a disk or a tape.
+
+
+
+
+
+      Glossary                                                              58
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      LI (length indicator)
+          The field that gives the length of the entire data unit; it is the
+          first field.  Used identically in both Transport and Application
+          (Disk and Tape) Protocols.
+
+      load point
+          The position of a magnetic tape just after it has been mounted on a
+          drive and made ready, or just after completing a rewind operation.
+
+      LU (logical unit)
+          An I/O device of an ISIS slot; here, particularly, a disk or tape.
+          An LU is the device itself, or a number used in tables etc.  to
+          designate one of these devices.
+
+      MAXP (maximum disk position)
+          In the Disk and Tape protocol, a field declaring the highest value
+          to be used in the POSN field (which see).
+
+      MDCSC (McDonnell Douglas Computer Systems Company)
+
+      MSC
+          The SHARE SVC supports the MSC-1400 disk, among others.
+
+      MUD (Master User Directory)
+          A disk file that the Supervisor consults while processing login
+          requests.
+
+      N-DATA request and indication
+          The abstract name for Network Service signals conveying user data.
+
+      N-OPERATIONAL indication
+          The abstract name for the Network Service signal which announces
+          that the connection is now usable.
+
+      N-OUT_OF_ORDER indication
+          The abstract name for the Network Service signal which announces
+          that the connection has become unusable.
+
+      N-RESET indication
+          The abstract name for the Network Service signal that announces that
+          the connection may have lost some data entrusted to it; however, the
+          connection remains usable.
+
+      N-RESYNC request and indication
+          The abstract name for the Network Service signal used as an out-of-
+          band marker.  The Transport Layer uses N-RESYNC sparingly to
+          reestablish TPDU alignment after a disruption in the Network Layer,
+          and in other circumstances.
+
+      NAME
+          In the Disk and Tape Protocol, NAME identifies what resource is
+          being requested in a UNIT Attach Request.
+
+
+
+
+      Glossary                                                              59
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      NETVAL (TYMNET Network Validation utility)
+
+      NPDU (Network Protocol Data Unit)
+
+      NSDU (Network Service Data Unit)
+
+      OSI (Open Systems Interconnection model)
+          A way of structuring computer communications into layers (including
+          in part Network, Transport, and Application).
+
+      PIR (Project Initiation Request)
+
+      POSN (disk position)
+          In the Disk and Tape Protocol, the field specifying a disk record
+          number to read or write.
+
+      PROT (protection)
+          In the Disk and Tape Protocol, the field that specifies whether the
+          requester intends to write on the device, or else intends only to
+          read.
+
+      PVC (Permanent Virtual Circuit)
+          In the data networks biz, a data interface that behaves like a
+          leased telephone circuit: it is installed as a fixed connection
+          between two points.  (Some of the time, however, it may be out of
+          order.)  It is in contrast to a switched virtual circuit, which can
+          place calls to a choice of destinations.
+
+      RAM (Raw Accounting Merger)
+          A slot application that combines TYMNET accounting information from
+          several sources.
+
+      RCODE (reason code)
+          In the Disk and Tape Protocol, the field that indicates whether the
+          request succeeded, or what happened instead.
+
+      RECL (record length)
+          In the Disk and Tape Protocol, RECL is used differently when
+          attaching a UNIT, and when reading and writing.  See the protocol
+          specification.
+
+      RJ (Reject)
+          In the Transport Protocol, RJ asks the receiving Transport Entity to
+          resend any unacknowledged TPDUs, because the sending Transport
+          Entity suspects that some of them have been lost.
+
+      SCOM
+          The Network Layer interface between MBase and Spirit for MBase
+          Supervisor Support.  The name is a whimsical variant of ICOM.
+
+      SIIX (Start of IIX)
+          An ISIS or Spirit message introducing an IIX message; see IIX.
+
+
+
+
+      Glossary                                                              60
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      SPACE
+          In the Disk and Tape Protocol, SPACE declares the number of bytes
+          required to store data for this UNIT.
+
+      SRC-REF (Source Reference)
+          In the Transport Protocol, SRC-REF is the sender's identifier for
+          this transport connection.  Each Transport Entity independently
+          assigns an identifier to each connection.
+
+      STATUS
+          In the Disk and Tape Protocol, encodes several details of the tape
+          controller's status.
+
+      SUBOP (sub-operation)
+          In the Disk and Tape Protocol, the Tape Control Request has several
+          variants, distinguished by the SUBOP field.
+
+      SVC (Supervisor Call)
+          See the ISIS-II Reference Manual.
+
+      T-CONNECT indication (or confirmation)
+          A Transport Service indication (to the Application Layer) that
+          announces a new transport connection.
+
+      T-DATA request (or indication)
+          A Transport Service element of data to be sent to the other end, or
+          being delivered from the other end.
+
+      T-DISCONNECT indication
+          The Transport Service indication that the Transport Connection has
+          been released.
+
+      tape mark
+          A special code written onto magnetic tape, and used to separate sets
+          of physical records.  The code cannot be duplicated by any data
+          record.  Also called a file mark, or an end-of-file (EOF) mark.
+
+      TIIX (Termination of IIX)
+          An ISIS or Spirit message marking the end of an IIX message; see
+          IIX.  This design does not use TIIX.
+
+      TPDU (Transport Protocol Data Unit)
+
+      TPDU-NR
+          In the Transport Protocol, the field that gives the sequence number
+          assigned to this TPDU, used in acknowledging receipt of the TPDU.
+
+      Transport Entity
+          The abstract process that implements the Transport Protocol on one
+          end of a transport connection.
+
+
+
+
+
+
+      Glossary                                                              61
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      TSDU (Transport Service Data Unit)
+
+      TSI (Tymnet Spirit Interface)
+          Why are you reading this document if you don't recognize TSI?
+
+      TTR (Time to Try Resynchronization)
+          In the Transport Protocol, a timer that limits how long the
+          Initiator will spend trying to reestablish an interrupted
+          connection.
+
+      TWR (Time to Wait for Resynchronization)
+          In the Transport Protocol, a timer that limits how long the
+          Responder will wait for the Initiator to reestablish an interrupted
+          connection.
+
+      UNIT
+          In the Disk and Tape Protocol, a number used to identify an attached
+          disk or tape.
+
+      YB (Yellow Ball)
+          In the alternate (simplified) Transport Protocol, YB is used when
+          reestablishing a transport connection, to determine that all data
+          from a previous connection has been flushed out of the network.  It
+          is named by analogy to the TYMNET Yellow Ball message, which
+          satisfies a similar need.
+
+      YR-TPDU-NR (Your TPDU Number)
+          In the Transport Protocol, this is the field that acknowledges
+          received TPDUs by giving the highest TPDU sequence number of the set
+          being acknowledged.
+
+      zapper
+          The TYMNET circuit-clearing signal.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      Glossary                                                              62
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      TABLE OF CONTENTS
+
+
+
+
+      1.0 PROJECT OBJECTIVES...........................................  1
+        1.1 Primary requirements.......................................  1
+        1.2 Secondary project requirements.............................  2
+        1.3 Derived requirements.......................................  2
+
+      2.0 OVERVIEW OF THE DESIGN.......................................  4
+        2.1 Network Layer..............................................  5
+          2.1.1 JCOM Interface between MBase and ISIS..................  5
+          2.1.2 SCOM Interface between MBase and ISIS..................  6
+          2.1.3 MBase Support of the Network Layer.....................  6
+        2.2 Transport Service..........................................  7
+        2.3 Disk and Tape Service......................................  7
+        2.4 Convention for Result Codes................................  8
+
+      3.0 NETWORK SERVICE SPECIFICATIONS...............................  9
+        3.1 ISIS JCOM Specification....................................  9
+          3.1.1 Connecting JCOM........................................  9
+          3.1.2 JCOM Descriptor........................................  10
+          3.1.3 JCOM Rings.............................................  10
+            Ring descriptor format.....................................  11
+            Ring-Wrap Message..........................................  11
+            Ring Never Wraps Implicitly................................  11
+          3.1.4 Flow Control (Backpressure)............................  11
+        3.2 Spirit SCOM Specification..................................  12
+          3.2.1 Connecting SCOM........................................  12
+          3.2.2 SCOM Messages..........................................  12
+          3.2.3 Flow Control (Backpressure)............................  13
+        3.3 MBase Connection between JCOM and SCOM.....................  13
+
+      4.0 TRANSPORT SERVICE SPECIFICATION..............................  14
+        4.1 Some Notes on Notation.....................................  14
+        4.2 Network Service interface..................................  16
+        4.3 Transport Service interface................................  17
+        4.4 Transport Protocol Data Units (TPDUs)......................  17
+          4.4.1 TPDU Fields............................................  17
+          4.4.2 CR, Connect Request....................................  18
+          4.4.3 CC, Connect Confirm....................................  18
+          4.4.4 DA, Data...............................................  19
+          4.4.5 AK, Acknowledgment.....................................  19
+          4.4.6 RJ, Reject.............................................  19
+          4.4.7 ER, Error..............................................  19
+        4.5 TPDU Reason Codes..........................................  20
+        4.6 Transport Protocol Overview................................  20
+          4.6.1 Establishing a Transport Connection....................  20
+          4.6.2 Reestablishing a Suspended Transport Connection........  21
+        4.7 Notes on Handling Exceptions...............................  21
+        4.8 Notes on Synchronization Issues............................  22
+        4.9 Initiator's Rules for Transport Protocol...................  23
+        4.10 Responder's Rules for Transport Protocol..................  25
+
+
+      Table of Contents                                                      i
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+
+      5.0 DISK AND TAPE SERVICE PROTOCOL SPECIFICATION.................  28
+        5.1 Disk Format Compatibility..................................  28
+        5.2 General APDU rules.........................................  28
+        5.3 DTS Resource Names.........................................  29
+        5.4 Reason Codes...............................................  29
+        5.5 Initialization and configuration agreement.................  30
+          5.5.1 Unit Attach Request....................................  30
+          5.5.2 Unit Attach Confirm....................................  31
+          5.5.3 Unit Detach Request....................................  31
+          5.5.4 Unit Detach Confirm....................................  32
+        5.6 Read and Write Operations..................................  32
+          5.6.1 Unit Read Request......................................  32
+          5.6.2 Unit Read Response.....................................  33
+          5.6.3 Unit Write Request.....................................  33
+          5.6.4 Unit Write Response....................................  33
+          5.6.5 Tape Control Request...................................  34
+          5.6.6 Tape Control Response..................................  34
+          5.6.7 Tape Unit STATUS Parameter.............................  34
+        5.7 Limits for this DTS Implementation.........................  36
+        5.8 Correspondence Between SHARE SVCs and DTS Protocol.........  36
+
+      6.0 ISIS AND MBASE CONFIGURATION DECLARATIONS....................  38
+        6.1 ISIS Configuration.........................................  38
+          6.1.1 Selection of Simulation Disk and Tape Drivers..........  38
+          6.1.2 Determining each UNIT's Characteristics................  38
+            Existing TYM File Information..............................  38
+            Automatic Calculation of DTS Parameters....................  39
+        6.2 MBase Configuration........................................  39
+          6.2.1 Inclusion of Supervisor Support........................  39
+          6.2.2 SCOM Host Number, User Name, MBase Port................  40
+
+      APPENDIX A. SIMPLE TRANSPORT PROTOCOL............................  41
+        A.1 Informal Notes on the Procedures...........................  41
+        A.2 Initiator's Rules for Transport Protocol...................  42
+        A.3 Responder's Rules for Transport Protocol...................  43
+
+      APPENDIX B. REFERENCES...........................................  45
+        B.1 MBase Supervisor Support Project Documentation.............  45
+        B.2 MBase, TSI, and Spirit Reference Documentation.............  45
+        B.3 CCITT Recommendations......................................  46
+
+      APPENDIX C. DESIGN CHOICES REGARDING IIX.........................  48
+        C.1 Synchronization After Data Loss............................  48
+        C.2 IIX Performance Burden.....................................  49
+
+      APPENDIX D. JCOM - DISCUSSION OF ALTERNATIVES....................  51
+        D.1 ISIS JCOM (Alternative 1)..................................  51
+        D.2 ISIS JCOM (Alternative 2)..................................  53
+
+
+
+
+
+
+
+      Table of Contents                                                     ii
+
+
+
+
+
+
+                                                               August 27, 1987
+
+
+      APPENDIX E. OPEN SYSTEMS INTERCONNECTION MODEL...................  55
+
+      GLOSSARY.........................................................  57
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      Table of Contents                                                    iii
+
+
+
+v@Yû
