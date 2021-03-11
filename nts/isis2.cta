@@ -1,0 +1,268 @@
+.	<<	file	ISIS2.TAB	>>
+.SEC(|ISIS Control Table|)
+.TOPIC(|Dispatcher|)
+.TOPIC(|Control Table Area|)
+.TOPIC(|CTA|)
+
+	Fixed locations for constants, and temp storage for dispatcher;
+The ISIS dispatcher and other programs will find this table at a fixed
+location in the slot's absolute memory:
+.BEGIN VERBATIM
+
+CTA	SEG	$A 14		:force to segment 14d!
+CNTRL	WS	1		:Control Flags, used by DISPATCHER
+   format (bits):
+ - - x x.x x x x.x x x x.x x x x.
+     | | | | | | | | | | | | | +--not currently used
+     | | | | | | | | | | | | +----set if  ports not reusable until they
+     | | | | | | | | | | | |		emit a disconnect
+     | | | | | | | | | | | +------set if number of ports may be changed
+     | | | | | | | | | | +--------set if host numbers may be changed
+     | | | | | | | | | +----------slot wants  to  know  about take-over
+     | | | | | | | | +------------slot wants to know supervisor time
+     | | | | | | | +--------------slot can originate reset requests
+     | | | | | | +----------------slot   wants   zappers  and  detach's
+     | | | | | |			acknowledged.
+     | | | | | +------------------set to accumulate project code
+***  | | | | +--------------------slot wants out-of-band flow-control
+     | | | +----------------------slot wants "1-down" messages
+     | | +------------------------slot wants to know if Supe is lost
+     | +--------------------------slot uses extended memory
+     +----------------------------not currently used
+
+CTASIZE	WS	1		:size of CTA area (bytes)
+AREAS	WS	$A 14		:memory area requirements (bytes/area)
+NPROT	HS	1		:count of usable protection bytes
+.TOPIC(|PROT|)
+.SEE(|MEMORY PROTECTION|,|PROT|)
+PROT	BS	$A 14		:memory protection requirements:
+		    bit masks	usage
+			1	execution access permitted
+			2	write access permitted
+			4	read allowed (required for others)
+
+ISTART	WC	START		:job execution start address
+DSTART	WC	DEBUG		:DDT execution start address
+STATUS	WC	FPANEL		:pointer to front-panel display cell
+HTBLPT	WC	HOSTS		:pointer to host table
+PTBLPT	WC	PORTS		:pointer to port table
+TTBLPT	WC	PTABLE		:pointer to termination table
+IRINGP  WS	1		:Input -- ring descriptor start address
+ORINGP	WS	1		:Output-- ring descriptor start address
+IBKPNT	WS	1		:input-- pointer to "FROMISIS" bits ***
+OBKPNT	WS	1		:input-- pointer to "TOISIS" bits  ***
+PCBPNT	WC	PCTTBL		:pointer to project code term. table
+CSADDR	WS	1		:core start address
+HOSTN	HC	MAXHOST		:Maximum number of hosts
+NPORTS	HC	MAXPORT		:Highest real port number (from 0)
+IMAXI	HS	1		:Input -- size of input ring in bytes
+OMAXI	HS	1		:Output -- size of output ring in bytes
+SLOTNO	HS	1		:Slot number (put there by dispatcher)
+SVERNO	HS	1		:Slot version number (assembled in)
+DD.BG2	WS	1		:Second DDT entry
+MACPNT	HC	MACR-0E0000	:HW pointer to extended MAC sets
+MAXCNT	HC	NUMAC		:HW count of extended MAC sets
+	WS	10		:extra entries for future expansion!
+.END
+.BEGIN BLOX
+	***#####NOTE: The "out-of-band flow control", and the associated
+"FROMISIS" and "TOISIS" bit arrays will shortly become unsupported!
+All such usage should be removed from existing applications!!
+.END
+	There are also a number of additional tables and cells, addressed
+by the dispatcher.  These should be placed in segment 0E,
+(or another write-protected area), where they can be
+protected from inadvertent modification by the slot's code.
+
+.BEGIN OFFSET
+
+	HOSTS:  The master table, for this slot,
+showing the numbers of all of the hosts to be applied.
+(NOTE...unless the CNTRL word specifies that the host numbers may be
+changed, this table MUST be assembled in!)
+
+	PORTS:  The master table, for this slot, of all port allowances
+(number of host ports) for each potential host.
+(NOTE...unless the CNTRL word specifies that the number of ports may be
+changed, this table MUST be assembled in!)
+The HIGH-ORDER TWO BITS of each entry specify the host state:
+.BEGIN VERBATIM
+			00 - answered
+			01 - down
+			10 - shut
+			11 - gone
+.END
+
+	PTABLE:  Slot permuter table (length NPORTS+1 halfwords); extra port
+is used for port 0...thus NPORTS is the number of serviceable ports, and is
+also the highest port number to use:
+.BEGIN VERBATIM
+	entry = 0 --> not in use
+	entry  >0 --> index for dispatcher buffer
+	entry  <0 --> timeout waiting to be thrashed
+		(or waiting for disconnect to return)
+.END
+	MACR:  The extended MAC register sets are assembled starting at
+the label MACR.  Each set must consist of 16 fullword MAC registers followed
+by a fullword pointer and two fullwords of storage.  The pointer contains
+the address of the PSD used to resume execution after the Change MAC Set SVC
+has been issued.  The MAC registers take the form:
+.BEGIN BOX
+	WXYYZZZZ
+
+	where:	W	is the protection mask
+		X	is the extended memory block number
+		YY	is the number of pages in the segment
+		ZZZZ	is the starting page of the segment
+
+.END
+	The starting page number is the starting page relative to the
+beginning of the block.  The protection mask is the same as shown
+forfor the label PROT above.
+.END
+
+	Still other tables and cells occur within the program itself:
+
+.BEGIN OFFSET
+	START:  The start address for background code.
+
+	DEBUG:  The address (if non-zero) of a special routine,
+executable from DDT, to provide application-dependent
+information and control.
+
+	FPANEL:  The address of a halfword, which can be displayed at
+the front panel for diagnostic purposes.
+	"TOISIS": A bit array, of length maxport, whose bits correspond to
+the same numeric ports;  the bit turned on means that the DISPATCHER is
+willing to accept data on that port (applied to data going to ISIS).
+	"FROMISIS": A bit array, like "TOISIS", set by the slot to specify
+which ports it is willing to accept data on.  Set by A0, A1 conventions,
+or may be set explicitly by slot.
+.BEGIN BLOX
+	NOTE:###The "out-of-band flow control", and the associated
+"FROMISIS" and "TOISIS" bit arrays will shortly become unsupported!
+All such usage should be removed from existing applications!!
+.END
+	"PCBTBL": An optional (256-bit) bit array, the bits of which specify
+those input characters which are to terminate the "project code".  This
+is ignored unless the "project code" CNTRL bit is set.  Even then, it
+may be null (pointer set to 0), in which case project codes of 27 characters
+will be accumulated.  If not null, up to 27 characters of data will be
+accumulated, unless terminated by one of the data characters specified by
+PCBTBL;  the terminating character is included in the project code.
+(Project code characters are those included in the input data stream, but
+exclude control mesages.)
+.END
+
+.SS(|Memory Management|)
+
+	The user's memory layout is defined by a table in the CTA,
+and is in terms of AREAS, where an area corresponds to an
+integral number of MAC segments, rather than exactly one.  In
+particular, The executable code area need not start at 10000, but
+may instead start wherever is convenient.  Further, the user program is
+permitted to specify the protection to apply to each segment at load time,
+and to change the protection, independently in each independent process,
+at run time, dynamically.  This permits the definition of multiple areas of
+executable code, and allows, for example, the foreground to not have access
+to background data areas, such as bufferlets, if this should seem desirable.
+
+.BEGIN GROUP VERBATIM
+
+                        Figure 1.
+
+	---------
+	|	|
+	|	|
+	|  FsF  | ----------+
+ F0000  |-------|           |
+	|	|           |
+	|	|           |
+	|  EaE  | ----------|---+
+ E0000  |-------|           |   |
+			    |   |
+	   <->	            |   |
+		            |   |
+	|-------|	    |   |
+	|	|           |   |
+	|  2a2  | ----+     |   |
+	|  2a2  |     +-----|---|------ |- 3s3 -|
+ 30000  |-------|           |   |       |  3s3  |
+	|  2a2  |           |   |       |  2s2  |
+	|  2a2  |           |   |       |- 2s2 -|
+	|  2a2  | ----+     |   |       |  2s2  |
+  20000 |-------|     +-----|---|------ |  2s2  |
+	|	|  +--------|---|------ |- 1s1 -|
+	|	|  | +------|---|------ |  0s0  |
+	|  1a1  | -+ | +----|---|------ |  0s0  |
+ 10000  |-------|    | |    |   +------ |- EsE -|
+	|	|    | |    |              <->
+	|  0a0  | ---+ |    |
+	|  0a0  | -----+    +---------- |  FaF  |
+     0  ---------
+Slot Virtual address space	  Physical address space
+
+     Where "NaN" denotes area "N", and "s" denotes segment.
+
+.END
+
+	The user has no access control over segments 14d and 15d (15d is still used
+to examine system parameters, such as the clocks).  Segment 14d maps into
+the beginning of the user's physical address area, unconditionally!  This
+insures that ISIS knows where to find it at all times, independent of the
+setting of the user's MAC registers.  DDT will be able to write into SEG 14d,
+provided that the slot is not running (in order to initialize storage), but
+this segment is outside the control of the slot, and write protected.
+As a result of this convention, the physical storage is "scrambled", relative
+to the topological address space of the user, but, since he can never address
+the real space directly, there should be no real difficulty.  However,
+any process which loads a slot's storage into physical memory (down-stream
+load, etc.) must be aware of this convention.
+
+
+.SS(|Host Management|)
+
+	NOTICE...ALL management of hosts is performed by the slots!
+In particular, the slot MUST issue an 0:04 message to change the
+state of the host, and in particular to create initial knowledge of
+host numbers and the number of ports to apply to that host.  The
+dispatcher will not do any management, other than update the HOSTS and
+PORTS tables (for it's own information) unless some condition outside
+the slot (halting the slot, etc) forces the dispatcher to take all hosts
+down and zap all circuits.  In particular, no attempt will be made to
+avoid repetitive messages (i.e., host 12 down, host 12 down,...), although
+TYMNET may have strong objections!.
+
+	If the slot crashes, all circuits will be zapped, and all hosts will
+be set "DOWN".  If the slot is HALTED, the hosts will instead be set "GONE".
+
+.BEGIN TURN OFF "#"
+	If the slot issues a host message 0:04, 0:0A or 0:0C, the dispatcher will
+verify that "RH#" is less than HOSTN, else it is cause to crash the slot!
+
+	A host MUST be set GONE before the host number can be changed, but
+the host number may be changed in the process of bringing the host from
+GONE to any other state.
+
+	For the 0:0A and 0:0C messages, a mismatch of host numbers is also
+cause to crash the slot.
+
+	However, in the TYMNET-I environment, a "RH#" of zero is the ONLY
+legitimate value, and in this environment, HOSTN is taken to be 1 for each
+slot--this will cause a crash for any attempt to address other than host 0!!
+
+	The TYMNET-II node code will be configured for a certain number of
+hosts and ports.  If these are exceeded, a 0:0B message is issued back to
+the requesting slot, indicating the error.
+
+	If "CNTRL" masked with 04 or 08 is zero (disallowing host number or
+port changes), then (and ONLY then) the values presented by the slot for
+that "RH#" will be ignored, and the assembled-in values will be used instead!
+.END
+
+	Once a circuit has been built to a host, it is tied to the slot.
+In particular, the dispatcher will not have knowledge of which circuits
+correspond to a host, and that host may be taken to any state, including
+"GONE", without affecting the existing circuits.  The slot must manage
+this function if it wants to drop circuits when the host goes down.
+   
