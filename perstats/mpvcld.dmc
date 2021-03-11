@@ -1,0 +1,87 @@
+OPEN MPVC09.10.
+INIT 1 MPVC.RPT.
+FI TERMHOST 322 991 2197 2199 2909.
+SORT TERMHOST TERMID.
+
+REPORT START.
+
+        SECTION INITIAL.
+                PAGE 66.
+                BODY 60.
+                HEADING PRINT SYSPAGE FORMAT 'TERMID=21  MPVC' &
+                        ' REPORT FOR 09/10/85' 35X 'PAGE ' I4..0 // &
+                        29X 'INPUT' 8X 'OUTPUT' 8X 'TOTAL' 8X 'CONNECT' / &
+                        2X 'TERMHOST' 4X 'SESSIONS' 3(4X 'CHARACTERS') &
+                        5X 'MINUTES' / &
+                        2X 8('-') 4X 8('-') 3(4X 10('-')) '-' 4X 7('-') &
+                        / END.
+                DEFINE REAL DAYMIN DAYCHR DAYSES MPVCMIN MPVCCHR &
+                        MPVSES TIDMIN TIDCHR TIDSES HSTMIN HSTCHR HSTSES.
+                DEFINE REAL PDMIN PDSES PDCHR PHMIN PHSES PHCHR.
+
+                LET DAYMIN=5846393.
+                LET DAYCHR=4278731483.
+                LET DAYSES=570325.
+
+        SECTION GETREC.
+        SECTION HEADING.
+        SECTION PRINT.
+        SECTION TOTALS.
+                ON CHANGE TERMID EVALUATE TIDSES EQ TOT 1 TIDCHR EQ  &
+                        TOT TOTALCHARS TIDMIN EQ TOT TOTMIN.
+                ON CHANGE TERMID GOTO TID.
+                ON CHANGE TERMHOST EVALUATE TIDSES EQ TOT 1 TIDCHR EQ  &
+                        TOT TOTALCHARS TIDMIN EQ TOT TOTMIN.
+                ON CHANGE TERMHOST GOTO TID.
+                GOTO F.
+
+        TID:    IF TERMID NE 21 GOTO CONT.
+        MPVCSES=MP VCSES+TIDSES.
+                MPVCSES=MPVCSES+TIDSES.
+                MPVCCHR=MPVCCHR+TIDCCHR.
+                MPVCMIN=MPVCMIN+TIDCMIN.
+                PRINT TERMHOST TIDSES TIDIN TIDOUT TIDCHR TIDMIN FORMAT &
+                        3X I5 7X I6 5X I10 4X I10 4X I11 4X I7 END.
+
+        CONT:           ON END EVALUATE HSTMIN EQ TOT TOTMIN &
+                        HSTCHR EQ TOT TOTALCHARS HSTSES EQ TOT 1.
+                ON END GOTO END.
+                GOTO F.
+
+
+                END: LET PDSES = MPVCSES/DAYSES.
+                     LET PDMIN = MPVCMIN/DAYMIN.
+                     LET PDCHR = MPVCCHR/DAYCHR.
+                     LET PHSES = MPVCSES/HSTSES.
+                     LET PHMIN = MPVCMIN/HSTMIN.
+                     LET PHCHR = MPVCCHR/HSTCHR.
+
+                     PRINT FORMAT 2(/ 80('-')) // 35X 'TOTALS' // END.
+
+                     PRINT MPVCSES DAYSES PDSES HSTSES PHSES FORMAT &
+                        6X 'MPVC' 7X 'DAY' 4X '% MPVC' 1X 'POS HOST' 1X &
+                        5X 'SESSIONS' 2X 'SESSIONS' 1X 'OF DAY' 1X &
+                        'SESSIONS' 1X 'OF DAY' /&
+                        5X 8('-') 2X 8('-') 1X 6('-') 1X 8('-') 1X 6('-') / &
+                        6X I6 4X I6 2X F3.2 2X I6 2X F3.2 // END.
+
+                     PRINT MPVCMIN DAYMIN PDMIN HSTMIN PHMIN FORMAT &
+                        6X 'MPVC' 7X 'DAY' 4X '% MPVC' 1X 'POS HOST' 1X &
+                        5X 'MINUTES' 2X 'MINUTES' 1X 'OF DAY' 1X &
+                        'MINUTES' 1X 'OF DAY' /&
+                        5X 8('-') 2X 8('-') 1X 6('-') 1X 8('-') 1X 6('-') / &
+                        6X I6 4X I6 2X F3.2 2X I6 2X F3.2 // END.
+
+                     PRINT MPVCCHR DAYCHR PDCHR HSTCHR PHCHR FORMAT &
+                        6X 'MPVC' 7X 'DAY' 4X '% MPVC' 1X 'POS HOST' 1X &
+                        5X 'CHARACTERS' 2X 'CHARACTERS' 1X 'OF DAY' 1X &
+                        'CHARACTERS' 1X 'OF DAY' /&
+                        5X 10('-') 2X 10('-') 1X 6('-') 1X {_
+                        6X I6 4X I6 2X F3.2 2X I6 2X F3.2 // END.
+
+
+F:      SECTION FINAL.
+REPORT END.
+CLEAR.
+CLOSE.
+QUIT.
