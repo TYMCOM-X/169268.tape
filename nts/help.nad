@@ -1,0 +1,1418 @@
+ISIS__TTE.442          COMMANDS AND DEFINITIONS
+          NAD is used to read  and  write  image  binary  files  which
+          contain information necessary to load and dump memory images
+          for TYMNET ENGINES.  These files  may  also  contain  symbol
+          table  and  macro  information  so  that a user may save and
+          reconstruct NAD environments for debugging purposes.
+               The following is a summary of commands frequently  used
+          when working on a XCOM type communication interface.
+               ;X<FILE.CMD>   Will cause  subsequent  commands  to  be
+                              read  from FILE.CMD.  This is especially
+                              useful for assembling a series of files.
+               ;;             This command allows comments in  command
+                              files   or   at   command   level.   All
+                              characters after the ";;" and up to  but
+                              not  including  a  carriage  return  are
+                              ignored except that they  are  typed  if
+                              the  command  is  in a command file.  An
+                              example can be found in the  first  four
+                              lines of above XCOM slot command fil.
+               n[SYMBOL       Sets  the  current  type-out   mode   to
+                              magnitude.   It  also opens and displays
+                              memory from the current program  counter
+                              and leaves the memory open.
+               ;@<filename>   Cause an assembly to take  place.   This
+                              command is equivalent to ";A".  
+               n;P<filename>  A new file, <filename>  is  created  and
+                              becomes   the   current  NIB  file.   If
+                              <filename> exists and n is equated to 1,
+                              the  existing  file  is deleted.  If the
+                              file already exists and n is zero or not
+                              present,  then  the  user  is  given the
+                              option of deleting the existing file  or
+ISIS__TTE.442                              aborting the command.
+               ad,cnt;P       This command appends a range  of  memory
+                              image data into the NIB file.  ad is the
+                              beginning address and cnt  is  the  byte
+                              count.   A  typical example in the above
+                              slot command file is SEG7,S7SIZE;P where
+                              SEG7  is  the  address for segment seven
+                              and  S7SIZE  is  the  number  of   bytes
+                              assigned for the segment.
+               %P             Puts state information and  all  symbols
+                              except opcodes on NIB file.
+               %Q             Exits NAD to  the  monitor.   Exit  also
+                              occurs  if  two  successive  escapes are
+                              typed.
+               GL             This is a NAD symbol  control  found  in
+                              the  slot  command file.  This directive
+                              marks a symbol as global to all modules.
+               n%F<filename>  An  existing  file  with  the  specified
+                              filename  becomes  the current NIB file.
+                              If n is 1 (1%F) then new information may
+                              be  appended  to the file.  If n is zero
+                              or not present then the file may be read
+                              from   but   not  written  to.   If  the
+                              <filename> does  not  exist,  a  warning
+                              comment  is  issued  and  a  new file is
+                              opened.
+               %G             Get state information  and  all  symbols
+                              from  last "%P" record of all symbols on
+                              NIB file.
+               ;G             Get entire NIB  memory  image  into  NAD
+                              local image.
+               ;C             This command is  used  to  construct  an
+                              auxiliary    circuit.     It    requires
+                              additional argument  consisting  of  the
+                              username   string,   a   ":",   and  the
+                              destination host.
+               ;R             This is a hex-relay command used in  the
+                              NAD     debugger-DDT     communications.
+                              Succeeding pairs of  hexidecimal  digits
+                              are   transmitted  as  characters.   The
+                              command is  terminated  when  the  first
+                              non-digit  is  entered.   An example for
+ISIS__TTE.442                              relaying the slot number to the DDT when
+                              logging  into  slot  3  of  a particular
+                              machine is ;R03\ where 03 is the desired
+                              slot number and \ is the terminator.
+               :R Addr,Cnt    Read Engine slot memory  and  print  Cnt
+                              bytes    starting   a   location   Addr.
+                              Example, :R Crat,4C where  Crat  is  the
+                              beginning address of the crash table and
+                              4C is the number of bytes in hex  to  be
+                              read in the table.
+               ::RR Reg,Cnt   Reads contents of Cnt registers starting
+                              at Register Reg.  These are the register
+                              values  at  the  time  the   last   user
+                              instruction  was executed.  Example, ::R
+                              R0,0F to read all sixteen  registers  in
+                              this slot.
+               ::H            Halts the job associated  with  a  slot.
+                              This  is  a  fatal command and should be
+                              used with discretion.               ::E            Execute the job associated with  a  slot
+                              and starts execution independent of DDT.
+                              This command initializes all  table  and
+                              traces  and  should not be used during a
+                              debugging session on a crashed slot.
+               ::?HOST        Query host command, the  DDT  outputs  a
+                              table  of  host(s)  in use by that slot.
+                              Each message  gives  the  relative  host
+                              number  for that slot, i.e.  0 being the
+                              first relative host number.  It is  then
+                              followed  by  the  actual host number in
+                              decimal radix and the  number  of  ports
+                              configured.   Each message is terminated
+                              by one of the four  possible  states  of
+                              the host.  It can be gone, down, shut or
+                              answered.
+               ::?USE         Query  dispatcher  buffer  usage.   This
+                              command causes the DDT to output a table
+                              of the ports currently  active  and  the
+                              maximum  number  of  characters that the
+                              dispatcher needed to buffer  because  of
+                              full rings in each direction.
+               ::?SLOT        This command causes the  DDT  to  output
+                              the  current  slot number.  This command
+                              should be used  to  ascertain  the  slot
+                              connected during initial logon.
+ISIS__TTE.442               ::?Vern        This command causes the  DDT  to  output
+                              the ISIS version number, followed by the
+                              slot's version.  This command is used to
+                              determine  if  the right version of code
+                              is loaded.
+               ::?HIST        This command causes the DDT to list  all
+                              diagnostics  in  the  system  diagnostic
+                              queue, starting  with  the  oldest,  are
+                              dumped to the terminal making the query.
+                              This  command  is  used   to   determine
+                              historically  if  and  when the slot was
+                              restarted,  crashed   or   reloaded   in
+                              days:hours:minutes:seconds.
+               ::?PORT        This command causes the DDT to list  the
+                              users  of  the  Kernel  ports.  The port
+                              sending this query command should have a
+                              * adjacent to the port number printed.
+               ::?HANG N      From time to time, it  is  necessary  to
+                              enter  into  a  slot  which  is  already
+                              connected to another kernel port.   This
+                              is  likely  to happen when another field
+                              consultant is logging into  the  desired
+                              slot  without your consent or if the aux
+                              circut to  this  slot  was  accidentally
+                              broken  previously.   To  re-gain access
+                              into   desired   slot,   log   into   an
+                              unoccupied  slot  in the same Engine and
+                              enter the ::?PORT command  to  find  out
+                              the  kernel  port  number other than the
+                              one with the * adjacent  to  it.   Enter
+                              ::?HANG  N  where  N is the other kernel
+                              port number in order to  break  the  aux
+                              circuit  for  this  port.   It  is  then
+                              possible to re-enter the desired slot by
+                              doing  ::^M  where M is the desired slot
+                              number.
+               ::^M           A command to transfer control  from  the
+                              DDT  of  the slot currently logged into,
+                              to the slot specified by M as  explained
+                              above.
+
+ISIS__TTE.442
+               ^Z^Z           A Zap command to log off from the  slot.
+                              Where  ^Z  is  control key + key Z.  The
+                              second ^Z is a confirmation to  the  DDT
+                              of the intention of logging off from the
+                              slot.
+               :\             This  is  a   NAD-Kernel   communication
+                              command     to     recover    from    an
+                              unrecognizable command.  It is therefore
+                              used effectively to restart a DDT.  
+               NUM_           Underscore sets  the  current  type  out
+                              mode  to  symbolic  mode.  It is used to
+                              determine  the  symbol  associated  with
+                              NUM.   Where  NUM  is  a location in the
+                              slot.  Example, 1A65A_  gives  TRC010+08
+                              which   is  a  location  in  the  Record
+                              teardown logic module.
+               SYM[           Sets  the  current  type-out   mode   to
+                              magnitude  and displays the SYM mnemonic
+                              in hex.   Example,  SECN2B[  gives  7310
+                              where   SECN2B   is   a  symbol  in  the
+                              initialization timer routine.  And  7310
+                              is  the  mnemonic  hex representation of
+                              LHL,TEMP,,
+               Sym]           Sets  the  current  type-out   mode   to
+                              instruction   and   displays   the   Sym
+                              mnemonic.  Example,  SECN2B]  gives  LHL
+                              R1,TEMP,,
+
+
+                NAD - Node Assembler and Debugger
+
+                1. commands are used to the NAD system thru the Debugger.
+                   For ex.,   ;x  is a Debugger command.
+                2. the Debugger allows you to assemble different modules
+                   into a single assembly & to examine the contents of
+                   the assembly, as well as change values in the assembly.
+                3. works with the file just assembled.
+                4. allows to look at the core memory.
+                5. allows to access DDT.
+
+
+                <CR>   sets the current type-out mode to the standard
+                       type-out mode , and sets the current radix to the
+                       standard radix.
+
+
+                Current Type-out mode                       
+                       - is the form in which memory contents or addresses               
+                       are displayed; it can be one of the following:-
+                           (1)  magnitude
+                           (2)  (signed) numeric
+                           (3)  Ascii
+                           (4)  Symbolic
+                           (5)  Instruction
+                       Different Type-out modes assist in understanding
+                       the contents of a memory location or an address,
+                       for example:
+                            -  magnitude,numeric, or Ascii may be desired
+                               when looking at a data location.
+                            -  instruction mode would be desired when
+                               looking at 'locations containing code'.
+
+
+                 Command       Description
+                 -------       -----------
+
+                 <LF>          - causes consecutive reading of the memory.
+                               - advances PC to PC + 2 (or 4, depending on
+                               whether in halfword or fullword mode),
+                               and displays memory from new PC, according
+                               to the current Type-out mode.
+                               This will change old memory if a value has been 
+                               entered.
+
+                 ;^            same as <LF>, except that it decrements PC.
+                 
+                 
+                 address \     display contents of address in current t-o mode
+                 
+                 address [     display contents of address in magnitude t-o 
+                               mode.
+                               
+                 address ]     display contents of address in instruction 
+                               t-o mode.
+                               
+                               Note:
+                               1. they all display memory from the contents of
+                               the argument, if one argument is supplied.
+                               2. if 2 arguments are supplied, it displays
+                               the range.
+                               3. if no arguments are supplied, then it 
+                               displays the contents of the last value 
+                               displayed.
+                               4. ";\",";[", and ";]" commands will show
+                               the contents of last valued displayed.
+
+                 address_      displays the name of the symbol at address
+                 
+                 "             stores the Ascii in memory starting at the 
+                               current Pc.
+                               example:
+                               10204]  SR R10,R12  "/text message/
+                                                    |
+                                                    |
+                                                    --> will store the message
+                                                    (in hex) at this memory.
+
+                 :             allows defining a label in Debugger
+                 
+                               example:
+                               10204]   SR    R10,R12    LOOP2:
+                                                          |
+                                                          |
+                                                          -> will assign
+                                                the current PC to this label
+
+                 %M            magnitude type-out mode       (default)
+                               (unsigned numeric output___whatever radix is)
+                 %N            nemeric typout mode
+                               (signed numeric output___
+                                                         ^ for positive
+                                                         - for negative)
+
+                 %"            Ascii output
+
+                 %S            Symbolic type-out mode
+                               - displays label & offset.
+
+                 %I            Instruction type-out mode
+                  
+                 ;M            - to set the next operation to be in a 
+                               magnitude mode.
+                               - to get back to default mode,just hit the
+                               carriage return <CR>
+
+                 ;N            - to set the next operation to be in a
+                               numeric type-out mode
+
+                 ;I            - to setnstruction type-out mode
+
+                 ;S            - to set to symbolic type-out mode
+ 
+                 ;"            - to set to Ascii type-out mode
+
+                 %2            sets the standard halfwoed mode
+
+                 %4            sets the standard fullword mode
+
+                 ;2            - to set current halfword mode.
+                               ex.
+                                   2;2
+                                   |
+                                   |
+                                   --> 2 halfwords per line
+                                   
+                                   10204\    0BAC   1234
+                                   10208\
+                                   
+                 ;4            - to set current fullword mode
+                 
+                 ;%            sets the line and page lengths
+                               1st argument__ 50<line length<145
+                               2nd argument__  4<page length
+                               Note :-
+                               1. if only one arg. supplied,
+                               it is for page length.
+                               2. no arg. given, default is provided :-
+                                  line length  =  120
+                                  page length  =   56  lines
+                               3. the arguments are evaluated in decimal.
+                               
+                 ;K symbol     deletes the symbol
+                 
+                 ;;            allows to enter comments
+                               - everything up to a <CR> is a comment.
+                          
+                 %Q or esc-esc exits from NAD
+
+
+
+                 NAD-DDT
+                 (NAD translates the input before sending)
+                 ;R  Binary Relay Mode(<CR> terminates it)
+                 %R  Ascii Relay Mode (esc-esc terminates it)
+                 :H  halts the NAD
+                 :E  executes the slot
+                 
+                 GO command can be replaced by C^G
+                 
+                 nice thing about using DDT thru NAD
+                 :R Loop+2,4
+                      |
+                      |
+                      --> instead of Hex. address, the symbol is used,
+                          & is translated before sending.
+
+		 ::RR start-reg-#,reg-count ---> to print registers
+
+		 e.g. ::RR 0,10  --->  to print all registers
+
+		 ::?BRR 0,10  --->  to print background job registers
+
+
+		 :\   ---> to recover from error, back to DDT prompt *
+
+
+
+
+
+
+
+
+
+
+
+
+                         CHAPTER 1
+
+                    TOOLS AND UTILITIES
+
+
+
+          1.1  NAD COMMANDS AND DEFINITIONS
+
+               NAD will  read  and  write  image  binary  files  which
+          contain information necessary to load and dump memory images
+          for TYMNET ENGINES.  These files  may  also  contain  symbol
+          table  and  macro  information  so  that a user may save and
+          reconstruct NAD environments for debugging purposes.
+
+               The following is a summary of commands frequently  used
+          when working on a XCOM type communication interface.
+
+
+               ;X<FILE.CMD>   Will cause  subsequent  commands  to  be
+                              read  from FILE.CMD.  This is especially
+                              useful for assembling a series of files.
+
+               ;;             This command allows comments in  command
+                              files   or   at   command   level.   All
+                              characters after the ";;" and up to  but
+                              not  including  a  carriage  return  are
+                              ignored except that they  are  typed  if
+                              the  command  is  in a command file.  An
+                              example can be found in the  first  four
+                              lines of above XCOM slot command fil.
+
+               n[SYMBOL       Sets  the  current  type-out   mode   to
+                              magnitude.   It  also opens and displays
+                              memory from the current program  counter
+                              and leaves the memory open.
+
+               ;@<filename>   Cause an assembly to take  place.   This
+                              command is equivalent to ";A".  
+
+               n;P<filename>  A new file, <filename>  is  created  and
+                              becomes   the   current  NIB  file.   If
+                              <filename> exists and n is equated to 1,
+                              the  existing  file  is deleted.  If the
+                              file already exists and n is zero or not
+                              present,  then  the  user  is  given the
+                              option of deleting the existing file  or
+          PART II - TOOLS AND UTILITIES                       Page 1-2
+
+
+                              aborting the command.
+
+               ad,cnt;P       This command appends a range  of  memory
+                              image data into the NIB file.  ad is the
+                              beginning address and cnt  is  the  byte
+                              count.   A  typical example in the above
+                              slot command file is SEG7,S7SIZE;P where
+                              SEG7  is  the  address for segment seven
+                              and  S7SIZE  is  the  number  of   bytes
+                              assigned for the segment.
+
+               %P             Puts state information and  all  symbols
+                              except opcodes on NIB file.
+
+               %Q             Exits NAD to  the  monitor.   Exit  also
+                              occurs  if  two  successive  escapes are
+                              typed.
+
+
+
+               GL             This is a NAD symbol  control  found  in
+                              the  slot  command file.  This directive
+                              marks a symbol as global to all modules.
+
+               n%F<filename>  An  existing  file  with  the  specified
+                              filename  becomes  the current NIB file.
+                              If n is 1 (1%F) then new information may
+                              be  appended  to the file.  If n is zero
+                              or not present then the file may be read
+                              from   but   not  written  to.   If  the
+                              <filename> does  not  exist,  a  warning
+                              comment  is  issued  and  a  new file is
+                              opened.
+
+               %G             Get state information  and  all  symbols
+                              from  last "%P" record of all symbols on
+                              NIB file.
+
+               ;G             Get entire NIB  memory  image  into  NAD
+                              local image.
+
+
+
+               ;C             This command is  used  to  construct  an
+                              auxiliary    circuit.     It    requires
+                              additional argument  consisting  of  the
+                              username   string,   a   ":",   and  the
+                              destination host.
+
+               ;R             This is a hex-relay command used in  the
+                              NAD     debugger-DDT     communications.
+                              Succeeding pairs of  hexidecimal  digits
+                              are   transmitted  as  characters.   The
+                              command is  terminated  when  the  first
+                              non-digit  is  entered.   An example for
+          PART II - TOOLS AND UTILITIES                       Page 1-3
+
+
+                              relaying the slot number to the DDT when
+                              logging  into  slot  3  of  a particular
+                              machine is ;R03\ where 03 is the desired
+                              slot number and \ is the terminator.
+
+               :R Addr,Cnt    Read Engine slot memory  and  print  Cnt
+                              bytes    starting   a   location   Addr.
+                              Example, :R Crat,4C where  Crat  is  the
+                              beginning address of the crash table and
+                              4C is the number of bytes in hex  to  be
+                              read in the table.
+
+               ::RR Reg,Cnt   Reads contents of Cnt registers starting
+                              at Register Reg.  These are the register
+                              values  at  the  time  the   last   user
+                              instruction  was executed.  Example, ::R
+                              R0,0F to read all sixteen  registers  in
+                              this slot.
+
+               ::H            Halts the job associated  with  a  slot.
+                              This  is  a  fatal command and should be
+                              used with discretion.
+
+               ::E            Execute the job associated with  a  slot
+                              and starts execution independent of DDT.
+                              This command initializes all  table  and
+                              traces  and  should not be used during a
+                              debugging session on a crashed slot.
+
+               ::?HOST        Query host command, the  DDT  outputs  a
+                              table  of  host(s)  in use by that slot.
+                              Each message  gives  the  relative  host
+                              number  for that slot, i.e.  0 being the
+                              first relative host number.  It is  then
+                              followed  by  the  actual host number in
+                              decimal radix and the  number  of  ports
+                              configured.   Each message is terminated
+                              by one of the four  possible  states  of
+                              the host.  It can be gone, down, shut or
+                              answered.
+
+               ::?USE         Query  dispatcher  buffer  usage.   This
+                              command causes the DDT to output a table
+                              of the ports currently  active  and  the
+                              maximum  number  of  characters that the
+                              dispatcher needed to buffer  because  of
+                              full rings in each direction.
+
+               ::?SLOT        This command causes the  DDT  to  output
+                              the  current  slot number.  This command
+                              should be used  to  ascertain  the  slot
+                              connected during initial logon.
+          PART II - TOOLS AND UTILITIES                       Page 1-4
+
+
+               ::?Vern        This command causes the  DDT  to  output
+                              the ISIS version number, followed by the
+                              slot's version.  This command is used to
+                              determine  if  the right version of code
+                              is loaded.
+
+               ::?HIST        This command causes the DDT to list  all
+                              diagnostics  in  the  system  diagnostic
+                              queue, starting  with  the  oldest,  are
+                              dumped to the terminal making the query.
+                              This  command  is  used   to   determine
+                              historically  if  and  when the slot was
+                              restarted,  crashed   or   reloaded   in
+                              days:hours:minutes:seconds.
+
+               ::?PORT        This command causes the DDT to list  the
+                              users  of  the  Kernel  ports.  The port
+                              sending this query command should have a
+                              * adjacent to the port number printed.
+
+               ::?HANG N      From time to time, it  is  necessary  to
+                              enter  into  a  slot  which  is  already
+                              connected to another kernel port.   This
+                              is  likely  to happen when another field
+                              consultant is logging into  the  desired
+                              slot  without your consent or if the aux
+                              circut to  this  slot  was  accidentally
+                              broken  previously.   To  re-gain access
+                              into   desired   slot,   log   into   an
+                              unoccupied  slot  in the same Engine and
+                              enter the ::?PORT command  to  find  out
+                              the  kernel  port  number other than the
+                              one with the * adjacent  to  it.   Enter
+                              ::?HANG  N  where  N is the other kernel
+                              port number in order to  break  the  aux
+                              circuit  for  this  port.   It  is  then
+                              possible to re-enter the desired slot by
+                              doing  ::^M  where M is the desired slot
+                              number.
+
+               ::^M           A command to transfer control  from  the
+                              DDT  of  the slot currently logged into,
+                              to the slot specified by M as  explained
+                              above.
+
+               ::?BT          A DDT command to query  background  PSD.
+                              A  normal  running XCOM slot should show
+                              that  the  pointer  is  cycling  in  the
+                              background executive loop.
+
+               ::?FT          A DDT command to  query  foreground  PSD
+                              for  the  slot.   A  normal running XCOM
+                              slot should show  that  the  pointer  is
+                              cycling   in  the  foreground  executive
+                              loop.  This and  the  above  command  is
+          PART II - TOOLS AND UTILITIES                       Page 1-5
+
+
+                              normally used for debugging purposes.  A
+                              abnormal  slot  may  be  caused  by  the
+                              pointer   failed   to   return   to  the
+                              executive loop.  These two commands  can
+                              be  used to determine the location where
+                              the code failed.
+
+               :W Addr,Val    A NAD-Kernel Command to write  Val  into
+                              memory immediate right adjusted in the 4
+                              bytes starting  at  Addr.   Example,  to
+                              enable   the  background  trace,  do  :W
+                              BEXPSD,1000  <c/r>.   To   disable   the
+                              background trace, do :W BEXPSD,0 <c/r>.
+
+               Addr,Cnt:W     A command to transfer Cnt bytes from the
+                              PDP  to  the  ENGINE,  staring  at Addr.
+                              Example,  SEG7,S7SIZE:W  to  write   the
+                              entire  segment  7 into the slot memory.
+                              or  ERRBB,ERRBL:W   to   overwrite   and
+                              initialize  the  error table in the XCOM
+                              slot.  It is not necessary to  terminate
+                              this command with a carriage return.
+
+               ^Z^Z           A Zap command to log off from the  slot.
+                              Where  ^Z  is  control key + key Z.  The
+                              second ^Z is a confirmation to  the  DDT
+                              of the intention of logging off from the
+                              slot.
+
+               :\             This  is  a   NAD-Kernel   communication
+                              command     to     recover    from    an
+                              unrecognizable command.  It is therefore
+                              used effectively to restart a DDT.  
+
+               NUM_           Underscore sets  the  current  type  out
+                              mode  to  symbolic  mode.  It is used to
+                              determine  the  symbol  associated  with
+                              NUM.   Where  NUM  is  a location in the
+                              slot.  Example, 1A65A_  gives  TRC010+08
+                              which   is  a  location  in  the  Record
+                              teardown logic module.
+
+               SYM[           Sets  the  current  type-out   mode   to
+                              magnitude  and displays the SYM mnemonic
+                              in hex.   Example,  SECN2B[  gives  7310
+                              where   SECN2B   is   a  symbol  in  the
+                              initialization timer routine.  And  7310
+                              is  the  mnemonic  hex representation of
+                              LHL,TEMP,,
+
+               Sym]           Sets  the  current  type-out   mode   to
+                              instruction   and   displays   the   Sym
+                              mnemonic.  Example,  SECN2B]  gives  LHL
+                              R1,TEMP,,
+
+
+
+
+
+
+
+
+
+
+
+
+
+                         CHAPTER 1
+
+                      TROUBLESHOOTING
+
+
+
+               Every new install may be substantially  different  from
+          the  others,  this  chapter  is  designed  to give a general
+          guideline on how to approach and resolve a  problem  when  a
+          new interface failed to come up or if a production interface
+          crashes from time to time.
+
+               The following is some example of the  typical  problems
+          encountered   when   installing  or  troublshooting  a  XCOM
+          communication interface.  :
+
+              1.  Slot loaded, but the host failed to come up.
+
+              2.  Slot loaded, but the customer claimed that they  are
+                  not receiving any frames.
+
+              3.  Slot keeps crashing.
+
+              4.  Slot not running despite  of  repeated  attempts  to
+                  reload the slot.
+
+              5.  X link failed to sync up.
+
+              6.  Users unable to log into the host.
+
+              7.  Host unable to make outgoing calls.
+
+              8.  Certain type of  terminals  do  not  work  with  the
+                  interface.
+
+              9.  Customer complains receiving bad frames  or  packets
+                  from the network.
+
+             10.  Terminal users unable to log into the host,  circuit
+                  cleared during session or hung terminal.
+
+
+          PART II - TROUBLESHOOTING                           Page 1-2
+
+
+          1.1  GENERAL TROUBLESHOOTING GUIDE
+
+               The    following    is    an    abstract    from    the
+          (NETMID:39)XGUIDE.DOC   on   some   of   the   guideline  to
+          troubleshooting.  Further details can be found in  this  and
+          the XGUIDE documents.
+
+
+
+          1.1.1  IF THE SLOT HAS CRASHED
+
+          1.  Get into the slot with NAD.
+
+          2.  If a message is printed  out  upon  entering  the  slot,
+              write it down for later reference.
+
+          3.  Do a ::?VERN to get the version number of both the  slot
+              AND of ISIS.
+
+          4.  Do a ::?HIST to  see  if  the  slot  has  been  crashing
+              frequently in the recent past.  
+
+          5.  Try to determine what  external  circumstances  preceded
+              the crash.
+
+          6.  Record the results.  
+
+          7.  If CRSTOP has been set, dump the slot  with  LOADII  and
+              restart  the  slot.  Always attach the symbol table from
+              the corresponding NIB file to the dump file  soon  after
+              the dump completes.
+
+          8.  If CRSTOP has not been set, look at the crash table.
+
+          9.  If the crash code is 10 (dispatcher crash),
+
+              1.  Try to determine  the  circumstances  preceding  the
+                  crash.  
+
+              2.  Try to reproduce the crash.
+
+              3.  If the crash cannot be reproduced, enable CRSTOP and
+                  BUFTRC  and  get  a  dump of the slot after the next
+                  crash.
+
+
+         10.  If the crash code is 14 (protection  violation),  or  if
+              the  crashes  occur  frequently, see if the cause of the
+              crash can be determined solely from the crash table.  
+
+                   If more information is needed, set CRSTOP,  BUFTRC,
+              and  HDWTRC.  Start the hardware trace in the background
+              or foreground, depending  on  whether  the  halfword  at
+              CRAT+4C  is  zero or nonzero.  Get a dump after the slot
+              crashes.  
+          PART II - TROUBLESHOOTING                           Page 1-3
+
+
+              CAUTION:   Starting  a  hardware  trace  will  place   a
+              significant drain on the CPU, so the trace should not be
+              used in heavily loaded configurations.
+
+         11.  When circumstances require a slot dump after a crash but
+              the  customer  will  not allow the slot to be down for a
+              period  long  enough  to  permit  a  dump.   Enable  the
+              appropriate  trace  switches and write a patch that will
+              save away the trace tables in PATCH0 after a crash.  
+
+                   A reasonable place to put a jump to the patch  area
+              is ENTRY1.  Be sure to save registers before executing a
+              patch and restore registers after a patch  execution  is
+              complete.   Make sure any table pointers are also saved.
+              P1SIZE and P0SIZE may need to be increased in  order  to
+              do this.
+
+
+               Decipher the crash table and determine the cause of the
+          crash.   As  a  minimum  the  following  information must be
+          obtained:
+
+          1.  Crash count,
+
+          2.  Crash type,
+
+          3.  Crash location, specified as a label plus displacement,
+
+          4.  Locations of executable code contained in the registers,
+              specified as a label plus displacement.
+
+
+               Refer to the appropriate source  listing  to  determine
+          the   cause  of  the  crash.   Take  note  of  the  comments
+          pertaining to the lines of code near the crash location.
+
+               If trace tables are available, use them in  conjunction
+          with the crash table to pinpoint the cause of the crash.
+
+               Submit  any  findings   to   your   technical   support
+          representative:
+
+          1.  If you are able to determine the reason for  the  crash,
+              submit  a  problem report.  If you have designed a patch
+              to solve the problem, include it in the problem  report.
+              Technical  support  will  review  the patch and will see
+              that it is made available for distribution.  
+
+          2.  If you are unable to determine the reason for the crash,
+              submit whatever you have found to your technical support
+              representative.   Be  sure  to  include  the  names  and
+              location of ALL relevant files (e.g., Tym files, command
+              files, NIB files, dump files, trace files, etc.)
+
+          PART II - TROUBLESHOOTING                           Page 1-4
+
+
+          1.1.2  IF PROBLEMS APPEAR AT THE FRAME OR PACKET LEVEL
+
+          1.  First make sure the interface options have been selected
+              correctly.    An   option   change  may  solve  all  the
+              complaints.
+
+          2.  If the customer  complains  of  problems  at  the  frame
+              level,  install  the  frame  trace  patch to allow frame
+              viewing through DDT.
+
+          3.  If the customer complains  of  problems  at  the  packet
+              level,  install  the  packet  trace patch to allow frame
+              viewing through DDT.  
+
+          4.  Get into the slot with NAD.
+
+          5.  If a message is printed  out  upon  entering  the  slot,
+              write it down for later reference.
+
+          6.  Recreate the problem while  the  trace  is  active.   In
+              order  to  capture the trace as it flits by your screen,
+              use CIAO or AUXIO to save the output from DDT in a  file
+              for   later   examination.    CIAO   is   documented  in
+              (DNDUTIL)CIAO.DOC.
+
+          7.  Examine the trace  and  submit  your  findings  to  your
+              technical  support  representative.   Be sure to include
+              the names and location of ALL relevant files (e.g.,  Tym
+              files,  command  files,  NIB  files,  dump  files, trace
+              files, etc.)
+
+
+
+
+          1.1.3  IF THE SLOT SHOWS NO RESPONSE
+
+          (i.e., user and/or host  receive  no  response,  IRING/ORING
+          pointers  do not move, etc., even though user/host claims to
+          be sending data), 
+
+          1.  Get into the slot with NAD.
+
+          2.  If a message is printed  out  upon  entering  the  slot,
+              write it down for later reference.
+
+          3.  Use DDT to check CPU usage to see if the slot  is  using
+              an  abnormally  large  amount  of  CPU.  The slot may be
+              caught in a loop.
+
+          4.  Check IRING/ORING pointers to see if they  are  unequal.
+              Normally the code moves fast enough so that the pointers
+              are usually seen to be equal.  If there are unequal  and
+              remain so, the code may be caught in a loop.
+          PART II - TROUBLESHOOTING                           Page 1-5
+
+
+          5.  Check the background and foreground PSD to  see  if  the
+              address  changes.   If  things are moving slow enough to
+              see the address change, you've  located  the  code  area
+              caught in a loop.
+
+              1.  Take some sample readings of the PSD that is  moving
+                  and    determine    the    locations   (label   plus
+                  displacement) to which they refer.  
+
+              2.  Go to the appropriate source listing and examine the
+                  area  of  code  that  is having the problem.  Try to
+                  determine what could be causing the code to loop.  
+
+              3.  Submit  your  findings  to  your  technical  support
+                  representative.
+
+
+          6.  If everything appears to be normal, but  data  does  not
+              seem  to be passing over the link, the link hardware may
+              be having trouble.
+
+              1.  If the link is SIO, check the SIO status  SIOTn  for
+                  link n.
+
+              2.  If the link is bisync, check the  condition  of  the
+                  bisync rotors.
+
+
+          PART II - TROUBLESHOOTING                           Page 1-6
+
+
+          1.2  TROUBLESHOOTING IMPLEMENTATION DETAILS
+
+               Follow the XGUIDE and read the sections below carefully
+          can  improve  your  ability  to  identify some of the common
+          problems encountered in the field operation for  either  new
+          install or existing interfaces.
+
+
+
+          1.2.1  OUTPUT SECTOR SECADR
+
+               The output buffers contain data to be sent out over the
+          X link.  Each packet is placed in a separate buffer, and the
+          addresses of all buffers for a particular line are kept in a
+          table.   Each  table  has  a  pointer  associated with it to
+          indicate the buffer address where the latest packet is to be
+          placed.
+
+
+                    SECADR  is a table of pointers  to  output  sector
+                            buffers.    Each   entry   is  a  fullword
+                            containing  an  absolute  address   of   a
+                            buffer.
+
+                    CURSEC  is a byte array of pointers, one byte  per
+                            link,   into  the  set  of  output  sector
+                            addresses in SECADR.   CURSEC  contains  a
+                            word  displacement  into SECADR and points
+                            to the next  available  entry  in  SECADR.
+                            The  number  of sectors allotted each link
+                            in SECADR is equal to the value of  K  for
+                            that link.  
+
+                    K.n     is the value of K for link n.  
+
+                    SECBIA  is a halfword array  containing  the  bias
+                            into SECADR for an individual link.
+
+
+               So, for link n, the value contained in the halfword 
+
+                                  SECBIA + 2*n
+
+          should be added to SECADR  to  find  the  beginning  of  the
+          output sector buffer pointers for link n.  This value should
+          be added to the value in the byte 
+
+                                   CURSEC + n
+
+          to determine the next SECADR entry for link n.
+
+               The debugging aid XOSTR will print the  output  sectors
+          through  DDT  if  XOSTR  is  available.   See the chapter on
+          debugginng aids.
+          PART II - TROUBLESHOOTING                           Page 1-7
+
+
+               Of course, the easiest  situation  to  examine  is  the
+          interface  with  a  single  link.   In that case the byte at
+          CURSEC is the displacement into SECADR.   SECADR  will  have
+          K.0 entries in it.  frame.
+
+
+
+          1.2.2  FRAME TRACE TABLE FTRTBL
+
+               The frame trace table is a record  of  the  interface's
+          view  of  the frames that have passed over the X link in the
+          recent past.  Frames are encoded as entries  in  a  circular
+          buffer with the following labels:
+
+
+
+                    FTRTBL  location of the table
+
+                    FTRINP  halfword containing  a  byte  displacement
+                            into FTRTBL that points to the location of
+                            the next available table position
+
+                    FTRLEN  length of the table in bytes
+
+
+               Each entry consists of  2  halfwords  (for  mod  8;   3
+          halfwords   for   mod   128  and  FML)  with  the  following
+          interpretation:  
+
+
+              Mod 8:    Byte      (4 bytes per entry)
+                          0       line number +80 for output,
+                                  +00 for input
+                          1       interface state
+                          2       address field
+                          3       control field
+
+              Mod 128:  Byte      (6 bytes per entry) (not FML)
+                          0       line number +C0 for output,
+                                  +40 for input
+                          1       interface state
+                          2       address field
+                          3       control field octet 1
+                          4       control field octet 2
+                          5       00
+
+              FML:      Byte      (6 bytes per entry)
+                          0       line number +C0 for output,
+                                  +40 for input
+                          1       line state (PRIST)
+                          2       link state (PRISTC)
+                          3       M(R) control field octet 1
+                          4       N(R) control field octet 2
+                          5       N(S) control field octet 3
+          PART II - TROUBLESHOOTING                           Page 1-8
+
+
+               The interface states are based on the middle  six  bits
+          of  the control fields.  They can be found in the listing at
+          the  label  PRIDEC.   The  state  depends  on  whether   the
+          configuration  is  LAP  or  LAPB  and whether the station is
+          primary or secondary.  The states are also given below:
+
+
+                           LAPB INTERFACE STATE TABLE
+          
+          STATE         PRIMARY                    SECONDARY
+          
+            0  not armed            PNARM    not armed            SECADM
+            1  arming               PARMG    trying to arm        SECRMG
+            2  information transfer PINFO    information transfer SECINF
+            3  timer recovery       PTRECV   timer recovery       SECRECV
+            4  reset                PRESET   reset                SECRESET
+            5  frame reject         PFRMR    frame reject         SECMDR
+            6  disconnect           PDISC    disconnect           SECDSC
+
+
+                           LAP INTERFACE STATE TABLE
+          
+          STATE         PRIMARY                    SECONDARY
+          
+            0  not armed            PNARM    not armed            SECADM
+            1  arming               PARMG    information transfer SECINF
+            2  waiting for SARM     PWSARM   frame reject         SECMDR
+            3  information transfer PINFO    disconnect           SECDSC
+            4  timer recovery       PTRECV   
+            5  reset                PRESET   
+            6  disconnect           PRDISC    
+            7  waiting for disconn. PWDISC
+
+
+               The  control  field  defines  the  frame  types.    For
+          supervisory and unnumbered frames, the types are as follows:
+
+                                     _
+                  x1    RR N(R)       |   where x = 2*N(R)
+                  x5    RNR N(R)      |   (x will be odd if
+                  x9    REJ N(R)     _|   P/F bit OR'ed in)
+                  0F    SARM (LAP)/DM (LAPB) (1F if P/F bit on)
+                  2F    SABM                 (3F if P/F bit on)
+                  43    DISC                 (53 if P/F bit on)
+                  63    UA                   (73 if P/F bit on)
+                  87    FRMR                 (97 if P/F bit on)
+
+          Information frames are of the form 
+
+                                       xy
+
+          where x = 2*N(R) and y = 2*N(S).  Note that y is always even
+          (y  = 0, 2, 4, 6, 8, A, C, E).  If a P-bit is present, it is
+          added to 2*N(R), making x odd.
+          PART II - TROUBLESHOOTING                           Page 1-9
+
+
+               The debugging aid XFTRACE will display the contents  of
+          the  frame  trace table through DDT if XFTRACE is available.
+          See the chapter on diagnostic routines.
+
+
+
+          1.2.3  PACKET TRACE TABLE PTRTBL
+
+               The packet trace table is a record of  the  interface's
+          view  of the packets that have passed over the X link in the
+          recent past.  Packets are encoded as entries in  a  circular
+          buffer with the following labels:
+
+
+
+                    PTRTBL  location of the table
+
+                    PTRINP  halfword containing  a  byte  displacement
+                            into  PTRTBL  pointing  to the location of
+                            the next available table position.
+
+                    PTRLEN  length of the table in bytes
+
+
+               Each entry consists of  3  halfwords  (for  mod  8;   4
+          halfwords for mod 128) with the following interpretation:  
+
+
+            Mod 8:    Byte       (6 bytes per entry)
+                        0        80 for output, 00 for input, 
+                                 +01 if illegal packet,
+                                 +02 if Q bit set
+                        1        line number
+                        2,3      external channel number
+                        4        actual packet type 
+                        5        channel state
+
+            Mod 128:  Byte       (8 bytes per entry)
+                        0 - 4    same as Mod 8
+                        5        diagnostic for receive Reset or Clear
+                        6        channel state
+                        7        00
+
+
+
+               The packet types are as follows:
+
+
+          PACKET TYPE    TYPE DEFINITION                LISTING SYMBOL
+          
+              013        Clear Request/Indication           YCLRR
+              017        Clear Confirmation                 YCLRC
+              00B        Call Request/Incoming Call         YCALR
+              00F        Call Accepted/Connected            YCALA
+              01B        Reset Request/Indication           YREST
+          PART II - TROUBLESHOOTING                          Page 1-10
+
+
+              01F        Reset Confirmation                 YRESTC
+              023        Interrupt Packet                   YINTP
+              027        Interrupt Confirmation             YINTPC
+              001        RR packet, P(R) must be OR'ed in   YRRP
+              005        RNR packet, P(R) must be OR'ed in  YRNRP
+              009        REJ packet, P(R) must be OR'ed in  YREJP
+              0F1        Diagnostic packet                  YDIAG
+              0FB        Restart Request                    YRSTRT
+              0FF        Restart Confirmation               YRSTRC
+
+          A data packet is not listed in the table above.  The  packet
+          type  of  a  data packet is always even.  The semi-octets of
+          the type are 2*P(S) and 2*P(R), in that order.
+
+
+
+               The channel states are as follows:
+
+          STATE NUMBER         STATE DEFINITION           LISTING SYMBOL
+          
+               0       Ready state                            PREADY
+               1       Send Call Request software state       PSCALR
+               2       Waiting for Call Confirmation          PWCALC
+               3       Must send Call Conf. state             PSCALC
+               4       Send Clear Request, software state     PSCLRQ
+               5       Waiting for Clear Confirmation state   PWCLRC
+               6       Send Clear Conf. state                 PSCLRC
+               7       Flow control ready state               PFLOWC
+               8       Must send Reset Indication             PSRESI
+                       (Reset in queue but not yet sent)
+               9       Waiting for Reset Confirmation state   PWRESC
+               0A      Must send Reset Conf. state            PSRESC
+                       (Reset was rcvd, Conf in queue but not sent)
+               0B      Send Restart Indication state          PSRSTI
+                       (Restart in RMAKE queue, but not sent)
+               0C      Waiting for Restart Confirmation state PWRSTC
+               0D      Send Restart Confirmation state        PSRSTC
+                       (Restart received; Confirmation in
+                       RMAKE queue, but not sent)
+
+               The debugging aid XPTRACE will display the contents  of
+          the  packet trace table through DDT if XPTRACE is available.
+          See the chapter on diagnostic routines.
+
+
+
+          1.2.4  SYNC LINE TRACE BUFFER HISTAB
+
+               If the symbol BUFTRC is defined and has a value greater
+          than  0,  then  a  trace  of  all  GCI and WCI calls will be
+          included in a circular table with the following labels:
+
+          PART II - TROUBLESHOOTING                          Page 1-11
+
+
+                    HISTAB  location of the circular table
+
+                    HISX    a halfword containing a byte  displacement
+                            into  HISTAB  to  the position of the next
+                            available entry in HISTAB
+
+                    HISTSZ  number of one word entries in HISTAB
+
+
+               HISTAB  will  contain  one  word  entries  defined   as
+          follows:
+
+                  Byte    Contents
+          
+                  0      character
+                  1      buffer number
+                  2-3    address of routine calling GCI/WCI
+
+
+               If the symbol HISTSZ is defined, the number of one word
+          entries  in  HISTAB  will be set to that number;  otherwise,
+          the value of 100x one word entries  will  be  used.   HISTSZ
+          must be a power of 2 not greater than 2000x.
+
+               The history table is especially useful when  attempting
+          to  determine  the reason for the appearance of a particular
+          character in an ORING/IRING message.  In general HISTAB will
+          contain a record of all calls to WCI/GCI.
+
+
+
+          1.2.5  HARDWARE TRACE TABLE TRCADR
+
+               If the symbol HDWTRC is defined and set  to  1  in  the
+          command  file, the hardware trace option is assembled.  This
+          code allows the tracing of  the  last  32  jumps  (lower  16
+          bits).
+
+          CAUTION:  To avoid confusing the slot code,  DO  NOT  ENABLE
+          BOTH the background and the foreground trace during the same
+          period of time.  Either trace may  be  running  at  any  one
+          time, but both should not be run simultaneously.
+
+               To enable a trace, enter --
+
+                       :W BEXPSD,1000 for background
+
+                       OR (not and)
+
+                       :W FEXPSD,1000 for foreground
+
+               To disable, enter --
+
+          PART II - TROUBLESHOOTING                          Page 1-12
+
+
+                       :W BEXPSD,0 for background
+
+                       :W FEXPSD,0 for foreground
+
+
+          TRCADR  contains the last 32 jumps (40x bytes total)
+
+          TRCPTR  is a halfword containing a  byte  displacement  into
+                  TRCADR  that  points  past  the  last  entry used in
+                  TRCADR
+
+          TRCREG  contains the registers at time of last jump
+
+          TRCPAT  is a UPSW instruction to continue followed by an 80x
+                  byte   patch   area  which  can  be  used  to  patch
+                  additional trace code.  Be sure  to  end  the  patch
+                  with UPSW.
+
+
+
+
+          1.2.6  PACKET BUFFER TRACE TABLE PBTTBL
+
+               The packet buffer trace table is a table of pointers to
+          the  buffers  containing  packets  received from the X link.
+          This  is  useful  for  examining  the  sequence  of  packets
+          received   over  the  link  during  the  recent  past.   The
+          following labels  are  associated  with  the  packet  buffer
+          trace:
+
+
+
+                    PBTTBL  location of  the  circular  packet  buffer
+                            trace table
+
+                    PBTINP  halfword containing  a  byte  displacement
+                            into  PBTTBL  where the next entry will be
+                            placed
+
+                    PBTLEN  length of PBTTBL in bytes
+
+
+               Each entry of PBTTBL is 4 bytes long:
+
+                 Byte    Interpretation
+          
+                  0      Link number
+                  1-3    Absolute buffer address
+
+
+               In  order  to  see  what  was  actually  received,  the
+          absolute buffer addresses must be read (20x bytes usually is
+          enough).  Each buffer starts with a halfword pointer to  the
+          next  buffer,  followed  by  a  halfword containing the byte
+          count of the packet that follows.
+          PART II - TROUBLESHOOTING                          Page 1-13
+
+
+          1.2.7  RECEIVE BUFFERS RBUFn
+
+               The  receive  buffers  RBUF0,  RBUF1,  ...,  RBUFn  are
+          buffers  that  contain  the frames received by the interface
+          over the n X lines.  Each buffer is RBUFHS  halfwords  long.
+          Each  variable  length  entry  is  preceded  by  a  halfword
+          indicating the number of bytes in  the  frame.   The  length
+          always  starts  on  a halfword boundary.  Unfortunately, the
+          length of the first entry gets wiped out, so its length must
+          be  guessed.   The  end  of  valid  data is indicated by the
+          halfword FFFF.
+
+
+
+          1.2.8  BISYNC INTERRUPT RECEIVE RING STRTBL
+
+               The  bisync  receive  ring  is  a  circular  table   of
+          characters  received  in RBUF, but the bits are inverted for
+          easier viewing.  The following labels  are  associated  with
+          this table:
+
+
+
+                    STRTBL  location of the table
+
+                    STRINP  fullword pointer containing the address of
+                            the  location  for  the  next  entry  into
+                            STRTBL
+
+                    STRLEN  length of STRTBL in bytes
+
+
+
+
+          1.2.9  ACCOUNTING TRACE BUFFER ATRTBL
+
+               A circular table is available for examining  accounting
+          messages  that have been sent into the network in the recent
+          past.  The accounting trace is activated with the  debugging
+          switch ACTRAC.  The table has the following relevant labels:
+
+
+
+                    ATRTBL  location of the accounting trace table
+
+                    ATRINP  halfword containing  a  byte  displacement
+                            into ATRTBL indicating the position of the
+                            next available entry in ATRTBL
+
+                    ATRLEN  length of ATRTBL in bytes
+
+
+               Each entry is a  fullword  in  length,  partitioned  by
+          halfwords as follows:
+          PART II - TROUBLESHOOTING                          Page 1-14
+
+
+                          Byte    Contents
+          
+                          0-1     Dispatcher port number
+                          2-5     Accounting message
+                          6-7     Terminating flag FFFF
+
+               The first four bits of the message will be  "E",  which
+          is  necessary  for  the ISIS part of the accounting message.
+          The second four bits is the message type.
+
+               Each type has a label of  the  form  "AA.*"  associated
+          with it:
+
+              Label    Type       Interpretation
+          
+             AA.HPN  0E0010000    Host physical port number assigned
+             AA.CD4  0E0020000    Low 4 BCD digits of called address
+             AA.CD3  0E0030000    Next 4 BCD digits
+             AA.CD2  0E0040000    Third group of 4 BCD digits
+             AA.CD1  0E0050000    1 byte of length and 2 high-order 
+                                  BCD digits
+          
+             AA.TNI  0E0060000    Transit network id
+             AA.CO   0E0070000    Collect/origination
+             COL.BT        100    Reverse charging
+             TER.BT          1    'From terminal'
+             AA.COH  0E0080000    Circuit-originating host number
+             AA.COP  0E0090000    Circuit-originating (physical) 
+                                  port number
+          
+             AA.CL4  0E00A0000    Low 4 BCD digits of calling address
+             AA.CL3  0E00B0000    Next 4 BCD digits
+             AA.CL2  0E00C0000    Third group of 4 BCD digits
+             AA.CL1  0E00D0000    1 byte of length and 2 high-order 
+                                  BCD digits
+          
+             AA.IRC  0E00E0000    IRC selected by gateway
+             CA.BT        8000    'Call accepted'
+             AA.CCD  0E00F0000    Call clearing cause and diagnostic
+             AA.MPC  0E0100000    Multipletxed PVC port count
+             AA.MPT  0E0110000    Multiplexed PVC session time
+             AA.TCU  0E0120000    Tariff class utility
+             AA.DTC       0000    Datapac tariff class
+             AA.OIP  0E1000000    Origination input packet count
+             AA.OOP  0E2000000    Origination output packet count
+             AA.OIS  0E3000000    Origination input segment count
+             AA.OOS  0E4000000    Origination output segment count
+             AA.DIS  0E5000000    Destination input segment count
+             AA.DOS  0E6000000    Destination output segment count
+             AA.DIP  0E7000000    Destination input packet count
+             AA.DOP  0E8000000    Destination output packet count
+             AA.GIN  0E9000000    Gateway invoice number
+  N@¥
