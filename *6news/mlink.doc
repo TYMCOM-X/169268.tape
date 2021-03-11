@@ -1,0 +1,1245 @@
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+                              MLINK
+
+                    BSO Cross-Linkage Editor
+
+                          for use with
+
+               All BSO Relocating Cross-Assemblers
+
+
+                               on
+
+                         TYMSHARE, INC.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      BOSTON SYSTEMS OFFICE
+                        469 Moody Street
+                       Waltham, MA  02154
+                         (617) 894-7800
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+         Copyright, The Boston Systems Office, Inc. 1978
+
+
+
+
+
+
+
+
+
+
+     This user's manual is intended as  a  thorough  product
+     description.   It  is,  to  the  best of our knowledge,
+     complete and accurate.
+
+     The Boston Systems Office does  not,  however,  warrant
+     this   document's   accuracy,  nor  shall  it  be  held
+     responsible for errors of  content  or  omission.   The
+     Boston Systems Office reserves the right to update this
+     document without prior notification.
+
+
+
+
+
+
+
+
+
+
+                    Updated November 14, 1980
+
+
+
+                    TABLE OF CONTENTS        
+        
+        Section                                          
+        
+        
+        1.0        Introduction to MLINK                 
+        
+        2.0        Phase I - File Specification          
+                        INPUT command
+                        LIBRARY command
+                        PDEFAULT command
+                        OUTPUT command
+                        NOOUTPUT command
+                        MAP command
+                        NOMAP command
+                        INCLUDE command
+                        EXCLUDE command
+                        PASS command
+                        NOPASS command
+                        DISABLE command
+                        ENABLE command
+        
+        3.0        Phase II - Parameter Adjustments      
+                        PRINT command
+                        UNDEFINED command
+                        DEFINE command
+                        ORDER command
+                        BASE command
+                        FLOAT command
+                        
+        4.0        Miscellaneous Commands                
+                        EXIT command
+                        HELP command
+                        RADIX command
+                        RESET command
+        
+        
+        5.0        Phase III - The Actual Linkage Process
+        
+        6.0        Indirect Commands                     
+        
+        
+        Appendix A      Summary of Commands                
+        
+        Appendix B      Keywords for Output Format         
+        
+        Appendix C      Error Messages                     
+                                                           Page 5
+
+
+1.0 INTRODUCTION TO MLINK
+
+
+     MLINK is BSO's general-purpose microprocessor  cross-linkage
+editor.  It reads relocatable or absolute files in BSO format and
+links these modules together to produce an absolute  load  module
+in  BSO  format.  This absolute object data can then be used with
+BSO's  simulator/debuggers,   converted   to   any   of   several
+microprocessor  manufacturers'  absolute  object formats by BSO's
+OBJCNV  utility,  or  optionally  used  as  absolute  input  into
+subsequent linkages.
+
+
+     The input files to the Cross-Linkage Editor  are  always  in
+BSO format.  BSO's object format files can consist of one or more
+relocatable object modules (produced by  BSO's  relocating  cross
+assemblers), one or more absolute load modules (produced by BSO's
+absolute cross assemblers, OBJCNV  conversion  of  manufacturer's
+absolute  format,  or MLINK's output), and object library modules
+(produced from relocatable modules by BSO's  librarian  program).
+Output files consist of an absolute load module in BSO format and
+(optionally)  a  load  map  listing,  showing  where  relocatable
+sections were loaded in absolute memory, the values of global and
+(optionally) local symbols, and other information.
+
+
+     MLINK,  together  with  BSO's  relocating  assemblers   also
+support   a   relocatable   expression   feature   which  permits
+arbitrarily  complex   expressions   (consisting   of   absolute,
+relocatable,  and  external  global  symbols) to be passed by the
+assembler to MLINK,  which  then  resolves  the  expressions  and
+includes  their  values  where  indicated  in  the  absolute load
+module.
+
+
+     MLINK includes a "verb style" command processor which allows
+the  user  to  specify  parameters and instructions via full-word
+commands to the program.  Each command may be abbreviated to  its
+first   few   letters;   the  minimum  length  of  an  acceptable
+abbreviation for a command keyword is governed by whether or  not
+such  an  abbreviation  would  uniquely  define the command.  For
+example, two of the  command  keywords  supported  by  MLINK  are
+"INPUT"  and "INCLUDE".  The "INPUT" command could be abbreviated
+if desired to the  letters  "INP"  or  "INPU",  or  spelled  out,
+"INPUT";   the  "INCLUDE"  command could be abbreviated to "INC",
+"INCL", "INCLU", "INCLUD", or spelled out,  "INCLUDE".   However,
+the  abbreviations  "I"  or  "IN"  would  be  invalid  for  these
+commands, since the  abbreviations  are  ambiguous;   they  could
+stand for either "INPUT" or "INCLUDE".
+
+
+                                                           Page 6
+
+
+     A typical session with MLINK could be broken up  into  three
+logical  segments.  The first phase involves the specification of
+files to be used in the linking process.  During this phase,  the
+user  specifies  the  names  of  all  the input files and all the
+output files.  Also during  this  phase,  MLINK  checks  for  the
+existence  and  validity of each of the input files, and collects
+information for each one.
+
+
+     The second phase of a MLINK session involves the setting  of
+parameters by the user which govern the base addresses of program
+sections, the order in which sections are loaded.
+
+
+     The final phase is the actual generation of the  object  and
+map files.  It occurs automatically, without user intervention.
+
+
+     Each of  these  segments  is  documented  in  the  following
+sections.  A summary of commands appears in Appendix A at the end
+of this document.
+                                                           Page 7
+
+
+2.0 PHASE I - FILE SPECIFICATION
+
+     Before beginning phase I of a MLINK session, the  user  must
+run the Cross Linkage Editor program.  This is done by typing the
+command
+
+          -R MLINK
+
+at monitor level.  MLINK, in turn, will  respond  with  a  header
+message and a command prompt:
+
+          Cross Linkage Editor 
+          Copyright, The Boston Systems Office, Inc.  1979
+          (617) 894-7800
+          For help type "HELP"
+
+          /
+
+     At this point, MLINK is waiting for the user to specify  the
+names  of  the  files  with  which  it  will  work.  The commands
+applicable  (all  typed  in  response  to  the  "/"  prompt)  are
+summarized below:
+
+
+INPUT filespec[,filespec,filespec,...]
+
+     This command specifies input files for the linkage  process.
+     Each  file  listed  is  read immediately in order to collect
+     global symbol and section size information;  the  files  are
+     also  each  read a second time during phase 3 of the linkage
+     process.  Each file must be in BSO format  and  may  contain
+     one  or  more  modules.   All  modules  in each file will be
+     included in the linkage.  If manufacturer Absolute files are
+     needed  as  input  to MLINK, they must first be converted to
+     BSO format by OBJCNV.
+
+     Each file specification "filespec" in the command is of  the
+     general form:
+
+          dev:filename.ext[dir]
+
+     where "dev" is a device name (e.g.  "DTA0:" for DECtape unit
+     0),  and  can  be  omitted  to use the user's default system
+     device;  "[dir]" is the  directory  in  which  the  file  is
+     stored,  and  can  be  omitted  to  use  the  user's default
+     directory area;  and "filename.ext" is the 1 to 6  character
+     filename  and  1 to 3 character file extension (if extension
+     is omitted, ".ROB" is assumed).
+
+     Example:
+          /INPUT ABC,DEF.XXX
+
+     This command would specify input load  modules  ABC.ROB  and
+     DEF.XXX.
+
+     As many INPUT commands may be specified as necessary to name
+     all  the  input files for the linkage process.  Each command
+                                                           Page 8
+
+
+     must be followed by at least  one  file  specification,  but
+     several may be specified, separated by commas.
+
+
+LIBRARY filespec
+
+     This command loads the  specified  file  in  library  search
+     mode.  Only those modules which resolve currently unresolved
+     global references will be included in the  linkage  process.
+     All  modules contained in the file are scanned.  If the file
+     was produced by BSO's librarian program, this search can  be
+     completed  relatively  quickly.  If the file was not created
+     as  a  library   file   by   the   librarian,   MLINK   will
+     unconditionally  include all modules in the linkage process.
+     Files are assumed to have the default extension ".LIB".
+
+     Example:
+          / LIBRARY MATH,FOR.
+
+     would cause MATH.LIB and FOR.  (with a null extension) to be
+     loaded in library search mode.
+
+
+PDEFAULT
+
+     This command, which takes no arguments, is used  to  request
+     that  MLINK  show  the  current default absolute object file
+     format.  This is the default format that  will  be  produced
+     when OBJCNV converts the Linker's output to a manufacturer's
+     object format.  This format can always  be  overridden  when
+     OBJCNV  is  run;  it is only a default indication to OBJCNV.
+     This indicator is obtained from the first input file.  
+
+     Example:
+          / PDEFAULT
+          Default format:  INTEL, Micro Type:  8086
+
+          /
+
+
+OUTPUT filespec
+
+     This command specifies the name of the  output  file  to  be
+     produced by the MLINK session.  The file specification (only
+     one is permitted) is of the same form as is described  under
+     the INPUT command.  The output file is in BSO format and has
+     a default extension of ".ABS".
+
+     Example:
+          /OUTPUT PROG
+
+     specifies an output file named PROG.ABS.
+
+     An OUTPUT command may be given at any time during Phase I or
+     Phase II of the MLINK session, and a new OUTPUT command will
+     override any previous OUTPUT commands.
+                                                           Page 9
+
+
+OUTPUT:type filespec
+
+     This command is identical to  the  OUTPUT  command,  but  it
+     accepts  an  output object format (type) as well as the name
+     of the output  file.   This  "type"  overrides  the  default
+     format  indicator  supplied  by  the input files as they are
+     being read.  The valid formats are listed in Appendix B.
+
+     Example:
+          /OUTPUT:INTEL PROG2
+
+     The above command  would  create  an  absolute  output  file
+     called "PROG2.ABS".  INTEL format will be produced by OBJCNV
+     by default.
+
+
+NOOUTPUT
+
+     If no OUTPUT commands are given to MLINK,  the  program  can
+     operate  in a mode which produces no output load module, but
+     still verifies the validity of various parameters given in a
+     session  and  possibly  produces  a load map (if requested).
+     Once an OUTPUT command is given, the program is  set  up  to
+     produce  an  output  file  of the specified name and format.
+     Should the user decide at some point after issuing an OUTPUT
+     command  that  he  really does not want an output file after
+     all, he may type the NOOUTPUT command,  returning  MLINK  to
+     the initial condition of having no output object file.
+
+     Example:
+          /OUTPUT FOO
+          /NOOUTPUT
+          /
+
+     In the above sequence of commands, the user first  specified
+     an  output  file  in default format called FOO.ABS, and then
+     cancelled the specification by issuing a NOOUTPUT command.
+
+     NOOUTPUT may actually be specified at any time before typing
+     the GO command (i.e., any time during Phase I or Phase II of
+     the MLINK session).
+
+
+MAP filespec
+
+     This command specifies the name of a load map file to MLINK.
+     The load map is a text file which lists the locations of the
+     program sections and global symbols  in  the  absolute  load
+     module  developed  during the linkage process.  The load map
+     is produced at the beginning of phase III of a MLINK session
+     (immediately  after  the  GO  command  is  given).  The file
+     specification is of the same format  as  described  earlier,
+     and the map file has a default file extension of ".MAP".
+
+     Example:
+          /MAP JOE
+                                                          Page 10
+
+
+     specifies a map file named JOE.MAP.
+
+
+NOMAP
+
+     The NOMAP command functions like  the  NOOUTPUT  command  in
+     that it cancels a previous MAP command.  It may be specified
+     any time before the GO command is given.
+
+INCLUDE keyword
+EXCLUDE keyword
+
+     The map file output produced by MLINK normally contains  the
+     values of global symbols used in the linkage process.  These
+     two commands may be used to change what types of symbols are
+     listed  in  the  load map (if one is produced).  The INCLUDE
+     command specifies that the named type of  symbol  SHOULD  be
+     included  in the map;  EXCLUDE specifies that it should NOT.
+     The keywords associated  with  INCLUDE  and  EXCLUDE,  their
+     defaults with respect to inclusion, and the types of symbols
+     they represent are shown below:
+
+     Keyword   Default   Category of symbols
+     
+     GLOBALS   INCLUDE   Global (intermodule) symbols
+     LOCALS    EXCLUDE   Local (module-specific) symbols
+     ZERO      INCLUDE   Symbols from zero-length modules
+     ALL       see text  All symbols
+
+     Notes on above:
+
+     1- The keyword "ZERO" refers  to  those  symbols  which  are
+     defined  in  modules  which  generate no code, i.e., modules
+     which contain only symbol definitions.  The action  of  this
+     keyword  is  to some degree dependent on what other keywords
+     are supplied.  In particular, "INCLUDE ZERO" does not  force
+     all  local  symbols  from  zero-length modules when "EXCLUDE
+     LOCALS" has been specified.  The  main  use  of  the  "ZERO"
+     keyword  is in the "EXCLUDE ZERO" command.  It would cause a
+     symbol to be excluded from the load map if that symbol  were
+     defined in a module which generated no code but only defined
+     symbols.
+
+     2- The keyword "ALL"  implies  all  of  the  above-mentioned
+     categories,  and  its  default is really neither INCLUDE nor
+     EXCLUDE.  The command "INCLUDE ALL" would cause ALL types of
+     symbols  to  be  included  in  the  load  map;   the command
+     "EXCLUDE ALL" would cause NO symbols to be included.
+
+     Examples:
+          /INCLUDE LOCALS
+          /EXCLUDE ZERO
+          /
+
+     In the above sequence of commands, a user specifies that his
+     load  map should include local symbols from each module, but
+     that no symbols from zero-length modules should  be  printed
+                                                          Page 11
+
+
+     in the load map.
+
+     3- Note that in order  to  enable  the  inclusion  of  local
+     symbols  in any case requires the "/D" (debug) switch set in
+     the command input line to the cross  assembler  at  assembly
+     time.
+
+PASS keyword
+NOPASS keyword
+
+     When the absolute file produced by a MLINK session is to  be
+     used  with  one of BSO's symbolic simulator/debuggers, it is
+     desirable to include a program symbol table with the  object
+     module  to  make  debugging  easier at simulation time.  The
+     PASS and NOPASS commands control what types of  symbols,  if
+     any,  are  to  be included in the absolute output file.  The
+     keyword argument is either "LOCALS",  "GLOBALS",  or  "ALL".
+     The  default (initial) condition is "NOPASS ALL", which says
+     to not put any symbol definitions in the output  file.   The
+     PASS  command  may  be used to specify which types are to be
+     included ("LOCALS" for local symbols, "GLOBALS"  for  global
+     symbols, "ALL" for all symbols -- local and global).  NOPASS
+     complements   PASS   and   can   be   used   to   counteract
+     previously-specified erroneous PASS commands.
+
+     Example:
+          /PASS ALL
+
+     This command causes all  local  and  global  symbols  to  be
+     included in the absolute output file.
+
+DISABLE section_name[,section_name,...]
+ENABLE section_name[,section_name,...]
+
+     Specified sections may be excluded from the  current  output
+     file with the DISABLE command.  
+
+     When the "GO" command is given (Sec.5.0), all sections which
+     have not been DISABLEd are linked, producing an output file.
+     After the linkage has been completed, MLINK returns  to  the
+     state  it was in just before the "GO" command was given (all
+     previously input files are available to be linked  according
+     to  previously  specified parameters).  The user may at this
+     point specify a new  output  file,  and  ENABLE  or  DISABLE
+     various  sections.   The subsequent linkage will include the
+     new combination of sections.
+
+     DISABLE and ENABLE commands would be useful, for example, to
+     a  programmer  whose code combined RAM and ROM sections, and
+     who wished to link only the ROM sections for input to a PROM
+     burner.   The  RAM sections could subsequently be linked, as
+     in the following example:
+
+         / INPUT INFILE
+         / DISABLE RAM
+         / OUTFILE FILE1
+         / GO
+                                                          Page 12
+
+
+         
+           *** Pass Complete ***
+         
+         / DISABLE ROM
+         / ENABLE RAM
+         / OUTFILE FILE2
+         / GO
+         
+           *** Pass Complete ***
+         
+         / EXIT
+                                                     Page 13
+
+
+3.0 PHASE II - PARAMETER ADJUSTMENTS
+
+     After the MLINK user specifies all his files, he or she  may
+then  optionally  type  a  series  of  commands to tell the Cross
+Linkage Editor where and in what order the program  sections  may
+be  loaded.   In  addition  to commands for modifying parameters,
+commands exist to type out current parameter values.
+
+     The commands used during this phase are described below:
+
+
+PRINT section_name[,section_name,...]
+
+     This command is used to print information about one or  more
+     program  sections.  The command argument, "section_name", is
+     a one to six character name of a program section which  must
+     exist  in  at  least  one  of the modules which were read in
+     during phase I.
+
+     Example:
+          /PRINT RAMSEC
+          RAMSEC  R  E  Float  Base=100   Length=BC  Range=0:FFFF
+
+          /
+
+     The output includes the following:
+
+     1- The name of the section being  printed,  RAMSEC  in  this
+     case.
+
+     2-  A  one-letter  code  indicating  the  type  of   section
+     (A=Absolute, R=Relocatable).
+
+     3- A one-letter code indicating whether or not  the  section
+     is currently enabled (E=Enabled, D=Disabled).
+
+     4- The current position  status  of  the  section.   "Fixed"
+     indicates  the  section  has been requested for loading at a
+     fixed absolute address with  a  BASE  command  (see  below).
+     Absolute  sections  are  always  "Fixed" and cannot be moved
+     under any circumstances.  "Float" indicates the  section  is
+     relocatable  and currently "floats" in absolute memory.  The
+     order of sections can be changed;  see the "ORDER"  command,
+     below.
+
+     5- The current base address of the section.
+
+     6- The current length (in bytes) of the section.
+
+     7- The range of  absolute  addresses  this  section  can  be
+     located within.  A section should never be relocated outside
+     this range of addresses.  Normal relocatable sections have a
+     range  of  0 to 0FFFF to allow them to be placed anywhere in
+     memory.  Page zero sections get a range of 0 to 0FF to limit
+     them to page zero addresses.  If a section is placed so that
+     any of its data is at addresses outside this range a warning
+     is generated.
+                                                          Page 14
+
+
+PRINT
+
+     The PRINT command with no argument is similar to  the  PRINT
+     command followed by a section name, except that it lists ALL
+     program sections, in the order they  are  currently  loaded.
+     This command can be used to aid the user in specifying ORDER
+     and BASE commands.
+
+     Example:
+        /PRINT
+        .ABS.   A  E  Fixed  Base=   0  Length=  10
+        VARS    R  D  Float  Base=  10  Length=  4C  Range=0:FF
+        .MAIN.  R  E  Fixed  Base= 100  Length= 108  Range=0:FFFF
+        SUBS    R  E  Float  Base= 208  Length=  4C  Range=0:FFFF
+        RAM     R  E  Fixed  Base=2000  Length= 10A  Range=0:FFFF
+        
+        /
+
+     The output produced by this command  is  identical  to  that
+     produced  by  the  PRINT command with arguments, except that
+     several sections are listed.
+
+
+UNDEFINED
+
+     This command lists currently  unresolved  externals  on  the
+     user's terminal.
+
+
+DEFINE symbol-name = value
+
+     This  command  allows  unresolved  external  symbols  to  be
+     resolved at linkage time.  The specified symbol is given the
+     specified value.
+
+     Example:
+          /DEFINE XXX=1000
+
+
+ORDER section_name,section_name[,section_name,...]
+
+     Initially, program sections are ordered by MLINK as follows:
+     All absolute sections are loaded first into their respective
+     absolute locations.   Relocatable  sections  are  placed  at
+     floating  addresses such that they fit in the current holes.
+     This floating of each relocatable section is limited to  the
+     range of addresses the section is allowed to reside in.  
+
+     The user may wish to change the order in which sections have
+     been  loaded to fit the needs of the system being developed.
+     This is the purpose of the ORDER command.  It  takes  as  an
+     argument  a  list  of  section  names  in the order the user
+     wishes to load them.  Normally, the user  will  specify  all
+     program  sections in one ORDER command.  However, if several
+     groups of sections are to  be  arranged,  each  starting  at
+     different  physical  base  addresses, several ORDER commands
+     may be used.   The  first  section  specified  in  an  ORDER
+                                                          Page 15
+
+
+     command may be a fixed section;  subsequent sections must be
+     floating.  
+
+     Example:
+          /ORDER RAM1,RAM2
+
+     This command ensures that section RAM1 will  be  immediately
+     followed by RAM2.  
+
+     The PRINT command (with no argument) is extremely useful  in
+     aiding  users  of  the  ORDER  command,  since  it  displays
+     sections in their currently-loaded order.
+
+
+BASE section_name=address[,section_name=address,...]
+
+     This command tells MLINK that section "section_name",  which
+     must  be  a  relocatable  section,  is to be loaded at fixed
+     address "address".  Initially, all relocatable sections  are
+     loaded  at "floating" addresses (they immediately follow the
+     sections loaded before them or are put  in  positions  where
+     they will fit).
+
+     The following command sequence might be used,  for  example,
+     to logically group two sections of ROM code and two sections
+     of RAM code, and then specify base addresses for  the  first
+     section  of  each  type.   The  second  section of each type
+     (i.e.,  RAM2  and  ROM2)  would   immediately   follow   its
+     predecessor  at  a  floating  address,  since  no  BASE  was
+     specified for it.
+
+     Example:
+          /ORDER RAM1,RAM2
+          /ORDER ROM1,ROM2
+          /BASE RAM1=0,ROM1=1000
+
+
+FLOAT section_name[,section_name,...]
+
+     This  command  informs  MLINK  that  the  named  section  or
+     sections are to be "floated" in absolute memory as described
+     earlier.  This is the initial condition for all  relocatable
+     sections,  and  this  command  is  provided  to counteract a
+     previously-given erroneous BASE command.
+
+     Example:
+          /FLOAT XYZ
+
+     This command specifies that section XYZ is to be floated  in
+     absolute memory instead of being fixed with a BASE command.
+                                                          Page 16
+
+
+4.0 MISCELLANEOUS COMMANDS
+
+     MLINK has several additional commands which cannot easily be
+classified as part of phase I or phase II.  They are:
+
+
+EXIT
+
+     This command causes MLINK to return to the operating  system
+     and abort any current operation.
+
+     Example:
+
+          /EXIT
+
+          .
+
+HELP
+
+     This command will print a short summary of commands, similar
+     in content to Appendix A of this manual.
+
+
+RADIX keyword
+
+     Initially, numbers  typed  out  by  the  PRINT  command  are
+     printed  in  hexadecimal  radix, and numbers typed in to the
+     BASE command are assumed to be hexadecimal  as  well.   This
+     may  be  changed  to  decimal (base 10) or octal (base 8) by
+     using the RADIX command.  It takes one argument, a  keyword,
+     which  is  either  "HEXADECIMAL"  for base 16, "DECIMAL" for
+     base 10, or "OCTAL" for  base  8.   These  keywords  may  be
+     abbreviated to one letter.
+
+     Examples:
+          /RADIX DECIMAL or RADIX D
+          /RADIX H or HEXADECIMAL
+
+     These two commands change the radix to decimal and  back  to
+     hexadecimal,  respectively.   The  radix may be changed with
+     this command as often as is desired.
+
+
+RESET
+
+     If the user has typed several commands to MLINK and  decides
+     to  start  over  again,  he may type this command instead of
+     exiting MLINK and re-executing the program.  It  essentially
+     restarts  the MLINK program from the beginning, but does not
+     reprint MLINK's sign-on message.  
+                                                          Page 17
+
+
+5.0 PHASE III - THE ACTUAL LINKAGE PROCESS
+
+     Once the user is satisfied with the  parameters  set  during
+phase II, he or she types the command "GO" to tell MLINK to begin
+acting on the commands typed during phase I and phase II.  The GO
+command has no arguments:
+
+          /GO
+
+     The "GO" command signifies the start of phase III, which  is
+non-interactive.   The  Cross  Linkage  Editor  proceeds  to link
+together the specified files, inform the user of any errors,  and
+produce (if requested) map and/or output object file.  When done,
+MLINK prints the message:
+
+          * * * Pass Complete * * *
+
+and reprompts for more commands.  At this point, MLINK is in  the
+same  state  as  was  in just before the "GO" command.  All files
+input during phase I  are  loaded  according  to  the  parameters
+specified  in  phase  II.   The previously specified output file,
+however, is closed.
+
+     The user now has three options:
+
+1.  He may type "EXIT" or Control/C and exit from MLINK.
+2.  He may type "RESET" and then perform another linkage with
+    new files.
+3.  He may specify a new output filename (with the OUTPUT 
+    command) and ENABLE or DISABLE various sections, then
+    perform a linkage.
+                                                          Page 18
+
+
+6.0 INDIRECT COMMANDS
+
+     A user of MLINK may frequently find himself linking the same
+sequence  of  modules together to produce the same output file(s)
+with the same set of parameters very frequently.  In  cases  like
+this,  it  often  becomes  cumbersome  to  have  to type the same
+sequence of commands over and over for each usage of the program.
+
+     In order to make the process easier, MLINK supports indirect
+(batch)  command files, which allow the user to put a sequence of
+commonly-used MLINK commands in a file, which MLINK can then read
+in lieu of terminal input at linkage time.
+
+     A command file, which can be  created  and/or  edited  using
+standard  system  editor  utilities,  may be executed by MLINK by
+typing a command of the form
+
+          /@filespec
+
+     This causes the file named in "filespec" (which has in  this
+case  a  default extension of ".CMD") to be read by MLINK and the
+commands contained therein to be processed as if they  came  from
+the  user's  terminal.   When the command file has been executed,
+the user once again has control over MLINK,  and  may  type  more
+commands  from  his terminal, if desired.  Indirect command files
+may not currently be nested;  that is, no indirect  command  file
+may contain an "@" command.
+                                                          Page 19
+
+
+                           Appendix A
+                       Summary of Commands
+
+
+
+
+BASE section-name=addr[,section-name=addr,...]
+     Specify base absolute addresses for relocatable sections
+
+DISABLE section-name[,section-name,...]
+     Exclude specified section(s) from the current output file.
+
+ENABLE section-name[,section-name,...]
+     Include specified section(s) in the current output file.
+
+EXCLUDE keyword
+     Exclude named symbol type from map
+
+EXIT
+     Leave MLINK, return to operating system
+
+FLOAT section-name[,section-name,...]
+     Specify that named section  floats  in  absolute  memory  to
+     immediately follow the section which precedes it
+
+GO
+     Terminates specification phases and begins linkage phase
+
+HELP
+     Prints command summary
+
+INCLUDE keyword
+     Include named symbol type in map
+
+INPUT filespec[,filespec,...]
+     Specify input files
+
+LIBRARY filespec
+     Specify input in library search mode
+
+MAP filespec
+     Specify map file
+
+NOPASS keyword
+     Don't Include information for the simulator/debugger in  the
+     output module
+
+NOMAP
+     Specify no map file (initial condition)
+
+NOOUTPUT
+     Specify no output load module (initial condition)
+
+ORDER section-name,section-name[,section-name,...]
+     Specify load order of program sections
+                                                          Page 20
+
+
+OUTPUT filespec
+     Specify object module output file
+
+OUTPUT:type filespec
+     Specify object output file with named format  indicator  for
+     OBJCNV
+
+PASS keyword
+     Include additional information for the simulator/debugger in
+     the output module
+
+PDEFAULT
+     Print default absolute format to be used by  OBJCNV  on  the
+     output module
+
+PRINT
+     Print information on all sections
+
+PRINT section
+     Print information on named section
+
+RADIX keyword
+     Specify default input/output radix for commands
+
+RESET
+     Restart MLINK, abort current operation
+                                                          Page 21
+
+
+                           Appendix B
+          Keywords for Output Format indicator "types"
+      (to be used by OBJCNV in converting BSO format file)
+
+
+
+Keyword             Format
+
+INTEL               Intel hex ASCII format
+MOSTECH             MOS Technology hex ASCII format
+MOTOROLA            Motorola hex ASCII format
+COSMAC              Cosmac 1802 format
+TEKTRONIX           Tektronix format
+TI9900              Texas Instruments 9900 format
+F8                  Fairchild F8
+                                                          Page 22
+
+
+                           Appendix C
+                         Error Messages
+
+
+                   ***** Command Errors *****
+
+Illegal argument     The argument, keyword, or parameter  entered
+                     after the command is invalid.
+
+Illegal command      The command entered is  not  a  valid  MLINK
+                     command  (see Appendix A for a list of valid
+                     commands).
+
+Parameters required  The command entered  requires  one  or  more
+                     parameters which the user failed to enter.
+
+Too many type        The user entered a command such as 
+modifiers            OUTPUT:INTEL:MOTOROLA which is illegal.
+
+Illegal              The user entered a command followed by
+modifier             an invalid modifier.
+
+No such section      A BASE, PRINT, ORDER or  FLOAT  command  was
+                     entered for a non-existent section.
+
+Absolute sections    A BASE command was entered for an absolute
+cannot be BASEd      section.
+
+Fixed sections       A BASE command was entered for a section
+cannot be BASEd      that was already fixed in memory.
+
+Not enough sections  An ORDER command was entered with only one
+                     section parameter.
+
+No modules to        A GO command was entered without
+link                 any previous INPUT commands.
+
+Can't ORDER fixed    Only the first section ORDERed may be
+sections             be fixed;  others must be floating.
+
+Absolute sections    An absolute section is always fixed, so can
+cannot be floated    never be floated.
+
+Section already      Section is already floating.
+floating 
+
+File not found       An input file was not found.
+
+Bad command          The command line was  rejected  because  the
+                     line  was  too long, or there was a hardware
+                     error or a  nesting  error  in  an  indirect
+                     command file.
+
+Can't find           The specified command file could not
+command file         be found.
+                                                          Page 23
+
+
+No modifier allowed  The user entered a  command  followed  by  a
+                     modifier,  such  as  RADIX:6800,  when  that
+                     command has no  valid  modifiers  associated
+                     with it.
+
+Section must have
+word alignment       Tried to BASE a section at an address which
+Section must have    is illegal for this particular section.
+page alignment
+
+Section must have    Section must start on a paragraph
+paragraph alignment  boundary.
+
+Section cannot cross Tried to BASE a section such that it 
+page boundaries      illegally overlapped a page boundary.
+
+Illegal filespec     A file specification was not in  the  proper
+                     format  (refer  to the INPUT command section
+                     for a description of the proper  format  for
+                     file specifications).
+
+Can't open map       There was no room for the map file, or the
+file                 file was locked or  protected,  or  possibly
+                     there is a hardware error.
+
+Can't ORDER          The user has attempted to override the laws
+section after self   of nature and have a section in  two  places
+                     at once.  For example:  "/ORDER A,B,C,A"
+
+Illegal address      The user tried to BASE a section at a
+for section          location  the  micro  doesn't  support,  for
+                     example:  BASE FOO=FFFFFFFFFFFF.
+
+
+
+
+       ***** Diagnostic Messages *****                    
+
+
+Section is at an     The specified section has exceeded the
+illegal address      addressing ability of the target micro.  For
+                     example:    17-bit   address   on  a  16-bit
+                     machine.
+
+Mismatching section  A module was read which contained a section
+types                whose type (Abs/Rel or Range) did not  match
+                     the  type  of a previously read section with
+                     the same name.  The original type is used.
+
+Checksum error       A file was read which contained a line  with
+                     a  checksum  error.   The  data  is  assumed
+                     correct.
+
+Master checksum      The checksum of the checksum was incorrect.
+error                The data is assumed correct.
+                                                          Page 24
+
+
+Multiply defined     A file was read which contained an internal
+internal             global  definition  which   was   previously
+                     encountered.   The  original  value  of  the
+                     global is retained.
+
+Undefined external   While  attempting  to  resolve  an  external
+                     reference,  MLINK  could  not  find a global
+                     definition  to  match  with  this   external
+                     reference.   The  symbol is assigned a value
+                     of zero.
+
+Overlapping section  Two or more sections were loaded on  top  of
+                     each  other in absolute memory.  This may or
+                     may not  cause  improper  execution  of  the
+                     object program.  Refer to the map to examine
+                     exactly what was loaded where.
+
+Funny expression     These errors indicate that a relocatable 
+error                object file has been tampered with, the
+Block error          assembler is  not  working  properly,  or  a
+                     source file did not assemble properly.
+
+Multiple start       More than one module contains an auto-start
+addresses given      address.  The first start address
+                     encountered is retained.
+
+Section below re-
+location boundaries  Contents of a section have fallen
+Section above re-    outside of allowable boundaries.
+location boundaries
+
+Value error          A byte or word overflowed.
+
+Bad offset           Arguments for paragraph offset are improper.
+
+Page overflow        (Only with COSMAC 1802  files)  Due  to  the
+                     architecture of the 1802 micro, sections are
+                     required to fit within a page.  If  sections
+                     do  not  fit within a page, the section will
+                     be page aligned  by  the  linker,  and  this
+                     error will appear.
+
+
+
+
+                                                          Page 25
+
+
+          ***** Fatal Errors *****                     
+
+
+File not in          These errors indicate that an input file has
+proper format        been tampered with or that an attempt was
+Illegal block type   made to read a file in the wrong format.
+Illegal micro type
+
+Input error          This error indicates a hardware error  while
+                     reading  the  input  file,  or that an input
+                     file has been tampered with.
+
+Output error on      
+object file          These errors indicate a hardware error while
+Output error on      writing the specified file.
+map file
+
+No more memory       An unsuccessful attempt was made to expand 
+left                 MLINK's table space.
+
+Mismatching micro    An attempt was made to load modules for
+types                differing microcomputers.
+
+Unknown alignment
+characteristic       These errors indicate that a relocatable
+Illegal section      object file has been tampered with, the
+Illegal external     assembler is not working properly, or a
+reference            source file did not assemble properly.
+Illegal local        
+reference 
+
+Unknown polish       These errors indicate an incompati-
+argument             bility between the current version of
+Unknown polish       the Cross Assembler and the current 
+operator             version of the Linker.  Please report
+Unimplemented code   this to BSO at your earliest convenience.
+group
+
+Lookup error on      This error indicates that a file which was
+Pass 2               read during Pass 1 of  the  linkage  process
+                     was not found during Pass 2.
+
+Can't open object    This error indicates a hardware error while
+file                 opening the appropriate file, or no room  on
+                     the appropriate device.
+
+Command file error   Error  encountered  while  reading   command
+                     file.
+
+
+
+        HOW TO REPORT DOCUMENTATION OR SOFTWARE PROBLEMS
+
+
+Documentation:
+
+At BSO we are constantly striving to improve the quality  of  our
+documentation.    If  you  have  had  any  trouble  locating  the
+information you need, or have found parts of this  manual  to  be
+unclear  or  inaccurate,  we  would  appreciate hearing from you.
+Please use the general purpose form on the following page.
+
+
+Software:
+
+In the event you  encounter  a  problem  with  your  use  of  BSO
+software,  please  report  the difficulty to us by mailing in the
+following three items:
+
+     1.  The PROBLEM AND SUGGESTION  REPORT  on  the  next  page,
+         giving  a  description  of the software problem.  Please
+         fill in all requested information.
+
+     2.  A small SAMPLE PROGRAM which illustrates the problem you
+         encountered.   We  need  the  source code of your sample
+         program ON WHATEVER  MEDIUM  (tape  or  disk)  YOUR  BSO
+         SOFTWARE ARRIVED.  If an updated version of the software
+         becomes necessary, we will send it to you on the tape or
+         disk  you  have  provided  (assuming  you  are currently
+         covered under a  new  product  warranty  or  a  software
+         maintenance contract).
+
+     3.  TERMINAL SESSIONS and/or LISTINGS of your sample program
+         with  arrows  and comments to indicate where the problem
+         occurred.
+
+This information has proven to be  essential  for  the  effective
+processing  of  any  software  problems.   Your  co-operation  in
+sending the above three items, plus  any  additional  information
+that  might  prove  helpful, such as command files, object files,
+listing files, relocatable binary (ROB) files, etc., will  result
+in the speediest possible handling of your problem.
+
+
+
+                 THE BOSTON SYSTEMS OFFICE, INC.
+                  PROBLEM AND SUGGESTION REPORT
+
+
+NOTE:  If you are reporting a software problem, DO  NOT  send  in
+this  form  alone.   Please  see the previous page for additional
+required information.
+
+
+Product:                                    Version:
+-----------------------------------------------------------------
+Distribution medium (mag tape, floppy, RK-05, etc.):
+-----------------------------------------------------------------
+Reported by:                                Date:
+-----------------------------------------------------------------
+Company:                                    Phone:
+-----------------------------------------------------------------
+Address
+-----------------------------------------------------------------
+Host computer/operating system:
+-----------------------------------------------------------------
+
+Comments regarding software or documentation:
+-----------------------------------------------------------------
+
+-----------------------------------------------------------------
+
+-----------------------------------------------------------------
+
+-----------------------------------------------------------------
+
+-----------------------------------------------------------------
+
+-----------------------------------------------------------------
+
+-----------------------------------------------------------------
+
+-----------------------------------------------------------------
+
+-----------------------------------------------------------------
+
+-----------------------------------------------------------------
+
+-----------------------------------------------------------------
+
+
+Please  mail  this   form,   along   with   additional   required
+information, to:  
+
+                 The Boston Systems Office, Inc.
+                        469 Moody Street
+                       Waltham, MA  02154
+ Vn‘
