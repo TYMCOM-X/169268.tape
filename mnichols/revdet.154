@@ -1,0 +1,399 @@
+%   REVENUE.DETAIL.R154                REVDET.PR3      05  %
+PROCEDURE REVENUE.DETAIL.R154
+%
+Version 9.0 --- April 10, 1990 --- Sharon Young
+  Cleaned up for 1990/1991 plan.
+
+Version 8.0 --- May 25, 1988 --- Sharon Young
+  Changed IF BRANCH.NUM CHANGING to print file name only if it exists.
+
+Version 7.0  10/10/85  J. Coons
+Modified to change data file from .DAT to .SAV to allow user to only
+modifify when changes need to be made.
+
+Version 6.0  08/29/84  J. Coons
+Modified to reflect changes in ROUTING.
+
+Version 5.0  02/01/83  C. Bryant
+Added a column which states whether the customer is a new account,
+targeted account or neither of these for 83 commissions.
+
+Version 4.0  11/29/82  C. Bryant
+Modified to add a page.divider which will be used to mark where
+a page.feed should be sent to the terminal when typing the report in Magnum.
+
+Version 3.0  09/16/81  L. Foster-Mason
+Modified to print reports by branch rather than by area.
+
+Version 2.0  08/03/81  C. Bryant and L. Foster-Mason
+No longer prints Grand Totals for each salesperson on separate page,
+and trims messages so that each message prints out as only one line.
+
+Version 1.0  10/19/79  H. Hobart
+*
+Prints the Revenue Detail Report from the relation REVENUE.DETAIL.
+%
+%
+Relations accessed:             DATES, ISP, REVENUE.DETAIL, IRCS,
+                                SREV.CORRECTIONS, ADDS.MSG, ROUTING
+
+Relations updated:              None
+
+Input files:                    NET154.SAV - tells the procedure which
+                                areas, branches, or salespeople to
+                                print
+
+Output files:                   NCS154.xxx - the report files
+
+%
+
+BEGIN
+
+INCLUDE TEXT 'RUN.TIME.TEXT'
+
+FIELDS
+  DOUBLE.COMM             AS 'C',
+  RPT.SECT.NAME           AS '60C' DEFAULT
+          'REVENUE DETAIL REPORT - CURRENT MONTH REVENUE',
+  FILE.NAME               AS '14C',
+  CID.TYPE                AS 'C',
+  PCT.L                   AS '2ZN.NN'
+
+DEFINE
+  DEDICATED.10            = 20,
+  DEDICATED.370           = 19,
+  DEDICATED.940           = 21,
+  REV.10                  = 33,
+  REV.370                 = 70,
+  REV.940                 = 0,
+  REV.2020                = 37,
+  SPECIAL.10              = 2,
+  SPECIAL.370             = 7,
+  SPECIAL.940             = 12,
+  TYMSLICE                = 13
+
+
+SOURCE IN.FILE FROM '(NETENTRY)NET154.SAV'
+  FREE FORM
+  INPUT
+    TRAN.CODE,
+      CONDITIONAL ON TRAN.CODE
+        BEGIN
+        'ALL':      @CR
+        'AREA':     AREA.NUM, @CR
+        'BRAN':     BRANCH.NUM, @CR
+        'SALE':     SALES.NUM, @CR
+        END
+
+
+REPORT REVDET.RPT APPEND TO FILE.NAME
+  PAGE.TOP        @FF
+  PAGE.SIZE        60
+  LINE.LENGTH     132
+
+  GROUP.HEADING ON RPT.SECTION
+
+    BEGIN
+    CONDITIONAL ON RPT.SECTION
+
+      BEGIN
+      1:  LET RPT.SECT.NAME =
+          'REVENUE DETAIL REPORT - CURRENT MONTH SERVICE REVENUE'
+      2:  LET RPT.SECT.NAME =
+          '    REVENUE DETAIL REPORT - PRIOR MONTHS CORRECTIONS'
+      3:  LET RPT.SECT.NAME = 
+          '             REVENUE DETAIL REPORT - IRCS'
+      4:  LET RPT.SECT.NAME =
+          '     REVENUE DETAIL REPORT - PRODUCT CORRECTIONS'
+      5:  LET RPT.SECT.NAME = 
+          '     REVENUE DETAIL REPORT - ADDITIONAL REVENUE'
+      6:  LET RPT.SECT.NAME =
+          '    REVENUE DETAIL REPORT - CURRENT PRODUCT REVENUE'
+      END
+
+    PRINT                  PAGE.TOP,
+          @TAB TO  1,     '------------',
+          @CR,            'Process Date: ', TODAY AS DATE 'MM/DD/YY',
+          @TAB TO 57,     'COMMISSIONS SYSTEM',
+          @TAB TO 121,    'Page:', PAGE.NUM,
+          @CR,            'Process Time: ', RUN.TIME,
+          @TAB TO 41,      RPT.SECT.NAME,
+          @TAB TO 121,     FIL.RPT,
+          @CR,
+          @TAB TO 57,     'FOR MONTH OF ', COMM.DATE AS DATE 'MM/YY',
+          @CR, @CR
+
+    SELECT ISP VIA KEY THEN
+  
+      PRINT               ' Sales   Comm   Name',
+          @CR,            'Number   Plan',
+          @CR, @CR,        SALES.NUM,
+          @TAB 3,          COMM.PLAN,
+          @TAB 2,          TRIM(EMP.FIRST.NAME),
+          @TAB 1,          EMP.LAST.NAME,
+          @CR, @CR, @CR
+
+    CONDITIONAL ON RPT.SECTION
+
+      BEGIN
+
+      1 OR 2 OR 4 OR 5 OR 6:
+        PRINT             'Customer Name',
+          @TAB TO 38,     'Cust',
+          @TAB TO 44,     'Cust',
+          @TAB TO 52,     'Invoice',
+          @TAB TO 64,     'Rev',
+          @TAB TO 73,     'Invoice',
+          @TAB TO 84,     'Not Eligible',
+          @TAB TO 99,     'Alloc',
+          @TAB TO 109,    'Eligible',
+          @TAB TO 126,    'P & L',
+          @CR,
+          @TAB TO 39,     'Num',
+          @TAB TO 44,     'Type',
+          @TAB TO 53,     'Number',
+          @TAB TO 63,     'Code',
+          @TAB TO 75,     'Total',
+          @TAB TO 86,     'For Comm',
+          @TAB TO 100,    'Pct',
+          @TAB TO 109,    'For Comm',
+          @TAB TO 125,    'Amount',
+          @CR, @CR
+
+      3:
+        PRINT             'Customer Name',
+          @TAB TO 40,     'Customer  Rev',
+          @TAB TO 62,     'Amount',
+          @CR, @TAB TO 40,'Number   Code',
+          @CR, @CR
+
+      END
+
+    END
+
+
+
+  GROUP.HEADING ON FROM.SALES.NUM
+
+    CONDITIONAL ON RPT.SECTION
+
+      BEGIN
+      1 OR 2 OR 3 OR 4 OR 6:
+        NOTHING
+
+      5:
+        PRINT
+          @CR,            'Revenues from Sales Number ', FROM.SALES.NUM,
+          @CR, @CR
+      END
+
+
+
+  GROUP.FOOTING ON FROM.SALES.NUM
+
+    CONDITIONAL ON RPT.SECTION
+
+      BEGIN
+      1 OR 2 OR 3 OR 4 OR 6:
+        NOTHING
+
+      5:
+        PRINT
+          @CR, @CR,
+          @TAB TO 41,    'Totals',
+          @TAB TO 68,     SUM(AMT) AS '(7ZN.NN)',
+          @TAB TO 83,     SUM(N.COMM.AMT) AS '(7ZN.NN)',
+          @TAB TO 105,    SUM(COMM.AMT) AS '(7ZN.NN)',
+          @TAB TO 119,    SUM(P.L.AMT) AS '(7ZN.NN)',
+          @CR
+      END
+
+
+
+  GROUP.FOOTING ON RPT.SECTION
+
+    CONDITIONAL ON RPT.SECTION
+
+      BEGIN
+      1 OR 2 OR 4 OR 5 OR 6:
+        PRINT
+          @CR,@TAB TO 41,'Totals',
+          @TAB TO 68,     SUM(AMT) AS '(7ZN.NN)',
+          @TAB TO 83,     SUM(N.COMM.AMT) AS '(7ZN.NN)',
+          @TAB TO 105,    SUM(COMM.AMT) AS '(7ZN.NN)',
+          @TAB TO 119,    SUM(P.L.AMT)  AS '(7ZN.NN)',
+          @CR
+
+      3:
+        PRINT
+          @CR,@TAB TO 40,'Total',
+          @TAB TO 56,     SUM(AMT) AS '(7ZN.NN)',
+          @CR
+      END
+
+
+  REPORT.FOOTING      
+
+    PRINT
+          @CR, @CR,
+          @TAB TO 40,    'Grand Totals: ',
+          @TAB TO 68,     SUM(AMT) AS '(7ZN.NN)',
+          @TAB TO 83,     SUM(N.COMM.AMT) AS '(7ZN.NN)',
+          @TAB TO 105,    SUM(COMM.AMT) AS '(7ZN.NN)',
+          @TAB TO 119,    SUM(P.L.AMT) AS '(7ZN.NN)'
+
+
+FORMAT DETAIL.1
+                          CUST.NAME,
+          @TAB TO 37,     CUST.NUM,
+          @TAB TO 46,     CID.TYPE,
+          @TAB TO 49,     INV.NUM,
+          @TAB TO 63,     REV.CODE,
+          @TAB TO 68,     AMT,
+          @TAB TO 83,     N.COMM.AMT,
+          @TAB TO 98,     PCT.L,
+          @TAB TO 105,    COMM.AMT,
+          @TAB TO 119,    P.L.AMT,
+          @CR
+
+
+FORMAT DETAIL.2
+                          CUST.NAME,
+          @TAB TO 37,     CUST.NUM,
+          @TAB TO 46,     CID.TYPE,
+          @TAB TO 49,         REV.CODE,
+          @TAB 2,         AMT,
+          @CR
+
+
+
+LET PROCEDURE.NAME = 'REVENUE.DETAIL.R154'
+LET VERS.NUM       = 9.0
+LET PROC.NUM       = '154'
+
+RUN BEGIN.PROCEDURE (PROCEDURE.NAME, VERS.NUM, PROC.NUM)
+  ACCEPTING (USR.NAM, PREFIX, FIL.DAT, FIL.DAT.ANY, FIL.FMT,
+             FIL.FMT.ANY, FIL.RPT, FIL.RPT.ANY, FIL.TMP, FIL.TMP.ANY)
+
+LET FILE.NAME = PREFIX + PROC.NUM + '.XXX-ANY'
+
+LET ACT.CODE = 'A'
+
+
+TYPE @CR, 'BEGINNING REPORT SECTION', @CR
+    %  Print the report, using TEMP.IN as an index to REVENUE.DETAIL  %
+
+FOR EACH DATES
+
+  BEGIN
+  FOR EACH ISP VIA ACT.CODE SORTED ON BRANCH.NUM, SALES.NUM
+
+    BEGIN
+    LET SUBSTR(FILE.NAME,8,3) = ((BRANCH.NUM - 3000) AS '3N') AS '3C'
+    FOR EACH REVENUE.DETAIL VIA (AREA.NUM, SALES.NUM) WRITE REPORT REVDET.RPT
+
+      BEGIN
+
+      CONDITIONAL ON RPT.SECTION
+
+        BEGIN
+        1:
+          BEGIN    %  Print Current Month Revenue Section  %
+          IF LINE.NUM OF REVDET.RPT GE 55 THEN
+            FORCE FOR REVDET.RPT GROUP.HEADING ON RPT.SECTION
+          ELSE NOTHING
+          LET PCT.L = INV.PCT * 100.00
+          PRINT TO REVDET.RPT DETAIL.1
+          END
+
+        2 OR 4:
+          BEGIN    %  Print Prior Months Corrections & Messages  %
+          IF LINE.NUM OF REVDET.RPT GE 55 THEN
+            FORCE FOR REVDET.RPT GROUP.HEADING ON RPT.SECTION
+          ELSE NOTHING
+          LET PCT.L = INV.PCT * 100.00
+          PRINT TO REVDET.RPT DETAIL.1
+
+          SELECT SREV.CORRECTIONS VIA KEY THEN
+            BEGIN
+            IF SREV.MSG.1 NE ' ' THEN
+              PRINT TO REVDET.RPT    @TAB TO 20, TRIM(SREV.MSG.1), @CR
+            IF SREV.MSG.2 NE ' ' THEN
+              PRINT TO REVDET.RPT    @TAB TO 20, TRIM(SREV.MSG.2), @CR
+            IF SREV.MSG.3 NE ' ' THEN
+              PRINT TO REVDET.RPT    @TAB TO 20, TRIM(SREV.MSG.3), @CR
+            END
+          ELSE NOTHING
+          END
+
+        3:
+          BEGIN    %  Print IRCS Section and its Messages  %
+          IF LINE.NUM OF REVDET.RPT GE 55 THEN
+            FORCE FOR REVDET.RPT GROUP.HEADING ON RPT.SECTION
+          ELSE NOTHING
+          LET PCT.L = INV.PCT * 100.00
+          PRINT TO REVDET.RPT DETAIL.2
+
+          SELECT IRCS VIA (SALES.NUM = SALES.NUM OF REVENUE.DETAIL,
+                 CUST.NUM = CUST.NUM OF REVENUE.DETAIL,
+                 PLAN.MO = PLAN.MO OF DATES,
+                 UNIQ = INV.NUM OF REVENUE.DETAIL AS '5N') THEN
+            IF SREV.MSG.1 NE ' ' THEN
+              PRINT TO REVDET.RPT    @TAB TO 20, TRIM(SREV.MSG.1), @CR
+            ELSE NOTHING
+          ELSE NOTHING
+          END
+
+        5:
+          BEGIN    %  Print Additions and Messages  %
+          IF LINE.NUM OF REVDET.RPT GE 55 THEN
+            FORCE FOR REVDET.RPT GROUP.HEADING ON RPT.SECTION
+          ELSE NOTHING
+          LET PCT.L = INV.PCT * 100.00
+          PRINT TO REVDET.RPT DETAIL.1
+
+          SELECT ADDS.MSG VIA KEY THEN
+            BEGIN
+            IF SREV.MSG.1 NE ' ' THEN
+              PRINT TO REVDET.RPT    @TAB TO 20, TRIM(SREV.MSG.1), @CR
+            IF SREV.MSG.2 NE ' ' THEN
+              PRINT TO REVDET.RPT    @TAB TO 20, TRIM(SREV.MSG.2), @CR
+            IF SREV.MSG.3 NE ' ' THEN
+              PRINT TO REVDET.RPT    @TAB TO 20, TRIM(SREV.MSG.3), @CR
+            END
+          ELSE NOTHING
+          END
+
+        6:
+          BEGIN    %  Print Products Section  %
+          IF LINE.NUM OF REVDET.RPT GE 55 THEN
+            FORCE FOR REVDET.RPT GROUP.HEADING ON RPT.SECTION
+          ELSE NOTHING
+          LET PCT.L = INV.PCT * 100.00
+          PRINT TO REVDET.RPT DETAIL.1
+          END
+
+        END        %  End of Conditional on Rpt.Section  %
+
+      END          %  End of For Each Revenue.Detail  %
+
+    IF BRANCH.NUM CHANGING THEN
+      IF FILE SUBSTR(FILE.NAME,1,10) EXISTS THEN
+        TYPE SUBSTR(FILE.NAME,1,10), ' CREATED', @CR
+      ELSE
+        NOTHING
+    ELSE NOTHING
+
+    END            %  End of For Each Temp.In  %
+
+
+  END              %  End of For Each Dates  %
+
+TYPE @CR, 'REPORT FINISHED'
+
+MOVE DEFAULT TO FILE.1, FILE.2, FILE.3, FILE.4, FILE.5
+RUN END.PROCEDURE (PROCEDURE.NAME, FILE.1,FILE.2,FILE.3,FILE.4,FILE.5)
+
+END
+
+  
