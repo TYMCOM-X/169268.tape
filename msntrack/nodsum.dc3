@@ -1,0 +1,657 @@
+!            PROGRAM:       NODSUM.DMC
+!            AUTHOR         Rob Nielsen
+!            DATE:          August 27, 1986
+! 
+!            PURPOSE:       To summarize node performance data (EXEC count and
+!                 total cps) as shown in Deluti for use in monthly trend
+!                 reports.
+! 
+!            DESCRIPTION:   The program is split into two DPL segments. The
+!                 first will create from the Deluti DUNS data base a temporary
+!                 file of links (node pairs) and the maxumum utilization and
+!                 minimum exec count for each node. The second goes through
+!                 the temporary file for a given node type, as found in
+!                 Supmap.Nod, and gathers the range and percentile statistics.
+
+!            ALGORITHM:
+!                                 First Segment
+!                 Find all records in DUNS
+!                 Sort by node
+!                 For each node
+!                      Find its max throughput (Async CPSi+o + Link CPSi+o) 
+!                      Print Node, Max CPS, and min EXEC count to a flat file
+!                 Open temporary data base NODTMP.DMS
+!                 Delete all remaining records
+!                 Append the flat file just created
+
+!                                 Second Segment
+!                 For each node type of concern
+!                     Find all nodes in SUPMAP.NOD
+!                     Map to NODTMP
+!                     Sort by max CPS
+!                     Count the number of nodes of this type
+!                     Find mean of the max CPS values
+!                     Find values for .10, .25, .50, .75 and .90 percentiles
+!                          as well as absolute max and min
+!                     Get counts of nodes with max CPS in a given range
+!                     Sort by min EXEC count
+!                     Find mean of the max EXEC values
+!                     Find values for .10, .25, .50, .75 and .90 percentiles
+!                          as well as absolute max and min
+!                     Get counts of nodes with min EXEC in a given range
+!             
+!                 Repeat above procedure for all nodes in DUNS taken as a whole
+!                 Delete all records from temporary data base NODTMP.DMS
+!                 Erase NODTMP.DMI.
+
+!            ******************  FIRST PROGRAM ***************
+
+             OPEN (MSNTRACK)DUNS.
+             INIT 1 (MSNTRACK)NODTMP.DMI.
+
+             DPL START.
+             DEFINE INTEGER Noad MaxCPS MinExcnt Dait MinDate MaxDate Today &
+                            ThisYear LastYear ThisMonth LastMonth.
+             DEFINE TEXT 10 TodayText.
+
+             DBSET DUNS.
+
+!                 The next few statements will take all the Deluti data,
+!            not just the most recent month. To use, remove comments (!)
+
+!            FIND ALL.
+!            GETREC 1.
+!                LET MinDate EQ CDATE.             
+!            GETREC SYSNREC.
+!                LET MaxDate EQ CDATE. 
+
+!                 The next few statements should have comment marks placed
+!            in front if you want to take all of the data in DUNS. Otherwise
+!            the program will take only the previous month's data.
+
+             LET TodayText EQ TEXTR(SYSDATE).
+             LET Today EQ INT(TodayText).
+             LET Today EQ (Today-19000000).
+
+             LET ThisYear EQ (Today/10000).
+             LET ThisMonth EQ (Today-(ThisYear*10000))/100.
+
+             IF ThisMonth EQ 1 GOTO January.
+                  LET LastMonth EQ (ThisMonth-1).
+                  LET LastYear EQ ThisYear.
+             GOTO DatesDone.
+
+January:          LET LastMonth EQ 12.
+                  LET LastYear EQ (ThisYear-1).
+  
+DatesDone:   LET MinDate EQ (10000*LastYear) + (100*LastMonth) + 1.
+             LET MaxDate EQ (10000*ThisYear) + (100*ThisMonth) + 1.
+             FIND CDATE GE MinDate AND CDATE LT MaxDate.
+
+!                 *    *   *   *   *  *    *   *   *   *  *    *   *
+!                 Find max throughput and min EXEC count for each node
+             CALL FindMax.
+!                 *    *   *   *   *  *    *   *   *   *  *    *   *
+
+
+             GOTO TheEnd1.
+
+
+!            ***************   SUBROUTINE FINDMAX  ***********************
+
+!                This subroutine finds, for each node selected in calling 
+!           program,  the max CPS and min EXEC.  It  uses  the  variables  
+!           MaxCPS  and MinExcnt to keep track of the current max and min 
+!           values for the current node.  The variable Noad is used to mark 
+!           the beginning of a new node.  
+
+FindMax:     DBSET DUNS.
+             SORT KEY NODE.
+
+!                Initialize Node checks and 1st max utilization value
+             GETREC LastNode1.    
+                 LET Dait EQ CDATE.
+                 LET Noad EQ NODE.
+                 LET MaxCPS EQ (LCI + LCO + ACO + ACI).
+                 LET MinExcnt EQ EXCT. 
+             STARTREC.
+
+NextNode1:   GETREC LastNode1.
+                  IF NODE NE Noad GOTO PrintData.
+                  IF (LCI + LCO + ACI + ACO) GT MaxCPS GOTO NewMaxCPS.
+CheckExec:        IF EXCT LT MinExcnt GOTO NewMinExec.
+             GOTO NextNode1.
+
+NewMaxCPS:        LET MaxCPS EQ (LCI + LCO + ACI + ACO).
+             GOTO CheckExec.
+
+NewMinExec:       LET MinExcnt EQ EXCT.
+             GOTO NextNode1.
+
+PrintData:        PRINT ON 1 NOAD MaxCPS MinExcnt Dait &
+                  FORMAT I5 1X I9 1X I7 1X I6 END.
+                  LET Noad EQ NODE.
+                  LET MaxCPS EQ (LCI + LCO + ACI + ACO).
+                  LET MinExcnt EQ EXCT.
+!         Now holding first record of next node and have assigned new max 
+!         and min. Go to NextNode1 to get next record
+             GOTO NextNode1.
+
+LastNode1:   PRINT ON 1 Noad MaxCps MinExcnt Dait &
+             FORMAT I5 1X I9 1X I7 1X I6 END.
+             RETURN.
+
+
+!            **************** END OF FIRST PROGRAM  **************
+
+TheEnd1:     !     Release (Save) NODTMP.DMI so it can be loaded
+             RELEASE 1.
+             DPL STOP.
+             DPL END.
+
+!                 Load file containing Node and Max CPS and Min EXEC
+             LOAD (MSNTRACK)NODTMP.
+!                 Erase flat file for temp data base
+             INIT 1 (MSNTRACK)NODTMP.DMI.
+             PRINT ON 1 FORMAT 1X END.
+             RELEASE 1.
+
+
+
+!             ***************  START OF SECOND SEGMENT ***************
+
+!            PURPOSE:       To summarize node performance data (EXEC count and
+!                 CPS) as shown in Deluti for use in monthly trend reports.
+! 
+!            DESCRIPTION:   The program will collect 2 types of data (EXEC
+!                 count and max CPS) for 4 types of nodes (all nodes, Consats,
+!                 Switchers, and ISIS Consats). For each node type it will
+!                 collect counts of nodes in up to 10 ranges of CPS and EXEC as 
+!                 well as the the median, upper and lower quartiles, max and min
+!                 CPS and EXEC for that type.  
+
+!                        The data base NODTMP.DMS is used to get the max CPS and
+!                 min EXEC for each node type and the data base SUPMAP.NOD is 
+!                 used to identify the nodes running a given type of node code.
+
+!            ALGORITHM:
+!                 For each nodetype (All, Switcher, Consat and ISIS Consat)
+!                      Find all nodes of that type in Supmap
+!                      Map to NODTMP via node
+!                      First for CPS, then for EXEC count
+!                           Sort by CPS or EXEC count
+!                           Find these percentile points : 10,25,50,75,90
+!                           Find the max and min
+!                           Calculate the mean
+!                           For each range, starting with the highest
+!                                Count all nodes through the top of the range
+!                                Write this total to an array
+!                           Convert array of cumulative counts to an array of
+!                             ranges (intervals)
+!                      Print out NodeType, CPS percentiles, CPS range counts,
+!                                EXEC percentiles, EXEC range counts, number
+!                                of nodes, date of program run
+! 
+!            PROGRAM ORGANIZATION
+!                 Main Program
+!                      InitArrays     Set range values, and nodetypes, set
+!                                       all ouput values to 0.0
+!                      GetData        Get percentile values, range counts, and
+!                                       a count of nodes
+!                      Printout       Print data for 1 node type
+! 
+!            NOTATION:
+!                 ALL CAPS: File names, attribute names, & DPL reserved words
+!                 Mixed:    Variables, labels, and subroutines.
+
+!            EXPANDING NUMBER OF RANGES
+!                 The program allows for the easy expansion of ranges from
+!            the current 5 to any number up to 10. Simply increase the values
+!            of MaxErange and MaxCrange to the desired number of ranges and set
+!            the new upperlimits in columns 1 of arrays CPSrange and EXECrange
+!            in the subroutine InitArrays. If you load the output into a 1022
+!            data base, you must also change the structure of the DMD file. See
+!            the subroutine Printout for the current structure.
+!                 You may not easily increase the number of percentile
+!            points taken but you can easily change which percentiles these are
+!            by changing the initialization of the array Percent in InitArrays
+
+!            ******************  MAIN PROGRAM ***************
+
+             OPEN (PERSTATS)SUPMAP.NOD (MSNTRACK)NODTMP.
+             INIT 1 (MSNTRACK)NODSUM.DMI.
+
+!            Delete Some Obvious problems in the CPS and make note of them
+!            in the error file NODTMP.ERR.
+             DBSET NODTMP.
+             FI CPS GT 99999.
+                IF SYSNREC EQ 0 THEN ST1.
+                DUMP DATA NODTMP.ERR.
+                DELETE.
+
+ST1:         DPL START.
+
+             DBSET SUPMAP.
+             LET SYSCASE EQ 1.
+
+!                 The variables MinDate and MaxDate are used in the second
+!            program but are not defined below.  These variables were defined
+!            in the first program and are passed "globally" to the second
+!            program. Redefining them would reset their values to 0.
+
+             DEFINE INTEGER TypeVers(0:10,2) CPSrange(0:10,3).
+             DEFINE INTEGER EXECrange(0:10,3) CPSpercnt(7) EXECpercnt(7) &
+                            TypeCount RangeCount MaxCrange MaxErange &
+                            Count Nodecount MeanEXEC MeanCPS Types.
+             DEFINE REAL Percent(7).
+             DEFINE TEXT 9 Tipe(-1:10).
+             DEFINE TEXT 3 Indicator.                            
+
+             CALL InitArrays.
+
+!                 Take statistics for the entire network
+             LET TypeCount EQ 0.
+             DBSET SUPMAP.
+             CALL InitType.
+             CALL Network. 
+
+
+!              *  *    *   *   *   *  *    *   *   *   *  *    *   *
+!                          MAIN LOOP OF PROGRAM
+
+!                 Take statistics for each nodetype, one at a time
+             LET Typecount EQ 1.
+NextType:    DBSET SUPMAP.
+             CALL InitType.
+!                     Set switch to do CPS statistics
+                  LET Indicator EQ "CPS".
+                  FIND VERS BET TypeVers (TypeCount, 1)   &
+                            AND TypeVers (TypeCount, 2).
+                  IF SYSNREC EQ 0 GOTO NewType.
+
+                  MAP TO NODTMP VIA NODE TO NODE.
+                       IF SYSNREC EQ 0 GOTO NewType.
+                  CALL GetData.
+
+             DBSET SUPMAP.
+!                     Set switch to do EXEC statistics
+                  LET Indicator EQ "EXC".
+                  FIND VERS BET TypeVers (TypeCount, 1) &
+                            AND TypeVers (TypeCount, 2).
+                  MAP TO NODTMP VIA NODE TO NODE.
+                  CALL GetData.
+
+                  CALL Printout.
+
+NewType:          LET TypeCount EQ (TypeCount + 1).
+             IF TypeCount LE Types GOTO NextType.
+
+!                          END OF MAIN LOOP
+!              *  *    *   *   *   *  *    *   *   *   *  *    *
+
+
+!                 Take statistics on nodetypes not included above
+             LET TypeCount EQ -1.
+             DBSET SUPMAP.
+             CALL InitType.
+             CALL Other.
+
+             GOTO TheEnd2.
+
+!            **************  SUBROUTINE INITARRAYS *********************
+
+!                 InitArrays will initialize the parameters that will
+!            hold throughout the program (eg EXEC count ranges to select)
+!            as well as the EXEC and CPS output to be printed at the end of
+!            each pass through the main loop.
+! 
+!                 The program uses these arrays:
+! 
+!            TypeVers (4,2):     All nodes of type i have versions between
+!                 Typevers(i,1) and Typevers(i,2)
+! 
+!            CPSRange (10,3), EXECrange (10,3): Col 1 is the upper of each
+!                 range. Col 2 is the output column of cumulative counts and
+!                 Col 3 is a set of range, or interval, counts derived from
+!                 Col 2. MaxCrange and MaxErange will control how many ranges
+!                 to search. Cols 2 and 3 is initialized in InitType.
+! 
+!            Percent (7):   7 percentile points to be collected. In the initial
+!                 addition, this program will collect the .10, .25,.50,.75,.90
+!                 points.
+! 
+!            CPSpercnt(7), EXECpercnt(7):  The 7 values corresponding to each
+!                 of the percentile points in Percent(7). These arrays are  
+!                 indexed by the array Percent but are initialized in InitType.
+! 
+!            Type (4):      A string representing each of the 4 node types.
+
+InitArrays:  LET Tipe(-1) EQ "OTHER    ".
+             LET Tipe(0) EQ "ALL NODES".
+             LET Tipe(1) EQ "SWITCHER ".
+             LET Tipe(2) EQ "CONSAT   ".
+             LET Tipe(3) EQ "ISIS     ".
+             
+             LET TypeVers (0,1) EQ 0.
+             LET TypeVers (0,2) EQ 999999.
+             LET TypeVers (1,1) EQ 405.
+             LET TypeVers (1,2) EQ 577.
+             LET TypeVers (2,1) EQ 20400.
+             LET TypeVers (2,2) EQ 20599.
+             LET TypeVers (3,1) EQ 10400.
+             LET TypeVers (3,2) EQ 10599.
+
+             LET Types EQ 3.
+             LET MaxCrange EQ 4.
+
+             LET CPSrange (0,1) EQ 0.
+             LET CPSrange (1,1) EQ 3000    .
+             LET CPSrange (2,1) EQ 6000    .
+             LET CPSrange (3,1) EQ 9000    .
+             LET CPSrange (4,1) EQ 99999999.
+             LET CPSrange (5,1) EQ 99999999.
+             LET CPSrange (6,1) EQ 99999999.
+             LET CPSrange (7,1) EQ 99999999.
+             LET CPSrange (8,1) EQ 99999999.
+             LET CPSrange (9,1) EQ 99999999.
+             LET CPSrange (10,1) EQ 99999999.
+
+             LET MaxErange 5.
+             LET EXECrange (0,1) EQ 0      .
+             LET EXECrange (1,1) EQ 20      .
+             LET EXECrange (2,1) EQ 40      .
+             LET EXECrange (3,1) EQ 60      .
+             LET EXECrange (4,1) EQ 80      .
+             LET EXECrange (5,1) EQ 99999999.
+             LET EXECrange (6,1) EQ 99999999.
+             LET EXECrange (7,1) EQ 99999999.
+             LET EXECrange (8,1) EQ 99999999.
+             LET EXECrange (9,1) EQ 99999999.
+             LET EXECrange (10,1) EQ 99999999.
+
+             LET Percent (1) EQ .00.
+             LET Percent (2) EQ .10.
+             LET Percent (3) EQ .25.
+             LET Percent (4) EQ .50.
+             LET Percent (5) EQ .75.
+             LET Percent (6) EQ .90.
+             LET Percent (7) EQ .9999.
+
+             RETURN.
+
+
+
+
+
+
+!            ***************  SUBROUTINE INITTYPE  ********************
+
+!                This subrouine initializes the output variables whenever
+!            a new type of node is encountered.
+
+InitType:    LET Count EQ 0.
+InitNext:        LET CPSrange(Count,2) EQ 0.
+                 LET CPSrange(Count,3) EQ 0.
+                 LET EXECrange(Count,2) EQ 0.
+                 LET EXECrange(Count,3) EQ 0.
+                 LET Count EQ (Count+1).
+             IF Count LE 10 GOTO InitNext.    
+
+             LET Count EQ 1.
+InitNext2:       LET CPSpercnt(Count) EQ 0.
+                 LET EXECpercnt(Count) EQ 0.   
+                 LET Count EQ (Count+1).
+             IF Count LE 7 GOTO InitNext2.
+
+             LET NodeCount EQ 0.
+
+             RETURN.
+
+!            ***************  SUBROUTINE NETWORK **************************
+
+!                 This subroutine does the same work as the main loop in the
+!            main program except that it works on the entire network. A 
+!            separate subroutine exists only because the array indexing in the
+!            main program will not work here.
+
+Network:     DBSET SUPMAP.
+             LET Indicator EQ "CPS".
+             FIND ALL.    
+                  IF SYSNREC EQ 0 GOTO TheEnd2.
+
+             MAP TO NODTMP VIA NODE TO NODE.
+                  IF SYSNREC EQ 0 GOTO TheEnd2.
+                  CALL GetData.
+
+             DBSET SUPMAP.
+             FIND ALL.
+             LET Indicator EQ "EXC".
+                  MAP TO NODTMP VIA NODE TO NODE.
+                  CALL GetData.
+
+             CALL Printout.
+
+             RETURN.
+
+!            ***************  SUBROUTINE OTHER **************************
+
+!                 This subroutine does the same work as the main loop in the
+!            main program except that it works on the for those node types not 
+!            found in the main program. A separate subroutine exists to enhance
+!            readibility of the main program.
+
+Other:       DBSET SUPMAP.
+             CALL InitTy             LET Indicator EQ "CPS".
+             FIND ALL.
+                  LET TypeCount EQ 1.     
+Exclude:          FIND LAST AND NOT (VERS BET TypeVers (TypeCount, 1)        &
+                                     AND TypeVers (TypeCount, 2)).
+                      LET TypeCount EQ (TypeCount+1).
+                  IF TypeCount LE Types GOTO Exclude.
+
+             IF SYSNREC EQ 0 GOTO EndOther.
+
+                  MAP TO NODTMP VIA NODE TO NODE.
+                       IF SYSNREC EQ 0 GOTO EndOther.
+                  CALL GetData.
+
+             DBSET SUPMAP.
+                  LET Indicator EQ "EXC".
+                  FIND ALL.
+                  LET TypeCount EQ 1.     
+Exclude2:         FIND LAST AND NOT (VERS BET TypeVers (TypeCount, 1)        &
+                                     AND TypeVers (TypeCount, 2)).
+                      LET TypeCount EQ (TypeCount+1).
+                  IF TypeCount LE Types GOTO Exclude2.
+
+                  MAP TO NODTMP VIA NODE TO NODE.
+                  CALL GetData.
+
+             LET TypeCount EQ -1.
+    
+             CALL Printout.
+
+EndOther:    RETURN.
+
+!            ***************  SUBROUTINE GETDATA **************************
+
+!                 This routine will collect the raw data for percentiles and
+!            ranges of CPS and EXEC.  Getdata consists of 4 basic blocks of 
+!            code. The first block determines takes totals and means and sorts 
+!            the data by either CPS or EXEC. The second block takes the 
+!            percentile point of the CPS or EXEC distribution. The third block 
+!            counts the number of nodes within a given range of CPS and the 
+!            fourth block does the same for EXEC. The subroutine always knows 
+!            whether to use CPS or EXEC by reading the string Indicator.
+
+!                 Getdata is the heart of the program.
+
+!              *  *    *   *   *   *  *    *   *   *   *  *    *
+!                         BLOCK1:  TAKE MEANS AND TOTALS, SORT
+
+Getdata:     IF Indicator EQ "EXC" GOTO SortExec.
+             SORT KEY CPS.
+             LET NodeCount EQ SYSNREC.
+             EVALUATE MeanCPS MEAN(CPS).
+             GOTO StartPrct.
+
+SortExec:    SORT KEY EXCT.
+             EVALUATE MeanEXEC MEAN(EXCT).
+
+!                          END OF BLOCK 1
+!              *  *    *   *   *   *  *    *   *   *   *  *    *
+
+
+!              *  *    *   *   *   *  *    *   *   *   *  *    *
+!                     BLOCK2:  TAKE PERCENTILE POINTS, MAX/MIN
+
+StartPrct:   LET I EQ 2.
+
+!                 Getrec (k*SYSNREC) will get the value with the kth percentile
+!                 rank under the current sorct.
+
+NextPrct:    GETREC StartRange INT((Percent(I) * REAL(SYSNREC))+0.5).
+             IF Indicator EQ "EXC" GOTO ExecPrct.
+                  LET CPSpercnt(I) EQ (CPS).
+                       LET I EQ (I+1).
+                       IF I LE 6 GOTO NextPrct.
+!               Find MAX and MIN
+             IF Indicator EQ "EXC" GOTO ExecMaxMin.
+             GETREC StartRange 1.
+                  LET CPSpercnt(1) EQ (CPS).
+             GETREC StartRange SYSNREC.
+                  LET CPSpercnt(7) EQ (CPS).
+             GOTO StartRange.
+
+ExecPrct:         LET EXECpercnt(I) EQ EXCT.
+                       LET I EQ (I+1).
+                       IF I LE 6 GOTO NextPrct.
+!               Find MAX and MIN
+ExecMaxMin:  GETREC StartRange 1.
+                  LET EXECpercnt(1) EQ (EXCT).
+             GETREC StartRange SYSNREC.
+                  LET EXECpercnt(7) EQ (EXCT).
+             GOTO StartRange.
+
+!                             END OF BLOCK 2
+!              *  *    *   *   *   *  *    *   *   *   *  *    *
+
+
+!              *  *    *   *   *   *  *    *   *   *   *  *    *
+!                      BLOCK 3: COUNT NODES WITHIN CPS RANGES
+
+!                      STARTREC preserves the current sort
+StartRange:  STARTREC.
+             LET I EQ 1.
+             IF Indicator EQ "EXC" GOTO EXECrnge.
+
+NextRange:   GETREC LastRange.
+NewCrange:        IF (CPS) LE CPSrange(I,1) GOTO NextRange.
+                  LET CPSrange(I,2) EQ (SYSRECNO-1).
+                  LET I EQ (I+1).
+                  GOTO NewCrange.
+
+LastRange:        LET CPSrange(I,2) EQ SYSNREC.
+FillCrange:       IF I GE MaxCrange GOTO CInterval.
+                       LET I EQ (I+1).
+                       LET CPSrange(I,2) EQ SYSNREC.
+                       GOTO FillCrange.  
+
+!                      Calculate interval counts from cumulative counts
+CInterval:        CALL Interval.
+                  GOTO EndData.
+
+!                              END OF BLOCK 3
+!              *  *    *   *   *   *  *    *   *   *   *  *    *
+
+
+!              *  *    *   *   *   *  *    *   *   *   *  *    *
+!                      BLOCK 4: COUNT NODES WITHIN EXEC RANGES
+
+EXECrnge:    GETREC LastERange.
+NewErange:        IF EXCT LE EXECrange(I,1) GOTO EXECrnge.
+                  LET EXECrange(I,2) EQ (SYSRECNO-1).
+                  LET I EQ (I+1).
+                  GOTO NewErange.
+
+LastERange:       LET EXECrange(I,2) EQ SYSNREC.
+FillErange:       IF I GE MaxErange GOTO EInterval.
+                       LET I EQ (I+1).
+                       LET EXECrange(I,2) EQ SYSNREC.
+                       GOTO FillErange.  
+
+!                      Calculate interval counts from cumulative counts
+EInterval:        CALL Interval.
+                  GOTO EndData.
+
+!                              END OF BLOCK 4
+!              *  *    *   *   *   *  *    *   *   *   *  *    *
+
+
+EndData:     RETURN.
+
+!            ***************  SUBROUTINE INTERVAL  *****************
+
+!                 This subroutine takes the counts of nodes less than or equal
+!            a specified value, ie the top value of each range, and turns 
+!            them into a count of nodes within a range of values. The 
+!            cumulative counts are found in columns 2 of EXECrange and 
+!            CPSrange and the range(interval) counts are returned to column 3  
+
+Interval:    LET I EQ 1.
+             IF Indicator EQ "EXC" GOTO ExInterval.
+
+NextIval:    LET CPSrange(I,3) EQ (CPSrange(I,2) - CPSrange(I-1,2)).
+             LET I EQ (I+1).
+             IF I LE MaxCrange GOTO NextIVal.
+                  GOTO EndIntrval.
+
+ExInterval:  LET EXECrange(I,3) EQ (EXECrange(I,2) - EXECrange(I-1,2)).
+             LET I EQ (I+1).
+             IF I LE MaxErange GOTO ExInterval.
+
+EndIntrval:  RETURN.
+
+!            **************** SUBROUTINE PRINTOUT ***************
+
+!                 This subroutine prints out one line each time it is called
+!            It should be called once you have collected all the statistics
+!            for the node type.
+
+Printout:    PRINT ON 1 Tipe(TypeCount) NodeCount FORMAT A9 1X I4 1X $ END.
+                  LET I EQ 1.
+Print1:      PRINT ON 1 CPSpercnt(I) FORMAT I5 1X $ END.
+                  LET I EQ (I+1).
+             IF I LE 7 GOTO Print1.
+
+                  LET I EQ 1.
+             PRINT ON 1 MeanCPS FORMAT I5 1X $ END.
+Print2:      PRINT ON 1 CPSrange(I,3) FORMAT I5 1X $ END.
+                  LET I EQ (I+1).
+             IF I LE MaxCrange GOTO Print2.
+
+                  LET I EQ 1.
+Print3:      PRINT ON 1 EXECpercnt(I) FORMAT I4 1X $ END.
+                  LET I EQ (I+1).
+             IF I LE 7 GOTO Print3.
+
+                  LET I EQ 1.
+             PRINT ON 1 MeanEXEC FORMAT I4 1X $ END.
+Print4:      PRINT ON 1 EXECrange(I,3) FORMAT I4 1X $ END.
+                  LET I EQ (I+1).
+             IF I LE MaxErange GOTO Print4.
+
+             PRINT ON 1 MinDate MaxDate SYSDATE &
+             FORMAT I6 1X I6 1X D4 END.
+
+             RETURN.
+
+
+!            *****************  END OF PROGRAM ********************
+
+TheEnd2:     RELEASE 1.
+             DPL STOP.
+             DPL END.
+
+
+ $g¹
