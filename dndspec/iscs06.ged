@@ -1,0 +1,225 @@
+.ND "July 24, 1988"
+
+.ds T1 SIO SPEEDLINK TELEX
+.ds T2 General External Design 
+.ds N0 Ram Akella 
+
+.li 0
+.PH ""
+.PF ""
+.nr P 1
+.R
+.lg 0
+.DS C
+.sp 1i
+.S 20
+.B "\*(T1"
+.sp .5v
+.B "\*(T2"
+.sp .5v
+.I "\*(T3"
+.SP 2
+.S 14
+\*(N0
+.sp .5v
+\*(DT
+.SP 2
+.B MDC\-TYMNET
+.sp .5v
+.B "Network Technology Development"
+.S \nS
+.DE
+.sp 1.5i
+.TS
+center,linesize (20),tab (`),expand;
+cw(.2i) | cBp11w(5i) | cw(.2i).
+`_
+`T{
+BT\-TYMNET's proprietary rights are included in the information disclosed herein.
+The recipient, by receiving this document, agrees that neither this document
+nor the information disclosed herein nor any part thereof shall be reproduced
+or transferred to other documents or used or disclosed to others for
+manufacturing or any other purpose except as specifically authorized in
+writing by BT\-TYMNET. 
+T}
+.sp .4v
+`_
+.TE
+.PH "'SIO SPEEDLINK TELEX''\\\\*(DT'"
+.if \nP .bp
+.de nE
+.nr e 1+\\n(Ex
+.ds n# \\n(H1-\\ne
+..
+.de pE
+.ds p# \\n(H1-\\n(Ex
+..
+.de Ch          \"begin change macro
+.mc \(br 2m
+..
+.de Co          \"end change macro
+.mc
+..
+.nr Cl 3
+.nr Ej 1
+.nr Hb 7
+.nr Hc 1
+.nr Hi 1
+.nr Hs 7
+.nr Hu 1
+.nr Hy 1
+.nr Pi 4
+.ds HF 3 3 3 3 3 2 2
+.ds HP 16 14 12 11 10 11 10
+.de HX
+.if\\$1=3 .ti +5n
+..
+.de HY
+.if\\$1=3 .ti +5n
+..
+.de SH
+.H 1 "\\$1"
+.ds a] \\$1
+.nr P 1
+..
+.de AH
+.if \\n(a0<2 \{\
+.if !\\n(a0 \{\
+.bp
+.nr H1 0 \}
+.HM A
+.nr a0 2
+.nr Ej 0 \}
+.nr H1 +1
+.ds a[ Appendix \\n(H1:  \\$1
+.nr H1 -1
+.HU "\\*(a["
+.rn a[ a]
+.nr Ej 1
+.nr P 1
+..
+.PF "''\\\\*(a]'Page \\\\n(H1-\\\\nP'"
+.li 0
+
+.SH "ABSTRACT"
+
+Currently, the connection of Speedlink TELEX devices is supported using
+the standard asynchronous ports on the TYMNET Engine. This project calls
+for the implementation of supporting these devices using the Serial I/O
+(SIO) ports.
+
+.SH "INTRODUCTION"
+
+This document describes the implementation for the Speedlink support
+using the SIO subsystem. Speedlink refers to the customer's private
+telegraph network used for exchanging messages between customer's 
+offices around the world. Speedlink telex uses polarity key 
+signalling to indicate and maintain the line state. There are four types
+of connections being supported.
+
+.DS
+
+1. 50 baud station using polar key signalling to a message switch
+   - TID36
+
+2. 75 baud station using polar key signalling to a message switch
+   - TID37
+
+3. 300 baud ASCII device using polar key signalling to an ASCII
+   message switch - TID38
+
+4. 300 baud ASCII device to a message switch not using the polar key
+   signalling - TID10
+
+.DE
+
+This project is driven by the introduction of the PICO Engine that
+supports only the SIO asynchronous subsystem. Hongkong & Shanghai
+Banking Corp., the originators of the PIR, require the ability to
+support Telex devices on this new member of the Engine family and
+hence the effort.
+
+.SH "GENERAL EXTERNAL DESIGN"
+
+The implementation changes for the SIO support of Speedlink devices
+will be made to CONSAT version 6.03. 
+The time constraints and the fact that version 8.00, currently under
+completion, has undergone extensive modifications would not permit us 
+to implement and test the changes along with the testing of the
+modifications in the time available. 
+
+
+
+
+
+.H 2 "IMPLEMENTATION"
+
+In looking at the four connections that need to be supported
+the fourth type - 300 baud ASCII to MSC not using polar key
+signalling TID10 - is already supported on the SIO subsystem
+in version 6.03. Hence, the document deals with
+the remaining three types TID36,TID37,TID38.
+.P
+The implementation involves changes to all portions of the code
+involved with the speedlink telex devices. These changes encompass the 
+init file and the following modules - INITIZ,DATA,PVC,CONSAT,TELEX
+VERIFY.
+.P
+New Telex SIO Transmitters and Receivers need to be added along with
+the necessary routines to handle the telex signalling capabilities.
+From a functional viewpoint any changes made will be transparent 
+to the user.
+
+
+
+
+
+
+
+
+.H 3 " Approach"
+
+The approach would be to maintain the existing TIDs and
+based on the device,
+introduce jumps within the existing telex Tranmitter and Receiver to
+the new Telex SIO tranmitters and Receivers 
+This would alleviate the need for new TIDs. Further, this
+would tend to be consistent with the proposed implementation in
+version 8.
+
+
+
+
+.H 3 "NEW TIDS - Alternate Approach"
+
+In order to support the four different type of connections, four
+new TIDs are introduced to differentiate from the existing TIDs
+that are supported on an asynchronous subsystem.
+.DS
+
+  TID46 : supports a 50 baud Telex station using polar key
+	  signalling to a message switch on a SIO port only.
+
+  TID47 : supports a 75 baud Telex station using polar key
+	  signalling to a message switch on a SIO port only.
+
+  TID48 : supports a 300 baud ASCII device using polar key
+	  signalling to a message switch on a SIO port only.
+
+
+
+  Usage:
+
+
+  SPVCRNG(0)
+  SPVCEX(0,TID46,AID,ALO,PCO,NOHNG,PROBE,NOWRU,NONPI,NOTXT)
+.DE
+
+These TIDs would be applicable to this version of code only, and
+would not be available in the implementation of version 8.
+.P
+In any case, either approach will not drastically affect the rest of
+the changes being made to this version.
+
+
+.TC 1 1 2 0 "TABLE OF CONTENTS"
