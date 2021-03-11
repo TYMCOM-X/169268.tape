@@ -1,0 +1,102 @@
+PROCEDURE MSI.LINE.ITEM
+
+%--------------------------------------------------------------------------
+
+  Name: MSI.LINE.ITEM        Author: Mary Winslow    Date: 01/28/82
+
+Purpose:  This is a multi-selectable inquiry screen for use in demonstrating 
+       the Screen Generator in the MAGNUM Maintenance and Implementation class.
+
+Relations Referenced: SO.LINE.ITEM
+
+Relations Affected: SO.LINE.ITEM but only TO.SHIP.DATE which is
+        changed to today's date for each instance selected.
+
+----------------------------------------------------------------------------%
+
+
+MAIN.LOOP:
+BEGIN % selectable line item %
+
+CONTROLS FOR RELATION
+  CONCURRENT UPDATE
+
+INCLUDE TEXT 'CRT.CONTROLS'
+INCLUDE TEXT 'MSI.ITEM.LIB'
+
+DISP.MASK:
+DISPLAY MSI.ITEM
+
+  BEGIN % display %
+
+  APPLY DISP.MSI.ITEM
+  LOOP1:
+  BEGIN % loop1 %
+
+    FOR EACH SO.LINE.ITEM VIA (SALES.ORD.NO)
+    BEGIN % for each line item %
+
+      LET MSI.FLAG = 1
+      APPLY WL.MSI.ITEM
+      IF SCREEN.FULL EQ 'Y'
+        THEN
+        FUNCT.KEY.LOOP:
+            BEGIN % funct.key.loop %
+              TYPE TO TERMINAL ERROR.LINE, 'MARK LINE ITEMS SHIPPED TODAY'
+              SET.CURSOR SALES.ORD.NO OF MSI.ITEM
+              INPUT FUNCTION.KEY
+              CONDITIONAL ON FUNCT.KEY
+                BEGIN % conditional %
+                    FUNCT.T:
+                      BEGIN % select %
+                          APPLY PROCESS.MSI.ITEM
+                          IF EDIT.CANCELED EQ 'Y'
+                            THEN REPEAT FUNCT.KEY.LOOP
+                          MOVE DEFAULT TO CL.MSI.ITEM
+                          FINISH FUNCT.KEY.LOOP
+                      END % of select %
+                    FUNCT.R:
+                      BEGIN % restore screen to first screen of data %
+                          APPLY RESTORE.MSI.ITEM
+                          REPEAT LOOP1
+                      END % of restore screen %
+                    FUNCT.D:
+                      BEGIN % clear screen to defaults %
+                          DELETE FROM MSI.ITEM.ITEM ALL
+                          MOVE DEFAULT TO CNT.MSI.ITEM, CL.MSI.ITEM, CHAR.CNT
+                          APPLY DEFAULT.MSI.ITEM
+                          TYPE TO TERMINAL EL.MSI.ITEM, SET.WRITE.PROTECT.OFF
+                          REPEAT LOOP1
+                      END % of clear screen %
+                    FUNCT.Q: 
+                      BEGIN % quit and allow another lot inquiry %
+                          TYPE TO TERMINAL SHUT.DOWN
+                          FI    3067
+840854643 37    22 1Y       93      324        0      417      141                  5013
+840854643 37    37 1Y      167      139        0      306        0                  5013
+840854644191    47 3Y        0      153        0      153      233                  5017
+840854657 46    47 3Y     7849        0        0     7849    14837                  3102
+840854658 11    85 3Y        0        0        0        0      120                  3011
+840854665249    41 3Y      422        0        0      422      233                  3067
+840854666249    41 3Y      240        8        0      248      467                  3067
+N     3252      792        0     4044        0                  3158
+850252425175    82 3N      179       68        0      247        0                  2055
+850252427171    41 3N      989     1252        0     2241        0                  2054
+850252427171    49 3N     4422     1104        0     5527        0                  2054
+850252427171    82 3N   122152   303593        0   425744        0                  2054
+850252431 90    54 1Y      998      529        0     1528        0                  3083
+850252437249    41 3Y     2261       89        0     2349        0                  3067
+850252438249    41 3Y     2332        7        0     2340        0                  3067
+850252459 46    47 3Y     3810        0        0     3810        0                  3102
+850252460 46    47 3Y      363        0        0      363        0                  3102
+850252461 76    47 3Y    19508    12018        0    31526        0                  5006
+850252466 16    49 3Y      134        0        0      134        0                  3020
+850252470249    41 3Y      381      334        0      715        0                  3067
+850252476 95    44 3Y       15       36        0       51        0                  3084
+850252495172    33 1N        0     1967        0     1967        0                  4030
+850252495172    40 3N      102      151        0      254        0                  4030
+850252495172    54 1N     6358      777        0     7135        0                  4030
+850252502 95    48 3Y       37        0        0       37        0                  3084
+850252502 95    49 3Y      119        0        0      119        0                  3084
+850252503 16    48 3Y      446      477        0      923        0                  3020
+850252515171    41 3N     6135     
