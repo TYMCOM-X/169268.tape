@@ -1,0 +1,1450 @@
+
+                                                          Page 1.0
+                                                          ________
+   
+    
+                             T M D T
+                             _______
+        
+                  TYMNET MULTIPOINT DESIGN TOOL
+                  _____________________________
+         
+         
+        
+INTRODUCTION:
+____________
+       
+     TMDT (Tymnet Multipoint Design Tool) is designed to create and
+maintain least-cost line layouts for centralized subsystems which are
+to be connected to the TYMNET NETWORK. With this tool TYMNET can pro-
+vide prospective and actual customers of its 3270 connection with least
+cost line layouts for their multipoint lines. TMDT is resident under
+"ANALYSIS" on system 33. To run the program simply type
+     
+                   -GO (ANALYSIS)TMDT
+      
+     TMDT has an extremely useful built-in network editor, which will
+let the user maintain and edit a file containing the locations of ter-
+minals, hosts and concentrators. Please note that in our world network
+nodes and concentrators are treated alike. For 3270 applications, the
+node locations supporting 3270 have to be specified by the user.
+       
+     The program uses the minimum distance criteria to home terminals
+to nodes and then uses the ESAU-WILLIAMS algorithm to design the nec-
+essary number of multi-drop lines. The lines are designed based on
+the user constraints as the number of locations/terminals that can be
+assigned to a line and also the maximum transmit/receive traffic. Pos-
+sible future enhancements to the program may include options on homing
+techniques and a module to add new locations to already existing lines.
+      
+     TMDT supplies the user with prompts, default values, informative
+messages and diagnostics wherever necessary or upon request by the user.
+Useful messages are obtainable anywhere in the program by simply typing
+"?". TMDT is primarily divided into two main modules. The first is a
+network editor called EDIT. The second main module designs the lines
+and is called DESG. The structure is as follows;
+                
+       
+               *********************************
+               *           T M D T             *
+               *********************************
+                      *                 *
+                      *                 *
+                  ***********     ***********
+                  * E D I T *     * D E S G *
+                  ***********     ***********
+
+        
+                                                          Page 2.0
+                                                          ________
+               
+EDITOR MODULE (EDIT):
+____________________
+                
+     The Network Editor (EDIT) provides the user with the capability
+of entering and saving information about the locations in his network
+including traffic to and from each node. He can also capture design
+information (circuits) created by the Design Module or enter his own
+circuit information to augment or override the Design Module. The Net-
+work Editor provides commands to do the following functions:
+        
+    1). File Management........ From within the program, at any point
+        the user can either input a file of nodes and links, append
+        a file of nodes and links or output a file of nodes and links.
+       
+    2). Node Management........ The user has the capability to add nodes,
+        delete nodes, modify the nodes' properties and at any point in
+        the program to type out nodes and their properties.
+         
+    3). Link Management........ At any point in the program, the user 
+        may type out any links and their properties that the Design
+        Module has created. The capability to manually add and modify
+        links and their properties has not been implemented in the
+        current version of TMDT.
+          
+NETWORK EDITOR STRUCTURE:
+________________________
+       
+      EDIT commands are hierarchically organized into logical groupings
+of commands with related functions. EDIT is primarily divided into three
+main modules. The first is file management called FILES. The second main
+EDIT module does node management and is called NODES. The third main EDIT
+module does link management and is called LINKS. The EDIT structure is as
+follows;             
+            
+        ***********************************************************
+        *                         E D I T                         *
+        ***********************************************************
+                  *                  *                  *          
+                  *                  *                  *
+            *************      *************      *************
+            * F I L E S *      * N O D E S *      * L I N K S * 
+            *************      *************      *************
+                  *                  *                  *           
+                  *                  *                  *         
+        ****************       ***************      ****************
+        *       *      *       *    *    *   *      *    *    *    *
+        *       *      *       *    *    *   *      *    *    *    *
+     ******  ******  ******  **** **** **** ****   **** **** **** ****
+     *IFIL*  *AFIL*  *OFIL*  *AN* *DN* *MN* *TN*   *AL* *DL* *ML* *TL*
+     ******  ******  ******  **** **** **** ****   **** **** **** ****
+
+         
+                                                          Page 3.0
+                                                          ________
+         
+FILE MANAGEMENT (FILES):
+_______________________
+         
+     Commands under file management are the following:
+               
+     1). IFIL <filename>     Inputs a binary file representing nodes,
+                             links and properties. This command will
+                             destroy a present network core image and
+                             replace it with the one read from the file.
+         
+     2). AFIL <filename>     Appends a binary file representing nodes,
+                             links and properties to the current network
+                             core image.
+       
+     3). OFIL <filename>     Outputs a binary file representing the cur-
+                             rent network core image of nodes, links and
+                             properties.
+               
+    
+NODE MANAGEMENT (NODES):
+_______________________
+       
+     Commands under node management are the following:
+        
+     1). AN <node id>        Adds a node to the network core image. Only
+                             a unique node id is required to add a node.
+                             The program will prompt for the other pro-
+                             perties like area-code/exchange where instead
+                             of a value the user can enter a carriage re-
+                             turn and the program uses default values.
+                 
+     2). DN <node id>        Deletes a specific node based on the node id
+                *            or if the star option is used will delete all
+                             nodes in the network core image. Note that 
+                             when a node is deleted then all links inci-
+                             dent to that node are also deleted.
+            
+     3). MN <node id>        Modifies node properties for a specific node,
+            <property>       a specified group of nodes or all nodes. For
+                *            example, to change a particular node's pro-
+                             perties the user enters MN <node id>. After
+                             which the user enters the properties to change
+                             with their new values. The user could also
+                             use MN * to assign new values to certain pro-
+                             perties for all nodes in the network core image.
+                             Even more fun is a way to identify a group of
+                             nodes based on the value of specified properties
+                             they have in common and assign new values to
+                             specified properties for them. For example,
+                             suppose the user wishes to change certain 
+                             properties for all nodes with the city name
+                             "NEW YORK". The user could use MN CITY and
+                             the program would then prompt for a city name
+                             and after that for the properties to change 
+                             along with their new values.
+
+      
+                                                          Page 4.0
+                                                          ________  
+           
+     4). TN <node id>        Types node's primary properties out at the
+               *             terminal. Again the star option can be used
+                             when the user desires all nodes typed out.
+                             Nodes primary properties are node id (no
+                             keyword), area-code/exchange (keyword ACEX),
+                             city (keyword CITY), state (keyword STAT),
+                             number of devices (keyword DEV), receive
+                             traffic (keyword RC), transmit traffic (key-
+                             word TX), role (keyword ROLE), home (keyword
+                             HOME) and number of terminations (keyword
+                             TER). Secondary node properties are location
+                             id (keyword LOC), vertical coordinate (key-
+                             word VER), horizontal coordinate (keyword 
+                             HOZ) and AB rate identifier (keyword AB).
+                             Secondary properties are displayed in the
+                             circuit report and may also be changed using
+                             the modify node command (MN).
+     
+LINK MANAGEMENT (LINKS):
+_______________________
+         
+     Commands under link management are the following:
+               
+     1). TL <endpoints>      Types out at the terminal a specific link,
+            * <endpoint>     a group of links or all links. For example,
+            <endpoint> *     to type out the link between node id T0001
+              *    *         and node id T0002 the user would enter TL
+                             and the program would prompt for an endpoint.
+                             The user would then respond with the node id
+                             T0001. Then the program would prompt for the
+                             other endpoint and the user would respond with
+                             the node id T0002.                       
+        
+     2). DL <endpoints>      Deletes from the network core image a specific
+            * <endpoint>     link, a group of links based on a particular
+            <endpoint> *     endpoint or it can be used to delete all links.
+              *    *
+         
+     3). AL <endpoints>      This command is NOT currently implemented. If
+                             it is ever added it would allow the user to
+                             manually add links. The current version of 
+                             TMDT only allows the design module (DESG) to
+                             add links.
+      
+     4). ML <endpoints>     This command is also NOT currently implemented.
+            * <endpoint>    If it is ever implemented it would allow the
+            <endpoint> *    user to manually modify link properties.
+
+     
+                                                          Page 5.0
+                                                          ________
+      
+NODE PROPERTIES:
+_______________
+       
+     Each node has the following properties associated with it. The
+program uses keywords to reference the associated properties:
+        
+     Node Id (no keyword)    - A 1 to 5 character unique node identifier
+                               by which the user normally refers to the
+     node by. It is assigned to the node when the node is first added to
+     the network core image. It can not be changed by the modify node (MN)
+     command. In most of the places in the program where the node id is 
+     asked for the user can usually substitute the star option ("*") which
+     stands for any or all nodes.
+        
+     City (keyword = CITY)   - A 1 to 10 character city descriptor. When
+                               the user first adds the node to the network
+     core image the add node command (AN) prompts for an area-code/exchange.
+     From the supplied area-code/exchange the program looks up the city,
+     state, vertical coordinate and horizontal coordinate. Though TMDT
+     normally fills in the city, state, V and H fields the user could if
+     desired manually change these fields.                             
+                                                                          
+     State (keyword = STAT)  - A 2 character state code (see CITY).
+            
+     Area-code/exchange (keyword = ACEX) - The 6 digit area-code/exchange
+                                           assigned by the telephone
+     company for the node location. TMDT looks up the corresponding CITY,
+     STAT, VER and HOZ values from this number.
+        
+     Role (keyword = ROLE)   - A node can only be one of three functional
+                               types according to TMDT. Either a concen-
+     trator (keyword CONC) which in our world is normally a TYMNET node;
+     a terminal location (keyword TERM); or a host location (keyword HOST).
+                                                                          
+     Home (keyword = HOME)   - TERM and HOST locations are either assigned
+                               homes by the design module (using the ASGH
+     command) or they can be manually assigned using the modify node (MN)
+     network editor command. Homes are the CONC nodes where lines consist-
+     ing of the TERM and HOST locations are to be connected to.
+         
+     Location Id (keyword = LOC) - This is an advance user feature. It is
+                                   a 1 to 5 character id which the user
+     can assign to nodes using the modify node (MN) network editor com-
+     mand. If the user assigns two or more nodes with the same location
+     id then the design module will NEVER put those nodes on the same
+     circuit. For reliability purposes, the design module never designs
+     multipoint lines with more than one node with the same NONBLANK
+     location id.
+        
+     Receive Traffic (keyword = RC) - Arbitrary units of traffic received 
+                                      by the TERM node as assigned by the
+     user. Since the units are arbitrary, the user must remember that if   
+     the value for RC stands for bps for one TERM node then all other nodes
+     RC field also stand for bps. Receive traffic is meaningless as far as
+     CONC and HOST nodes are concern when the design module designs the
+     multipoint lines.
+
+     
+                                                          Page 6.0
+                                                          ________
+         
+     Transmit Traffic (keyword = TX) - Arbitrary units of traffic trans-
+                                       mitted by the TERM node (see above
+     receive traffic).                                                  
+              
+     Number of Devices (keyword = DEV) - The number of devices at the TERM
+                                         node. This field is only meaning-
+     ful for TERM nodes. The devices may actually be terminals or terminal
+     control units; only the consistency of what the numbers represent must
+     not be forgotten.
+         
+     Vertical Coordinate (keyword = VER) - Usually this field is filled in
+                                           based on the area-code/exchange
+     the user supplies for the node. The user can manually make this field
+     any value he desires through use of the network editor modify node (MN)
+     command. This can be useful when the area-code/exchange info is not
+     known but the vertical and horizontal coordinates are.
+       
+     Horizontal Coordinate (keyword = HOZ) - See above vertical coordinate.
+          
+     Terminations (keyword = TER) - This field is also normally maintained
+                                    by the program. When the design module
+     creates lines it calculates the number of terminations the node is
+     responsible for. Again the user can manually change this field using
+     the editor modify node cammand (MN).                              
+                                                                    
+     A/B Indicator (keyword = AB) - This is the AT&T Rate Center identifier
+                                    used for line pricing under the MPL
+     tariff. Currently when a node is first added to TMDT's network core
+     image it is assigned as a type "B" city. Unless the user manually
+     changes this using the network editor modify node command, TMDT will
+     not always design and report the least-cost topology. Instead it will
+     come close by designing the least-mileage topology and report the
+     possible most the design could cost under MPL tariff... and not
+     its actual cost.
+
+      
+                                                          Page 7.0
+                                                          ________
+          
+LINK PROPERTIES:
+_______________
+                
+        
+                 
+     Each link has the following properties associated with it:
+              
+     Endpoints (no keyword) - Eack link is idenfified by the node ids
+                              of its endpoints. 
+                 
+     Circuit Id (keyword = CIRC) - When the design module creates links,
+                                   it assigns a 10 characircuit des-
+     criptor. This circuit descriptor specifies what circuit each link is  
+     on. When creating circuits the design module uses the CONC location
+     node id concatenated with a sequential number as the circuit id.
+          
+     Length (keyword = LEN) - The billable length in air-line miles between
+                              the link's endpoints.
+           
+     Cost (keyword = COST) - The link's MPL cost. NOTE that circuits with
+                             the same length may have different costs 
+     depending on their A/B types. ALSO NOTE THAT THIS IS THE MILEAGE COST
+     THAT THE TELEPHONE COMPANY CHARGES UNDER MPL TARIFF. THIS IS NOT THE
+     COST TYMNET CHARGES THE CUSTOMER FOR THE LINE. IF TYMNET IS CHARGING
+     THE CIRCUIT BACK TO THE CUSTOMER (SAY AT 110%) THEN THE USER MUST
+     MULTIPLY THE MILEAGE, TERMINATION AND POSSIBLY THE MODEM CHARGES THAT
+     TMDT GIVES BY 110%.
+   
+               
+                                                          Page 8.0
+                                                          ________
+         
+NETWORK EDITOR SCENARIOS:
+________________________
+                  
+     The following are actual scenarios with TMDT. In these scenarios,
+user input will be underlined to distinguish it from system output.
+Carriage returns supplied by the user will appear as a {cr}.
+             
+            
+        
+  SCENARIO # 1 :  This scenario will just show how to execute and exit
+  ____________    from the TMDT program and how the question mark can
+                  used by the user.
+               
+     -R (ANALYSIS)TMDT {cr}
+      _____________________
+     ENTER TMDT COMMAND...OR ? :? {cr}
+                                ______
+     ENTER ONE OF THE FOLLOWING COMMANDS :
+        EDIT - NETWORK EDITOR MODULE.
+        DESG - DESIGN AND ANALYSIS MODULE.
+        EXIT - EXIT PROGRAM.
+                              
+     ENTER TMDT COMMAND...OR ? :EXIT {cr}
+                                _________
+     EXIT
+                    
+     -
+           
+  SCENARIO # 2 :  This scenario will get the user into the TMDT program,
+  ____________    get him into the network editor and finally show how
+                  define some nodes. This scenario will define two CONC
+                  nodes and save them to a file called "CONC.FIL". Then
+                  this scenario will delete these nodes and define four
+                  TERM nodes and one HOST node which will be saved to a
+                  file called "TERM.FIL".
+                                                                          
+     -R (ANALYSIS)TMDT {cr}                                            
+      _____________________
+     ENTER TMDT COMMAND...OR ? :EDIT {cr}
+                                _________
+     ENTER EDIT COMMAND...OR ? :? {cr}
+                                ______
+     ENTER ONE OF THE FOLLOWING COMMANDS :
+       FILES - TO DO FILE MANAGEMENT.
+       NODES - TO DO NODE MANAGEMENT.
+       LINKS - TO DO LINK MANAGEMENT.
+       QUIT  - TO QUIT EDIT AND RETURN TO HOME.
+        
+     ENTER EDIT COMMAND...OR ? :NODES {cr}
+                                __________
+
+      
+                                                          Page 9.0
+                                                          ________
+       
+     ENTER EDIT NODES COMMAND...OR ? :? {cr}
+                                      ______
+     ENTER ONE OF THE FOLLOWING COMMANDS :
+       AN   - TO ADD NODES AND THEIR PROPERTIES.
+       DN   - TO DELETE NODES.
+       MN   - TO MODIFY EXISTING NODES PROPERTIES.
+       TN   - TO TYPE OUT NODES AND THEIR PROPERTIES.
+       QUIT - TO QUIT EDIT NODES AND RETURN TO EDIT.
+         
+     ENTER EDIT NODES COMMAND...OR ? :AN {cr}
+                                      _______
+     ENTER 1 TO 5 CHAR NODE ID...OR <CR> TO QUIT :CONC1 {cr}
+                                                  __________
+     ENTER THE 6-DIGIT AREA-CODE EXCHANGE AS AAAXXX :212358 {cr}
+                                                     ___________
+     ENTER THE NUMBER OF DEVICES :{cr}                     <--Note #1
+                                  ____
+     ENTER THE ROLE...( TERM...CONC...HOST):CONC {CR}
+                                            _________
+     ENTER THE NUMBER OF UNITS OF RECEIVE TRAFFIC :{cr}    <--Note #2
+                                                   ____
+     ENTER THE NUMBER OF UNITS OF TRANSMIT TRAFFIC :{cr}
+                                                    ____
+     ENTER 1 TO 5 CHAR NODE ID...OR <CR> TO QUIT :CONC2 {cr}
+                                                  __________
+     ENTER THE 6-DIGIT AREA-CODE EXCHANGE AS AAAXXX :408446 {cr}
+                                                     ___________
+     ENTER THE NUMBER OF DEVICES :{cr}
+                                  ____
+     ENTER THE ROLE...( TERM...CONC...HOST):CONC {cr}
+                                            _________
+     ENTER THE NUMBER OF UNITS OF RECEIVE TRAFFIC :{cr}
+                                                   ____
+     ENTER THE NUMBER OF UNITS OF TRANSMIT TRAFFIC :{cr}
+                                                    ____
+     ENTER 1 TO 5 CHAR NODE ID...OR <CR> TO QUIT :{cr}
+                                                  ____
+     ENTER EDIT NODES COMMAND...OR ? :QUIT {cr}
+                                      _________
+     ENTER EDIT COMMAND...OR ? :FILES {cr}
+                                __________
+     ENTER EDIT FILES COMMAND...OR ? :OFIL {cr}
+                                      _________
+     ENTER FILENAME :CONC.FIL {cr}
+                     _____________
+     WRITE TO CONC.FIL        (Y OR N)? Y {cr}
+                                        ______
+     NET OF     2 NODES AND     0 LINKS WRITTEN TO FILE CONC.FIL
+           
+     ENTER EDIT FILES COMMAND...OR ? :QUIT {cr}
+                                      _________
+
+      
+                                                          Page 10.0
+                                                          _________
+       
+     ENTER EDIT COMMAND...OR ? :NODES {cr}
+                                __________
+     ENTER EDIT NODES COMMAND...OR ? :DN {cr}
+                                      _______
+     ENTER THE NODE ID ... OR <CR> TO QUIT:* {cr}
+                                           ______
+     ENTER EDIT NODES COMMAND...OR ? :AN {cr}
+                                      _______
+     ENTER 1 TO 5 CHAR NODE ID>>>OR <CR> TO QUIT :TERM1 {cr}
+                                                  __________
+     ENTER THE 6-DIGIT AREA-CODE EXCHANGE AS AAAXXX :212358 {cr}
+                                                     ___________
+     ENTER THE NUMBER OF DEVICES :5 {cr}
+                                  ______
+     ENTER THE ROLE...( TERM...CONC...HOST):TERM {cr}
+                                            _________
+     ENTER THE NUMBER OF UNITS OF RECEIVE TRAFFIC :500 {cr}
+                                                   ________
+     ENTER THE NUMBER OF UNITS OF TRANSMIT TRAFFIC :300 {cr}
+                                                    ________
+     ENTER 1 TO 5 CHAR NODE ID...OR <CR> TO QUIT :TERM2 {cr}
+                                                  __________
+     ENTER THE 6-DIGIT AREA-CODE EXCHANGE AS AAAXXX :213864 {cr}
+                                                     ___________
+     ENTER THE NUMBER OF DEVICES :10 {cr}
+                                  _______
+     ENTER THE ROLE...( TERM...CONC...HOST):{cr}           <--Note #3
+                                            ____
+     ENTER THE NUMBER OF UNITS OF RECEIVE TRAFFIC :300 {cr}
+                                                   ________
+     ENTER THE NUMBER OF UNITS OF TRANSMIT TRAFFIC :{cr}
+                                                    ____
+     ENTER 1 TO 5 CHAR NODE ID...OR <CR> TO QUIT :TERM3 {cr}
+                                                  __________
+     ENTER THE 6-DIGIT AREA-CODE EXCHANGE AS AAAXXX :203244 {cr}
+                                                     ___________
+     ENTER THE NUMBER OF DEVICES :{cr}
+                                  ____
+     ENTER THE ROLE...( TERM...CONC...HOST):{cr}
+                                            ____
+     ENTER THE NUMBER OF UNITS OF RECEIVE TRAFFIC :250 {cr}
+                                                   ________
+     ENTER THE NUMBER OF UNITS OF TRANSMIT TRAFFIC :{cr}
+                                                    ____
+     ENTER 1 to 5 CHAR NODE ID...OR <CR> TO QUIT :TERM4 {cr}
+                                                  __________
+     ENTER THE 6-DIGIT AREA-CODE EXCHANGE AS AAAXXX :312346 {cr}
+                                                     ___________
+     ENTER THE NUMBER OF DEVICES :7 {cr}
+                                  ______
+     ENTER THE ROLE...( TERM...CONC...HOST):{cr}
+                                            ____
+     ENTER THE NUMBER OF UNITS OF RECEIVE TRAFFIC :360 {cr}
+                                                   ________
+     ENTER THE NUMBER OF UNITS OF TRANSMIT TRAFFIC :{cr}
+                                                    ____
+
+        
+                                                          Page 11.0
+                                                          _________
+      
+     ENTER 1 TO 5 CHAR NODE ID...OR <CR> TO QUIT :HOST1 {cr}
+                                                  __________
+     ENTER THE 6-DIGIT AREA-CODE EXCHANGE AS AAAXXX :209229 {cr}
+                                                     ___________
+     ENTER THE NUMBER OF DEVICES :{cr}
+                                  ____
+     ENTER THE ROLE...( TERM...CONC...HOST):HOST {cr}
+                                            _________
+     ENTER THE NUMBER OF UNITS OF RECEIVE TRAFFIC :{cr}
+                                                   ____
+     ENTER THE NUMBER OF UNITS OF TRANSMIT TRAFFIC :{cr}
+                                                    ____
+     ENTER 1 TO 5 CHAR NODE ID...OR <CR> TO QUIT :{cr} 
+                                                  ____
+     ENTER EDIT NODES COMMAND...OR ? :QUIT {cr}
+                                      _________
+     ENTER EDIT FILES COMMAND...OR ? :FILES {cr}
+                                      __________
+     ENTER EDIT FILES COMMAND...OR ? :OFIL {cr}
+                                      _________
+     ENTER FILENAME :TERM.FIL {cr}
+                     _____________
+     WRITE TO TERM.FIL        (Y OR N)? Y {cr}
+                                        ______
+     NET OF    5 NODES AND    0 LINKS WRITTEN TO FILE TERM.FIL
+       
+     ENTER EDIT FILES COMMAND...OR ? :QUIT {cr}
+                                      _________
+     ENTER EDIT COMMAND...OR ? :QUIT {cr}
+                                _________
+     ENTER TMDT COMMAND...OR ? :EXIT {cr}
+                                _________
+     EXIT
+     -
+         
+     Note #1: When adding a new node and the program prompts for number
+              of devices, if the user reponds with a carriage return the
+              program uses the default value of 1 for number of devices.
+           
+     Note #2: When the program prompts for receive and/or transmit traffic,
+              if the user responds with a carriage return the default value
+              of zero is used.
+         
+     Note #3: When the program prompts for the role, if the user responds
+              with a carriage return the default value of TERM is used.
+
+          
+                                                          Page 12.0
+                                                          _________
+       
+  SCENARIO # 3 :  This scenario takes the two node files created in
+  ____________    scenario # 2 , changes the AB rate city indicator for
+                  known class A cities to "A" and then outputs the files
+                  under the same names.         
+                           
+     -R (ANALYSIS)TMDT {cr}                                            
+      _____________________               
+     ENTER TMDT COMMAND...OR ? :EDIT {cr}
+                                _________ 
+     ENTER EDIT COMMAND...OR ? :FILES {cr}
+                                __________
+     ENTER EDIT FILES COMMAND...OR ? :IFIL {cr}
+                                      _________
+     ENTER FILENAME :CONC.FIL {cr}
+                     _____________
+     READ FROM CONC.FIL        (Y OR N)? Y {cr}
+                                         ______
+     NET OF    2 NODES AND    0 LINKS NOW IN MEMORY.
+          
+     ENTER EDIT FILES COMMAND...OR ? :QUIT {cr}
+                                      _________
+     ENTER EDIT COMMAND...OR ? :NODES {cr}
+                                __________          
+     ENTER EDIT NODES COMMAND...OR ? :TN {cr}
+                                      _______
+     ENTER THE NODE ID ... OR <CR> TO QUIT:* {cr}
+                                           ______
+       NODE ID *ACEX* ***CITY*** ST DEV ***RC*** ***TX*** ROLE HOME **TER**
+     ----------------------------------------------------------------------
+     
+        CONC1  212358 QUEENS NYC NY   1    0.000    0.000 CONC             0
+        CONC2  408446 SAN JOSE   CA   1    0.000    0.000 CONC             0
+          
+     ENTER THE NODE ID ... OR <CR> TO QUIT:{cr}            
+                                           ____
+     ENTER EDIT NODES COMMAND...OR ? :MN {cr}
+                                      _______
+     ENTER THE IDENTIFYING NODE ID, KEYWORD, OR <CR> :CONC2 {cr}
+                                                      __________
+     ENTER THE PROPERTY TO CHANGE...<CR> WHEN FINISHED :AB {cr}
+                                                        _______
+     ENTER THE NEW A/B INDICATOR :A {cr}
+                                  ______
+     ENTER THE PROPERTY TO CHANGE...<CR> WHEN FINISHED :{cr}
+                                                        ____
+     ENTER THE IDENTIFYING NODE ID, KEYWORD, OR <CR> :{cr}
+                                                      ____
+     ENTER EDIT NODES COMMAND...OR ? :QUIT {cr}
+                                      _________
+     ENTER EDIT COMMAND...OR ? :FILES {cr}
+                                __________
+
+            
+       
+                                                          Page 13.0
+                                                          _________
+ 
+ 
+ 
+ 
+     ENTER EDIT FILES COMMAND...OR ? :OFIL {cr}
+                                      _________
+     ENTER FILENAME :CONC.FIL {cr}
+                     _____________
+     WRITE TO CONC.FIL        (Y OR N)? Y {cr} 
+                                        ______
+     NET OF    2 NODES AND     0 LINKS WRITTEN TO FILE CONC.FIL
+     
+     ENTER EDIT FILES COMMAND...OR ? :IFIL {cr}
+                                      _________
+     ENTER FILENAME :TERM.FIL {cr}
+                     _____________
+     READ FROM TERM.FIL        (Y OR N)? Y {cr}
+                                         ______
+     NET OF     5 NODES AND     0 LINKS NOW IN MEMORY.
+     
+     ENTER EDIT FILES COMMAND...OR ? :QUIT {cr}
+                                      _________
+     ENTER EDIT COMMAND...OR ? :NODES {cr}
+                                __________
+     ENTER EDIT NODES COMMAND...OR ? :TN {cr}
+                                      _______
+     ENTER THE NODE ID ... OR <CR> TO QUIT:* {cr}
+                                           ______
+       NODE ID *ACEX* ***CITY*** ST DEV ***RC*** ***TX*** ROLE HOME **TER**
+     ----------------------------------------------------------------------
+    
+        TERM1  212358 QUEENS NYC NY   5  500.000  300.000 TERM             0
+        TERM2  213864 NORWALK    CA  10  300.000    0.000 TERM             0
+        TERM3  203244 HARTFORD   CT   1  250.000    0.000 TERM             0
+        TERM4  312346 CHICAGO    IL   7  360.000    0.000 TERM             0
+        HOST1  209229 FRESNO     CA   1    0.000    0.000 HOST             0
+           
+     ENTER THE NODE ID ... OR <CR> TO QUIT:{cr}
+                                           ____
+     ENTER EDIT NODES COMMAND...OR ? :MN {cr}
+                                      _______
+     ENTER THE IDENTIFYING NODE ID, KEYWORD, OR <CR> :CITY {cr}
+                                                      _________
+     ENTER THE IDENTIFYING CITY NAME :HARTFORD {cr}
+                                      _____________
+     ENTER THE PROPERTY TO CHANGE...<CR> WHEN FINISHED :AB {cr}
+                                                        _______
+     ENTER THE NEW A/B INDICATOR :A {cr}
+                                  ______
+     ENTER THE PROPERTY TO CHANGE...<CR> WHEN FINISHED :{cr}
+                                                        ____
+
+ 
+ 
+                                                          Page 14.0
+                                                          _________
+ 
+ 
+ 
+ 
+     ENTER THE IDENTIFYING NODE ID, KEYWORD, OR <CR> :CITY {cr}
+                                                      _________
+     ENTER THE IDENTIFYINF CITY NAME :FRESNO {cr}           
+                                      ___________
+     ENTER THE PROPERTY TO CHANGE...<CR> WHEN FINISHED :AB {cr}
+                                                        _______
+     ENTER THE NEW A/B INDICATOR :A {cr}
+                                  ______
+     ENTER THE PROPERTY TO CHANGE...<CR> WHEN FINISHED :{cr}
+                                                        ____
+     ENTER THE IDENTIFYING NODE ID, KEYWORD, OR <CR> :CITY {cr}
+                                                      _________
+     ENTER THE IDENTIFYING CITY NAME :CHICAGO {cr}
+                                      ____________               
+     ENTER THE PROPERTY TO CHANGE...<CR> WHEN FINSIHED :AB {cr}
+                                                        _______
+     ENTER THE NEW A/B INDICATOR :A {cr} 
+                                  ______
+     ENTER THE PROPERTY TO CHANGE...<CR> WHEN FINISHED :{cr}   
+                                                        ____
+     ENTER THE IDENTIFYING NODE ID, KEYWORD, OR <CR> :{cr}
+                                                      ____       
+     ENTER EDIT NODES COMMAND...OR ? :QUIT {cr}
+                                      _________
+     ENTER EDIT COMMAND...OR ? :FILES {cr}
+                                __________
+     ENTER EDIT FILES COMMAND...OR ? :OFIL {cr}
+                                      _________
+     ENTER FILENAME :TERM.FIL {cr}
+                     _____________
+     WRITE TO TERM.FIL        (Y OR N)? Y {cr}
+                                        ______
+     NET OF     5 NODES AND     0 LINKS WRITTEN TO  FILE TERM.FIL
+      
+     ENTER EDIT FILES COMMAND...OR ? :QUIT {cr}
+                                      _________
+     ENTER EDIT COMMAND...OR ? :QUIT {cr}
+                                _________
+     ENTER TMDT COMMAND...OR ? :EXIT {cr}
+                                _________
+     
+     EXIT
+     -
+
+            
+                                                          Page 15.0
+                                                          _________
+        
+     
+DESIGN AND ANALYSIS MODULE (DESG):
+_________________________________
+          
+     The Design Module (DESG) can be used to plan, design and maintain
+centralized subnetworks like the 3270 Tymnet Connection. The Design Module
+will assign terminals and hosts to concentrator locations (like Tymnet Nodes)
+according to user constraints to give the optimal cost subnetwork. The Design
+Module can also be used to show the cost impact of varying the multi-drop
+contraints like the maximum number of terminals to allow on any single circuit.
+The Design Module provides commands to do the following functions;
+            
+     1). Maintain design parameters used to design and price the multi-drop
+         circuits.
+     
+     2). Assign or reassign homing concentrator locations to all TERM and
+         HOST nodes.
+       
+     3). Design the line layout of connecting the terminal nodes (Role = TERM)
+         and host nodes (Role = HOST) to their homed concentrator nodes (Role =
+         CONC).
+                                     
+     4). Report on the design topology and cost either as a summary or in
+         detail.
+          
+DESIGN MODULE STRUCTURE:
+_______________________
+       
+     The Deisgn Module is structured as follows;
+         
+     ******************************************************************
+     *                           D E S G                              *
+     ******************************************************************
+           *         *         *         *         *         *
+           *         *         *         *         *         *
+         ****      ****     ******     ****      *****    ******
+         *LP*      *MP*     *ASGH*     *LL*      *REP*    *COST*
+         ****      ****     ******     ****      *****    ******
+                                         *                      
+                                         *
+                             ******************************   
+                             *        *         *         *
+                          ******    ******    *****     ******
+                          *REDO*    *FORC*    *ADD*     *DROP*
+                          ******    ******    *****     ******
+     
+
+       
+                                                          Page 16.0
+                                                          _________
+       
+LIST PARAMETERS (LP):
+____________________
+       
+    The Design Module (DESG) designs circuits based on parameter values,
+limiting the load on circuit. The List Parameter (LP) command displays the
+current values of the following parameters;
+    MTRF - Maximum Traffic Per Circuit.
+    MDEV - Maximum Number of Devices Per Circuit.
+    MLOC - Maximum Number of Locations Per Circuit.
+    PCHG - Port Charge... PCHG is used to cost out circuits but the value also
+           affects the designing of circuits. The higher the PCHG the harder
+           DESG tries NOT to have any point-to-point circuits.
+    TFBS - Traffic Basis.                                                
+    MODEM - Modem Charge .. like PCHG, MODEM is used to cost out circuits but
+           the user should be aware the this parameter affects the design pro-
+           cess just like PCHG.
+    TOPT - Termination Option...used only for cost reporting. TOPT has
+           nothing to do with the design process.
+    HINT - Host Interface Charge ... used only for cost reporting. HINT has
+           nothing to do with the design process.
+    ACHG - Charge Per Terminal Address ... used only for cost reporting. ACHG
+           has nothing to do with the design process.
+            
+         
+MODIFY PARAMETERS (MP):
+______________________
+        
+    the user can change the DESG parameters by using the MP command.
+                 
+          
+ASSIGN HOMES (ASGH):
+___________________
+         
+     DESG must be given the association of TERM nodes to CONC nodes in order
+for the line layout design process. Either the user can manually use EDIT and
+set the HOME property of each TERM node or DESG can be given the ASGH command
+to perform the homing. If ASGH is used then DESG assigns homing CONC locations
+to all TERM and HOST locations based on nearest distance. If any links exists
+when ASGH is executed then the program prompts the user for permission to
+delete all current links in order to continue with the homing. Many times it
+is useful to let ASGH do the initial homing and then to manually use EDIT to
+change some homing assignments before continueing with a line layout.
+
+        
+                                                          Page 17.0
+                                                          _________
+              
+LINE LAYOUT (LL):
+________________
+           
+    Currently this module has only one way implemented to perform line lay-
+outs...REDO. REDO is used to redo the design process completely on all
+nodes homed to all CONC nodes or , if specified, on all nodes homed to the
+specified CONC node. REDO designs circuits one CONC location at a time. It
+will delete circuits before designing new ones.
+    The following are planned LL commands that hopefully will be implemented
+if their need is vocalized;      
+    FORC - Would allow the user to specify line segments that DESG should
+           force into the final design.
+    ADD  - Would allow the user to best add new locations to already existing
+           designs.
+    DROP - Would allow the user to drop locations from existing designs.
+            
+               
+COST TOTALS (COST):
+__________________
+            
+     COST gives the user cost and totals for an entire network design or for
+a specified CONC node.
+         
+DETAIL REPORT (REP):
+___________________
+           
+     REP gives circuit details for an entire network design, for circuits
+pretaining to a specified CONC node or only the circuit that contains a
+specified node id. The user has the option of saving reports to a disk file.
+
+                 
+                                                          Page 18.0
+                                                          _________
+       
+ESAU-WILLIAMS ALGORITHM:
+_______________________
+         
+     DESG uses the Esau-Williams algorithm to design the line-layouts of
+terminal locations associated with specified concentrator locations. This
+is done under the submodule LL.
+    Before the line-layout can be handled, it is first necessary to deter-
+mine which TERM locations are to be associated with which CONC locations. DESG
+handles this terminal clustering problem with the ASGH command. This assigns
+TERM and HOST locations to their nearest CONC locations. There are other ways
+to do this then simply using least distance. Eventually we hope to implement
+one of the least cost solutions to this terminal clustering problem. Until then
+the user may find it useful to override some of ASGH homing assignments and
+manually assign homes through EDIT module.
+    The following is a brief outline of the Esau-Williams algorithm and how
+DESG uses it to handle each terminal cluster.
+           
+    STEP 0 :
+                Calculate all trade off parameters.
+                  Tij = Cij - Ci1 for all i,j
+                and disregard all parameters > 0
+         
+    STEP 1 :
+                Select the minimum Tij and consider connecting i to j.
+         
+    STEP 2 :
+                Check to see if the constraints are satisfied. If yes...
+                goto STEP 3. If not ... set Tij = infinity then go back to
+                STEP 1 and select again.
+       
+    STEP 3 :
+                Add link i-j; label node i with the label of node j to show
+                i is connected to j. Reevaluate the constraints and update
+                the trade-off parameters ... then go back to STEP 1.
+            
+      
+Note 1:  Before STEP 0, for terminal clusters greater than 6 terminal locations
+         TMDT treats the problem as a relatively sparse graph where each node
+         can only connect to a small number (in our case 5) of its nearest
+         neighbors and to its central. According to A.Kershenbaum and W.Chou...
+         IEEE Transactions on Communications, Vol.Com-22,No.11,Nov. this does
+         not significantly degrade the solution. It does however greatly im-
+         prove execution time.
+        
+Note 2: In step 0 when calculating all the trade off parameters, TMDT checks
+        to see if any such proposed links would violate any constraints.
+
+    
+                                                          Page 19.0
+                                                          _________
+      
+TMDT LINE PRICING (MPL TARIFF):
+______________________________
+          
+    
+     TMDT reports the AT&T Multischedule Private Line (MPL) tariff FCC #260
+line costs. MPL tariff groups locations into two city types - TYPE A / TYPE B.
+Type B cities are all small cities and account for almost all locations in the
+continental United States. There are approximately 350 Type A cities, generally
+the largest cities. 
+     Normally a user might desire a 2400, 4800 or 9600 bps. line between two
+locations. If the user gets billed from the supplying Telco under MPL pricing
+then the total line cost would usually consist of mileage charges, station
+termination charges and modem charges. PLEASE NOTE THAT MODEMS CHARGES ARE NOT
+PART OF MPL PRICING. IF THE USER HAS HIS OWN MODEMS AND DOES NOT REQUEST ANY
+FROM THE SUPPLYING TELCO THEN THE TELCO CANNOT BILL FOR THEM. ALSO NOTE THAT
+IT IS THE MODEMS USED THAT DETERMINES THE SPEED OF AN ANALOG LINE. WHATEVER
+THE MODEM SPEED THE LINE'S MILEAGE AND STATION CHARGES ARE THE SAME.
+    The mileage charge under MPL pricing is determined by two things;
+       1). The airline miles between two locations.
+       2). The A/B Types of the two cities.
+    
+For example;
+    
+     Consider three lines each connecting points 2564 miles apart...which is
+approximately what a line between New York City and San Francisco would be.
+       
+  ***************************************************************
+  *  CITY 1   *    CITY 2   *   MILEAGE   *    MILEAGE CHARGE   *
+  *  A/B      *    A/B      *             *    MPL TARIFF       *
+  ***************************************************************
+  *           *             *             *                     *
+  *    A      *     A       *   2564      *      $ 1977.12      *
+  *           *             *             *                     *
+  *    A      *     B       *   2564      *      $ 2069.75      *
+  *           *             *             *                     *
+  *    B      *     B       *   2564      *      $ 2166.05      *
+  *           *             *             *                     *
+  ***************************************************************
+       
+     Consider also three short lines each connecting points only 43 miles
+apart...which is approximately like San Francisco to San Jose.
+      
+  ***************************************************************
+  *  CITY 1   *    CITY 2   *   MILEAGE   *    MILEAGE CHARGE   *
+  *  A/B      *    A/B      *             *    MPL TARIFF       *
+  ***************************************************************
+  *           *             *             *                     *
+  *    A      *     A       *     43      *      $  158.01      *
+  *           *             *             *                     *
+  *    A      *     B       *     43      *      $  231.83      *
+  *           *             *             *                     *
+  *    B      *     B       *     43      *      $  285.11      *
+  *           *             *             *                     *
+  ***************************************************************
+
+      
+                                                          Page 20.0
+                                                          _________
+         
+DESG MODULE SCENARIOS:
+_____________________
+       
+     The following scenarios use the topology files, TERM.FIL & CONC.FIL,
+defined in previous scenarios.
+      
+  SCENARIO # 4 : This scenario assumes the following DESG parameters. It
+  ____________   is important that the user realizes how the DESG parameters
+                 correspond to a related circuit response time requirement.
+                 Before running TMDT the user should already know the response
+                 time objective and what constraints and line speed is required
+                 meet that response time. The most important thing TMDT tells
+                 the user is how much that response time objective is going to
+                 cost and how much could be saved by relaxing that objective
+                 some. Let assume the following DESG parameters correspond to
+                 an average terminal response time of 3.5 seconds and a line
+                 speed of 9600 BPS. What we want from DESG is the least cost
+                 configuration to obtain this 3.5 sec response time and what
+                 is it going to cost.
+
+        
+     1). MTRF  = 1000   ... The Max. Traffic as the SUM of TERM locations
+         TFBS  = SUM        input and output traffic will not exceed 1000
+                            BPS. The TERM locations traffic are assumed to
+                            also correspond to units of Bits Per Second.
+                       
+     2). MDEV  =   10   ... The Max. Terminal Devices allowed on any circuit
+                            may not exceed 10. The actual devices do not mat-
+                            ter as long as the TERM locations are expressed
+                            as so many equivalent devices. The actual physical
+                            devices may be a mix of terminals, terminal control
+                            units, printers, card readers, etc. For example,
+                            the user may express a physical printer as being
+                            equivalent to 5 terminals to TMDT.
+    
+     3). MLOC  =   10   ... The Max. Number of Locations allowed on any circuit
+                            may not exceed 10.
+
+     4). PCHG  = 250.00 ... The Port Charge here of $250.00 correspond to the
+                            Tymnet charge that Tymnet charges a customer for
+                            use of a 9600 bps port.
+                  
+     5). MODEM = 354.00 ... The Modem Charge here of $354.00 correspond to the
+                            monthly leased charge for a Bell provided 9600 BPS
+                            modem.           
+     
+     6). TOPT  =   S    ... The Termination Option here of "S" means that when
+                            computing termination charges, TMDT will price out
+                            one termination per location. The only other alter-
+                            native would be "M" which means to charge each
+                            TERM device a seperate termination charge.
+        
+     7). HINT = 1300.00 ... The Host Interface Charge here of $1300.00 cor-
+                            respond to the charge Tymnet imposes .
+       
+     8). ACHG =   40.00 ... The Charge Per Terminal Address here of $40.00
+                            correspond to a Tymnet imposed charge.
+
+      
+                                                          Page 21.0
+                                                          _________
+      
+     -R (ANALYSIS)TMDT {cr}
+      _____________________
+     ENTER TMDT COMMAND...OR ? :EDIT {cr}
+                                _________
+     ENTER EDIT COMMAND...OR ? :FILES {cr}
+                                __________
+     ENTER EDIT FILES COMMAND...OR ? :IFIL {cr}
+                                      _________
+     ENTER FILENAME :CONC.FIL {cr}
+                     _____________
+     READ FROM CONC.FIL        (Y OR N)? Y {cr}
+                                         ______
+     NET OF     2 NODES AND     0 LINKS NOW IN MEMORY.
+    
+     ENTER EDIT FILES COMMAND...OR ? :AFIL {cr}
+                                      _________
+     ENTER FILENAME :TERM.FIL {cr}
+                     _____________
+     READ FROM TERM.FIL        (Y OR N)? Y {cr}
+                                         ______
+     NET OF     7 NODES AND     0 LINKS NOW IN MEMORY.
+      
+     ENTER EDIT FILES COMMAND...OR ? :QUIT {cr}
+                                      _________
+     ENTER EDIT COMMAND...OR ? :NODES {cr}
+                                __________
+     ENTER EDIT NODES COMMAND...OR ? :TN {cr}
+                                      _______
+     ENTER THE NODE ID ... OR <CR> TO QUIT:* {cr}
+                                           ______
+       NODE ID *ACEX* ***CITY*** ST DEV ***RC*** ***TX*** ROLE HOME **TER**
+     ----------------------------------------------------------------------
+    
+        CONC1  212358 QUEENS NYC NY   1    0.000    0.000 CONC             0
+        CONC2  408446 SAN JOSE   CA   1    0.000    0.000 CONC             0
+        TERM1  212358 QUEENS NYC NY   5  500.000  300.000 TERM             0
+        TERM2  213864 NORWALK    CA  10  300.000    0.000 TERM             0
+        TERM3  203244 HARTFORD   CT   1  250.000    0.000 TERM             0
+        TERM4  312346 CHICAGO    IL   7  360.000    0.000 TERM             0
+        HOST1  209229 FRESNO     CA   1    0.000    0.000 HOST             0
+       
+     ENTER THE NODE ID ... OR <CR> TO QUIT:{cr}
+                                           ____
+     ENTER EDIT NODES COMMAND...OR ? :QUIT {cr}
+                                      _________
+     ENTER EDIT COMMAND...OR ? :QUIT {cr}
+                                _________
+     ENTER TMDT COMMAND...OR ? :DESG {cr}
+                                _________
+
+    
+                                                          Page 22.0
+                                                          _________
+    
+    
+    
+    
+     ENTER DESG COMMAND...OR ? :LP {cr}
+                                _______
+     THE FOLLOWING DESG PARAMETERS ARE IN EFFECT ;
+        MTRF  - 999999.0 - MAX TRAFFIC PER CIRCUIT.
+        MDEV  -    99999 - MAX # OF TERMS PER CIRCUIT.
+        MLOC  -       10 - MAX # OF LOCATIONS PER CIRCUIT.
+        PCHG  -   250.00 - PORT CHARGE.
+        TFBS  -    SUM   - TRAFFIC BASIS WHERE ;
+                              MAX - MAX OF TX AND RC.
+                              SUM - SUM OF TX AND RC.
+                               TX - JUST TX.
+                               RC - JUST RC.
+        MODEM -   354.00 - MODEM CHARGE (REAL COST).
+        TOPT  -        S - TERMINATION OPTION USED TO          
+                           COMPUTE TERMINATIONS.
+                              S - SINGLE TER PER NODE.
+                              M - MULTIPLE TER PER NODE.
+        HINT  -  1300.00 - HOST INTERFACE CHARGE.
+        ADCHG -    40.00 - CHARGE PER TERMINAL ADDRESS.
+      
+     ENTER DESG CPMMAND...OR ? :MP {cr}
+                                _______
+     ENTER PARAMETER ID...OR <CR> TO QUIT:MTRF {cr}
+                                          _________
+     MTRF  -    999999.0     - 1000
+     
+     ENTER PARAMETER ID...OR <CR> TO QUIT:MDEV {cr}
+                                          _________
+     MDEV  -           99999 - 10
+    
+     ENTER PARAMETER ID...OR <CR> TO QUIT:{cr}
+                                          ____
+     ENTER DESG COMMAND...OR ? :LP {cr}
+                                _______
+     THE FOLLOWING DESG PARAMETERS ARE IN EFFECT ;
+        MTRF  -   1000.0 - MAX TRAFFIC PER CIRCUIT.
+        MDEV  -       10 - MAX # OF TERMS PER CIRCUIT.
+        MLOC  -       10 - MAX # OF LOCATIONS PER CIRCUIT.
+        PCHG  -   250.00 - PORT CHARGE.
+        TFBS  -    SUM   - TRAFFIC BASIS WHERE ;
+                              MAX - MAX OF TX AND RC.
+                              SUM - SUM OF TX AND RC.
+                               TX - JUST TX.
+                               RC - JUST RC.
+        MODEM -   354.00 - MODEM CHARGE (REAL COST).
+        TOPT  -        S - TERMINATION OPTION USED TO
+                           COMPUTE TERMINATIONS.
+                              S - SINGLE TER PER NODE.
+                              M - MULTIPLE TER PER NODE.
+                                  BASED ON # OF TERMINALS.
+        HINT  -  1300.00 - HOST INTERFACE CHARGE.
+        ACHG  -    40.00 - CHARGE PER TERMINAL ADDRESS.
+
+    
+                                                          Page 23.0
+                                                          _________
+     
+    
+   
+      
+     ENTER DESG COMMAND...OR ? :ASGH {cr}
+                                _________
+     ENTER DESG COMMAND...OR ? :LL {cr}
+                                _______
+     ENTER LL COMMAND...OR ? :REDO {cr}
+                              _________
+     ENTER CONC ID...OR * :* {cr}
+                           ______
+     ENTER LL COMMAND...OR ? :QUIT {cr}
+                              _________
+     ENTER DESG COMMAND...OR ? :COST {cr}
+                                _________
+     ENTER CONCID...OR * :* {cr}
+                          ______
+********************************CONC2****************************************
+* TERM.LOC=  1 MI=     446.0 PORT.CHG=    250.00 LINES=    547.73           *
+* TERM.DEV= 10 RC=   300.000 ADD.CHG =    400.00 MODEM=    708.00           *
+* CIRCUITS=  2 TX=     0.000 HOST.INT=   1300.00 DROP =     71.00    3276.73*
+*****************************************************************************
+             
+********************************CONC1****************************************
+* TERM.LOC=  3 MI=     868.0 PORT.CHG=    500.00 LINES=   1285.38           *
+* TERM.DEV= 13 RC=  1110.000 ADD.CHG =    520.00 MODEM=   1770.00           *
+* CIRCUITS=  2 TX=   300.000 HOST.INT=      0.00 DROP =    177.50    4252.88*
+ *****************************************************************************
+     
+********************************TOTALS***************************************
+* TERM.LOC=  4 MI=    1314.0 PORT.CHG=    750.00 LINES=   1833.11           *
+* TERM.DEV= 23 RC=  1410.000 ADD.CHG =    920.00 MODEM=   2478.00           *
+* CIRCUITS=  4 TX=   300.000 HOST.INT=   1300.00 DROP =    248.50    7529.61*
+*****************************************************************************
+     
+     ENTER DESG COMMAND...OR ? :REP {cr}
+                                ________
+     ENTER NODE TO BE REPORTED ...OR <CR> TO QUIT:* {cr}
+                                                  ______
+     ENTER T, F OR Q :F {cr}
+                      ______
+     ENTER FILENAME :DESG1.NET {cr}
+                     ______________
+     WRITE TO DESG1.NET       (Y OR N) ? :Y {cr}
+                                          ______
+     ENTER NODE TO BE REPORTED ...OR <CR> TO QUIT:{cr}
+                                                  ____
+     ENTER DESG COMMAND...OR ? :QUIT {cr}
+                                _________
+     ENTER TMDT COMMAND...OR ? :EXIT {cr}
+                                _________
+     EXIT
+     
+
+   
+                                                          Page 24.0
+                                                          _________
+    
+    
+    
+     -TYPE DESG1.NET {cr}
+      ___________________
+       
+                      ***REPORT FOR ENTIRE NETWORK FILE***
+ 
+ CONCENTRATOR CONC2
+ 
+ 
+   CIRCUIT CONC2-   2:
+ 
+   STATION DETAILS
+ 
+      TERID  ---CITY---  ST  #DEV          DROP-COSTS     HOST-INTER
+ 
+      CONC2  SAN JOSE    CA     1
+ 
+      HOST1  FRESNO      CA     1                       $    1300.00
+ 
+   INTEREXCHANGE CHANNEL DETAILS
+ 
+                ---CITY--- ST -ACEX- VVVV HHHH A/B -ALMI-  LINE-COSTS
+ 
+     FROM CONC2 SAN JOSE   CA 408446 8583 8619  A
+     TO   HOST1 FRESNO     CA 209229 8669 8239  A   124.0
+ 
+ ====================TOTALS FOR CIRCUIT CONC2-   2============================
+ = TERM.LOC=  0 MI=     124.0 PORT.CHG=      0.00 LINES=      0.00           =
+ = TERM.DEV=  0 RC=     0.000 ADD.CHG =      0.00 MODEM=      0.00           =
+ =              TX=     0.000 HOST.INT=   1300.00 DROP -      0.00    1300.00=
+ =============================================================================
+ 
+ 
+   CIRCUIT CONC2-   1:
+ 
+   STATION DETAILS
+ 
+      TERID  ---CITY---  ST  #DEV          DROP-COSTS     HOST-INTER
+ 
+      CONC2  SAN JOSE    CA     1
+ 
+      TERM2  NORWALK     CA    10        $      71.00
+ 
+   INTEREXCHANGE CHANNEL DETAILS
+ 
+                ---CITY--- ST -ACEX- VVVV HHHH A/B -ALMI-  LINE-COSTS
+ 
+     FROM CONC2 SAN JOSE   CA 408446 8583 8619  A
+     TO   TERM2 NORWALK    CA 213864 9239 7841  B   322.0  $   547.73
+
+   
+                                                          Page 25.0
+                                                          _________
+    
+    
+    
+   
+ ====================TOTALS FOR CIRCUIT CONC2-   1============================
+ = TERM.LOC=  1 MI=     322.0 PORT.CHG=    250.00 LINES=    547.73           =
+ = TERM.DEV= 10 RC=   300.000 ADD.CHG =    400.00 MODEM=    708.00           =
+ =              TX=     0.000 HOST.INT=      0.00 DROP -     71.00    1976.73=
+ =============================================================================
+ 
+ 
+ ####################TOTALS FOR CONCENTRATOR CONC2############################
+ # TERM.LOC=  1 MI=     446.0 PORT.CHG=    250.00 LINES=    547.73           #
+ # TERM.DEV= 10 RC=   300.000 ADD.CHG =    400.00 MODEM=    708.00           #
+ # CIRCUITS=  2 TX=     0.000 HOST.INT=   1300.00 DROP =     71.00    3276.73#
+ #############################################################################
+ 
+ 
+ CONCENTRATOR CONC1
+ 
+ 
+   CIRCUIT CONC1-   2:
+ 
+   STATION DETAILS
+ 
+      TERID  ---CITY---  ST  #DEV          DROP-COSTS     HOST-INTER
+ 
+      CONC1  QUEENS NYC  NY     1
+ 
+      TERM1  QUEENS NYC  NY     5        $      71.00
+ 
+   INTEREXCHANGE CHANNEL DETAILS
+ 
+                ---CITY--- ST -ACEX- VVVV HHHH A/B -ALMI-  LINE-COSTS
+ 
+     FROM CONC1 QUEENS NYC NY 212358 4997 1406  B
+     TO   TERM1 QUEENS NYC NY 212358 4997 1406  B     0.0  $    75.22
+ 
+ ====================TOTALS FOR CIRCUIT CONC1-   2============================
+ = TERM.LOC=  1 MI=       0.0 PORT.CHG=    250.00 LINES=     75.22           =
+ = TERM.DEV=  5 RC=   500.000 ADD.CHG =    200.00 MODEM=    708.00           =
+ =              TX=   300.000 HOST.INT=      0.00 DROP -     71.00    1304.22=
+ =============================================================================
+ 
+ 
+   CIRCUIT CONC1-   1:
+ 
+   STATION DETAILS
+ 
+      TERID  ---CITY---  ST  #DEV          DROP-COSTS     HOST-INTER
+ 
+      CONC1  QUEENS NYC  NY     1
+ 
+      TERM4  CHICAGO     IL     7        $      35.50
+ 
+      TERM3  HARTFORD    CT     1        $      71.00
+ 
+   INTEREXCHANGE CHANNEL DETAILS
+ 
+                ---CITY--- ST -ACEX- VVVV HHHH A/B -ALMI-  LINE-COSTS
+ 
+     FROM TERM3 HARTFORD   CT 203244 4687 1373  A
+     TO   TERM4 CHICAGO    IL 312346 5986 3426  A   769.0  $   870.81
+
+     
+                                                          Page 26.0
+                                                          _________
+   
+    
+     
+   
+ 
+     FROM CONC1 QUEENS NYC NY 212358 4997 1406  B
+     TO   TERM3 HARTFORD   CT 203244 4687 1373  A    99.0  $   339.35
+ 
+ ====================TOTALS FOR CIRCUIT CONC1-   1============================
+ = TERM.LOC=  2 MI=     868.0 PORT.CHG=    250.00 LINES=   1210.16           =
+ = TERM.DEV=  8 RC=   610.000 ADD.CHG =    320.00 MODEM=   1062.00           =
+ =              TX=     0.000 HOST.INT=      0.00 DROP -    106.50    2948.66=
+ =============================================================================
+ 
+ 
+ ####################TOTALS FOR CONCENTRATOR CONC1############################
+ # TERM.LOC=  3 MI=     868.0 PORT.CHG=    500.00 LINES=   1285.38           #
+ # TERM.DEV= 13 RC=  1110.000 ADD.CHG =    520.00 MODEM=   1770.00           #
+ # CIRCUITS=  2 TX=   300.000 HOST.INT=      0.00 DROP =    177.50    4252.88#
+ #############################################################################
+ 
+ 
+ ********************TOTALS FOR THE ENTIRE NETWORK*****************************
+ * TERM.LOC=  4 MI=    1314.0 PORT.CHG=    750.00 LINES=   1833.11           *
+ * TERM.DEV= 23 RC=  1410.000 ADD.CHG =    920.00 MODEM=   2478.00           *
+ * CIRCUITS=  4 TX=   300.000 HOST.INT=   1300.00 DROP =    248.50    7529.61*
+ *****************************************************************************
+ 
+ 
+
+       
+                                                          Page 27.0
+                                                          _________
+    
+
+ 
+ 
+ 
+ 
+SUMMARY:
+_______
+ 
+   The preceeding pages showed how TMDT is used to configure multi-drop
+circuits. Now let's summarize the steps we preformed on the preceeding
+pages.
+        
+   INPUTS:
+   ______
+         
+     1). Notify TMDT of the Tymnet locations supporting 3270. Call these
+         locations "CONC" locations to the program.
+      
+     2). Notify TMDT of the terminal locations with their associated traffic
+         and number of devices. Call these locations "TERM" locations to the
+         program.
+            
+     3). Notify TMDT of the host locations. Call these locations "HOST" to
+         the program.
+       
+     4). Notify TMDT's DESG module of what constraints and cost parameters
+         to use while configuring circuits. 
+      
+        
+   EXECUTION:
+   _________
+     
+     1). Make sure the above inputs are reflected in TMDT's memory. This
+         is done by using the EDIT command TN (type node) and the DESG
+         command LP (list parameters).
+      
+     2). Use the DESG command ASGH (assign homes) in most cases. Only
+         when the user manually takes care of the homing is ASGH unneces-
+         sary.
+     
+     3). Use the DESG module LL (line layout) and REDO ( redo circuit con-
+         figurations) to configure circuits.
+     
+   
+OUTPUTS:
+_______
+     
+     1). Save the network configuration to a report file for later review.
+         This is accomplished by using the DESG module REP (report) command.
+     
+NOTES:
+_____
+     
+     1). Currently Tymnet charges 3270 customers back for the Telephone   
+         company related charges for terminal circuits. Hence in our
+         scenarios the related LINE, DROP and MODEM charges would be billed
+         back to the TYMNET customer at 110%. Hence before reporting the
+         TMDT charges back to the customer, the associated Telephone Charges
+         must be multiplied by 1.10. 
+     
+     2). Tymnet charges a fixed charge for the HOST circuit... based on line
+         speed. Hence Telephone Company charges, modem charges and port
+         charges are not included in TMDT's report for HOST circuits.
+      
+     3). TMDT only reports recurring charges. Before quoting a proposal the
+         user should manually compute the installation charges associated
+         with the configuration.
+      
+     4). TMDT does not include such things as conditioning. Hence if the 
+         user knows that each circuit TMDT configured will need condition-
+         ing then the additional charges for conditioning must be added
+         manually.
+
+    X[\ù
