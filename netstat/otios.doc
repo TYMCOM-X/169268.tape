@@ -1,0 +1,257 @@
+
+
+
+
+                          OTIOS DOCUMENTATION
+
+                Orignode - Termhost I/O Sampling Program
+
+
+
+                              INTRODUCTION
+                              ------------
+
+The OTIOS program is used to gather and summarize data about ORIGNODE -
+TERMHOST Pairs.  A sample (1 out of every N sessions) is taken for each
+day of the month.  This sample may be refined by the user specifying a
+time range for the sample to be taken over.  The following outline shows
+the procedures that the OTIOS program takes to produce a monthly 1022
+data base of ORIGNODE - TERMHOST  Pair information.
+
+
+                                OUTLINE
+                                -------
+
+1) Read the PHASE-TO-PROCESS, DATE-TO-PROCESS, TIME RANGE OF SAMPLE, and
+   SAMPLING RATE from the control file (OTIOS.CTL).
+
+2) PHASE 1 - Take the sample.  The sample is placed into a daily OTIO
+   Sampling File named: OTIOMM.0DD, where MM = 2 digit month number and
+   DD = 2 digit day number.
+
+   NOTE: The following occurs during the sampling process: a) The Nth
+   session is looked at. b) If either the STARTTIME or ENDTIME of the
+   Nth session falls within the time range of the sample, then the
+   session is selected for the sample.  If not, then the session is not
+   selected and the program goes to look at next Nth record.  Thus, the
+   sample may turn out to be smaller than expected.
+
+3) PHASE 2 - The sample is added to the monthly OTIO Data base
+   (OTIOMM.DMS).
+
+        . If the program is processing the 1st day of the month, then
+          the OTIOMM.0DD file is loaded into 1022 to become OTIOMM.DMS.
+
+        . If the program is processing any day other than the 1st, then
+          the OTIOMM.0DD file is appended to OTIOMM.DMS.
+
+   In either case, at the end of PHASE 2 there are multiple entries for
+   each ORIGNODE-TERMHOST Pair in OTIOMM.DMS.
+
+4) "CRUNCH" the OTIOMM.DMS Data Base to get only one entry per
+   ORIGNODE-TERMHOST Pair.  This is done by using a 1022 commands file
+   OTIOS.DMC.  A symbolic file is created containing thiese entries
+   (OTIOMM.CRU).
+
+5) PHASE 4 - Create a new OTIO Data base with only 1 entry per ORIGNODE-
+   TERMHOST Pair summarizing all traffic up through the date being
+   processed.  This is done by LOADING the OTIOMM.CRU file as
+   OTIOMM.DMS.
+                                                              Page  2   
+
+
+
+                      EXPLANATION OF CONTROL FILE
+                      ---------------------------
+
+The control file (OTIOS.CTL) is used to pass information to the OTIOS
+program.  It contains the following information:
+
+PHASE-TO-PROCESS        LOCATION = COL 1                FORMAT: I1
+
+        This field is updated by the OTIOS program each time a PHASE of
+        the processing completes.  Thus, if the OTIOS program is aborted
+        for some reason, the next time the program is run the processing
+        will start at the beginning of the phase it was aborted in.
+        When the last phase completes (PHASE 4),  the DATE-TO-PROCESS is
+        incremented by 1 and the PHASE-TO-PROCESS is set to 1.  This
+        means that the next time the program is run the next day will be
+        processed.
+
+DATE-TO-PROCESS         LOCATION = COL 3-8              FORMAT: I6
+
+        This field contains the date the OTIOS will process when it is
+        run.  The date is in the format: YYMMDD, WHERE  YY = 2 digit
+        year number, MM = 2 digit month number, DD = 2 digit day number.
+        This date is automaticaly updated by the OTIOS program.
+
+TIME RANGE OF SAMPLE    
+        STARTHOUR       LOCATION = COL 10-13            FORMAT: I4
+        ENDHOUR         LOCATION = COL 15-18            FORMAT: I4
+
+        These two fields define the time range of the sample and should
+        be set by the user.  However, the time range should be left the
+        same for all of the days of a month.  To select a sample with no
+        time range, set STARTHOUR to 0000 and ENDHOUR to 2400.  
+        NOTE: TIMES MUST BE IN GMT.
+
+SAMPLING RATE           LOCATION = COL 20-25            FORMAT: I6
+
+        This field is the N in the expression: ONE OUT OF EVERY N, and
+        defines the sampling rate for OTIO processing.  The SAMPLING
+        RATE is set by the user, but should be the same amount for all
+        of the days of one month.
+                                                              Page  3   
+
+
+
+                              FILES NEEDED
+                              ------------
+
+        FILE                    DESCRIPTION
+        ----                    -----------
+
+        OTIOS.SAV               The OTIOS Program
+
+        OTIOS.DMD               Descriptor file for the OTIOS Data Base
+
+        OTIOS.DMC               The 1022 commands file that "crunches"
+                                the data.
+
+        OTIOS.CTL               The OTIOS control file
+
+        YMMDD#.DMS              The DailY NETSTAT files for the day
+                                being processed by OTIOS, # = A or B.
+
+
+
+
+                            FILES GENERATED
+                            ---------------
+
+        FILE                    DESCRIPTION
+        ----                    -----------
+
+        OTIOMM.0DD              The daily symbolic file that contains
+                                the sample.
+
+        OTIOMM.DMS              The OTIOS 1022 Data Base
+
+        OTIOMM.CRU              The "crunched file".  This file is the
+                                symbolic form of the OTIOS Data Base.
+                                                              Page  4   
+
+
+
+                          RUNNING THE PROGRAM
+                          -------------------
+
+To run the OTIOS program 1st check the control file to make sure it
+contains the correct information, and then type:
+
+        GO OTIOS
+
+The program will read the control file and then start/continue
+processing for the date specified without any further input from the
+user.
+
+                                EXAMPLE
+                                -------
+
+
+- TYPE OTIOS.CTL
+1 820206 0000 2400 000010
+
+-GO OTIOS
+
+
+OTIO SAMPLING PROGRAM     VERSION 2.0     14-Feb-83  06:46
+
+
+
+
+          ***** 830206 *****
+
+
+
+
+***** PHASE 1 *****
+ TAKE THE SAMPLE
+
+
+UNABLE TO OPEN FILE: 30206B.DMS
+
+
+
+NUMBER OF SESSIONS IN SAMPLE =    7561
+
+
+
+
+
+***** PHASE 1 COMPLETED *****
+
+
+
+
+***** PHASE 2 *****
+  ADD SAMPLE TO
+MONTHLY OTIO D.B.
+                                                              Page  5   
+
+
+
+SYSTEM 1022 APPEND PROGRAM
+
+7561 DATA RECORDS ADDED
+PROCESSING KEYED ATTRIBUTES:
+ORIGNODE (285 VALUES)
+TERMHOST (314 VALUES)
+
+
+***** PHASE 2 COMPLETED *****
+
+
+
+
+***** PHASE 3 *****
+  CRUNCH DATA BASE
+
+
+
+
+***** PHASE 3 COMPLETED *****
+
+
+
+
+***** PHASE 4 *****
+  CREATE NEW OTIOS
+  D.B. FROM CRUNCH
+  FILE.
+
+
+
+SYSTEM 1022 DATA LOADING PROGRAM
+
+NO ERRORS ON DESCRIPTION FILE
+ALLOCATED 15000 BLOCKS IN 1 ATTEMPT
+16381 RECORDS PROCESSED, 913 BLOCKS WRITTEN ON PHASE 2
+PROCESSING KEYED ATTRIBUTES:
+ORIGNODE (79 BLOCKS, 491 VALUES)
+TERMHOST (87 BLOCKS, 833 VALUES)
+166 BLOCKS WRITTEN ON PHASE 3
+1081 BLOCKS FINAL ALLOCATION, 0 RESERVED (UNWRITTEN) BLOCKS
+
+
+***** PHASE 4 COMPLETED *****
+
+
+14-Feb-83     07:00
+
+
+
+EXIT
+
+
+
