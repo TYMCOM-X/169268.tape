@@ -1,0 +1,124 @@
+C. THE LEGAL CHARACTERS USED IN NETVAL VERSION 2.05 AND 3
+   -------------------------------------------------------
+
+   The Netval 2.05 and 3 USERNAME can accept alphanumeric and ' ', '#', '$',
+'*', ',', '.', '-'(dash), '/', '&', if you username is not in the above 
+character set then it has to be changed before the upgrade from version 1
+to 2 or version 1 to 3.
+
+   The Netval 2.05 host and node listname can only accept alphanumeric and 
+'_'(underline). If your listname contains the character that is not in this 
+character set please change it before the upgrade.
+
+D. THE QUESTION AND ANSWER RELATED TO CLASS AND GROUP.
+   ---------------------------------------------------
+
+1. What is the maximum number of classes which can be defined via the 
+   Supervisor FENCE macro ?  What is the maximum number of groups which
+   can be defined via the supervisor FENCE macro ?
+
+2. What is the maximum number of node lists which can be defined via 
+   NETVAL ? What is the maximum number of host lists which can be defined 
+   via NETVAL ?
+
+3. What is the maximum number of entries which can be placed in a single 
+   class ? What is the maximum number of entries which can be placed in
+   a single group ?
+
+4. What is the maximum number of entries which can be placed in a single 
+   node list ? What is the maximum number of entries which can be placed
+   in a single host list ?
+
+5. If a class/group definition or node/host list has 'N' entries included,
+   how many bytes (sectors) of disk storage will this list require ? If
+   the list is an exception list, does the number of bytes (sectors) change, 
+   especially increase ?
+
+           *******************************************
+
+ANSWERS:
+
+ The maximum class/group table size can be set depending on the table 
+size declared in the SUP macro FENCE.
+
+EXAMPLE: 
+   FENCE(30,6,10,6) : maximum class = 30
+                      maximum class table size = 6 sector
+                                               = 256 * 6 = 1536 bytes
+                      maximum group = 10
+                      maximum group table size = 6 sector
+                                               = 256 * 6 = 1536 bytes
+
+   The format of the class/group table is as follows :
+
+   WORD
+   0 - 29 Class 1-30
+          BIT 
+          0-15 pointer to first node/host
+          16 if on, list is exception list
+          17-31 size of list in bytes(zero if undefined)
+   30 - 373 
+          halfwords of host or node, if bit 0 or 16 is on, entry is 
+          host number.
+
+   Some format can be applied to group, except group use halfwords of
+   host. 
+
+   Use the following formula for the calculation:
+   
+   1. MAXIMUM_TABLE_CLASS_LIST_SIZE = 
+      maximum_class_table_size - (maximum_class * 4)
+            (   6 * 256   )    - (30 * 4 ) = 1416 bytes
+
+   2. MAXIMUM_TABLE_CLASS_LIST_HALFWORD_SIZE = 
+      maximum_table_class_list_size div 2
+                    1416 / 2 = 708 (maximum # of hosts and nodes in this 
+                                    class table)
+
+      same formula can be used for GROUP
+   ----------------------------------------------------------------------
+   ex. the class/group table defined in Netval 2.05 
+
+   PAGES_IN_NODE_LIST_HEADER = 5
+   PAGES_IN_NODE_LIST = 66
+   PAGES_IN_HOST_LIST_HEADER = 1
+   PAGES_IN_HOST_LIST = 65
+
+   1 PAGE = 256 bytes                                        
+
+             *************************************************
+The following is the ansdwer for your questions.
+Answer for question #1:
+  The maximum macro of FENCE = FENCE(1023, 128, 1023, 128)
+
+  TOTAL CLASS NETVAL CAN HANDLE = [(5 page*256) - (4 word*4 bytes)]/8
+                                = 158 classes
+  5 pages used for node list header, 4 fullwords are used for node
+  description, 8 bytes for EACH class, describing the list(node or
+  host) that make up the class.
+
+  TOTAL GROUP NETVAL CAN HANDLE =[(1 page*256) - (4 word*4 bytes)]/8
+                                = 30 groups
+  In 1 page of host list header, 4 fullwords are used for host
+  description. 8 bytes for each group, describing the list(host) that
+  make up the group.
+
+Answers for question #2, and 4:
+  Maximum number of node list       = 66 (each list uses 1 page)
+  Maximum number of nodes in a list = (256 - 28)/2 = 114 nodes.
+                                      (28 bytes for ascii description)
+  Maximum number of host list       = 65 (each list uses 1 page)
+  maximum number of hosts in a list = (256 - 28)/2 = 114 hosts
+                                      (28 bytes for ascii description)
+
+Answer for question #3:
+  Each class can handle 8 host or node lists.
+  Each group can handle 8 host lists.
+
+Answer for question #5:
+  Each class/group requires 1 fullword
+  Each node/host requires a halfword (2 bytes)
+
+  Exception list does not increase the storage.
+  If total size of Netval class/group table and its node/host exceeds the 
+  size allocated in SUP then class/group table can not be sent.                                                                 
