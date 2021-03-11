@@ -1,0 +1,1220 @@
+
+        ISIS DDT Commands                                     December 13, 1985
+
+
+
+
+
+
+                                5 -  ISIS DDT Commands
+
+
+             ISIS DDT is a subset of the KERNEL process on the ENGINE.  One may
+        log into  ISIS on  any given ENGINE,  by directing  the log-in  to that
+        machine's host 0.
+
+             The  kernel  has a  good-guy  list, used  to  verify  the username
+        logging in.  If the  user-name is valid, login may  proceed;  otherwise
+        the  user  is  dropped.   If  valid,  the  list  is  checked  for  slot
+        assignment.  If no slot is assigned to this user, the kernel asks for a
+        slot number.  Once the slot has  a valid slot number, and if  that slot
+        is available, the kernel will  connect the user to DDT.  The  user sees
+        (USER TYPES, kernel types):
+
+        USER:377;PASSWORD
+        slot# :3                (only if no slot is pre-assigned)
+        *
+
+             When the "*"  prompt occurs, the user  is connected to  DDT.  Then
+        the commands below can be used.
+
+             Each user name in the good-guy list has certain licenses assigned.
+        These licenses determine which  classes of slots that name  may access,
+        and which set of operations is legal to that name.
+
+             In particular,  certain of these  licences are  "access licenses",
+        which permit  access to  certain special slots.   Every valid  user has
+        ordinary access to  the normal "application"  slots (slot number  > 0).
+        In addition, certain usages have special accesses defined:
+
+           L.DISC  licence to format a disc;
+           L.S0A   license to log into slot 0;
+           L.SYA   license to log into slot 0FF (the ISIS system);
+           L.SUA   license to log into slots associated with the supervisor.
+
+             Having such license permits one to log into that slot, and perform
+        certain commands.   Additional license is  required to  perform certain
+        other commands, and these depend upon the access licenses:
+
+           L.R     normal read access;
+           L.L     normal load  access (permits the  loading and starting  of a
+               dead slot);
+           L.E     normal execution access (permits the starting and halting of
+               a slot);
+           L.H      normal halt  access  (permits halting  a slot  in  order to
+               reload it);
+           L.P     normal patch access (permits patching a running slot);
+           L.S0R   slot 0 read access;
+
+        68                              ISIS-II                       ISIS2.DOC
+        ISIS DDT Commands                                     December 13, 1985
+
+
+           L.S0P   slot 0 patch access;
+           L.SYR   system read access;
+           L.SYP   system patch access.
+
+             In the  following command  description, each  will start  with the
+        list of licenses required: "[L.X!L.Y]", where "!" is the logical ".OR."
+        function,  and  special  slot requirements  are  assumed  from context;
+        [L.R!L.S0R]  automatically  implies  normal (L.R)  and  slot  0 (L.S0R)
+        respectively.
+
+             Note that,  generally, if a  command requires Read  licence, Patch
+        licence will also satisfy the requirement.
+
+             Note, also, that certain commands require that the slot  be halted
+        (disconnected from  the Dispatcher).  These  will be designated  by the
+        requirement "L.HALT".
+
+
+
+
+
+
+                          5.1  Initialize Address Space::  A
+
+
+             [ L.HALT ! L.L ! L.H ! L.P ! L.S0P ].
+
+             Set up address space for slot as one large MAC area.
+
+             An  area larger  than  1 segment  is constructed  as  the required
+        number of contiguous  segments (e.g., a slot  with 90-K will  result in
+        segment  0  of 64-K  and  a segment  1  of 26-K).   No  protections are
+        applied.
+
+
+
+
+
+
+                           5.2  Set Breakpoint::  B ADDR NUM
+
+
+             [ L.HALT ! L.L ! L.H ! L.P ! L.S0R ! L.S0P ].
+
+             Set breakpoint NUM at ADDR.   B will undo any old  breakpoint NUM.
+        If ADDR is zero B will undo the old breakpoint only.
+
+
+
+
+
+
+
+
+        69                              ISIS-II                       ISIS2.DOC
+        ISIS DDT Commands                                     December 13, 1985
+
+
+                          5.3  Disable Watch-frog Timer::  D
+
+
+             This  command causes  a slots'  watch-frog timer  to  be disabled.
+        This enables a slot to be stopped for debugging purposes, and not crash
+        because the watch-frog wasn't updated.
+
+
+
+
+
+
+                                5.4  Execute Slot::  E
+
+
+             [ L.HALT ! L.L ! L.E ! L.H ! L.P ! L.S0P ].
+
+             E connects the  job associated with  a slot  and  starts execution
+        independent of DDT.
+
+
+
+
+
+
+                                   5.5  Fire-up::  F
+
+
+             [ L.L ! L.H ! L.P ! L.S0P ! L.SYP ].
+
+             F enables  the "KIO"  jobs associated with  a slot  for subsequent
+        logon.
+
+
+
+
+
+
+                                   5.6  Go:: G ADDR
+
+
+             [ L.R ! L.L ! L.H ! L.P ! L.S0R ! L.S0P ! L.SYR ! L.SYP].
+
+             G causes your program to start at ADDR.  It creates a PSW  using a
+        half word  in the  user block.   The status  bits may  be changed  by a
+        privileged user through the U command.
+
+
+
+
+
+
+
+
+        70                              ISIS-II                       ISIS2.DOC
+        ISIS DDT Commands                                     December 13, 1985
+
+
+                                  5.7  Halt Slot::  H
+
+
+             [ L.E ! L.H ! L.P ! L.S0P ! L.SYP].
+
+             H halts  the job associated  with a slot;  if the slot  controls a
+        "KIO" job, subsequent logons are disabled.
+
+
+
+
+
+
+                                 5.8  Initialize::  I
+
+
+             [ ].
+
+             I should only be typed after a new load.
+
+
+
+
+
+
+                                5.9  Suspend Slot::  J
+
+
+             This command causes a slot to be suspended.
+
+
+
+
+
+
+             5.10  Load From Disk::  L DISK-ADDR NUMBER-OF-BLOCKS MEM-ADDR
+
+
+             [ L.L ! L.H ! L.P ! L.S0P ].
+
+             *(* VALID ONLY IF SYSTEM INCLUDES DISK AND SUPERVISOR *)*
+
+             Reads  NUMBER-OF-BLOCKS  (4  blocks/sector)  starting   at  user's
+        virtual DISK-ADDR (16  bits, of which the  high 3 are the  area number;
+        the rest  are beginning-block  number) storing  the result  starting at
+        user's MEM-ADDR.
+
+
+
+
+
+
+
+
+        71                              ISIS-II                       ISIS2.DOC
+        ISIS DDT Commands                                     December 13, 1985
+
+
+                    5.11  LL UNIT SECTOR CORE-ADDR NUMBER-OF-BYTES
+
+
+             Alternate  load memory  from disk.::  [ L.L ! L.H  ! L.P ! L.S0P ]
+        *(* VALID  ONLY  IF  SYSTEM  INCLUDES  DISK *)*  Reads  NUMBER-OF-BYTES
+        starting at user's virtual  SECTOR on UNIT storing the  result starting
+        at user's CORE-ADDR.
+
+
+
+
+
+
+                  5.12  Mask for Search::  M MASK START-ADDR END-ADDR
+
+
+             [ L.R ! L.L ! L.H ! L.P ! L.S0R ! L.S0P ! L.SYR ! L.SYP].
+
+             Set search MASK and range FOR  X AND Y commands.  The MASK  is one
+        word (a MASK of 0 translates to -1).
+
+             Also used to set up parameters for the V (spy) command.
+
+             See the commands V, X, and Y for more details.
+
+
+
+
+
+
+                                    5.13  Next::  N
+
+
+             [ L.R ! L.L ! L.H ! L.P ! L.S0R ! L.S0P ! L.SYR ! L.SYP].
+
+             Sets a special breakpoint  after the current instruction  and then
+        executes the current instruction.
+
+
+
+
+
+
+                         5.14  Re-enable Watch-frog Timer::  O
+
+
+             This  command re-enables  a watch-frog  timer that  had previously
+        been disabled.
+
+
+
+
+
+
+        72                              ISIS-II                       ISIS2.DOC
+        ISIS DDT Commands                                     December 13, 1985
+
+
+                                  5.15  Proceed::  P
+
+
+             [ L.R ! L.L ! L.H ! L.P ! L.S0R ! L.S0P ! L.SYR ! L.SYP].
+
+             Must be  used to continue  from a breakpoint.   Restores identical
+        status that existed when breakpoint was reached.
+
+
+
+
+
+
+                                5.16  Resume Slot::  Q
+
+
+             This command causes a suspended slot to be resumed.
+
+
+
+
+
+
+                           5.17  Read Memory::  R ADDR COUNT
+
+
+             [ L.R ! L.L ! L.H ! L.P ! L.S0R ! L.S0P ! L.SYR ! L.SYP].
+
+             Prints contents of COUNT bytes starting at ADDR.
+
+
+
+
+
+
+                         5.18  Read Registers::  RR REG COUNT
+
+
+             [ L.R ! L.L ! L.H ! L.P ! L.S0R ! L.S0P ! L.SYR ! L.SYP].
+
+             Prints contents of COUNT registers starting at REG.  These are the
+        register values at the time the last user instruction was executed.
+
+
+
+
+
+
+
+
+
+
+
+
+        73                              ISIS-II                       ISIS2.DOC
+        ISIS DDT Commands                                     December 13, 1985
+
+
+          5.19  Save Memory on Disk::  S DISK-ADDR NUMBER-OF-BLOCKS MEM-ADDR
+
+
+             [ L.L ! L.H ! L.P ! L.S0P ].
+
+             *(* VALID ONLY  IF SYSTEM  INCLUDES DISK AND  SUP, AND  THE GLOBAL
+        UNIT DEFINITION INCLUDES THE "SS" ATTRIBUTE *)*
+
+             Has opposite effect of L.
+
+
+
+
+
+
+                    5.20  SS UNIT SECTOR CORE-ADDR NUMBER-OF-BYTES
+
+
+             Alternate  save  memory  on   disk.::  [ L.L ! L.H ! L.P ! L.S0P ]
+        *(* VALID ONLY IF SYSTEM INCLUDES DISK, AND THE GLOBAL  UNIT DEFINITION
+        INCLUDES THE "SS" ATTRIBUTE *)* Has opposite effect of LL.
+
+
+
+
+
+
+                                5.21  Type Old PSD::  T
+
+
+             [ L.R ! L.L ! L.H ! L.P ! L.S0R ! L.S0P ! L.SYR ! L.SYP].
+
+             Types PSW as it was when last user instruction was executed.  Four
+        additional digits  may be typed  indicating the cause  of the  last MAC
+        interrupt.  (These are the 16 bits read from the MAC status register at
+        the  time  of  the  interrupt.   See  the  TYMNET  ENGINE  document for
+        elaborations.   These  latter digits  are  then cleared,  and  will not
+        appear until another MAC violation occurs.)
+
+
+
+
+
+
+                              5.22  User Status::  U NUM
+
+
+             [ L.H ! L.P ! L.S0P ! L.SYP].
+
+             Makes NUM (4  bits) the condition code  in the new psw  created by
+        all subsequent G commands.If  NUM .and. 1000x is  non-zero, instruction
+        trace logic is enabled for subsequent G commands.
+
+
+        74                              ISIS-II                       ISIS2.DOC
+        ISIS DDT Commands                                     December 13, 1985
+
+
+                                  5.23  Spy::  V ADDR
+
+
+             [ L.H ! L.P ! L.S0P ! L.SYP ].
+
+             Spy expects that the user has previously issued  a "M CNT FAD LAD"
+        command,  which has  specified number-of-bins  (CNT), spy-start-address
+        (FAD), and spy-end-address (LAD).  When the "V ADDR" command is issued,
+        ADDR specifies the start of  a table--in the user space--of  length CNT
+        halfwords ("bins").  It is  assumed that the user has  initialized this
+        array in  an appropriate fashion.   (ADDR = 0  causes Spy to  be turned
+        off!)
+
+             While spy is  active, interrupts will  exit to special  code which
+        compares the address interrupted  from with the specified FAD  and LAD;
+        if in range, the address is biased by -FAD, and the position within the
+        range LAD-FAD is converted to  a corresponding bin number;  one  (1) is
+        added to that bin.
+
+             Spy is turned off on  command, OR if an overflow is  threatened in
+        any bin [ 1+ (bin) = 0 (that bin has wrapped around, and counted  up to
+        -1 already) ].
+
+             Spy is intended as  a performance monitoring facility,  allowing a
+        programmer to determine where  the code is most heavily  exercised.  It
+        does have certain restrictions and penalties associated with it:  being
+        driven by interrupts, it does impose a fairly heavy load on the system;
+        also, the  implementation allows only  ONE slot's DDT  to use Spy  at a
+        time.  Appropriate diagnostics  may be issued  for attempts to  use Spy
+        incorrectly!
+
+             See the M command for initialization command format.
+
+
+           Example:
+
+           M B,S,E     B = no. of Bins, S = Start Address, E = End Address.
+           V BA        BA = Bin Address (start of Bins).
+
+
+
+
+
+
+                       5.24  Write Memory::  W ADDR COUNT string
+
+
+             [ L.L ! L.H ! L.P ! L.S0P ! L.SYP].
+
+             Reads COUNT bytes from the terminal and deposits them  starting at
+        ADDR.
+
+
+
+        75                              ISIS-II                       ISIS2.DOC
+        ISIS DDT Commands                                     December 13, 1985
+
+
+                      5.25  Write Register::  WR REG COUNT string
+
+
+             [ L.L ! L.H ! L.P ! L.S0P ! L.SYP].
+
+             Reads 4*COUNT  bytes from  the terminal and  deposits them  in the
+        register save area starting at REG.
+
+
+
+
+
+
+                      5.26  Data Search::  X (0,1) (1,2,4) VALUE
+
+
+             [ L.R ! L.L ! L.H ! L.P ! L.S0R ! L.S0P ! L.SYR ! L.SYP].
+
+             Search: 0  or 1 (match  or non-match), 1,2  or 4 (number  of bytes
+        long).  VALUE is one word.  The search range set in M is used  with the
+        mask set  in M.  The  mask is  applied only the  memory value,  not the
+        search value.  In  a match search only  the addresses of  matched cells
+        are printed, in non-match search  both address & value are  printed (on
+        seperate lines).
+
+             See the M command for initialization command format.
+
+
+           Example:  Scan  without printing  (for example,  to look  for parity
+               errors):
+
+           M 0FF000,1000
+           X 0,2,00FF
+
+
+
+
+
+
+              5.27  Instruction Search::  Y (1,2,3) VALUE1 VALUE2 VALUE3
+
+
+             [ L.R ! L.L ! L.H ! L.P ! L.S0R ! L.S0P ! L.SYR ! L.SYP].
+
+             Search: 1,2  or 3  (length of instruction  in half  words).  Enter
+        search value in appropriate number of half words.  Search is match only
+        and used search range set in M but not the mask.  Addresses  of matches
+        are printed.
+
+             See the M command for initialization command format.
+
+
+
+
+        76                              ISIS-II                       ISIS2.DOC
+        ISIS DDT Commands                                     December 13, 1985
+
+
+                            5.28  Zap Command Circuit::  Z
+
+
+             [ ].
+
+             Command to log off.  Responds with "Logging off?" to  confirm your
+        intentions.  Type Z to log off, anything else to abort log off.
+
+
+
+
+
+
+        5.29
+
+
+             [ ].
+
+             " " is  normally used to  recover from an  unrecognizable command.
+        It effectively restarts DDT.  Starting (or restarting) DDT includes the
+        examination of  a diagnostic  to determine  if any  abnormal conditions
+        have occured  since the  last start.   These conditions  include parity
+        error,  illegal memory  references, illegal  SVC's, or  KERNEL crashes,
+        either  within DDT,  or  within any  of  the domain  controlled  by DDT
+        (Background, Foreground, etc.).  " " may be used instead of any command
+        to examine this diagnostic.
+
+
+
+
+
+
+                              5.30  Switch Slot::  ^ NUM
+
+
+             [ ].
+
+             "^"  attempts  to  transfer  control  from  the  DDT  of  the slot
+        currently logged into,  to the slot specified  by NUM, if  all criteria
+        for logging into that slot are otherwise satisfied.  If not successful,
+        diagnostics are generated.
+
+
+
+
+
+
+
+
+
+
+
+
+
+        77                              ISIS-II                       ISIS2.DOC
+        ISIS DDT Commands                                     December 13, 1985
+
+
+                                    5.31  ?command
+
+
+             "?":: [ ] followed by a command string (with  possible arguments),
+        terminated with any delimiter, invokes special commands:
+
+
+
+
+
+                    5.31.1  ?B        --query Breakpoints
+
+             ?B outputs a table showing where breakpoints are currently set.
+
+
+
+
+
+                    5.31.2  ?ABS ADDR --query Absolute Address
+
+             ?ABS ADDR  translates ADDR  to a  physical address  (unMAC'ed) and
+        outputs this address, and the protection applied to references  to that
+        address.
+
+
+
+
+
+                    5.31.3  ?MAC      --query MAC
+
+             ?MAC  outputs  a  table  that  displays  the  slot's  current  MAC
+        configuration.  If  using extended  memory, ?MAC  outputs a  table that
+        displays the slot's MAC configuration  for the MAC set selected  by the
+        ?SMAC command.
+
+
+
+
+
+                    5.31.4  ?SMAC n   --(query) Select MAC Set
+
+             ?SMAC selects the slot's  MAC set, when using extended  memory, to
+        be used by  DDT, where n  is the MAC set  number.  ?SMAC followed  by a
+        <CR> (no argument) selects the internal MAC set.
+
+
+
+
+
+
+
+
+
+
+        78                              ISIS-II                       ISIS2.DOC
+        ISIS DDT Commands                                     December 13, 1985
+
+
+                    5.31.5  ?SLOT     --query SLOT number
+
+             ?SLOT outputs the current slot's key.
+
+
+
+
+
+                    5.31.6  ?VERN     --query version number
+
+             ?VERN  outputs the  ISIS version  number, fod  by  the slot's
+        version (provided that the slot is a DISPATCHER slot).
+
+
+
+
+
+                    5.31.7  ?BT       --query Background PSD
+
+             ?BT outputs the current (running) background PSD.  Approximate!
+
+
+
+
+
+                    5.31.8  ?FT       --query Foreground PSD
+
+             ?FT outputs the current (running) foreground PSD.  Approximate!
+
+
+
+
+
+                    5.31.9  ?BRR R N  --query Background's Read Registers
+
+             ?BRR   outputs   the  current   (running)   background  registers.
+        Approximate!   "?BRR"  works like  "RR",  with "R"  being  the starting
+        register, and "N" being the number of registers to display.
+
+
+
+
+
+                    5.31.10  ?FRR R N  --query Foreground's Read Registers
+
+             ?FRR   outputs   the  current   (running)   foreground  registers.
+        Approximate!   "?FRR"  works like  "RR",  with "R"  being  the starting
+        register, and "N" being the number of registers to display.
+
+             NOTE..."APPROXIMATE" indicates that the multiple-words  output are
+        not necessarily correlated.   DDT will "snapshot" each  successive word
+        and output it, but may be dismissed after any word is  output, allowing
+
+
+        79                              ISIS-II                       ISIS2.DOC
+        ISIS DDT Commands                                     December 13, 1985
+
+
+        the  process  being  monitored  to  run,  and  change  the  items being
+        examined.  USE THIS FACILITY WITH CAUTION!
+
+
+
+
+
+                    5.31.11  ?CT       --query Channels Terminating
+
+             ?CT  outputs  a  table  (for  slots  connected  to  DISPATCHER) of
+        channels connected to the slot.  Each is of form:
+                PORT i -->Sn:j
+
+             where i is the port number on that slot, n is the slot it connects
+        to,  and  j  is  the  port number  on  that  slot.   ("i"  and  "j" are
+        hexadecimal; n is decimal.)
+
+
+
+
+
+                    5.31.12  ?USE      --query Dispatcher buffer usage
+
+             ?USE outputs a  table (for slots  connected to DISPATCHER)  of the
+        ports currently active, and the maximum (decimal) number  of characters
+        that the dispatcher  needed to buffer, because  of full rings,  in each
+        direction.
+
+
+
+
+
+                    5.31.13  ?HOST     --query host
+
+             ?HOST outputs a table  (for slots connected to the  DISPATCHER) of
+        hosts in use by that slot.  Each is of form:
+                n HOST m HAS j PORTS, IS state
+
+             where n is the relative host  number for that slot, m is  the host
+        number, and j is the number of ports.  ("n" is hexadecimal, "m" and "j"
+        are decimal.) "state" is one of the possible states:
+
+                gone!
+                down!
+                shut
+                answered
+
+
+
+
+
+
+
+
+        80                              ISIS-II                       ISIS2.DOC
+        ISIS DDT Commands                                     December 13, 1985
+
+
+                    5.31.14  ?WHO      --query who
+
+             ?WHO outputs a table showing, for each slot, the current status of
+        DDT for that slot, and the two most recent user-names to log  into that
+        slot, to provide a short history of who has been making changes.
+
+
+
+
+
+                    5.31.15  ?EDBG     --(query) Enter DeBuG mode
+
+             Turns on debug mode, so that any subsequent system traps cause the
+        background and foreground to become frozen, rather than crashing.
+
+
+
+
+
+                    5.31.16  ?LDBG     --(query) Leave DebuG mode
+
+             Turns off debug mode.
+
+
+
+
+
+                    5.31.17  ?FREZ     --(query) FREeZe
+
+             Freeze the associated background and foreground jobs.
+
+
+
+
+
+                    5.31.18  ?THAW     --(query) THAW
+
+             Thaw the associated background and foreground jobs.
+
+
+
+
+
+                    5.31.19  ?RET      --query return
+
+             If you  have a  user-name assigned  to a  specific slot,  and have
+        transfered  to DDT,  ?RET will  take you  back (equivalent  to  the "^"
+        command, except that you don't  have to know what slot key  is assigned
+        to you).
+
+
+
+
+
+        81                              ISIS-II                       ISIS2.DOC
+        ISIS DDT Commands                                     December 13, 1985
+
+
+                    5.31.20  ?STAT     --query status
+
+             If you have a Dispatcher-connected job, and it specifies a status-
+        address,  control will  be transfered  to that  address, to  permit the
+        execution of  code, at the  DDT level, which  will give  diagnostic and
+        status information related to the background and foreground job  to the
+        person who is logged into the DDT partition.  This may also be used for
+        other, more specialized functions, such as for a private debugger, etc.
+
+
+
+
+
+                    5.31.21  ?LMAC     --(query) Load Mac
+
+             If you have a Dispatcher-connected job,  it's CTA specifies how to
+        set up  storage.  The function  of this  command is to  set up  the MAC
+        according to this description.  The command is illegal unless  the slot
+        is connectable to  the dispatcher.  A  failure exit and  diagnostic may
+        result if there is insufficient memory to set up the desired MAC area.
+
+
+
+
+
+                    5.31.22  ?PORT      --(query) Kernel Ports
+
+             List the users of the kernel ports.
+
+
+
+
+
+                    5.31.23  ?HANG      --(query) hang Kernel Ports
+
+             Hang the user on the kernel port specified.
+
+
+
+
+
+                    5.31.24  ?TIME      --(query) system time
+
+             Output  the current  system time  (elapsed time  since  system was
+        loaded.
+
+
+
+
+
+
+
+
+
+        82                              ISIS-II                       ISIS2.DOC
+        ISIS DDT Commands                                     December 13, 1985
+
+
+                    5.31.25  ?DIAG      --(query) Flush diagnostics
+
+             All diagnostics which have not yet been flushed will be  dumped to
+        the terminal controlling the DDT slot.  This happens  AUTOMATICALLY for
+        the  console TTY  connected to  DDT for  ANY slot.   Once flushed  to a
+        terminal, the diagnostics do not normally come out again.
+
+
+
+
+
+                    5.31.26  ?HIST      --(query) list ALL system diagnostics
+
+             All diagnostics in the system diagnostic queue, starting  with the
+        oldest, are dumped to the terminal making the query.  This will include
+        those which have already been  flushed, but does not of itself  cause a
+        flush.
+
+
+
+
+
+                    5.31.27  ?MEM      --query Memory Error Log
+
+             ?MEM outputs  the system  time and a  table displaying  the memory
+        error log buffer.  An error  log table is output only if  memory errors
+        were detected by the ECC circuitry on the semiconductor  memory boards.
+        The table displays how long, in system time, since the  first occurance
+        of  the error,  the address  of  the memory  board on  which  the error
+        occurred, the number  of occurances of the  error, and the  chip number
+        (for single bit errors) or the row number (for double bit errors) where
+        the error  occurred on  the board.  Only  the location  of the  last 16
+        different memory errors are maintained in the memory error log buffer.
+
+             Other debugger commands  exist but should  not be used.   They and
+        their consequences are:
+
+
+
+
+
+                    5.31.28  ?CPU      --(query) CPU utilization
+
+             A "snapshot" of the fast clock and the appropriate local clocks is
+        performed, DDT dismisses for  approximately 1 second, and  now computes
+        the  elapsed real  and slot  (virtual) time.   This is  converted  to a
+        percentage,  and output.   Further, the  total "span"  used  (number of
+        bytes processed, including padding and incorporating "folding")  of the
+        Dispatcher  input  and  output  rings  is  output.   Users  with System
+        licences will get a table for all slots; users with lesser licence will
+        get the information for their slot only!
+
+
+
+        83                              ISIS-II                       ISIS2.DOC
+        ISIS DDT Commands                                     December 13, 1985
+
+
+                    5.31.29  ?SYS      --(query) SYStem utilization
+
+             This command MAY be  implemented on certain ISIS systems,  being a
+        configuration-defined  parameter.  If  on, the  command  causes certain
+        system parameters to  be monitored, and the  values to be  output, with
+        titles; the  set of  parameters may vary  with time.   These parameters
+        include the elapsed time  for the sample, and may  additionally include
+        such elements as the number of context switches during that time, etc.
+
+
+
+
+
+                    5.31.30  ?LU       --(query) Logical Unit
+
+             This command displays a  list of logical units and  the associated
+        physical device type and unit number.
+
+
+
+
+
+                    5.31.31  ?TRAN     --(query) Transfer Logical Unit
+
+             This  command transfers  a logical  unit (L.U.)  from one  slot to
+        another.  This command requires SYS licence.
+
+             To perform a transfer, one must connect to the slot that currently
+        pocesses  the  L.U.  to be  transfered.   After  entering  the command,
+        successive  prompts  requests  for  the  L.U.,  destination  slot,  and
+        destination   L.U.  (all   responses   to  prompts   are   expected  in
+        hexadecimal).  The source L.U. must not be null;  the  destination must
+        be null.  The  source and destination slot  may be the same.   The slot
+        originally in pocession  of the L.U. will  find that I/O is  halted and
+        subsequent references to the L.U. (via SVC's) will fail (since it is an
+        unasigned unit).
+
+
+
+
+
+
+                                 5.32  DDT Filesystem
+
+
+             The ISIS Dynamic Debugger, DDT, contains the option of simple file
+        system which  may be  enabled as following.   When assembling  the ISIS
+        Kernel, a  disc unit  should be  allocated and  assigned to  the common
+        logical unit for  all slots.  Set the  symbol FSYS equal to  the chosen
+        logical unit number, (not the global unit number).  Thus  assembled the
+        file system will be operable from DDT commands.
+
+
+
+        84                              ISIS-II                       ISIS2.DOC
+        ISIS DDT Commands                                     December 13, 1985
+
+
+             The  commands  usually  require  a 1-8  byte  ascii  name  for the
+        filename.   A  filename may  contain  either lower  case,  or uppercase
+        characters.  The DDT commands are:
+
+
+
+
+
+                    5.32.1  ?LIST
+
+             List all files including file size.
+
+
+
+
+
+                    5.32.2  ?WRIT,FILENAME
+
+             Create and open for write the filename with the chosen  name.  Any
+        existing file with this name is deleted.
+
+             All read, and  write opened files  respond to the  appropriate DDT
+        commands:  R,ADDR,NBYTE,  or  W,ADDR,NBYTE,B1B2B3  etc.,  respectively.
+        While a  file is  write opened,  any number  of DDT  W commands  may be
+        issued.   An address  written  to in  a  previous W  command  cannot be
+        patched by a later W command.
+
+
+
+
+
+                    5.32.3  ?READ,FILENAME
+
+             Open for reading the filename with that name.
+
+
+
+
+
+                    5.32.4  ?SAVE,FILENAME
+
+             Save  the slot  image on  disc in  the file  with this  name.  Any
+        existing file with that name is deleted.
+
+
+
+
+
+
+
+
+
+
+
+        85                              ISIS-II                       ISIS2.DOC
+        ISIS DDT Commands                                     December 13, 1985
+
+
+                    5.32.5  ?SSEG,MASK,FILENAME
+
+             Save only the  segments masked by a  one in the hex  halfword MASK
+        (ascii coded).
+
+
+
+
+
+                    5.32.6  ?REST,FILENAME
+
+             Restore the  slot image to  core from the  file image in  the file
+        with this name.
+
+             ?REST  will  also  set the  segmentation  registers  found  in the
+        segment E in the file.  If  segment E does not exist and the  slot does
+        not have built in segmentation registers then an error will result.
+
+
+
+
+
+                    5.32.7  ?DELE,FILENAME
+
+             Deletes specified file.
+
+
+
+
+
+                    5.32.8  ?NAME,FILENAME,FILENAME
+
+             Renames the first file specified with the second name.
+
+
+
+
+
+                    5.32.9  ?CLOS
+
+             ?CLOS will close the currently opened file.
+
+             ?CLOS  releases  the  file  system  for  another  DDT  user.  This
+        filesystem can only service one user  at a time.  If a request  is made
+        while the system is attached to another DDT user, then an error message
+        results.
+
+
+
+
+
+
+
+
+        86                              ISIS-II                       ISIS2.DOC
+        ISIS DDT Commands                                     December 13, 1985
+
+
+                    5.32.10  ?INIT
+
+             Initialize disc unit, which erases all previous files.
+
+
+
+             The initializing  of the  disc unit consists  of placing  all disc
+        blocks in the FREE  file, which is a  file of unused disc  blocks.  Any
+        command  which   requires  an  initialized   disc  (almost   all)  will
+        automatically discover the initialization on the unit, or initialize it
+        as in the ?INIT command.
+
+             The file used in the system is a list of headers, with each header
+        containing a  list of data  blocks.  The directory  is a linked  set of
+        directory blocks.  Each directory block contains a word of link  to the
+        next directory block, a word  of directory index which is 16  times the
+        number of file entries listed in the block, and finally a list  of file
+        entries.  A file entry is a four word record, the first word  being the
+        first header block number for  the file, the second word the  number of
+        blocks in the file, and finally two words of filename.  Each file has a
+        file entry in a directory block, and there is no limit on the number of
+        files.  The free  list file is a  special file which contains  lists of
+        unused disc block numbers.  The  free list file remains 'open'  all the
+        time.  A directory entry has a 8 byte name (unused bytes null), a block
+        total field, and a first header number field.  A header contains a link
+        to the next header  field, number of entries  field, and a set  of data
+        block  list entries.   A  data block  list  entry has  a  user assigned
+        address field, number bytes  field, and disc block number  field.  Some
+        data blocks in a file will be compressed.  A data block list  entry for
+        a compressed block, does not have a data block number field.  Rather it
+        has a minus one in the left half of that field, and the compressed byte
+        in the  right most byte  of that field.   Compression takes  place when
+        writing to a file (?SAVE,  ?WRIT), and is used whenever a  character is
+        repeated 0F (hex) times.
+
+
+
+
+
+
+                                  5.33  C  don't use!
+
+
+             "C":: [  ] the  C command is used  to switch  from ASCII  input to
+        binary and back again.  It is used primarily by NAD, and use by logging
+        in directly may cause strange operations.
+
+
+
+
+
+
+
+
+        87                              ISIS-II                       ISIS2.DOC
+        ISIS DDT Commands                                     December 13, 1985
+
+
+                                    5.34  control-C
+
+
+             A control-C  (03 or 83)  is used to  interrupt a user  program and
+        return  control  to DDT.   It  also flushes  all  characters previously
+        input.
+
+
+
+
+
+
+                                    5.35  control-O
+
+
+             A  control-O (0F  or 8F)  is used  to flush  the input  and output
+        buffers.  This also terminates any output SVC in progress.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        88                              ISIS-II                       ISIS2.DOC
+    L E#
