@@ -1,0 +1,335 @@
+  99 POS$=POS$+CHAR(X) FOR X=32 TO 111
+ 100 INTEGER WHEEL(20), DRAW, SELECT, AMOUNTS(0:6), X, Y, Z, Z1, AMTWON, BOX, &
+             HUNDS(20), FVHUNDS(3), THOUS(2), TENTHOUS(1)
+ 105 STRING PICKS(80), RUB.VALS(6,2), RUB.VAL.ADDRS(6,2,11), &
+            WIN.DISTR(2), LOSE.DISTR(3), BOX.STRINGS(6,2), RUB.COORD(22)
+ 110 LOGICAL USED.VALS(6), RUBBED.SPOT(6)
+ 111 DATA &
+ '0101','0102','0103','0104','0105','0106','0107','0108','0109','0110','0111',&
+ '0201','0202','0203','0204','0205','0206','0207','0208','0209','0210','0211'
+ 112 READ RUB.COORD
+ 115 DATA '321', '3111', '222', '2211', '21111'
+ 120 READ WIN.DISTR, LOSE.DISTR
+ 125 DATA 0,2,5,100,500,1000,10000
+ 130 READ AMOUNTS
+ 135 DATA '  $10,000  ','  TEN THOU ','  $ 1,000  ','  ONE THOU ',&
+          '  $500.00  ',' FIVE HUND ','  $100.00  ','  ONE HUND ',&
+	  '  $  5.00  ','    FIVE   ','  $  2.00  ','    TWO    '
+ 140 READ RUB.VALS(X,Y) FOR Y=1 TO 2 FOR X=6 TO 1 STEP -1
+ 145 DATA 11,42,12,42,13,42,14,42,15,42,16,42, &
+          11,54,12,54,13,54,14,54,15,54,16,54
+ 150 FOR X=1 TO 6
+ 155   FOR Y=1 TO 2
+ 160     READ R1,C1
+ 165     FOR Z=1 TO 11
+ 170       RUB.VAL.ADDRS(X,Y,Z)=SCRNPOS(R1,C1)
+ 175       RUB.VAL.ADDRS(X,Y,Z)=LEFT(RUB.VAL.ADDRS(X,Y,Z),3)+ &
+		CHAR(ASC(RIGHT(RUB.VAL.ADDRS(X,Y,Z),1))+Z-1)
+ 180     NEXT Z
+ 181   NEXT Y
+ 182 NEXT X
+ 185 GOSUB 200 ! DOES USER WANT INSTRUCTIONS/ODDS?
+ 186 GOSUB 400 ! INITIALIZE TERMINAL CONTROL STRINGS
+ 187 GOSUB 500 ! INITIALIZE 80,000 TICKETS
+ 188 GOSUB 700 ! DRAW TICKET ON SCREEN
+ 189 GOSUB 1000 ! ASK FOR TICKET NUMBER AND DISPLAY RESULTS
+
+ 200 PRINT "Do you want instructions (new game!)? ":
+ 205 IIF 'R':RESPONSE$
+ 210 IF RESPONSE$='y' OR RESPONSE$='Y' THEN GOSUB 5000
+ 215 RETURN
+
+ 400 CLS$=CHAR(27)+';'
+ 401 STD.VIDEO$=CHAR(27)+'G0'
+ 402 REV.VIDEO$=CHAR(27)+'G4'
+ 403 REV.UL.VIDEO$=CHAR(27)+'G5'
+ 404 SET.PROT.MODE$=CHAR(27)+'&'
+ 405 CLR.PROT.MODE$=CHAR(27)+"'"
+ 406 PAGE.ERASE$=CHAR(27)+'Y'
+ 407 REV.BL.VIDEO$=CHAR(27)+'G7'
+ 408 PAGE.TURN$=CHAR(27)+'J'
+ 409 BL.VIDEO$=CHAR(27)+'G2'
+ 410 LINE.ERASE$=CHAR(27)+'T'
+ 411 BRIGHT$=CHAR(27)+'('
+ 412 DARK$=CHAR(27)+')'
+ 414 RETURN
+
+ 500 ON ESCAPE GOTO 2000
+ 505 X=RND(-1)
+ 510 PRINT 'Initializing 80,000 lottery tickets...'
+ 515 PICKS(X)=RPT('0',1000) FOR X=1 TO 80
+ 520 PRINT 'Selecting 1 $10,000.00 ticket...'
+ 525 CALL SETVAL(1,'6')
+ 530 PRINT 'Selecting 2 $1,000.00 tickets...'
+ 535 CALL SETVAL(2,'5')
+ 540 PRINT 'Selecting 3 $500.00 tickets...'
+ 545 CALL SETVAL(3,'4')
+ 550 PRINT 'Selecting 20 $100.00 tickets...'
+ 555 CALL SETVAL(20,'3')
+ 560 PRINT 'Selecting 960 $5.00 tickets...'
+ 565 CALL SETVAL(960,'2')
+ 570 PRINT 'Selecting 8000 $2.00 tickets...'
+ 575 CALL SETVAL(8000,'1')
+ 580 RETURN
+
+ 700 PRINT CLS$
+ 701 PRINT SCRNPOS(X,15)+'+'+RPT('-',50)+'+' FOR X=7 TO 17 STEP 10
+ 705 PRINT SCRNPOS(X,Y)+'|' FOR X=8 TO 16 FOR Y=15 TO 66 STEP 51
+ 710 PRINT SCRNPOS(8,16)+REV.VIDEO$+ &
+     '   "THE SKY'+CHAR(39)+'S THE LIMIT" INSTANT LOTTERY GAME   '+STD.VIDEO$
+ 715 PRINT SCRNPOS(9,16)+REV.UL.VIDEO$+ &
+     '          WIN UP TO $10,000 INSTANTLY!          '+STD.VIDEO$
+ 720 FOR ROW=11 TO 16
+ 725   FOR COL=65 TO 41 STEP -12
+ 730     PRINT SCRNPOS(ROW,COL):
+ 735     IF COL=65 THEN
+ 740       PRINT STD.VIDEO$
+ 745     ELSE
+ 750       IF INT(ROW/2)=ROW/2 THEN
+ 755         PRINT REV.UL.VIDEO$
+ 760       ELSE
+ 765         PRINT REV.VIDEO$
+ 770       ENDIF
+ 775     ENDIF
+ 780   NEXT COL
+ 785 NEXT ROW
+ 790 FOR ROW=11 TO 16
+ 795   PRINT SCRNPOS(ROW,16):
+ 800   IF ROW=11 OR ROW=16 THEN
+ 805     PRINT REV.UL.VIDEO$
+ 810   ELSE
+ 815     PRINT REV.VIDEO$
+ 820   ENDIF
+ 825 NEXT ROW
+ 830 PRINT SCRNPOS(11,19)+'Ticket number:'
+ 835 PRINT SCRNPOS(12,20)+'JACKPOT DRAWING!!'
+ 840 PRINT SCRNPOS(13,20)+'Jackpot finalists'
+ 845 PRINT SCRNPOS(14,22)+'will be drawn'
+ 850 PRINT SCRNPOS(15,23)+'from claimed'
+ 855 PRINT SCRNPOS(16,21)+'$100.00 winners.'
+ 860 PRINT DARK$
+ 865 FOR ROW=11 TO 16
+ 870   FOR COL=42 TO 54 STEP 12
+ 875     PRINT SCRNPOS(ROW,COL):
+ 880     IF INT(ROW/2)=ROW/2 THEN
+ 885       PRINT '+*+*+*+*+*+'
+ 890     ELSE
+ 895       PRINT '*+*+*+*+*+*'
+ 900     ENDIF
+ 905   NEXT COL
+ 910 NEXT ROW
+ 915 PRINT BRIGHT$
+ 920 RETURN
+
+1000 PRINT SCRNPOS(20,16)+PAGE.ERASE$+ &
+           'Which ticket do you want to buy (1:80000)':
+1005 INPUT BOX
+1010 IF BOX < 1 OR BOX > 80000 THEN GOTO 1000
+1011 PRINT SCRNPOS(11,34):
+1012 PRINT IN IMAGE '%%%%%': BOX
+1015 BOX=BOX-1
+1020 Z=INT(BOX/1000)+1
+1025 Z1=BOX MOD 1000 + 1
+1030 IF SUBSTR(PICKS(Z),Z1,1)='7' THEN 
+1031   PRINT SCRNPOS(20,16)+PAGE.ERASE$:
+1035   PRINT 'That number has already been selected; choose again'
+1036   WAIT 2
+1040   GOTO 1000
+1045 ELSE
+1050   AMTWON=AMOUNTS(VAL(SUBSTR(PICKS(Z),Z1,1)))
+1055   PICKS(Z)=SUBSTR(PICKS(Z),1,Z1-1)+'7'+SUBSTR(PICKS(Z),Z1+1)
+1060 ENDIF
+1065 GOSUB 3000 ! RUB OFF THE LOTTERY CARD
+1070 INCOME=INCOME+AMTWON
+1075 TICKET=TICKET+1
+1080 IF AMTWON<>100 THEN GOTO 1000
+1085 PRINT CLS$+'Congratulations! You now have a 1 in 625 chance to spin the'
+1090 PRINT '  California Lottery Jackpot wheel!'
+1095 PRINT
+1100 PRINT 'Select a number from 1 to 625: ':
+1105 INPUT DRAW
+1110 IF DRAW < 1 OR DRAW > 625 THEN GOTO 1100
+1115 SELECT=INT(RND*625)+1
+1120 IF SELECT=DRAW THEN
+1125   PRINT 'We have a winner!! You have won at least $10,000 and have a'
+1130   PRINT '  chance to win $3,000,000! Here comes the wheel...'
+1140   WHEEL=ZER
+1150   X=INT(RND*20)+1
+1160   WHEEL(X)=3000000
+1162   X=INT(RND*20)+1
+1164   IF WHEEL(X)=0 THEN WHEEL(X)=1000000 ELSE GOTO 1162
+1170   FOR X=1 TO 4
+1180     Y=INT(RND*20)+1
+1190     IF WHEEL(Y)=0 THEN WHEEL(Y)=100000 ELSE GOTO 1180
+1200   NEXT X
+1210   FOR X=1 TO 6
+1220     Y=INT(RND*20)+1
+1230     IF WHEEL(Y)=0 THEN WHEEL(Y)=50000 ELSE GOTO 1220
+1240   NEXT X
+1250   IF WHEEL(X)=0 THEN WHEEL(X)=10000  FOR X=1 TO 20
+1260   PRINT 
+1270   PRINT 'Select a number from 1 to 20: ':
+1280   INPUT DRAW
+1281   IF DRAW < 1 OR DRAW > 20 THEN GOTO 1270
+1290   PRINT 'You have won $':WHEEL(DRAW):' in the California Lottery!'
+1300   INCOME=INCOME+WHEEL(DRAW)
+1310 ELSE
+1320   PRINT 'Sorry, the winning number was':SELECT
+1330 ENDIF
+1335 GOSUB 700
+1340 GOTO 1000
+
+2000 PRINT CLS$
+2005 PRINT 'You bought':TICKET:' lottery tickets and'
+2010 PRINT 'You won $':INCOME:' for a net total of $':INCOME-TICKET
+2020 PRINT
+2030 PRINT 'The ticket numbers for the $100 winners were:'
+2040 PIM ' %%%%%  %%%%%  %%%%%  %%%%%  %%%%%': HUNDS(X) FOR X=1 TO 20
+2045 PRINT
+2050 PRINT 'The ticket numbers for the $500 winners were:'
+2060 PIM ' %%%%%  %%%%%  %%%%%': FVHUNDS(X) FOR X=1 TO 3
+2065 PRINT
+2070 PRINT 'The ticket numbers for the $1,000 winners were:'
+2080 PIM ' %%%%%  %%%%%': THOUS(X) FOR X=1 TO 2
+2085 PRINT
+2090 PRINT 'The ticket number for the $10,000 winner was:'
+2100 PIM ' %%%%%': TENTHOUS(1)
+2110 END ''
+
+3000 GOSUB 860
+3005 IF AMTWON=0 THEN
+3010   DISTR$=LOSE.DISTR(INT(RND*3)+1)
+3015 ELSE
+3020   DISTR$=WIN.DISTR(INT(RND*2)+1)
+3025 ENDIF
+3030 USED.VALS=FALSE
+3035 BOX.STRINGS=''
+3040 FOR X=1 TO LENGTH(DISTR$)
+3045   IF VAL(SUBSTR(DISTR$,1,X))=3 THEN
+3050     IF AMTWON=2 THEN
+3055       X1=1
+3060     ORIF AMTWON=5 THEN
+3065       X1=2
+3070     ORIF AMTWON=100 THEN
+3075       X1=3
+3080     ORIF AMTWON=500 THEN
+3085       X1=4
+3090     ORIF AMTWON=1000 THEN
+3095       X1=5
+3100     ORIF AMTWON=5000 THEN
+3105       X1=6
+3110     ENDIF
+3115   ELSE
+3120     X1=INT(RND*6)+1
+3125   ENDIF
+3130   IF USED.VALS(X1)=TRUE THEN GOTO 3045
+3135   USED.VALS(X1)=TRUE
+3140   FOR Y=1 TO VAL(SUBSTR(DISTR$,X,1))
+3141     Z=INT(RND*6)+1
+3145     IF BOX.STRINGS(Z,1)<>'' THEN GOTO 3141
+3150     BOX.STRINGS(Z,Z1)=RUB.VALS(X1,Z1) FOR Z1=1 TO 2
+3155   NEXT Y
+3160 NEXT X
+3165 USED.VALS=FALSE
+3170 FOR X=1 TO 6
+3175   X1=INT(RND*6)+1
+3180   IF USED.VALS(X1)=TRUE THEN GOTO 3175
+3185   USED.VALS(X1)=TRUE
+3190   FOR Y=1 TO 15
+3195     Y1=INT(RND*22)+1
+3200     Z1=INT(RND*22)+1
+3205     RUB.COORD(Y1)==RUB.COORD(Z1)
+3210   NEXT Y
+3215   FOR Y=1 TO 22
+3220     R1=VAL(LEFT(RUB.COORD(Y),2))
+3225     C1=VAL(RIGHT(RUB.COORD(Y),2))
+3230     PRINT RUB.VAL.ADDRS(X1,R1,C1)+SUBSTR(BOX.STRINGS(X1,R1),C1,1)+CHAR(8)
+3235   NEXT Y
+3240 WAIT 1
+3245 NEXT X
+3250 RETURN
+
+5000 PRINT 'This program is a simulation of the new "The Sky':
+5001 PRINT CHAR(39)+'s the Limit"'
+5010 PRINT "Lottery Game.  There will be 300,000,000 Instant Winner Lottery"
+5015 PRINT "Tickets printed for this run of the game, which is estimated"
+5016 PRINT 'to last about 12 weeks.  The odds of winning in "The Sky':
+5017 PRINT CHAR(39)+'s the'
+5018 PRINT 'Limit" are calculated as follows:'
+5030 PRINT
+5040 PRINT "Instant Games:"
+5050 PRINT "    Prize       Winners       Odds"
+5060 PRINT "       $2    30,000,000       1:10"
+5070 PRINT "       $5     3,600,000     1:83.3"
+5080 PRINT "     $100        75,000    1:4,000"
+5090 PRINT "     $500        11,250   1:26,667"
+5100 PRINT "   $1,000         7,500   1:40,000"
+5110 PRINT "  $10,000         3,750   1:80,000"
+5120 PRINT
+5130 PRINT "Each one of the $100 ticket winners will be placed in a random"
+5140 PRINT "drawing and have about 1 chance in 625 of being selected to spin"
+5150 PRINT "the Grand Prize wheel.  The Grand Prize wheel will have 100 slots"
+5160 PRINT "with five different prize amounts distributed among the slots."
+5161 PRINT "The estimated number of winners for each prize and the final odds"
+5162 PRINT "for winning each prize are as follows:"
+5170 PRINT
+5180 PRINT "     Prize      Slots      Winners        Odds"
+5190 PRINT "  $3,000,000       5           6      1:50,000,000"
+5195 PRINT "  $1,000,000       5           6      1:50,000,000"
+5200 PRINT "    $100,000      20          24      1:12,500,000"
+5210 PRINT "     $50,000      30          36       1:8,333,333"
+5220 PRINT "     $10,000      40          48       1:6,250,000"
+5230 PRINT
+5240 PRINT "It is not possible to exactly duplicate the odds of the Lottery"
+5250 PRINT "in this simulation: there is not enough memory or disk space on"
+5260 PRINT "this system to create 300,000,000 lottery tickets; however, the"
+5270 PRINT "odds can be kept very close by 'printing' (in memory) 80,000"
+5280 PRINT "tickets.  All you need to do is pick a ticket number between 1"
+5290 PRINT "and 80,000 (inclusive); the value of the ticket will then be"
+5300 PRINT "announced and the computer will keep a running total of the total"
+5310 PRINT "number of tickets purchased as well as the total winnings.  The"
+5320 PRINT "simulation may be ended at any time by typing an 'escape'; at"
+5330 PRINT "this time the player's final total will be shown."
+5340 PRINT
+5350 PRINT "Good luck (you'll need it to come out ahead)!"
+5360 PRINT
+5370 RETURN
+
+9000 DEF STRING SCRNPOS(INTEGER(R,C))
+9005   STRING ROW,COL
+9010   ROW=SUBSTR(POS$,R,1)
+9015   COL=SUBSTR(POS$,C,1)
+9020   EXIT CHAR(27)+'='+ROW+COL
+9025   ENDF SCRNPOS
+9030 DEF INTEGER LOTTERYNUM
+9035   DIM DIGIT$(5)
+9040   DIGIT$(1)=CHAR(INT(RND*8)+48)
+9045   FOR Q=2 TO 5
+9050     DIGIT$(Q)=CHAR(INT(RND*10)+48)
+9055   NEXT Q
+9060   NUMBER$=""
+9065   NUMBER$=NUMBER$+DIGIT$(Q) FOR Q=1 TO 5
+9070   EXIT VAL(NUMBER$)
+9075 ENDF LOTTERYNUM
+9080 DEF STRING SETVAL(INTEGER REPS, STRING WINVAL)
+9085   INTEGER X, Y, Z, Z1
+9090   FOR X=1 TO REPS
+9095     Y=LOTTERYNUM
+9100     Z=INT(Y/1000)+1
+9105     Z1=Y MOD 1000 + 1
+9110     IF SUBSTR(PICKS(Z),Z1,1)='0' &
+           THEN PICKS(Z)=SUBSTR(PICKS(Z),1,Z1-1)+ &
+                       WINVAL+ &
+		       SUBSTR(PICKS(Z),Z1+1) &
+	   ELSE GOTO 9095
+9115     IF WINVAL='6' THEN 
+9120       TENTHOUS(X)=Y+1
+9125     ORIF WINVAL='5' THEN
+9130       THOUS(X)=Y+1
+9135     ORIF WINVAL='4' THEN
+9140       FVHUNDS(X)=Y+1
+9145     ORIF WINVAL='3' THEN
+9150       HUNDS(X)=Y+1
+9155     ENDIF
+9160   NEXT X
+9165 ENDF SETVAL
