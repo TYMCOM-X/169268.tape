@@ -1,0 +1,465 @@
+                                                              February 12, 1988
+
+
+
+
+
+
+
+
+                ***** *   * *   * *   * ***** *****     *** ***
+                  *    * *  ** ** **  * *       *        *   * 
+                  *     *   * * * * * * ****    *   ***  *   * 
+                  *     *   * * * *  ** *       *        *   * 
+                  *     *   * * * *   * *****   *       *** ***
+
+                    ***    *   ***** ***** *   *   *   *   *
+                   *   *  * *    *   *     *   *  * *   * * 
+                   *     *****   *   ****  * * * *****   *  
+                   *  ** *   *   *   *     ** ** *   *   *  
+                    ***  *   *   *   ***** *   * *   *   *  
+
+                                ***  ***** **** 
+                               *   * *     *   *
+                               *     ****  *   *
+                               *  ** *     *   *
+                                ***  ***** **** 
+
+                    TYMNET-II TECHNOLOGY GATEWAY INTERFACE
+                            GENERAL EXTERNAL DESIGN
+
+                                Eric Valentino
+                    NETWORK TECHNOLOGY MANAGEMENT DIVISION
+                               February 12, 1988
+
+
+
+
+      ******************************************************************
+      **                  PROPRIETARY INFORMATION                     **
+      **                                                              **
+      **  MDC-TYMNET's   proprietary  rights  are  included  in  the  **
+      **  information disclosed herein.  The recipient, by receiving  **
+      **  this document,  agrees that neither this document nor  the  **
+      **  information disclosed herein nor any part thereof shall be  **
+      **  reproduced  or  transferred to other documents or used  or  **
+      **  disclosed  to  others for manufacturing or for  any  other  **
+      **  purpose  except as specifically authorized in  writing  by  **
+      **  MDC-TYMNET.                                                 **
+      ******************************************************************
+
+
+
+
+
+
+
+
+                                General External Design              T2GATE.GED
+                                                              February 12, 1988
+
+
+
+
+
+
+
+                                   TABLE OF CONTENTS
+
+        Section                                                            Page
+
+
+
+        1.   Design Objective                                                 1
+
+
+        2.   Internal Overview                                                2
+
+
+        3.   Functionality                                                    3
+
+
+        4.   Configuration                                                    4
+
+
+        5.   Documentation                                                    5
+
+
+        6.   Completion and Acceptance                                        6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                General External Design              T2GATE.GED
+        Design Objective                                      February 12, 1988
+
+
+
+
+
+
+                                 1 -  Design Objective
+
+
+             The purpose of  this project is  to provide modifications  to T-II
+        Node Code Software modules  to allow the Node Code to be  configured as
+        an application slot providing gateway services.
+
+             Tymnet-II Node Code may presently be configured for  several types
+        of service.  These configurations   are: ISIS Node Code (slot  0), Solo
+        Consat, Solo Switcher, and Supervisor Base.
+
+             In each configuration, particular code sections are  invoked under
+        switches so as to support the required functions.
+
+             The Tymnet-II Gateway shall be invoked under the "T2GATE" switch.
+
+             In order to remain compatible with T-II Node Code software, and to
+        provide continuing maintainability,  Gateway code modules  will utilize
+        Node Code modules  wherever possible.  In this way, Tymnet-II Node Code
+        will  evolve as  a single  software entity  which will  offer  the T-II
+        Gateway as one of its configuration options.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        1                       General External Design              T2GATE.GED
+        Internal Overview                                     February 12, 1988
+
+
+
+
+
+
+                                2 -  Internal Overview
+
+
+             The  Tymnet Gateway  provides  access from  one  Tymnet Technology
+        network to another Tymnet Technology network.
+
+             The Gateway software functions  within the ISIS environment  as an
+        application slot.  Synchronous  lines which are logically  connected to
+        the Gateway slot allow the Gateway to function as a virtual node in its
+        "home" network.
+
+             The term HNET  shall be used to  designate the "home  network" and
+        represents  the network  within  which the  Gateway slot  appears  as a
+        standard Tymnet-II node.
+
+             The term INET shall  designate the  "other" or "Isis  network" and
+        represents the nework within which the Gateway resides as an Isis  slot
+        host on an INET Engine.
+
+             The diagram below represents a Gateway configuration.
+
+
+
+                             I S I S  Node
+                      ________________________________
+                     | .                              |
+                     |  +        ( kernel )           |                     I
+                     |    + ._________________________|                     N
+                     |d      |    ( node code )       |    ( circuit out on E
+                     |i     [ ] (isis          ,-----[-]------------------- T
+                     |s      |   port)        /       |       I-NET link )
+                     |p  ,--[-]--------------'        |                      /
+                     |a  :   |________________________| ____________________/
+                     |t  :   | ( T-2 Gateway slot )   |
+                     |c  :  [ ]                      [ ]                    H
+                     |h  :   |  (isis                 |    ( circuit out on N
+                     |e  :  [ ]  port)      ---------[-]------------------- E
+                     |r  :   |             '          |       H-NET link )  T
+                     |    --[-]-----------'          [ ]
+                     |_______|________________________|______________________
+                                                                             \
+                                                                              \
+
+
+
+
+
+
+
+
+        2                       General External Design              T2GATE.GED
+        Functionality                                         February 12, 1988
+
+
+
+
+
+
+                                  3 -  Functionality
+
+
+             The  Tymnet  Gateway  serves  to  connect  two  Tymnet  Technology
+        networks.  Circuits may be built by either network's Supervisor  to the
+        Gateway.  The Gateway acts as the circuit's termination host,  and will
+        appear as a destination host in  the home network (HNET) or as  an ISIS
+        Slot Host in the other network (INET).
+
+             In either  case, the  Gateway examines what  is initially  sent as
+        data to the destination.  This may be logon information to be submitted
+        to the second network for  validation in the case of  transparent logon
+        functions.   If  the transparent  logon  function is  not  invoked, the
+        gateway will require  a second log-on  from the circuit  origination in
+        order  for  the  circuit  to be  continued  toward  the  second network
+        destination.  The  Gateway interface  acts as  a normal  destination in
+        Tymnet and performs according to Tymnet protocol with regard  to events
+        such as detach sequences and echo control.
+
+             The Tymnet-II  functions which will  be retained by  the Tymnet-II
+        Gateway are:
+
+
+               []      Individual command circuit to Supervisor
+
+               []      T-II Node Reports to Supervisor
+
+               []      Circuit Rebuild
+
+               []      Dynamic Channel allocation per link
+
+               []      Multiple line links
+
+               []      High speed line support
+
+               []      Gateway Operations Manager
+
+               []      Destination accounting within the home network
+
+             The initial phase of implementation will support a subset of these
+        functions.
+
+             The Tymnet-II Gateway will not support Tymnet-I technology  in any
+        form.
+
+
+
+
+
+
+        3                       General External Design              T2GATE.GED
+        Configuration                                         February 12, 1988
+
+
+
+
+
+
+                                  4 -  Configuration
+
+
+             The Tymnet-II Gateway must be loaded as part of the  compliment of
+        applications slots  on a  Tymnet Engine running  in the  "other" (INET)
+        network.  In this manner the INET  network consents to allow sync lines
+        from the "home" (HNET) network  to create a connection between  the two
+        networks via the Gateway interface.
+
+             The ISIS configuration (.TYM) file for the INET  Engine containing
+        the Gateway slot must assign the appropriate Sync Logical Units  to the
+        Gateway slot.
+
+             The  generation  of  the  Gateway  slot  itself  must  include  an
+        Operations Management  Access List (OMAL),  which will function  as the
+        "good  guy" list,  granting access  to the  Gateway  Operations Manager
+        (GOM).  The Gateway Operations  Manager shall be a subset  of Tymnet-II
+        Xray.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        4                       General External Design              T2GATE.GED
+        Documentation                                         February 12, 1988
+
+
+
+
+
+
+                                  5 -  Documentation
+
+
+             The following documents will be produced for this project:
+
+               []   T2GATE.DO   - Design Objective
+
+               []   T2GATE.GED  - General External Design
+
+               []   T2GATE.GID  - General Internal Design
+
+               []   T2GATE.ERS  - External Reference Specification
+
+               []   T2GATE.IMS  - Internal Maintenence Specification
+
+               []   T2GATE.QAS  - Quality Assurance Summary
+
+             The  completion   of  T2GATE.IMS   signifies  the   completion  of
+        programmer documentation for this project.
+
+             In  addition  to  the  above  project  generated   documents,  the
+        following   Network   Documentation  may   provide   useful  background
+        information:
+
+               []   TYMPO.DOC    - Tymnet-II Principles of Operation
+
+               []   XRAY05.DOC   - Tymnet-II  Operations  Manager  Guide
+                       and Glossary
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        5                       General External Design              T2GATE.GED
+        Completion and Acceptance                             February 12, 1988
+
+
+
+
+
+
+                            6 -  Completion and Acceptance
+
+
+             The project shall be  considered complete after a  programmer test
+        of all features  implemented and upon  completion of the  ERS document.
+        At that time  the features shall be  released to the  Quality Assurance
+        Unit for further complete  testing.  A review by the  Quality Assurance
+        Unit and the Tymnet  Accounting Unit managers should precede  the final
+        release of the features implemented.  The IMS should be completed after
+        final testing has occurred.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        6                       General External Design              T2GATE.GED
+    
