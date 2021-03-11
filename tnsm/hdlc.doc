@@ -1,0 +1,242 @@
+
+
+
+      PHYSICAL DECRIPTION                                    January 11, 1987
+
+
+                            3.5  HDLC I/O BOARD LAYOUT
+
+
+                                  ASS #470254-001 REV X
+      __________________________________________________
+      |                                                |
+      |                            P4               P1 |
+      |                            [POWER CONNECTORS]  |
+      |                                                |_____________________
+      |                                     B A E2      C             R6    |
+      |                                                 |E7      [ 5K POT ] |
+      |                                              A  B                   |
+      |                                                                     |
+      |                                                                     |
+      |KJHGFEDCBA                                      DS2                  |
+      |||||||||||E4                        [ MICROCODE PARITY LED ]         |
+      |WVUTSRPNML                                                           |
+      |[ ASYNC BAUD ]                                                       |
+      |KJHGFEDCBA                                                           |
+      |||||||||||E5                                                         |
+      |WVUTSRPNML                                                           |
+      |                                                                     |
+      |  SW10  SW9                                                          |
+      |                                                                     |
+      |SW11          [ 40-PIN ASYNC CONNECTOR ] P5                          |
+      |SW12                 PORTS 11-14                                     |
+      |                                                                     |
+      |SW13          [ 40-PIN SYNC  CONNECTOR ] P6                          |
+      |SW14                 PORTS  4-7    SW5  SW1                          |
+      |[ 26-PIN CONNECTOR ] P8 SYNC                                         |
+      |[ 26-PIN CONNECTOR ] P9 SYNC                                         |
+      |SW15                                                                 |
+      |SW16                               SW6  SW2                          |
+      |                                                                     |
+      |                                                                     |
+      |SW17          [ 40-PIN SYNC  CONNECTOR ] P7            DS1           |
+      |SW18             PORTS  0-3    SW7  SW3        [ SYS CLR LED ]       |
+      |                                           A   10W         11W       |
+      |SW19                                       | ________   ________     |
+      |SW20                           SW8  SW4  C-B |87654321||87654321|    |
+      |                                         E3   --------   --------    |
+      |                                           [ WDT/PFT/MFPT SWITCHES ] |
+      |                                                                     |
+      |                                                       C-B A E1      |
+      |                                           [ 26-PIN TTY CONNECTOR ]P2|
+      |              A B                                                    |
+      |              |                                                      |
+      |__________     C D                                                   |
+                 |                                                          |
+                 |                                                          |
+                 |                          [ 50-PIN CPU RIBBON CONNECTOR ] |
+                 |__________________________________________________________|
+
+
+      9                            HDLC u-Engine                     HDLC.FSD
+
+
+      INSTALLATION                                           January 11, 1987
+
+
+         E4-E5  [AYSYNCHRONOUS CHANNEL BAUD RATE SELECT]
+
+             Channels 10 - 13 are  divided into two pairs of  channels driven
+             by a Z80-SIO/2 controller with a T609 custom SIO support device.
+             Channels 10 - 13 are configured for RS232C operation.  Baud rate
+             timing is provided by a 14411 baud rate generator.  Each pair of
+             async channels  may be  strapped for one  of the  available baud
+             rates by terminating  the asynchronous BR  bus with a  jumper to
+             one of the outputs of  the 14411.  The output of the  jumper pad
+             for E4 is tied to both the transmit and receive clock  inputs of
+             the Z80-SIO/2 driving channels 10 - 11(location 4A).  The output
+             of  the jumper  pad for  E5  is tied  to both  the  transmit and
+             receive clock inputs of the Z80-SIO/2 driving channels 12 - 13.
+
+       
+              NOTE: Channel 10 baud rate will always EQUAL channel 11.
+                    Channel 12 baud rate will always EQUAL channel 13.
+
+              ASYNCHRONOUS DESIGNATOR ADDRESSING
+                    
+              CHANNELS 10-11  CHANNELS 12-13  BAUD RATE
+              --------------  --------------  ---------
+
+                E4A to E4L      E5A to E5L      9600
+                E4B to E4M      E5B to E5M      4800
+                E4C to E4N      E5C to E5N      2400
+                E4D to E4P      E5D to E5P      1200
+                E4E to E4R      E5E to E5R       600
+                E4F to E4S      E5F to E5S       300
+                E4G to E4T      E5G to E5T       150
+                E4H to E4U      E5H to E5U       135
+                E4J to E4V      E5J to E5V       110
+                E4K to E4W      E5K to E5W        75
+
+
+
+         E6  [BAUD RATE MULTIPLIER]
+
+             On  board timing  is available  for the  Z80-SIO/2 and  the T609
+             support devices  for I/O data  timing if required.   A 1.8432MHz
+             crystal  oscillator  drives  a  14411  baud  rate  generator (at
+             location  2W).   The  14411  divides  the  oscillator  frequency
+             providing seven  continuous frequencies output  on the  BR (baud
+             rate) bus  (signals BR1, BR2,  BR3,...  BR7).  The  frequency of
+             the  baud rate  generater can  be multiplied  by one  of several
+             values by strapping the jumper pad at E6.  Each SYNC/SIO channel
+             has a 74151 data selector in parallel to lines BR1 -  BR7.  Each
+             data  selector  has its  three  input select  pins  tied  to the
+             outputs of  rotary switches.   Switch settings 1  - 7  are valid
+             settings.  0, 8, and 9 are unused.
+
+
+
+
+      22                           HDLC u-Engine                     HDLC.FSD
+
+
+      INSTALLATION                                           January 11, 1987
+
+
+              E6 BAUD RATE STRAP OPTIONS
+
+                   Jumper Options         Multiplier
+                   ---------------        -----------
+
+              1.   A to C + B to D        X1  (UNUSED)
+              2.   A open + B to D        X8  (UNUSED)
+              3.   A to C + B open        X16 (USED)
+              4.   A open + B open        X64 (UNUSED)
+
+                 Normally option  3 is selected with A jumped to C and  B and
+             D open.
+
+
+         E7  [4MHz/8MHz 2XS CLOCK]
+
+             The primary source of all timing signals on the I/O board is the
+             8.064MHz crystal oscillator  (location Y1).  The 8MHz  signal is
+             divided by  2 at location  7A (7474) to  produce the  4MHz CLOCK
+             signal  and  its  complement  ECLOCK.   A  third  timing  signal
+             (2XSCLOCK) is derived from the buffered 8MHz signal by jumpering
+             E7 A to B or the buffered 4MHz signal CLOCK by jumpering E7 B to
+             C.  2XSCLOCK is further  divided through a 74163  synchronous 4-
+             bit counter (location  9N) to produce  the logic timing  for the
+             Z80 controllers  and the T609  support devices.  Normally  E7 is
+             jumpered from B to C.
+
+
+         SW1-SW10  [BAUD RATE SELECT SWITCHES]
+
+             The 10 rotary  switches on the board  are the switches  with the
+             outputs tied  to the 74151  multiplexers for selecting  the baud
+             rates  for  channels  0  -  9  I/O  data  timing.    Unlike  the
+             asynchronous channels 10 -  13 whose baud rates are  selected in
+             pairs,  each  SIO/SYNC  channel   (channels  A  or  B)   may  be
+             individually selected.  I/O  data timing may either  be provided
+             externally (from modems, clock drivers or a neighboring machine)
+             or  internally utilizing  the on-board  clocks. If  the on-board
+             clocks are to be used one of the seven possible frequencies must
+             be selected for the channel by adjusting the  appropriate rotary
+             switch.
+
+
+         SW11-SW20  [INTERNAL/EXTERNAL CLOCK SELECT]
+
+             The 10  switches on  the transmit and  receive lines  (TCA, TCB,
+             RCA, RCB) select the  on-board clocks or external  clock sources
+             for each channel.   When any of  these switches are  thrown "ON"
+             (closed)  towards the  rear panel  of the  HDLC  Microengine the
+             timing provided by  the board's BR  bus will be  utilized.  When
+             the switches  are thrown  "OFF" (open)  external clocks  will be
+             required.  In either case  both the transmit and  receive clocks
+
+
+      23                           HDLC u-Engine                     HDLC.FSD
+
+
+      INSTALLATION                                           January 11, 1987
+
+
+             will be provided from the same source. Clocks on unused channels
+             should be turned "OFF" until such time as they may be required.
+
+
+                BAUD RATE and INTERNAL/EXTERNAL SWITCH SELECTION
+
+                Channel     Baud Rate Switch     Int/Ext Switch
+                -------     ----------------     --------------
+
+                  0              SW8                 SW20
+                  1              SW4                 SW19
+                  2              SW7                 SW18
+                  3              SW3                 SW17
+                  4              SW6                 SW16
+                  5              SW2                 SW15
+                  6              SW5                 SW14
+                  7              SW1                 SW13
+                  8              SW10                SW12
+                  9              SW90                SW11
+
+
+                BAUD RATE SWITCH SELECTION
+
+                Switch Selection     Baud Rate
+                ----------------     ---------
+
+                      1               1600
+                      2               2400
+                      3               4800
+                      4               9600
+                      5              14400
+                      6              19200
+                      7              28800 (unused)
+
+
+             NOTE: Baud rate determination presumes a 14411 multiplier output
+             of X16.
+
+             As this is  a microcode driven  I/O processor all  data transmit
+             and receive operations are controlled by the routines  stored in
+             the PROMs.  Control signals  IORQ, RD/WT, C/D and  STATUS evoked
+             by the  firmware and tied  to the Z80-SIO/2s  and the  T609s are
+             used to handle all data transfers.  All flagging, required modem
+             signalling and modem status monitoring signalling is  handled by
+             the Z80s.  Serial data out and modem control signals  are output
+             from the Z80s  to 1488 line driver  inputs and the  1488s output
+             the  RS-232C  signals  (NRZ)  to  the  external  I/O connectors.
+             Receive  data and  modem signals  are received  on the  same I/O
+             external connectors and input to the T609 support  devices.  The
+             serial data received is converted to parallel and clocked to the
+             input sector over the bidirectional, tri-state S0 - S7 (SIO) bus
+             with any extra bits and flags stripped off.
+
+
+      24                           HDLC u-Engine                     HDLC.FSD
+   
