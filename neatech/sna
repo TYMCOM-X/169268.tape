@@ -1,0 +1,1480 @@
+
+
+  CRM 4 for Host Interface                                 April 15, 1987
+
+
+
+
+
+
+                       7 -  CRM 4 for Host Interface
+
+
+
+
+
+
+
+                               7.1  Overview
+
+
+  This project   implements the support  of 3270 Display  System Protocol
+  (DSP)  connection  request  mode  4  (CRM4)  for  SNA  host  interfaces
+  (secondary ports).   An  SNA host interface  (HIF) connected to  an SNA
+  primary station will accept CRM4 call requests from terminal PADs which
+  support the 3270 DSP CRM4. This will allow terminals, connected to such
+  interfaces as  CMT, to be associated with a particular printer  as soon
+  as the terminal establishes a call to the SNA HIF.
+
+
+
+  The SNA  HIF currently,  in versions 2.00  and earlier,  supports CRM1,
+  CRM2 and CRM3.  The next version, 3.00,  will support all of  these CRM
+  types with the  addition of CRM4 for  secondary ports. CRM4  support by
+  the SNA primary ports will follow in a future version.
+
+
+
+  To fully understand this  document, the reader should be  familiar with
+  the following documents:
+
+
+      [1] 3270 Display System Protocol - 2nd Edition June 1983
+      [2] Tymnet SNA External Reference Specification 
+      [3] Tymnet Circuit Protocol Reference Manual (August 25, 1983)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  80                SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+  CRM 4 for Host Interface                                 April 15, 1987
+
+
+                       7.2  CRM 4 Calling Procedures
+
+
+
+
+  CRM 4 is an associated device CRM. For this project, CRM 4  is  used by
+  the terminal PAD,  such as CMT, to  request a connection for  a printer
+  which is to be associated with an existing connection to a terminal.
+
+
+  For example, the SNA interface  at the SNA host side will  be sysgenned
+  to associate one  or more printers with  either one or  more terminals.
+  When the end user tries to logon to the SNA host from a  terminal which
+  has associated  printers, the SNA  interface will allow  the connection
+  only if BOTH the terminal  AND at least one of the  associated printers
+  is  not  already connected  to  another  end user,  and  if  the remote
+  terminal configuration  matches the  local terminal  configuration.  By
+  finding  an available  terminal  and printer  as soon  as  the terminal
+  connection  request arrives,  the SNA  HIF will   keep a  terminal from
+  being assigned to  a printer which may  already be assigned  to another
+  terminal. The printer will be restricted, by these  requirements,  from
+  receiving data from the wrong end user.
+
+
+   When the SNA interface determines that the printer may be  assigned to
+  the  terminal, information  uniquely identifying  the terminal  is sent
+  back to CMT. This information uniquely identifying the terminal  is now
+  echoed  back  by  CMT  inside  a  connection  request  message  for the
+  associated  printer  using  the   CRM  4  format.  The  SNA   HIF  will
+  successfully assign the requested  printer to this circuit only  if the
+  associated terminal is still in the 'BUSY' state AND the printer  is in
+  the 'WAIT' state, and also the remote printer configuration  must match
+  the local  printer configuration.   The SNA HIF  will tie  together the
+  terminal and  associated printer until  BOTH are disconnected  and once
+  again become available.
+
+
+  The  following subsections  will describe  in greater  detail  the call
+  establishment and call  clearing procedures. These  descriptions assume
+  the configuration illustrated below:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  81                SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+  CRM 4 for Host Interface                                 April 15, 1987
+
+
+                        - - - - - - - - - - - - - - - - -
+                      /                                   \
+                 ---------------          ---------   -----------
+                 |  SNA        |          |  CMT  |   | CONSAT  |--- CRT1
+     -------     |  HIF        |          |       |   |         |--- CRT2
+     | IBM |-----| HCRT1&HPRT1 |          |       |   |         |--- CRT3
+     | host|     | HCRT2&HPRT1 |          ---------   |         |--- PRT1
+     |     |     | HCRT3&HPRT2 |                      |         |--- PRT2
+     -------     ---------------                      -----------
+                      \                                   /
+                        - - - - - - - - - - - - - - - - - 
+
+  Legend:
+  &    a logical association setup during system generation
+  HCRT host terminal
+  HPRT host printer
+  CRT  terminal
+  PRT  printer
+  HIF  host interface 
+  CMT  Character Mode Terminal server
+
+
+
+
+
+                     Figure 7 - Example Configuration
+
+
+
+
+
+
+
+
+
+              7.2.1  Call Establishment
+
+
+
+  The following stages demonstrate how a call request is made using CRM4.
+
+         Stage 1. When the  end user at CRT2  wishes to logon to  the SNA
+            host, the end user will first log into CMT and issue  the CRM
+            4 logon selection from  the CMT logon screen.  CMT  will then
+            send a 'CALL USER DATA'  message to the SNA HIF to  request a
+            connection to  a terminal with  an associated  printer.  This
+            message will use  a CRM  3 format and will indicate a printer
+            is attached (byte 5 bit 4 of the user data field is set).
+
+
+         Stage 2.  The SNA  HIF will use  the requested  CRM to  find the
+            first available terminal with at least one  available printer
+
+
+  82                SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+  CRM 4 for Host Interface                                 April 15, 1987
+
+
+            associated with it.   If HCRT1 and HCRT2  are both in  use or
+            don't have terminal configurations which match the requesting
+            terminal configuration, then the SNA HIF will check to see if
+            HCRT3 would qualify for the terminal connection. For HCRT3 to
+            qualify, it  must be  in the  'IDLE' state  and must  have an
+            associated printer which is also in the 'IDLE' state. If both
+            HCRT3 and  HPRT2 are in  the "IDLE" state,  then the  SNA HIF
+            will assign HCRT3 to this circuit. HPRT2 is now in the "WAIT"
+            state and HCRT3 is in the "BUSY" state. The SNA HIF returns a
+            "CIRCUIT ENABLE"  message to CMT.  This message  contains all
+            necessary information to uniquely identify HCRT3.
+
+
+         Stage 3. CMT now sends a "CALL USER DATA" message with the CRM 4
+            format back to  the SNA HIF to  request a connection  for the
+            associated  printer  (HPRT2).   The   Additional  Destination
+            Designator (ADD) portion of this 'CALL USER DATA'  message is
+            the same as the ADD portion of the 'CIRCUIT ENABLE' message.
+
+
+         Stage  4.   The  SNA  HIF   will  perform  some   checks  before
+            successfully  assigning  HPRT2 to  this  circuit.  HCRT3 must
+            still be  in the  "BUSY" state AND  HPRT2 must  be in  in the
+            "WAIT" state. If either  device is not in the  correct state,
+            an  "INVITATION  TO  CLEAR"  message  with  reason  code "03"
+            (facility failure  detected) is sent  to CMT. In  addition to
+            the state checking, the configuration of HPRT2 in the SNA HIF
+            must  match the  configuration of  the printer  found  in the
+            "CALL  USER  DATA"  requesting  the  printer  connection. The
+            configuration  information  which is  checked  is  the device
+            format, host number,  transparency, color and  character set.
+            If  the  configuration  information  doesn't  match  then  an
+            "EBCDIC"  message will  be sent  to CMT  and the  end-user to
+            indicate the mis-match  followed by an "INVITATION  TO CLEAR"
+            message also  with cause code  "03" to request  to disconnect
+            the printer circuit.
+
+
+
+         Stage 5. If all checks are successfull, the SNA HIF  will assign
+            HPRT2 to this new circuit. HCRT3 and PRT2 will now be  in the
+            "BUSY" state.  The SNA HIF  sends a "CIRCUIT  ENABLE" message
+            back to CMT.
+
+
+
+
+
+
+
+
+
+
+
+  83                SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+  CRM 4 for Host Interface                                 April 15, 1987
+
+
+          The following table gives the "EBCDIC" messages which  might be
+            sent and under what conditions:
+
+
+
+       "EBCDIC" MESSAGE                    MESSAGE CAUSE
+    --------------------------------      ------------------
+  'SNAH 01 - INVALID HOST NUMBER'         o host # mis-match
+
+  'SNAH 03 - CONTROL UNIT NOT AVAILABLE'  o controller with available
+                                            CRT & assoc. PRT not found
+  'SNAH 04 - DEVICE NOT AVAILABLE'        o no CRT device currently
+                                            available 
+
+  'SNAH 06 - DEVICE WITH SPECIFIED        o PRT or CRT has transparency,
+   ATTRIBUTE NOT AVAILABLE'                 device size, color, and/or
+                                            character size mis-match
+  'SNAH 07 - DEVICE NOT ACTIVATED'        o PRT or CRT device not 
+                                            activated by SNA host.
+  'SNAH 08 - DEVICE ALREADY IN USE'       o CRT or PRT device already 
+                                            in use by another end user.
+  'SNAH 0B - NO ASSOCIATED DEVICE'        o no PRTs associated to CRT
+
+  'SNAH 0C - ASSOCIATED DEVICE ALREADY    o all associated PRTs are 
+   IN USE'                                  unavailable.
+       
+  'SNAH 10 - ASSOCIATED CRT UNATTACHED'   o CRT associated with this 
+                                            PRT not in 'BUSY' state.
+  'SNAH 11 - INVALID ASSOCIATION'         o PRT connection is not for
+                                            LU.T1 or LU.T3
+                                          o CRT and associated PRT are 
+                                            not attached correctly.
+
+
+
+
+                     Table 1 - "EBCDIC" Error Messages
+
+
+
+
+
+
+
+
+
+              7.2.2  Call Clearing
+
+
+
+  Once a terminal has successfully  been assigned by the SNA HIF  to it's
+  associated printer, they  will be tied  together until the  circuit for
+
+
+  84                SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+  CRM 4 for Host Interface                                 April 15, 1987
+
+
+  BOTH devices is cleared. If just one circuit is lost, the SNA  HIF will
+  also clear the other circuit.  These devices will now be in  the "IDLE"
+  state. If the inactivity timers  for BOTH devices elapses, the  SNA HIF
+  will also clear both circuits and put the devices into "IDLE" state.
+
+
+
+
+
+
+              7.2.3  Associating Terminals and Printers
+
+
+
+  To associate terminals and  printers together in one pool,  the TYMFILE
+  macros for  defining PU and  LU addresses and  labels are used.  No new
+  macros were added to implement the CRM 4 project.
+
+
+  For a terminal to have an associated printer, the terminal's PU and the
+  printer's PU must first have  the same 'PU.LABEL' value defined,  or if
+  no label is defined,  the same 'PU.ADDRESS' value defined.  In addition
+  to this requirement, the terminal's  LU and the printer's LU  must have
+  the same 'LU.LABEL' value defined, or if no label is defined,  the same
+  'LU.ADDRESS' value defined.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  85                SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+  LU Type 1 Virtual Host Printer                           April 15, 1987
+
+
+
+
+
+
+                    8 -  LU Type 1 Virtual Host Printer
+
+
+
+
+
+
+
+                               8.1  Overview
+
+
+  This  document  describes  the general  external  design  of  the LU_T1
+  virtual printer feature in  the SNA interface. This feature  allows SNA
+  hosts to send LU_T1 SCS printer data streams through TYMNET to an ASYNC
+  or Bisync 3270 printer.
+
+
+  The SNA  interface must map  LU_T1 SCS printer  data streams  into 3270
+  Display System Protocol (DSP) Write Structured Field (WSF) commands for
+  the network.   The 3270 DSP messages are destined for either  a network
+  server or  interface which supports  3270 DSP implementation  for LU_T1
+  SCS printer data streams.
+
+
+  For communication between  an SNA host and  an ASYNC printer,  the 3270
+  DSP messages will be sent to the Character Mode Terminal  (CMT) server.
+  CMT will then map the 3270 DSP messages into the TYMNET  ASYNC protocol
+  understood  by the  destination  ASYNC terminal  PAD  (TYMSAT).  TYMSAT
+  then sends the printer data stream in an ASYNC format to the printer.
+
+
+  When communicating between an SNA host and a 3270 Bisync  printer, 3270
+  DSP messages are sent to the 3270 Bisync terminal interface  (PBT). PBT
+  then maps the SCS printer data stream from the DSP WSF into 3270 Bisync
+  for the printer.
+
+
+  The following sections describe the format of SCS printer  data streams
+  received  from the  SNA host,  the format  of this  data stream  on the
+  network side,  and finally  how the  SNA interface  maps between  the 2
+  formats.
+
+
+  To fully understand this  document, the reader should be  familiar with
+  the following documents:
+
+
+     [1] SNA Sessions Between Logical Units (GC20-1868-2)
+     [2] IBM 3270 Information Display System Data Stream
+
+  86                SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+  LU Type 1 Virtual Host Printer                           April 15, 1987
+
+
+         Programmer's Reference (GA23-0059-0)
+     [3] 3274 Control Unit Description and Programmer's Guide
+         (GA23-0061-0)
+     [4] SNA Format and Protocol Reference Manual (SC30-3112-2)
+     [5] 3270 Display System Protocol 2nd Edition June 1983
+
+
+
+
+
+
+          8.2  Conversion Between LU_T1 SCS Data and 3270 DSP WSF
+
+
+  The  SNA interface  will convert  between LU_T1  SNA  Character Streams
+  (SCS) and  3270 Display  System Protocol  (DSP) using  Write Structured
+  Fields (WSF). LU_T1 SCS printer data flows to and from the SNA  host in
+  the  form   of  Request  Units   (RUs)  containing   structured  and/or
+  unstructured  fields.   On  the network  side, 3270  terminal  side DSP
+  messages carry the LU_T1 SCS  data in the form of WSF  commands between
+  the SNA interface and a 3270 DSP terminal interface.
+
+
+
+
+
+              8.2.1  LU_T1 SCS Data
+
+  For LU_T1 printer data, the SNA  host will use an SCS data  stream. The
+  SCS printer data stream is sent in an SNA Request Unit (RU).  There are
+  only 2 possible RU formats for this SCS data stream.
+
+  One format sends the SCS data stream as a structured field  following a
+  Function Management Header type 1 (FMH1). The second format   sends the
+  SCS data  stream without  using structured  fields. This  second format
+  would not include an FMH.
+
+
+   The BIND sent from the host will indicate whether FMHs are  allowed. A
+  bit in the Request Header (RH) for that particular SCS RU will indicate
+  whether the FMH is present or not.
+
+
+  The IBM 3274 Programmer's Guide  Chapter 1 discusses the format  of RUs
+  using Write Structured Field (WSF) command and FMH1 to convey SCS data.
+  In this chapter, it is pointed out that the format header  indicator in
+  the  BIND command  (byte  6, bit  1) must  specify  function management
+  header included if FMHs are to be used on this LU-LU  session. However,
+  in Chapter 5 of this same document, a table indicates very clearly that
+  the format indicator in the BIND command must indicate no FMHs included
+  or  the  BIND will  be  rejected. Because  this  document  explains how
+  structured fields could be used for SCS data, but then points  out that
+
+
+  87                SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+  LU Type 1 Virtual Host Printer                           April 15, 1987
+
+
+  this  is  currently not  supported  by 3274s,  both  methods  have been
+  included in this document in case structured fields are ever used.
+
+
+  The following  sections describe in  detail both structured  (with FMH)
+  and unstructured (without FMH) RU formats.
+
+
+
+
+  8.2.1.1  SCS Data Structured Field
+
+
+  The SCS data structured field has the following general  format whether
+  it is outbound (from the host) or inbound (to the host):
+
+
+  length - type - parameters and data
+
+
+  The length-field  value includes  the 2  bytes of  the length  field. A
+  value of  zero causes the  structured field to  be treated as  the last
+  field in the RU.
+
+
+  If SCS data is sent in the parameter and data field, then the type must
+  be X'41'. This is the SCS data identifier.
+
+
+  The first byte of the parameters and data field must be X'00'.  This is
+  a reserved byte and will be rejected by the SNA interface if  not equal
+  to X'00'.
+
+
+  When structured fields are used  to convey SCS printer data, a  FMH1 is
+  used to  direct the structured  field to  a 3274 printer  in LU  type 1
+  session.  The 3274  will only support FMH  type 1, and the  contents of
+  this header  must be X'0601000B6000'.   The FMH-1 will  be the  first 6
+  bytes of the RU after the RH. Refer to Appendix II. Function Management
+  Header Type 1 a description of the FMH-1 fields.
+
+
+   As indicated by  the FMH concatenation bit  in the FMH-1 (Byte  1, bit
+  0), no FMH  will follow this FMH-1  containing SCS data. This  means an
+  FMH-1 with SCS data is the first and only FMH in an RU.
+
+
+  An FMH-1  must be contained  within a chain.  It is mandatory  that the
+  Request  Header  (RH)  proceed  the  FMH-1  and  have  the  Begin Chain
+  Indicator set to first in chain.
+
+
+
+
+  88                SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+  LU Type 1 Virtual Host Printer                           April 15, 1987
+
+
+   The  RU may  contain one  or  more structured  fiof  the  same or
+  different types.  Because  of this, the  length and type  of structured
+  field is specified at the  start of each structured field. A  3274 will
+  only  accept one  FMH per  RU,  that is,  no concatenation  of  FMHs is
+  supported by 3274s.
+
+
+  The host indicates  structured field usage in  the BIND command  at the
+  start of the session. The  format header indicator in the  BIND command
+  (byte 6, bit 1) must specify function management header included. Also,
+  the format indicator (FI) in the  RH of the first RU in the  chain will
+  be on to indicate that an FMH is at the start of the RU. The  3274 will
+  only support FMH type 1 and  can only support one FMH per RU.  For each
+  RU there maybe one or more structured fields.  These  structured fields
+  maybe of various types, such as Outbound  3270 Data Stream (DS), SCS DS
+  and so on. Refer to Appendix I.  Structured Fields.
+
+
+  The following is the format of  an RU which includes  at least  one SCS
+  Data structured field. An SCS Data structured field is  not necessarily
+  the first structured field in the RU as depicted in this diagram.
+
+
+
+                            RU Format with FMH
+
+             <--------------- RU ---------------------------------..>
+  ----------------------------------------------------------------
+  | TH | RH | FMH | lngth | SCS  | 00 | SCS | other structured 
+  |    |    |     |       | ID   |    | Data|   fields .............
+  ----------------------------------------------------------------
+                   <--- Structured  -------->
+                         Field 1             
+
+
+
+
+                    Figure 8 - Structured SCS RU Format
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  89                SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+  LU Type 1 Virtual Host Printer                           April 15, 1987
+
+
+
+
+
+  The fields of the SCS structured RU have the following meanings:
+
+
+
+  -------------------------------------------------------------------
+  Field   Name          Contents    Field    Meaning
+                                    Length
+  -------------------------------------------------------------------
+  TH      Transmission FID = B'02'   6      FID must indicate FID2.
+          Header       MPF = B'10'          MPF must indicate first
+                                            segment. (Refer to FAPL
+                                            for detailed format)
+
+  RH      Request/    BC = B'01'   4 or 3   BC must indicate begin
+          Response    FI = B'01'            chain. FI must indicate
+          Header                            FMH follows. (Refer to
+                                            FAPL for detailed format)
+
+  FMH     Function  X'0601000B6000'  6    The 327x equiped with SFAP 
+          Management     (FMH-1)          support requires this format.
+          Header                          (Refer to 3274 Programmers
+                                           Guide pg.1-26)
+
+  lngth   Length       X'nnnn'       2    Length of structured field.
+                                          If X'0000', then indicates
+                                          last or only structured field
+                                          in transmission. (Refer to 3274
+                                          Programmers Guide pg. 1-31)
+  SCS ID  SCS Data     X'41'         1    Indicates following structured 
+          Identifier                      field contains SCS data stream.
+                                          (Refer to Programmer's Guide
+                                           pg. 2-26)
+                       X'00'         1    Reserved, must be zero.
+
+  SCS     SCS Data               length-4 The SCS printer data stream.
+  Data    Structured                      (Refer to Programmers Guide
+          Field                            pg. 2-26)
+
+
+
+                    Table 2 - Structured SCS RU Fields
+
+
+
+
+
+
+
+
+
+
+  90                SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+  LU Type 1 Virtual Host Printer                           April 15, 1987
+
+
+  8.2.1.2  SCS Data without FMH
+
+  The SNA host may send SCS printer data without employing FMHs.  In this
+  case, the RU will contain only  SCS printer data as defined by  the IBM
+  SNA  Sessions Between  Logical  Units (GC20-1868-2).  SCS  data streams
+  consist of a sequential string of SCS controls and data characters. The
+  host will convey this SCS string as an RU chain to the SNA interface.
+
+
+  The SNA interface will expect the  first byte of the RU to be  SCS data
+  if the Format Indicator in the RH indicates no FM header  following the
+  RH.
+
+
+  The following  is the format  of an RU  containing SCS data  without an
+  FMH.
+
+
+
+                           RU Format without FMH
+
+             <--------------- RU ----------------->
+  --------------------------------------------------
+  | TH | RH |  SCS printer data stream  .......... |
+  --------------------------------------------------
+
+
+
+
+                   Figure 9 - Unstructured SCS RU Format
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  91                SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+  LU Type 1 Virtual Host Printer                           April 15, 1987
+
+
+
+  The  following  table describes  the  different fields  for  an  SCS RU
+  without an FMH:
+
+
+
+  -------------------------------------------------------------------
+  Field   Name          Contents    Field    Meaning
+                                    Length
+  -------------------------------------------------------------------
+  TH      Transmission FID = B'02'   6      FID must indicate FID2.
+          Header       MPF = B'10'          MPF must indicate first
+                                            segment. (Refer to FAPL
+                                            for detailed format)
+
+  RH      Request/    BC = B'01'   4 or 3   BC must indicate begin
+          Response    FI = B'00'            chain. FI must indicate no
+          Header                            FMH follows. (Refer to
+                                            FAPL for detailed format)
+
+  SCS     SNA                         n     String of SCS control codes
+  Data    Character                         and data characters. (Refer
+          String                            to SNA Sessions Between 
+                                            Logical Unit Part 2 Ch.1)
+
+
+
+
+                   Table 3 - Unstructured SCS RU Fields
+
+
+
+
+
+
+
+              8.2.2  3270 DSP
+
+  The SNA interface will send the SCS printer data stream to  the network
+  as a 3270 DSP command. The  SCS data stream will be enclosed in  a 3270
+  Write Structured Field (WSF) command.
+
+
+  The  following  diagram  is  the  format  of  a  3270  DSP  WSF message
+  containing an SCS printer data stream. There could be various  types of
+  structured fields in  one DSP WSF message.  An SCS structured  field is
+  not  necessarily  the first  structured  field in  the  message  as the
+  following diagram demonstrates.
+
+
+
+
+
+
+  92                SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+  LU Type 1 Virtual Host Printer                           April 15, 1987
+
+
+                          DSP WSF Message Format
+
+
+
+  ----------------------------------------------------------------------
+  | DSP | ESC | WSF | lngth | SCS | 00 | SCS |  Other Structured | DSP |
+  | HDR |     |     |       | ID  |    | Data|      Fields   ....| TLR |
+  ----------------------------------------------------------------------
+                     <-- Structured Field 1 ->
+
+
+
+
+                    Figure 10 - DSP WSF Message Format
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  93                SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+  LU Type 1 Virtual Host Printer                           April 15, 1987
+
+
+
+
+
+  The following  table describes the  fields of the  WSF command  for SCS
+  data:
+
+
+
+  --------------------------------------------------------------------
+  Field   Name      Contents    Field    Meaning
+                                Length
+  --------------------------------------------------------------------
+
+  DSP     3270 DSP                3      DSP header includes UCN,
+  HDR     Header                         flags, and Sequence number.
+                                         (Refer to DSP manual)
+
+  ESC     Escape     X'27'        1      First byte of DSP command
+                                         must be escape character.
+
+  WSF     Write       X'F3'       1      Identifies the next field 
+          Structured                     as a structured field. (Refer 
+          Field                          to 3274 Programmer's Guide 
+                                         pg. 1-25)
+
+  lngth   Length      nnnn        2      Length of structured field. If
+                                         X'0000' then SCS data field end
+                                         indicated with ETX trailer.
+
+  SCS ID  SCS Data    X'41'       1      Indicates following structured
+          Identifier                     field contains SCS data stream.
+                                         (Refer to Programmer's Guide
+                                          pg. 2-25)
+
+                      X'00'       1      Reserved must be zero.
+
+  SCS     SCS Data    nnn...  length-4   The SCS printer data stream.
+  Data    Structured                     (Refer to Programmer's Guide
+          Field                           pg. 2-26)
+
+
+
+
+                     Table 4 - DSP WSF Message Fields
+
+
+
+
+
+
+
+
+
+
+  94                SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+  LU Type 1 Virtual Host Printer                           April 15, 1987
+
+
+              8.2.3  Mapping Between LU_T1 SCS and 3270 DSP
+
+
+
+  The  SNA interface  will  convert between  RUs consisting  of  SCS data
+  streams  on  the host side,  and 3270 DSP  WSF commands  containing SCS
+  structured fields on the network side.
+
+
+  Whether or not the SCS printer data stream is received from the host as
+  a structured field, the SCS data stream always has the same format when
+  sent to the  network.  The SNA interface  will always use the  3270 DSP
+  WSF command when communicating with the network.
+
+
+
+
+  8.2.3.1  SCS Structured Field Mapping to DSP WSF
+
+
+
+  If the host is using SCS structured fields, then the SNA interface will
+  check the  FMH. If  the FMH has  the value  X'0601000B6000' ,  the BIND
+  properly specifies FMH accepted, the TH specifies first in segement and
+  the RH specifies  begin chain and FMH  follows, then the  SNA interface
+  will proceed to map the remaining  chain of RUs into a WSF  command for
+  the network.
+
+
+  The  WSF  command  is  appended  to  the  beginning  of  the  remaining
+  structured fields in the RU  chain.   This WSF command is then  sent to
+  the  network  as  a DSP  command;  that  is, a  DSP  header  and Escape
+  character is attached to the front of the command and a DSP  trailer is
+  appended  to the  end of  the WSF  command (after  the  last structured
+  field).
+
+
+  If the  length byte in  the structured field  is zero, then  the length
+  field in the DSP WSF command will also be zero and the message  will be
+  terminated with an ETX.
+
+
+  For a description  of the frame and  network message formats,  refer to
+  the sections  entitled 'SCS  RU Format with  FMH' and  section entitled
+  '3270 DSP'.
+
+
+
+
+  It is possible to have more  than one structured field in a  single DSP
+  WSF command. All structured fields  received from the host in  the same
+  RU chain will be mapped into the same WSF command for the network.
+
+
+  95                SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+                      APPENDIX I.   Structured Fields
+
+
+
+
+
+  LU-LU session type 1 uses the SNA Character String (SCS) data format as
+  opposed to the 3270 Data Stream used by LU-LU sesion types 2 and 3. The
+  SCS data maybe  sent as a structured  field by appending  length bytes,
+  SCS identifier and a  reserved byte of zeroes  to the start of  the SCS
+  data stream.
+
+
+  The  following table  contains all  the different  types  of structured
+  fields which maybe used:
+
+
+
+  Types of Structured Fields
+
+
+   ID      Name
+   --      -----
+   00      Reset Partition
+   01      Read Partition
+            02 = Query
+            6E = Read Modified All
+            F2 = Read Buffer
+            F6 = Read Modified
+   06      Load Programmed Symbols
+   09      Set Reply Mode
+   0B      Set Window Origin
+   0C      Create Partition
+   0D      Destroy Partition
+   0E      Activate Partition
+   40      Outbound 3270DS
+  *41      SCS Data Structured Field
+   80      Inbound 3270DS
+   81      Query Reply
+             81 Query Reply (Usable Area)
+             84 Query Reply (Partitions)
+             85 Query Reply (Character Sets)
+             86 Query Reply (Color)
+             87 Query Reply (Highlight)
+             88 Query Reply (Reply Modes)
+             8A Query Reply (Field Validation)
+
+  * This is the only structured field used by 3270 LU_T1 printers.
+    All LU_T1s use SCS data stream not 3270 data stream.
+
+  131               SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+  Structured Fields                                        April 15, 1987
+
+
+                   Table 5 - Types of Structured Fields
+
+
+
+
+
+  The  information  in  this  Appendix was  gathered  from  the  IBM 3270
+  Information Display  System Data  Stream Programmer's  Reference (GA23-
+  0059-0)  chapter  7  and  the IBM  3274  Control  Unit  Description and
+  Programmer's Guide (GA23-0061-0) chapter 1. The  Programmer's Reference
+  did not  mention ID X'41';  this ID was  derived from  the Programmer's
+  Guide.  Perhaps  the  Programmer's  Guide  is  more  current  than  the
+  Programmer's Reference. For more information on structured  field refer
+  to these two IBM documents.;  makeappendix;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  132               SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+  Function Management Header Type 1                        April 15, 1987
+
+
+
+
+
+
+             APPENDIX II.   Function Management Header Type 1
+
+
+
+
+
+  This  appendix describes  the meaning  of each  indicator in  the FMH-1
+  accepted by the 3274.
+
+
+
+  FMH-1 Format for 3274 Controller: X'0601000B6000'
+
+  Byte        Bit       Content      Meaning
+  ----        ---       -------      -------
+
+   0                    X'06'        Length of header including length 
+                                     byte.
+   1           0        B'0'         No FMH follows this FMH-1.
+              1-7       B'0000001'   FMH-1 identifier
+
+   2          0-3       X'0'         Console is desired medium for data
+              4-7       X'0'         Logical subaddress
+
+   3           0        B'0'         Stack to be used is senders send 
+                                     stack.
+               1        B'0'         Rcvr may direct data to alternate 
+                                     medium.
+              2-3       B'00'        Reserved
+              4-7       X'B'         Structured Field DSP
+
+   4          0-2       B'011'       Begin/end destination selection
+               3        B'0'         Transmission exchange format
+               4        B'0'         Reserved
+               5        B'0'         No compression
+               6        B'0'         No compaction
+               7        B'0'         Reserved
+   5                    X'00'        Reserved for console medium
+
+
+
+
+                        Table 6 - FMH-1 Description
+
+
+
+
+
+
+
+  133               SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+  Function Management Header Type 1                        April 15, 1987
+
+
+  This information  was gathered  from the  SNA Sessions  Between Logical
+  Units Part 2 Chapter 4.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  134               SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+                                                           April 15, 1987
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                *   ****  ****  ***** *   * ****  ***** *   *
+               * *  *   * *   * *     **  * *   *   *    * * 
+              ***** ****  ****  ****  * * * *   *   *     *  
+              *   * *     *     *     *  ** *   *   *    * * 
+              *   * *     *     ***** *   * ****  ***** *   *
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  135               SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+  LU Type 3 Support for VHR/VTR                            April 15, 1987
+
+
+
+
+
+
+                APPENDIX I.   LU Type 3 Support for VHR/VTR
+
+
+
+
+
+  Support for  an LU  type 3 printer  could be  provided in  the  VHR/VTR
+  product.   Although VTR  will  control the  printer  via an  LU  type 3
+  session, this type of session  cannot be used on a  VTR/VHR connection.
+  LU type 3 does not allow for transmission of data from the  terminal to
+  the host.  This means an LU  type 2 session between VTR and  VHR should
+  be used instead.
+
+
+
+  All SNA/DSP mapping for this session could be performed the same way as
+  for real  LU type 2  (CRT). Every  RU chain coming  from VHR  should be
+  followed by  a dummy RU  from VTR to  change direction  of transmission
+  back to VHR/VTR.
+
+
+
+  A  big  problem with  printer  support is  error  recovery.  Delays are
+  inherent for the printer. For example, paper jam will cause a delay and
+  the necessity to re-transmit.
+
+
+
+  Sending -RSP in case of  such delay is probably not the  best approach.
+  It is suggested that if an RU chain is already partially transmitted it
+  will  be accepted  by VTR  with +RSP  and retained  there  for possible
+  retransmission to 3270. But no new RU chain will be started from VHR to
+  VTR until the delay condition clears. This could be achieved in  VTR by
+  simply not sending the  dummy RU chain with change  direction mentioned
+  above while the delay exists.
+
+
+
+  If  such  backpressure  is  applied by  VTR  then  VHR  will experience
+  accumulation of buffered data for this LU. After a short while VHR will
+  pass the  backpressure signal  to the  network. HIF  on the  other side
+  (say,  CMH) will  backpressure  the host  and  the print  data  will be
+  stopped from sending.
+
+
+
+  Printer logon is  no different from CRT  logon. Printer is  separate LU
+  and  separate VC  and there  will  be no  knowledge within  VHR  of any
+  logical or physical relations between the printer LU and any other LU.
+
+  136               SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+  LU Type 3 Support for VHR/VTR                            April 15, 1987
+
+
+  In other words  VTR will send printer  logon information to VHR  on the
+  session for the printer LU. The logon protocol will be the same  as for
+  CRT.
+
+
+
+  Although not discussed here, the  possible option for VTR is  to obtain
+  printer logon information from  the authorized CRT acting on  behalf of
+  this  printer.  Another  possibility  is to  use  PVC-type  VC  for the
+  printers.
+
+
+
+  If printer logon information is obtained from a CRT there is a question
+  when this information is  obtained. There might be a  requirement (like
+  in TYMNET BSC interface) that the user can request printer logon at any
+  time, including the period when  the CRT used to request it  is already
+  in end-to-end session with remote host application.
+
+
+
+  In this case there is a problem for VTR to backpressure any  new screen
+  updates coming from VHR and to restore the screen in its previous shape
+  after printer logon information was obtained.
+
+
+
+  Backpressure could be applied from VTR to VHR the same way as described
+  previously for the data going  to the printer. As far as  restoring the
+  screen  is  concerned  this  is  internal  VTR  function.   A  possible
+  technique is to obtain the screen content by issuing Read  Buffer, save
+  it and then restore from this information.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  137               SNA/SDLC External Reference Manual         SNAERS.DOC
+
+
+
+
+  INDEX                                                    April 15, 1987
+
+
+  BCI  96                          INDEX
+  BIU  96
+
+
+  DSP  @87
+
+
+  ECI  96
+
+
+  FMH-1  @133
+  FUNCTION MANAGEMENT HEADER TYPE
+     1  133
+
+
+  LU.T1 PRINTER DATA  87
+
+
+  MAPPING FIELD  96
+
+
+  RU  @87
+
+
+  SCS  @87
+  SCS UNSTRUCTURED DATA MAPPING  96
+  SEGMENT  96
+
+
+  WSF  @87
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  138               SNA/SDLC External Reference Manual         SNAERS.DOC
+   XZ
