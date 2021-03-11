@@ -1,0 +1,320 @@
+C
+C
+C
+C  ATTENTION!!!!   SET 'TTY FORM'  BEFORE TYPING OUT THIS FILE TO GET IT
+C  IN THE RIGHT FORMAT.
+C
+C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                         C
+C                       PORTS ANALYSIS PROGRAM                            C
+C                            VERSION 6.0                                  C
+C                                                                         C
+C  AUTHOR : G.P. RAVIKUMAR                          SEPTEMBER 27, 1985    C
+C           MANAGEMENT SCIENCES                                           C
+C                                                                         C
+C  REVISED : K. CORCORAN, ROB NIELSEN               MAY 8, 1986           C
+C            MANAGEMENT SCIENCES                                          C
+C                                                                         C
+C                                                                         C
+C  THIS VERSION IS AN ENHANCEMENT OF VERSION 5.0, IN ORDER TO             C
+C  DISTINGUISH BETWEEN CARRIED AND OFFERED TRAFFIC AS AN INITIAL INPUT.   C
+C                                                                         C
+C                                                                         C
+C  THIS PROGRAM CALCULATES THE PGRADE FOR GIVEN CARRIED OR OFFERED        C
+C  TRAFFIC AND A GIVEN NUMBER OF PORTS USING THE ERLANG-B OR EXTENDED     C
+C  ERLANG-B FORMULAS.  CONVERSELY, FOR A SPECIFIED PGRADE LEVEL, IT CAN   C
+C  ALSO CALCULATE THE NUMBER OF PORTS REQUIRED TO ACHIEVE THIS LEVEL.     C
+C                                                                         C
+C                                                                         C
+C  TYPE OUT THE FILE (ANALYSIS:28) PORTS.DOC   FOR DOCUMENTATION ON HOW   C
+C  TO RUN THIS PROGRAM AND OTHER INFORMATION.                             C
+C                                                                         C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        INTEGER CALLS, DAYHRS, CHOICE, OPTION, PORTS
+
+        DIMENSION PEAK(24,24)
+
+        DATA PEAK/100.,23*0.,
+     +0.,0.,22*0.,
+     +0.,0.,0.,21*0.,
+     +0.,0.,0.,0.,20*0.,
+     +27.,25.,22.,17.,9.,19*0.,
+     +23.,21.,19.,16.,13.,8.,18*0.,
+     +19.,18.,17.,16.,14.,9.,7.,17*0.,
+     +17.,16.,15.,14.,13.,12.,8.,5.,16*0.,
+     +17.,16.,14.,13.,12.,11.,9.,5.,3.,15*0.,
+     +16.,15.,14.,13.,12.,11.,8.,6.,3.,2.,14*0.,
+     +15.,14.,13.,12.,11.,10.,9.,6.,4.,3.,3.,13*0.,
+     +14.,13.,12.,12.,10.,9.,9.,6.,5.,4.,3.,3.,12*0.,
+     +14.,13.,12.,11.,10.,9.,8.,7.,6.,4.,3.,2.,1.,11*0.,
+     +13.,12.,12.,11.,10.,9.,8.,7.,6.,4.,3.,2.,2.,1.,10*0.,
+     +13.,12.,11.,11.,10.,9.,8.,7.,6.,4.,3.,2.,2.,1.,1.,9*0.,
+     +12.,12.,11.,11.,10.,9.,8.,7.,6.,5.,2.,2.,2.,1.,1.,1.,8*0.,
+     +192*0./
+
+C        CALL TTYFOR                                           PAGE 2
+
+
+        TYPE 10
+ 10     FORMAT(/,5X,'PORTS ANALYSIS PROGRAM VERSION 6.0  MAY 8,',
+     -        '1986',//,5X,'ATTENTION!!!! THIS IS A MODIFIED VERSION.',/,
+     -         5X,'BE SURE TO READ DOCUMENTATION IN (ANALYSIS)',
+     -        'PORTS.DOC ',/,5X,'BEFORE RUNNING THIS PROGRAM',//,5X,
+     -        'THIS PROGRAM ESTIMATES OFFERED TRAFFIC FROM CARRIED ',
+     -        'TRAFFIC.',/,5X,'SEE DOCUMENTATION IF HAVE A DIRECT ',
+     -        'ESTIMATE OF OFFERED TRAFFIC.',//)  
+ 
+
+ 20     TYPE 30
+ 30     FORMAT(/' DO YOU WANT TO COMPUTE  1.NO.OF PORTS ',
+     -' OR  2.PGRADE? ',/,8X,'(ENTER ''1'' OR ''2'' ; CR TO EXIT)',
+     -  14X,': ',$)
+
+        READ(5,40) CHOICE
+ 40     FORMAT(A1)
+        IF ((CHOICE .GT. '~') .AND. (CHOICE .LT. '!')) STOP
+        IF (CHOICE .NE. '1' .AND. CHOICE .NE. '2') GO TO 20
+
+C		THIS PROGRAM  DOES CARRIED TRAFFIC ONLY
+C        DELETE THE NEXT 2 LINES TO REINSTATE THE OFFERED TRAFFIC OPTION
+        OPTION = '1'
+        GO TO 69
+
+ 50     TYPE 60
+ 60     FORMAT(/' DO YOU KNOW  1.CARRIED TRAFFIC  OR ',
+     -' 2.OFFERED TRAFFIC? ',/,8X,'(ENTER ''1'' OR ''2'')',14X,': ',$)
+
+        READ(5,40) OPTION
+        IF ((CHOICE .GT. '~') .AND. (CHOICE .LT. '!')) STOP
+        IF (OPTION .NE. '1' .AND. OPTION .NE. '2') GO TO 50
+
+ 69     TYPE 70
+ 70     FORMAT(' ENTER NUMBER OF CALLS PER DAY        ',
+     -          '               : ',$)
+        READ (5,45) CALLS
+ 45     FORMAT (5G)
+
+
+ 79     TYPE 80
+ 80     FORMAT(' ENTER TOTAL CONNECT HOURS PER DAY',19X,': ',$)
+        READ (5,45) HOURS
+        IF (HOURS .LT. .0001) GOTO 79
+
+
+ 90     TYPE 100
+ 100    FORMAT(' DO YOU KNOW THE PERCENTAGE OF CALLS THAT OCCUR',
+     -       /,' DURING THE HEAVIEST TRAFFIC HOUR OF THE DAY?',
+     -       /,'             (ENTER ''Y'' OR ''N'')',
+     -           '                      : ',$)
+        READ (5,110) IANS
+ 110    FORMAT(A1)
+        IF (IANS.NE.'Y'.AND.IANS.NE.'N') GO TO 90
+        IF (IANS.EQ.'N') GO TO 150
+
+
+C                                                              PAGE 3
+
+
+ 120      TYPE 130
+ 130      FORMAT (' ENTER THE PERCENTAGE               ',
+     -              '                 : ',$)
+          READ (5,45) PKPRCT
+          IF (PKPRCT .GE. 4.17 .AND. PKPRCT .LE. 100.0) GO TO 170
+            TYPE 140
+ 140        FORMAT(' *** PERCENTAGE SHOULD BE BETWEEN 4.17 & 100 ***'/)
+            GO TO 120
+
+
+ 150    TYPE 160
+ 160    FORMAT (' ENTER NO. OF BUSINESS HOURS IN A DAY',/,
+     -          '     (SHOULD BE BETWEEN 5 AND 16)',20X,': ',$)
+        READ (5,45) DAYHRS
+        IF (DAYHRS .LT. 5 .OR. DAYHRS .GT. 16) GO TO 150
+
+
+ 170    TYPE 180
+ 180    FORMAT (' ENTER OPERATOR DELAY PER CALL (IN SECONDS)',
+     -            10X,': ',$)
+        READ (5,45) OPTIME
+
+        OPCONN = CALLS * OPTIME/3600.
+
+
+        IF (IANS.EQ.'N') PKPRCT=PEAK(1,DAYHRS)
+
+        ERLANG = (HOURS+OPCONN)*(PKPRCT/100.)
+
+
+        IF (CHOICE .EQ. '2') GO TO 250
+
+
+
+C  DETERMINE NUMBER OF LINES FOR A GIVEN PGRADE
+
+
+ 190    TYPE 200
+ 200    FORMAT(' ENTER DESIRED PERCENTAGE PGRADE',21X,': ',$)
+        READ (5,45) GRADE
+        IF (GRADE .GT. 0.25 .AND. GRADE .LT. 100.0) GO TO 220
+          TYPE 210
+ 210      FORMAT(' *** THE PERCENTAGE FIGURE SHOULD BE GREATER THAN ',
+     -           '0.25 AND LESS THAN 100.0',/)
+          GO TO 190
+
+ 220    GRADE=GRADE/100.0
+
+        IF (OPTION .EQ. '1') ERLANG=ERLANG/(1.0-GRADE)
+
+
+
+C                                                               PAGE 4
+
+
+C  ALGORITHM TO CALCULATE NUMBER OF LINES FOR A GIVEN PGRADE
+
+        NPRT1=1
+        PGRDE1=1.0
+ 230    PGRDE1 = (ERLANG*PGRDE1)/(FLOAT(NPRT1)+ERLANG*PGRDE1)
+        IF (PGRDE1.LE.GRADE) GO TO 240
+          NPRT1 = NPRT1+1
+          GO TO 230
+
+ 240    NPRT=NPRT1
+        PGRADE=PGRDE1*100.0
+        GO TO 330
+
+
+
+C  DETERMINE PGRADE FOR A GIVEN NUMBER OF LINES AND GIVEN CARRIED TRAFFIC
+
+
+ 250    TYPE 260
+ 260    FORMAT (' ENTER NUMBER OF PORTS ',30X,': ',$)
+        READ (5,45) IPORTS
+        IF (IPORTS .LT. 1) GOTO 250
+        IF (OPTION .EQ. '2') GO TO 300
+        IF (IPORTS.GE.ERLANG) GO TO 264
+
+          TYPE 261
+ 261      FORMAT (' *** THE NUMBER OF PORTS SHOULD BE GREATER THAN',/,
+     -            '     THE NUMBER OF ERLANGS ***',/)
+
+          TYPE 262, ERLANG, IPORTS
+ 262      FORMAT (' *** YOU HAVE ENTERED ', F5.1, ' ERLANGS AND ',
+     -              I4, ' PORTS ***',/)
+
+          GO TO 250
+
+ 264    IF (IPORTS.EQ.0) GO TO 300
+        IF (ERLANG.EQ.0.0) GO TO 290
+        IF (ERLANG.GT.IPORTS) GO TO 250
+
+ 265    EPSLN=0.001
+
+        A=0.0
+        B=0.0
+        B=(IPORTS)/2.0
+ 270    B=2.0*B
+
+
+C                                                               PAGE 5
+
+        CALL ESTMT(IPORTS, B, PGRDE4, NPRT4)
+        FCNVAL1=PGRDE4
+        FCNB=B*(1-FCNVAL1)-ERLANG
+
+        IF (FCNB.LT.0) GO TO 270
+        IF (B.GT.(IPORTS)) A=B/2.0
+
+ 280    C=(A+B)/2.0
+
+        CALL ESTMT(IPORTS, C, PGRDE4, NPRT4)
+        FCNVAL1=PGRDE4
+        FCNC=C*(1-FCNVAL1)-ERLANG
+
+        IF (FCNC.LT.0) A=C
+        IF (FCNC.GT.0) B=C
+        IF (FCNC.EQ.0) GO TO 290
+
+        IF (ABS(A-B).GT.EPSLN) GO TO 280
+
+ 290    IF (ERLANG.EQ.0.0) FCNVAL1=0
+
+        PGRDE2=FCNVAL1
+        NPRT=IPORTS
+        PGRADE=PGRDE2*100.0
+        GO TO 330
+
+
+C  DETERMINE PGRADE FOR A GIVEN NUMBER OF LINES AND GIVEN OFFERED TRAFFIC
+
+
+ 300    NPRT3 = 0
+        PGRDE3 = 1.0
+ 310    IF (NPRT3.EQ.IPORTS) GO TO 320
+          NPRT3=NPRT3+1
+          PGRDE3=(ERLANG*PGRDE3)/(FLOAT(NPRT3)+ERLANG*PGRDE3)
+          GO TO 310
+
+ 320    NPRT=NPRT3
+        PGRADE=PGRDE3*100.0
+        GO TO 330
+
+
+
+
+C                                                              PAGE 6
+
+
+C  OUTPUT NUMBER OF PORTS AND PGRADE
+
+
+ 330    IF (OPTION .EQ. '2') GO TO 345
+
+
+ 335    TYPE 340, NPRT,PGRADE
+ 340    FORMAT(///10X,'******************************************',
+     -             /10X,'*',40X,'*',
+     -             /10X,'*',9X,'NUMBER OF PORTS  = ',I5,7X,'*',
+     -             /10X,'*',40X,'*',
+     -             /10X,'*',9X,'EFFECTIVE PGRADE =', F5.1,' %',6X,'*',
+     -             /10X,'*',40X,'*',
+     -             /10X,'*',9X,'(GIVEN CARRIED TRAFFIC)',8X,'*',
+     -             /10X,'*',40X,'*',
+     -             /10X,'******************************************'//)
+
+        GO TO 20
+
+ 345    TYPE 346, NPRT,PGRADE
+ 346    FORMAT(///10X,'******************************************',
+     -             /10X,'*',40X,'*',
+     -             /10X,'*',9X,'NUMBER OF PORTS  = ',I5,7X,'*',
+     -             /10X,'*',40X,'*',
+     -             /10X,'*',9X,'EFFECTIVE PGRADE =', F5.1,' %',6X,'*',
+     -             /10X,'*',40X,'*',
+     -             /10X,'*',9X,'(GIVEN OFFERED TRAFFIC)',8X,'*',
+     -             /10X,'*',40X,'*',
+     -             /10X,'******************************************'//)
+
+
+        GO TO 20
+        END
+
+
+
+C  THIS SUBROUTINE ESTIMATES OFFERED TRAFFIC
+
+
+       SUBROUTINE ESTMT(IPORTS, ERL, PGRDE4, NPRT4)
+
+            NPRT4=0
+            PGRDE4=1.0
+ 350        IF (NPRT4.EQ.IPORTS) GO TO 360
+              NPRT4=NPRT4+1
+              PGRDE4=(ERL*PGRDE4)/(FLOAT(NPRT4)+ERL*PGRDE4)
+              GO TO 350
+ 360        PGRDE4=PGRDE4
+            RETURN
+            END
