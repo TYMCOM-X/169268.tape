@@ -1,0 +1,448 @@
+% The current procedure reads the input file created by NTRAK.FTF (XRAY
+  input information) and selects specific information to be dumped into
+  a 1022 DMI file. (The 1022 data ase willl contain useful XRAY information).
+
+  The procedure has been modified by Edsel Garciamendez Budar (Management
+  Sciences Unit (January 30, 1986) to optimize the performance of NTRACK
+  in the Delay/Utilization reporting project (DELUTI). The original code
+  of this rocedure was writen by Roy Roskilly/someone else(?).             %
+
+%  The procedure is mostly contained in a loop, which reads line by line
+   of the XRAY-like output. Depending on the headings that it encounters, it
+   then expects certain data. Since there are several XRAY versions, and
+   hence the outputs are different, the program has to avoid getting "out of
+   synchronization". If it finds a field other than expected, it disregards
+   the whole XRAY snap-shot to avoid loosing synch, and then starts from the
+   next snap-shot.                                                          %
+
+%  NOTE: The instructions commented out were used in the original NTRACK,   %
+%  but for the DELUTI project are not needed, and hence are not considered. %
+
+
+PROCEDURE DUKS.DMI
+BEGIN
+
+	FIELDS
+
+	IL              AS "132C",      %INPUT LINE FROM DUKS.DAT FILE%
+	OL              AS "54C"       %OUTPUT LINE FOR DMI FILE%,
+	RECORD.NUMBER   AS "ZZZ,ZZZ,ZZN",%INPUT FILE RECORD POINTER FOR ERROR
+			ANALYSIS%
+	NODE            AS "3ZN",
+	NEIGH           AS "3ZN",
+	ACCOUNTED.FOR   AS "3C",        %HELPS FIND NEW XRAY MESSAGES%
+	XRAY.GROUP      AS "20C"        %XRAY OUTPUT BODY ORIENTATION POINTER%
+
+	%We now specify the input statements%
+
+SOURCE KS.LINE FROM "DUKS.DA" FREE FORM SEPARATOR @CR
+ INPUT IL,@CR
+
+	%And the output statements are: %
+
+REPORT KS.DMI.FILE TO "DUKS.DMI-A"
+ PAGE.SIZE 1
+
+REPORT KS.ERROR.FILE TO "DUKS.ERR-A"
+ PAGE.SIZE 1
+
+		%*********************************%
+		% The main procedure starts here: %
+		%*********************************%
+
+
+LET XRAY.GROUP="ERROR MODE"
+
+		%The beginning of the "loop" is specified here:%
+
+FOR EACH KS.LINE WRITE REPORT KS.DMI.FILE,KS.ERROR.FILE
+ THIS.RECORD:
+
+ BEGIN
+
+			% The first part of this loop mostly checks for %
+			% XRAY-like output headings, to prepare the     %
+			% collection of the useful data.                %
+
+	 ADD 1 TO RECORD.NUMBER
+	 LET ACCOUNTED.FOR="NO"
+
+	 IF XRAY.GROUP="ERROR MODE" THEN
+		 IF SUBSTR(IL,1,7)#"XRAY ID" THEN
+			    FINISH THIS.RECORD
+
+	 IF SUBSTR(IL,1,7)="XRAY ID" THEN
+	 BEGIN
+	    LET ACCOUNTED.FOR="YES"
+	    LET OL=""
+	    IF XRAY.GROUP#"XRAY END FLAG" THEN
+		    IF XRAY.GROUP#"ERROR MODE" THEN
+		       BEGIN
+			       PRINT TO KS.ERROR.FILE
+			       RECORD.NUMBER," UNEXPECTED XRAY ID",@CR
+			       LET XRAY.GROUP="ERROR MODE"
+			       FINISH THIS.RECORD
+		       END
+	    LET XRAY.GROUP="XRAY ID"
+	    LET OL=SUBSTR(IL,18,6)
+	    LET OL=TRIM(OL)+SUBSTR(IL,25,4)
+	    IF SUBSTR(IL,13,4) IS NOT NODE THEN
+	       BEGIN
+	            PRINT TO KS.ERROR.FILE
+	            RECORD.NUMBER," BAD NODE NUMBER IN XRAY ID",@CR
+	            LET XRAY.GROUP="ERROR MODE"
+	            FINISH THIS.RECORD
+               END
+	       ELSE LET NODE=SUBSTR(IL,13,4) AS NODE
+	    FINISH THIS.RECORD
+	 END
+
+
+	 IF SUBSTR(IL,1,6)="LINK :" THEN
+	 BEGIN
+	    LET ACCOUNTED.FOR="YES"
+	    IF XRAY.GROUP#"XRAY ID" THEN
+	       BEGIN
+		       PRINT TO KS.ERROR.FILE
+		       RECORD.NUMBER," LINK : UNEXPECTED",@CR
+		       LET XRAY.GROUP="ERROR MODE"
+		       FINISH THIS.RECORD
+	       END
+	    LET XRAY.GROUP="LINK :"
+	    IF SUBSTR(IL,8,4) IS NOT NEIGH THEN
+	       BEGIN
+	            PRINT TO KS.ERROR.FILE
+	            RECORD.NUMBER," BAD NEIGHBOR NUMBER IN LINK LINE",@CR
+	            LET XRAY.GROUP="ERROR MODE"
+	            FINISH THIS.RECORD
+	       END ELSE
+	       BEGIN
+	            LET NEIGH=SUBSTR(IL,8,4) AS NEIGH
+		            %IF NODE>NEIGH THEN %
+			       %BEGIN%
+		                  %  LET OL=TRIM(OL)+NEIGH AS "4C" %
+		                  %  LET OL=TRIM(OL)+NODE AS "4C" %
+	                       %END ELSE %
+		               %BEGIN %
+                    LET OL=TRIM(OL)+NODE AS "4C"
+                    LET OL=TRIM(OL)+NEIGH AS "4C"
+	                       %END%
+	        END
+		FINISH THIS.RECORD
+	    END
+
+
+	 IF SUBSTR(IL,1,13)="XRAY END FLAG" THEN
+	    BEGIN
+		    LET ACCOUNTED.FOR="YES"
+		    IF XRAY.GROUP#"END FLAG PENDING" THEN
+		    BEGIN
+		       PRINT TO KS.ERROR.FILE
+		       RECORD.NUMBER," UNEXPECTED END FLAG",@CR
+		       LET XRAY.GROUP="ERROR MODE"
+		       FINISH THIS.RECORD
+		    END
+		    LET XRAY.GROUP="XRAY END FLAG"
+		    % LET OL=TRIM(OL)+NODE AS "4C"
+		      LET OL=TRIM(OL)+NEIGH AS "4C" %
+		    PRINT TO KS.DMI.FILE OL,@CR % It is until here that the %
+                                                % record gets printed!! %
+		    LET OL=""
+		    FINISH THIS.RECORD
+	    END
+
+
+	 IF SUBSTR(IL,1,7)="LOGICAL" THEN
+	    BEGIN
+		    LET ACCOUNTED.FOR="YES"
+		    IF XRAY.GROUP#"LINK :" THEN
+		       BEGIN
+			       PRINT TO KS.ERROR.FILE
+			       RECORD.NUMBER," UNEXPECTED LOGICAL GROUP",@CR
+			       LET XRAY.GROUP="ERROR MODE"
+			       FINISH THIS.RECORD
+		       END
+		    LET XRAY.GROUP="LOGICAL"
+		    FINISH THIS.RECORD
+	    END
+
+
+	 IF SUBSTR(IL,1,8)="PHYSICAL" THEN
+	    BEGIN
+		    LET ACCOUNTED.FOR="YES"
+		    IF XRAY.GROUP#"LOGICAL" THEN
+		       BEGIN
+			       PRINT TO KS.ERROR.FILE
+			       RECORD.NUMBER," UNEXPECTED PHYSICAL GROUP",@CR
+			       LET XRAY.GROUP="ERROR MODE"
+			       FINISH THIS.RECORD
+		       END
+		    LET XRAY.GROUP="PHYSICAL"
+		    FINISH THIS.RECORD
+	    END
+
+
+	 IF SUBSTR(IL,1,15)="PACKET OVERHEAD" THEN
+	    BEGIN
+		    LET ACCOUNTED.FOR="YES"
+		    IF XRAY.GROUP#"PHYSICAL" THEN
+		     BEGIN
+			PRINT TO KS.ERROR.FILE
+			 RECORD.NUMBER," UNEXPECTED PACKET OVERHEAD GROUP",@CR
+		        LET XRAY.GROUP="ERROR MODE"
+		        FINISH THIS.RECORD
+		     END
+		    LET XRAY.GROUP="PACKET OVERHEAD"
+		    FINISH THIS.RECORD
+	    END
+
+
+	 IF SUBSTR(IL,1,9)="BANDWIDTH" THEN
+	    BEGIN
+		    LET ACCOUNTED.FOR="YES"
+		    IF XRAY.GROUP#"PACKET OVERHEAD" THEN
+		     BEGIN
+			     PRINT TO KS.ERROR.FILE
+			      RECORD.NUMBER," UNEXPECTED BANDWIDTH GROUP",@CR
+			     LET XRAY.GROUP="ERROR MODE"
+			     FINISH THIS.RECORD
+		     END
+		    LET XRAY.GROUP="BANDWIDTH"
+		    FINISH THIS.RECORD
+	    END
+
+
+	 IF SUBSTR(IL,1,8)="CHAR/SEC" THEN
+	    BEGIN
+		    LET ACCOUNTED.FOR="YES"
+		    IF XRAY.GROUP#"BANDWIDTH" THEN
+		     BEGIN
+			     PRINT TO KS.ERROR.FILE
+			      RECORD.NUMBER," UNEXPECTED CHAR/SEC GROUP",@CR
+			     LET XRAY.GROUP="ERROR MODE"
+			     FINISH THIS.RECORD
+		     END
+		    LET XRAY.GROUP="CHAR/SEC"
+		    FINISH THIS.RECORD
+	    END
+
+
+	 IF SUBSTR(IL,1,17)="PACKET STATISTICS" THEN
+	    BEGIN
+		    LET ACCOUNTED.FOR="YES"
+		    IF XRAY.GROUP#"CHAR/SEC" THEN
+		     BEGIN
+		       PRINT TO KS.ERROR.FILE
+			RECORD.NUMBER," UNEXPECTED PACKET STATISTICS GROUP",@CR
+		       LET XRAY.GROUP="ERROR MODE"
+		       FINISH THIS.RECORD
+		     END
+		    LET XRAY.GROUP="PACKET STATISTICS"
+		    FINISH THIS.RECORD
+	    END
+
+
+	 IF SUBSTR(IL,1,10)="LINK DELAY" THEN
+	    BEGIN
+		    LET ACCOUNTED.FOR="YES"
+		    IF XRAY.GROUP#"PACKET STATISTICS" THEN
+		     BEGIN
+		        PRINT TO KS.ERROR.FILE
+			 RECORD.NUMBER," UNEXPECTED LINK DELAY GROUP",@CR
+			LET XRAY.GROUP="ERROR MODE"
+		        FINISH THIS.RECORD
+		     END
+		    LET XRAY.GROUP="LINK DELAY"
+		    FINISH THIS.RECORD
+	    END
+
+
+	 IF SUBSTR(IL,1,14)="OVERLOAD COUNT" THEN
+	    BEGIN
+		    LET ACCOUNTED.FOR="YES"
+		    IF XRAY.GROUP#"LINK DELAY" THEN
+		     BEGIN
+			PRINT TO KS.ERROR.FILE
+			 RECORD.NUMBER," UNEXPECTED OVERLOAD COUNT GROUP",@CR
+		        LET XRAY.GROUP="ERROR MODE"
+		        FINISH THIS.RECORD
+		     END
+		    LET XRAY.GROUP="OVERLOAD COUNT"
+		    FINISH THIS.RECORD
+	    END
+
+			% The second part of the loop starts here. It now %
+			% collects the numerical XRAY-like data fields.   %
+
+
+	 IF XRAY.GROUP="LOGICAL" THEN
+	    BEGIN
+		    LET ACCOUNTED.FOR="YES"
+		    IF SUBSTR(IL,1,6)="CPS IN" THEN
+		       BEGIN
+		%       LET OL=TRIM(OL)+SUBSTR(IL,13,5)
+		        LET OL=TRIM(OL)+SUBSTR(IL,28,5) %
+		        FINISH THIS.RECORD
+		       END
+		    IF SUBSTR(IL,1,7)="CPS OUT" THEN
+		       BEGIN
+		%       LET OL=TRIM(OL)+SUBSTR(IL,13,5)
+		        LET OL=TRIM(OL)+SUBSTR(IL,28,5) %
+		        FINISH THIS.RECORD
+		       END
+		    PRINT TO KS.ERROR.FILE
+		     RECORD.NUMBER," LOGICAL LINK",@CR
+		    LET XRAY.GROUP="ERROR MODE"
+		    FINISH THIS.RECORD
+	    END
+
+
+	 IF XRAY.GROUP="PHYSICAL" THEN
+	    BEGIN
+		    LET ACCOUNTED.FOR="YES"
+		    IF SUBSTR(IL,1,6)="CPS IN" THEN
+		       BEGIN
+			       LET OL=TRIM(OL)+SUBSTR(IL,13,5)
+			       LET OL=TRIM(OL)+SUBSTR(IL,28,5)
+			       FINISH THIS.RECORD
+		       END
+		    IF SUBSTR(IL,1,7)="CPS OUT" THEN
+		       BEGIN
+			       LET OL=TRIM(OL)+SUBSTR(IL,13,5)
+			       LET OL=TRIM(OL)+SUBSTR(IL,28,5)
+			       FINISH THIS.RECORD
+		       END
+		    PRINT TO KS.ERROR.FILE
+		     RECORD.NUMBER," PHYSICAL LINK",@CR
+		    LET XRAY.GROUP="ERROR MODE"
+		    FINISH THIS.RECORD
+	    END
+
+
+	 IF XRAY.GROUP="PACKET OVERHEAD" THEN
+	    BEGIN
+		    LET ACCOUNTED.FOR="YES"
+		    IF SUBSTR(IL,1,4)="IN :" THEN
+		       BEGIN
+			      % LET OL=TRIM(OL)+SUBSTR(IL,6,2)
+			        LET OL=TRIM(OL)+SUBSTR(IL,22,2) %
+			       FINISH THIS.RECORD
+		       END
+		    PRINT TO KS.ERROR.FILE
+		     RECORD.NUMBER," PACKET OVERHEAD",@CR
+		    LET XRAY.GROUP="ERROR MODE"
+		    FINISH THIS.RECORD
+	    END
+
+
+	 IF XRAY.GROUP="BANDWIDTH" THEN
+	    BEGIN
+		    LET ACCOUNTED.FOR="YES"
+		    IF SUBSTR(IL,1,4)="IN :" THEN
+		       BEGIN
+			       LET OL=TRIM(OL)+SUBSTR(IL,6,2)
+			       LET OL=TRIM(OL)+SUBSTR(IL,22,2)
+			       FINISH THIS.RECORD
+		       END
+		    PRINT TO KS.ERROR.FILE
+		     RECORD.NUMBER," BANDWIDTH",@CR
+		    LET XRAY.GROUP="ERROR MODE"
+		    FINISH THIS.RECORD
+	    END
+
+
+	 IF XRAY.GROUP="CHAR/SEC" THEN
+	    BEGIN
+		    LET ACCOUNTED.FOR="YES"
+		    IF SUBSTR(IL,1,4)="IN :" THEN
+		       BEGIN
+			      % LET OL=TRIM(OL)+SUBSTR(IL,6,4)
+			       LET OL=TRIM(OL)+SUBSTR(IL,20,4)
+			       LET OL=TRIM(OL)+SUBSTR(IL,38,4) %
+			       FINISH THIS.RECORD
+		       END
+		    PRINT TO KS.ERROR.FILE
+		     RECORD.NUMBER," CHAR/SEC",@CR
+		    LET XRAY.GROUP="ERROR MODE"
+		    FINISH THIS.RECORD
+	    END
+
+
+	 IF XRAY.GROUP="PACKET STATISTICS" THEN
+	    BEGIN
+		    LET ACCOUNTED.FOR="YES"
+		    IF SUBSTR(IL,1,14)="RECORDS/PACKET"
+		       THEN FINISH THIS.RECORD %NEED TO INCLUDE IN X22 DMD%
+		    IF SUBSTR(IL,1,11)="PACKETS/SEC" THEN
+		       BEGIN
+			       % LET OL=TRIM(OL)+SUBSTR(IL,15,4)
+			       LET OL=TRIM(OL)+SUBSTR(IL,40,3) %
+			       IF SUBSTR(IL,39,4) IS "4N" AND
+			          SUBSTR(IL,39,4) AS "4N" >128 THEN
+			          BEGIN
+			            PRINT TO KS.ERROR.FILE
+			             RECORD.NUMBER," PACKET SIZE > 128",@CR
+			            LET XRAY.GROUP="ERROR MODE"
+			          END
+			       FINISH THIS.RECORD
+		       END
+		    LET XRAY.GROUP="ERROR MODE"
+		    PRINT TO KS.ERROR.FILE
+		     RECORD.NUMBER," PACKET STATISTICS",@CR
+		    LET XRAY.GROUP="ERROR MODE"
+		    FINISH THIS.RECORD
+	    END
+
+
+	 IF XRAY.GROUP="LINK DELAY" THEN
+	    BEGIN
+		    LET ACCOUNTED.FOR="YES"
+		    IF SUBSTR(IL,1,8)="IN QUEUE" THEN
+		       FINISH THIS.RECORD
+		    IF SUBSTR(IL,1,4) IS "ZZZN" THEN
+		       BEGIN
+			      % LET OL=TRIM(OL)+SUBSTR(IL,1,4)
+			       LET OL=TRIM(OL)+SUBSTR(IL,11,4)
+			       LET OL=TRIM(OL)+SUBSTR(IL,21,4)
+			       LET OL=TRIM(OL)+SUBSTR(IL,31,4)
+			       LET OL=TRIM(OL)+SUBSTR(IL,41,4) %
+			       LET OL=TRIM(OL)+SUBSTR(IL,51,4)
+			       FINISH THIS.RECORD
+		       END
+		    PRINT TO KS.ERROR.FILE
+		      RECORD.NUMBER," LINK DELAY",@CR
+		    LET XRAY.GROUP="ERROR MODE"
+		    FINISH THIS.RECORD
+	    END
+
+
+	 IF XRAY.GROUP="OVERLOAD COUNT" THEN
+	    BEGIN
+		    LET ACCOUNTED.FOR="YES"
+		    IF SUBSTR(IL,1,4) IS NOT "4N" THEN
+		       BEGIN
+			       PRINT TO KS.ERROR.FILE
+			        RECORD.NUMBER," OVERLOAD COUNT",@CR
+			       LET XRAY.GROUP="ERROR MODE"
+			       FINISH THIS.RECORD
+		       END
+		    LET OL=TRIM(OL)+SUBSTR(IL,1,4)
+		    LET OL=TRIM(OL)+SUBSTR(IL,17,4)
+		   % LET OL=TRIM(OL)+SUBSTR(IL,33,4)
+		    LET OL=TRIM(OL)+SUBSTR(IL,49,4)
+		    LET OL=TRIM(OL)+SUBSTR(IL,63,8) %
+		    LET XRAY.GROUP="END FLAG PENDING"
+		    FINISH THIS.RECORD
+	    END
+
+
+	 IF ACCOUNTED.FOR="NO" THEN
+		 IF TRIM(IL)#"" THEN
+		    PRINT TO KS.ERROR.FILE
+		     RECORD.NUMBER," UNACCOUNTED FOR LINE",@CR
+
+    
+ END %THIS.RECORD%
+
+END  %End of Procedure KS.DMI %
+ 
